@@ -25,7 +25,7 @@
 
 
 TEST(parameter_processing, override_after_fatal) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         module dependency #(
             PARAM_1 = 5
@@ -52,7 +52,7 @@ TEST(parameter_processing, override_after_fatal) {
 
 
         endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;
@@ -77,7 +77,7 @@ TEST(parameter_processing, override_after_fatal) {
 
 
 TEST(parameter_processing, mixed_dep_override) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module dependency #(
             parameter [7:0] ACCESS_ALLOWED = -1,
             parameter [31:0] SLAVE_MASK [7:0] =  '{8{'hffff}}
@@ -95,7 +95,7 @@ TEST(parameter_processing, mixed_dep_override) {
             ) test_instance ();
 
         endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;
@@ -119,7 +119,7 @@ TEST(parameter_processing, mixed_dep_override) {
 
 
 TEST(parameter_processing, package_parameters_in_array_init) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
     package test_package;
 
@@ -149,7 +149,7 @@ TEST(parameter_processing, package_parameters_in_array_init) {
         ) test_instance ();
 
     endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;
@@ -177,7 +177,7 @@ TEST(parameter_processing, package_parameters_in_array_init) {
 
 
 TEST(parameter_processing, package_parameters_use) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         package test_package;
             parameter bus_base = 67;
@@ -188,7 +188,7 @@ TEST(parameter_processing, package_parameters_use) {
         )();
 
         endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;
@@ -229,7 +229,7 @@ TEST(parameter_processing, package_parameters_use) {
 
 
 TEST(parameter_processing, array_instance_parameter_override) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module dependency #(
             parameter param_1 = 4,
             parameter param_2 [1:0]= '{0,0},
@@ -254,7 +254,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
             ) test_instance ();
 
         endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;
@@ -340,7 +340,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
 
 
 TEST(parameter_processing, packed_array_initialization_expression_override) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         module dependency #(
             N_TRIGGER_REGISTERS = 1,
@@ -357,7 +357,7 @@ TEST(parameter_processing, packed_array_initialization_expression_override) {
                 .TRIGGER_REGISTERS_IDX('{TAP_ADDR_REG})
             ) d ();
         endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;
@@ -382,7 +382,7 @@ TEST(parameter_processing, packed_array_initialization_expression_override) {
 
 
 TEST(parameter_processing, simple_for_array_parameter) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         module dependency #(
             N_TRIGGER_REGISTERS = 1
@@ -402,7 +402,7 @@ TEST(parameter_processing, simple_for_array_parameter) {
                 end
             endgenerate
         endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;
@@ -432,7 +432,7 @@ TEST(parameter_processing, simple_for_array_parameter) {
 
 
 TEST(parameter_processing, complex_for_array_parameter) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         module dependency #(
             N_TRIGGER_REGISTERS = 1
@@ -454,7 +454,7 @@ TEST(parameter_processing, complex_for_array_parameter) {
                 end
             endgenerate
         endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;
@@ -482,7 +482,7 @@ TEST(parameter_processing, complex_for_array_parameter) {
 
 
 TEST(parameter_processing, complex_vector_function_parameter) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #(
             N_CORES = 3
         )();
@@ -503,7 +503,7 @@ TEST(parameter_processing, complex_vector_function_parameter) {
             parameter [ADDR_WIDTH-1:0] AXI_ADDRESSES [N_AXI_LITE-1:0] = CTRL_ADDR_CALC();
 
         endmodule
-    )");
+    )";
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
@@ -530,7 +530,7 @@ TEST(parameter_processing, complex_vector_function_parameter) {
 /*
  *TODO: FIX THIS ENDIANNESS CRAP
 TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #(
             N_CORES = 3
         )();
@@ -551,7 +551,7 @@ TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch)
             parameter [ADDR_WIDTH-1:0] AXI_ADDRESSES [N_AXI_LITE-1:0] = CTRL_ADDR_CALC();
 
         endmodule
-    )");
+    )";
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
@@ -576,7 +576,7 @@ TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch)
 */
 
 TEST(parameter_processing, simple_package_in_function_initialization) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
 
 
@@ -606,7 +606,7 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
         endmodule
 
 
-    )");
+    )";
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
@@ -632,7 +632,7 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
 
 
 TEST(parameter_processing, nested_package_in_function_initialization) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         package hil_address_space;
             parameter bus_base = 32'h43c00000;
@@ -658,7 +658,7 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
         endmodule
 
 
-    )");
+    )";
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -682,7 +682,7 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
 
 
 TEST(parameter_processing, override_with_system_task) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         module dependency #(
             parameter param_1 = 4
@@ -700,7 +700,7 @@ TEST(parameter_processing, override_with_system_task) {
             ) dep ();
 
         endmodule
-    )");
+    )";
 
 
 
@@ -731,7 +731,7 @@ TEST(parameter_processing, override_with_system_task) {
 }
 
 TEST(parameter_processing, interface_default_parameters) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         interface test_if #(DATA_WIDTH = 32);
         endinterface
 
@@ -741,7 +741,7 @@ TEST(parameter_processing, interface_default_parameters) {
             test_if iface();
 
         endmodule
-    )");
+    )";
 
 
 
@@ -773,7 +773,7 @@ TEST(parameter_processing, interface_default_parameters) {
 }
 
 TEST(parameter_processing, override_with_interface_param) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
 
     interface test_if #(DATA_WIDTH = 32);
@@ -797,7 +797,7 @@ TEST(parameter_processing, override_with_interface_param) {
             ) dep ();
 
         endmodule
-    )");
+    )";
 
 
 
@@ -830,7 +830,7 @@ TEST(parameter_processing, override_with_interface_param) {
 }
 
 TEST(parameter_processing, override_with_package_parameter) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         package test_package;
             parameter base = 33;
         endpackage
@@ -851,7 +851,7 @@ TEST(parameter_processing, override_with_package_parameter) {
             ) dep ();
 
         endmodule
-    )");
+    )";
 
 
 
@@ -884,7 +884,7 @@ TEST(parameter_processing, override_with_package_parameter) {
 
 
 TEST(parameter_processing, override_with_function_parameter) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         module dependency #(
             parameter param_1 = 4
@@ -916,7 +916,7 @@ TEST(parameter_processing, override_with_function_parameter) {
             ) dep ();
 
         endmodule
-    )");
+    )";
 
 
 
@@ -953,7 +953,7 @@ TEST(parameter_processing, override_with_function_parameter) {
 
 
 TEST(parameter_processing, override_package_function) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         package  test_pack;
             parameter test_param = 100;
         endpackage
@@ -988,7 +988,7 @@ TEST(parameter_processing, override_package_function) {
             ) dep ();
 
         endmodule
-    )");
+    )";
 
 
 
@@ -1019,7 +1019,7 @@ TEST(parameter_processing, override_package_function) {
 
 
 TEST(parameter_processing, parameter_with_for_loop) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         module dependency #(
             parameter DMA_BASE_ADDRESS = 4
@@ -1050,7 +1050,7 @@ TEST(parameter_processing, parameter_with_for_loop) {
                 ) dep ();
             end
         endmodule
-    )");
+    )";
 
 
 
@@ -1096,7 +1096,7 @@ TEST(parameter_processing, parameter_with_for_loop) {
 
 
 TEST(parameter_processing, parent_parameter_collision) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         module inner_dep();
 
@@ -1119,7 +1119,7 @@ TEST(parameter_processing, parent_parameter_collision) {
                 .INNER_PARAMETER(2)
             ) d ();
         endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;
@@ -1144,7 +1144,7 @@ TEST(parameter_processing, parent_parameter_collision) {
 
 
 TEST(parameter_processing, override_after_function_localparam) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
     module PwmControlUnit #(
         INITIAL_STOPPED_STATE = 0
@@ -1165,7 +1165,7 @@ TEST(parameter_processing, override_after_function_localparam) {
     endmodule
 
 
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -1191,7 +1191,7 @@ TEST(parameter_processing, override_after_function_localparam) {
 
 
 TEST(parameter_processing, init_list_override) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
     module axil_crossbar_interface #(
         parameter NS = 8,
@@ -1218,7 +1218,7 @@ TEST(parameter_processing, init_list_override) {
         );
 
     endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 

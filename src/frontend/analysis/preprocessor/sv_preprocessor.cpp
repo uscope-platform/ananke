@@ -20,10 +20,10 @@
 namespace preprocessor {
 
 
-    std::string sv_preprocessor::preprocess(const std::unique_ptr<std::istream> &in) {
+    std::string sv_preprocessor::preprocess(const std::string_view &file_content) {
         macro_processor macro_engine(definitions , line_number, path);
 
-        auto flat_source= flatten_source(in);
+        auto flat_source= flatten_source(file_content);
         std::istringstream iss(flat_source);
         std::ostringstream out;
 
@@ -55,7 +55,8 @@ namespace preprocessor {
                 auto current_line =line_number;
                 auto current_path = path;
                 path = included_file;
-                preprocess(std::make_unique<std::ifstream>(included_file));
+                mm_file file(path);
+                preprocess(file.view());
                 line_number = current_line;
                 path = current_path;
             } else if (trimmed_line.starts_with("`ifdef")) {
@@ -97,8 +98,17 @@ namespace preprocessor {
             auto end_identifier = line.substr(start_identifier+1).find_first_of('"');
             auto name = line.substr(start_identifier+1, end_identifier);
             if (name.starts_with('/')) return std::string(name);
-            auto dir = std::string(std::filesystem::path(path).parent_path()/name);
-            return dir;
+            std::string full_path;
+            auto rel_path = std::string(std::filesystem::path(path).parent_path()/name);
+            if (std::filesystem::exists(rel_path)) full_path = rel_path;
+            for (std::filesystem::path dir: include_directories) {
+                auto tmp_path = std::string(dir/name);
+                if (std::filesystem::exists(tmp_path)) full_path = tmp_path;
+            }
+            if (full_path.empty()) {
+                throw std::runtime_error("include file not found: " + std::string(name));
+            }
+            return full_path;
         } else {
             auto filename = std::string(line.substr(start_identifier+1, line.find_first_of('>')- start_identifier-1));
             for (std::filesystem::path dir: include_directories) {
@@ -159,9 +169,7 @@ namespace preprocessor {
     }
 
 
-    std::string sv_preprocessor::flatten_source(const std::unique_ptr<std::istream> &in) {
-        std::string content((std::istreambuf_iterator(*in)),
-                                 std::istreambuf_iterator<char>());
+    std::string sv_preprocessor::flatten_source(const std::string_view &content) {
 
         std::string result;
         result.reserve(content.size());

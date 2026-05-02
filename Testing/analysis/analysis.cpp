@@ -24,11 +24,11 @@
 #define EXPRESSION_WITH_TYPE(str) str, Expression_component::get_type(str)
 
 TEST( analysis_test , package) {
-    std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>("check_files/test_package.sv");
+    auto  test_file = mm_file("check_files/test_package.sv");
     sv_analyzer analyzer;
 
     
-    auto resource = analyzer.analyze("", test_file)[0];
+    auto resource = analyzer.analyze("", test_file.view())[0];
 
     Parameters_map parameters = resource.get_parameters();
 
@@ -101,9 +101,44 @@ TEST( analysis_test , package) {
 
 
 TEST( analysis_test , sv_module) {
-    std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>("check_files/test_sv_module.sv");
+    auto test_pattern = R"(
+        `timescale 10 ns / 1 ns
+
+        module Decoder (
+            input wire clock,
+            input wire reset,
+            axi_stream.slave data_in,
+            axi_stream.master data_out
+        );
+
+            parameter module_parameter_1 = 56;
+            localparam module_parameter_2 = 74;
+
+            axi_lite if_array[module_parameter_2+1]();
+
+            reg [31:0] memory [5:0];
+            initial memory = $readmemh("mem/init/file.dat");
+
+            SyndromeCalculator #(
+                .TEST_PARAM(test_package::param)
+            ) SC (
+                .clock(clock),
+                .reset(reset),
+                .data_in(data_in),
+                .syndrome(data_out)
+            );
+
+        endmodule
+
+
+        interface test_if;
+
+            logic signal_1;
+            logic signal_2;
+        endinterface
+    )";
     sv_analyzer analyzer;
-    auto res = analyzer.analyze("check_files/test_sv_module.sv",test_file);
+    auto res = analyzer.analyze("/test/file.sv",test_pattern);
     auto resource = res[0];
 
     HDL_instance d3("SC", "SyndromeCalculator", module);
@@ -139,7 +174,7 @@ TEST( analysis_test , sv_module) {
     test_ports["data_in"] = modport;
     test_ports["data_out"] = modport;
 
-    HDL_Resource check_res(module, "Decoder", "check_files/test_sv_module.sv");
+    HDL_Resource check_res(module, "Decoder", "/test/file.sv");
     check_res.add_dependencies(deps);
     check_res.set_ports(test_ports);
 
@@ -166,7 +201,7 @@ TEST( analysis_test , sv_module) {
 
     ASSERT_EQ(resource, check_res);
     resource = res[1];
-    check_res = HDL_Resource(interface, "test_if", "check_files/test_sv_module.sv");
+    check_res = HDL_Resource(interface, "test_if", "/test/file.sv");
     ASSERT_EQ(resource, check_res);
 }
 
@@ -183,7 +218,7 @@ TEST( analysis_test , vhdl_module) {
 
 
 TEST(analysis_test, port_concat_assignment) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
     module test_mod ();
 
 
@@ -195,7 +230,7 @@ TEST(analysis_test, port_concat_assignment) {
 
 
     endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     
@@ -217,13 +252,13 @@ TEST(analysis_test, port_concat_assignment) {
 
 
 TEST(analysis_test, interfaces_array) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern =R"(
     module test_mod ();
 
         axi_lite  cores_control[3]();
 
     endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     
@@ -247,7 +282,7 @@ TEST(analysis_test, interfaces_array) {
 
 
 TEST(analysis_test, parameter_array_assignment) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
     module test_mod ();
         integer i;
 
@@ -258,10 +293,9 @@ TEST(analysis_test, parameter_array_assignment) {
             );
 
     endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
-    
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 

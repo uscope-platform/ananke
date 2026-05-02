@@ -20,18 +20,19 @@
 #include "frontend/analysis/preprocessor/sv_preprocessor.hpp"
 
 
-std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const std::string &path, std::unique_ptr<std::istream> &input) {
+std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const std::string &path, const std::string_view &content) {
 
     preprocessor::sv_preprocessor preproc;
     preproc.set_path(path);
-    auto processed_content = preproc.preprocess(input);
+    preproc.set_include_directories(include_directories);
+    auto processed_content = preproc.preprocess(content);
     auto documentation_comments = preproc.get_documentation_comments();
     return {processed_content, documentation_comments};
 }
 
 
-std::vector<HDL_Resource> sv_analyzer::analyze(const std::string &path, std::unique_ptr<std::istream> &input) {
-    auto [preprocessed_content, documentation_comments] = preprocess(path, input);
+std::vector<HDL_Resource> sv_analyzer::analyze(const std::string &path, const std::string_view &file_content) {
+    auto [preprocessed_content, documentation_comments] = preprocess(path, file_content);
     auto entities = process_hdl(path, preprocessed_content);
 
 

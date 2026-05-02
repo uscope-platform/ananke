@@ -26,7 +26,7 @@ cache_manager::cache_manager(std::shared_ptr<settings_store> settings, std::shar
 
 }
 
-void cache_manager::add_file(std::filesystem::path &file) {
+void cache_manager:: add_file(std::filesystem::path &file) {
     if(ephimeral) return;
     d_store->remove_stale_info(file);
     cache[file.string()] = hash_file(file);
@@ -87,6 +87,10 @@ std::string cache_manager::hash_file(std::filesystem::path &file) {
 bool cache_manager::is_cached(std::filesystem::path &file) {
     if(ephimeral) return false;
     return cache.count(file.string())>0;
+}
+
+void cache_manager::purge() {
+    cache.clear();
 }
 
 void cache_manager::load_cache_backend() {

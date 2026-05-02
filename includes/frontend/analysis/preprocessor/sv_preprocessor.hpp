@@ -28,13 +28,14 @@
 #include <fmt/format.h>
 #include "frontend/analysis/preprocessor/conditional_solver.hpp"
 #include "frontend/analysis/preprocessor/macro_processor.hpp"
+#include "data_model/mm_file.hpp"
 
 namespace preprocessor {
     class sv_preprocessor {
     public:
         sv_preprocessor() = default;
-        std::string preprocess(const std::unique_ptr<std::istream> &in);
-        std::string flatten_source(const std::unique_ptr<std::istream> &in);
+        std::string preprocess(const std::string_view &file_content);
+        std::string flatten_source(const std::string_view &file_content);
         void set_include_directories(const std::vector<std::string> &i_d){include_directories = i_d;}
         void set_path(const std::string &s){path = s;}
         std::vector<std::string> get_documentation_comments() {return documentation_comments;}

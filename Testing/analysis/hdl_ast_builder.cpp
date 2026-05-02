@@ -18,7 +18,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 
-
+#include "data_model/mm_file.hpp"
 #include "frontend/analysis/sv_analyzer.hpp"
 #include "analysis/HDL_ast_builder_v2.hpp"
 
@@ -40,11 +40,11 @@ TEST( hdl_ast_builder, pid_ast_build) {
     for(auto &p:paths){
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv"){
-                std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
+                mm_file test_file(f.path());
                 sv_analyzer analyzer;
 
 
-                for(auto &entity:analyzer.analyze("", test_file)){
+                for(auto &entity:analyzer.analyze("", test_file.view())){
                     d_store->store_hdl_entity(entity);
                 }
             }
@@ -86,10 +86,10 @@ TEST( hdl_ast_builder, spi_ast_build) {
     for(auto &p:paths){
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv"){
-                std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
+                auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
-
-                for(auto &entity:analyzer.analyze("", test_file)){
+                analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
+                for(auto &entity:analyzer.analyze("", test_file.view())){
                     d_store->store_hdl_entity(entity);
                 }
             }
@@ -132,11 +132,11 @@ TEST( hdl_ast_builder, pwm_ast_build) {
     for(auto &p:paths){
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv" || f.path().extension() == ".svh"){
-                std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
+                auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
                 
 
-                for(auto &entity:analyzer.analyze("", test_file)){
+                for(auto &entity:analyzer.analyze("", test_file.view())){
                     d_store->store_hdl_entity(entity);
                 }
             }
@@ -181,10 +181,10 @@ TEST( hdl_ast_builder, adc_ast_build) {
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv" || f.path().extension() == ".svh"){
 
-                std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
+                auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
 
-                for(auto &entity:analyzer.analyze("", test_file)){
+                for(auto &entity:analyzer.analyze("", test_file.view())){
                     d_store->store_hdl_entity(entity);
                 }
             }
@@ -225,11 +225,11 @@ TEST( hdl_ast_builder, interface_parameter) {
     for(auto &p:paths){
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv" || f.path().extension() == ".svh"){
-                std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
+                auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
                 
 
-                for(auto &entity:analyzer.analyze("", test_file)){
+                for(auto &entity:analyzer.analyze("", test_file.view())){
                     d_store->store_hdl_entity(entity);
                 }
             }
@@ -237,13 +237,13 @@ TEST( hdl_ast_builder, interface_parameter) {
     }
 
 
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
             parameter test_param = 3;
             axi_stream test_defaults();
             axi_stream #(.DATA_WIDTH(15), .USER_WIDTH(test_param)) test_overload_params();
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     
@@ -279,7 +279,7 @@ TEST( hdl_ast_builder, package_dependency) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
 
         package test_package;
             parameter bus_base = 67;
@@ -290,7 +290,7 @@ TEST( hdl_ast_builder, package_dependency) {
         )();
 
         endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;
@@ -315,7 +315,7 @@ TEST( hdl_ast_builder, memory_dependency) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
 
         module test_mod #(
         )();
@@ -327,7 +327,7 @@ TEST( hdl_ast_builder, memory_dependency) {
         end
 
         endmodule
-    )");
+    )";
 
 
     sv_analyzer analyzer;

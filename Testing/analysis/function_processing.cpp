@@ -22,7 +22,7 @@
 
 
 TEST(function_processing, simple_function_scalar) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #(
         )();
 
@@ -30,7 +30,7 @@ TEST(function_processing, simple_function_scalar) {
                 CTRL_ADDR_CALC = 67;
             endfunction
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     
@@ -58,7 +58,7 @@ TEST(function_processing, simple_function_scalar) {
 
 
 TEST(function_processing, simple_function_array) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #(
         )();
 
@@ -69,7 +69,7 @@ TEST(function_processing, simple_function_array) {
                 IGNORED_ASSIGNMENT[2] = 1;
             endfunction
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     
@@ -116,7 +116,7 @@ TEST(function_processing, simple_function_array) {
 
 
 TEST(function_processing, simple_loop_function) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #(
             N_CORES = 3
         )();
@@ -127,7 +127,7 @@ TEST(function_processing, simple_loop_function) {
                 end
             endfunction
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     
@@ -183,7 +183,7 @@ TEST(function_processing, simple_loop_function) {
 
 
 TEST(function_processing, parametric_loop_function) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #(
             N_CORES = 3
         )();
@@ -194,7 +194,7 @@ TEST(function_processing, parametric_loop_function) {
                 end
             endfunction
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     
@@ -252,7 +252,7 @@ TEST(function_processing, parametric_loop_function) {
 }
 
 TEST(function_processing, complex_loop_function) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #(
             N_CORES = 3
         )();
@@ -265,7 +265,7 @@ TEST(function_processing, complex_loop_function) {
                 CTRL_ADDR_CALC[4] = 667;
             endfunction
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     
@@ -338,7 +338,7 @@ TEST(function_processing, complex_loop_function) {
 
 
 TEST(function_processing, parametrized_function) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #(
             N_CORES = 1
         )();
@@ -348,7 +348,7 @@ TEST(function_processing, parametrized_function) {
                 CTRL_ADDR_CALC[N_CORES] = 33;
             endfunction
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     
@@ -394,7 +394,7 @@ TEST(function_processing, parametrized_function) {
 
 
 TEST(function_processing, package_assignment) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
         module test_mod ();
 
 
@@ -403,7 +403,7 @@ TEST(function_processing, package_assignment) {
         endfunction
 
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     

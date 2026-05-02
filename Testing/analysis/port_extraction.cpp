@@ -19,7 +19,7 @@
 #include "frontend/analysis/sv_analyzer.hpp"
 
 TEST(port_extraction, regular_port) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -28,7 +28,7 @@ TEST(port_extraction, regular_port) {
                 .stream_in(buck_merged)
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -44,7 +44,7 @@ TEST(port_extraction, regular_port) {
 }
 
 TEST(port_extraction, concat_port) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -53,7 +53,7 @@ TEST(port_extraction, concat_port) {
                 .stream_in({buck_merged, dab_merged})
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -72,7 +72,7 @@ TEST(port_extraction, concat_port) {
 
 
 TEST(port_extraction, array_port) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -81,7 +81,7 @@ TEST(port_extraction, array_port) {
                 .stream_in(stream[5])
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -99,7 +99,7 @@ TEST(port_extraction, array_port) {
 }
 
 TEST(port_extraction, array_range_port) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -108,7 +108,7 @@ TEST(port_extraction, array_range_port) {
                 .stream_in(S_AXI_AWADDR[3+:1])
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -130,7 +130,7 @@ TEST(port_extraction, array_range_port) {
 
 
 TEST(port_extraction, concat_literal) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -139,7 +139,7 @@ TEST(port_extraction, concat_literal) {
                 .stream_in({1'b0,test})
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -157,7 +157,7 @@ TEST(port_extraction, concat_literal) {
 
 
 TEST(port_extraction, concat_simple_slicing) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -166,7 +166,7 @@ TEST(port_extraction, concat_simple_slicing) {
                 .stream_in({m_wdata[N],m_wstrb[N]})
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -186,7 +186,7 @@ TEST(port_extraction, concat_simple_slicing) {
 }
 
 TEST(port_extraction, concat_range) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -195,7 +195,7 @@ TEST(port_extraction, concat_range) {
                 .stream_in({S_AXI_AWADDR[N+:3],S_AXI_AWPROT[C-:1]})
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -227,7 +227,7 @@ TEST(port_extraction, concat_range) {
 
 
 TEST(port_extraction,range_concat_expression) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
         address_decoder wraddr(
@@ -235,7 +235,7 @@ TEST(port_extraction,range_concat_expression) {
             .clock(clock)
         );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -267,7 +267,7 @@ TEST(port_extraction,range_concat_expression) {
 
 
 TEST(port_extraction, concat_complex_slicing) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -276,7 +276,7 @@ TEST(port_extraction, concat_complex_slicing) {
                 .stream_in({S_AXI_AWADDR[N*ADDR_WIDTH+:ADDR_WIDTH],S_AXI_AWPROT[N*3+:3]})
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -308,7 +308,7 @@ TEST(port_extraction, concat_complex_slicing) {
 
 
 TEST(port_extraction, concat_interface_component) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -317,7 +317,7 @@ TEST(port_extraction, concat_interface_component) {
                 .stream_in({axil.WDATA,axil.WSTRB})
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -334,7 +334,7 @@ TEST(port_extraction, concat_interface_component) {
 
 
 TEST(port_extraction, repetition_port) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -343,7 +343,7 @@ TEST(port_extraction, repetition_port) {
                 .stream_in({5{1'b1}})
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -365,7 +365,7 @@ TEST(port_extraction, repetition_port) {
 
 
 TEST(port_extraction, complex_nested_concat_port) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -374,7 +374,7 @@ TEST(port_extraction, complex_nested_concat_port) {
                 .stream_in({OUTPUT_SIGNED[data_in.dest],{DATA_PATH_WIDTH-1{1'b0}}, test})
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -400,7 +400,7 @@ TEST(port_extraction, complex_nested_concat_port) {
 
 
 TEST(port_extraction, concat_of_repetitions) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axi_stream_combiner #(
@@ -409,7 +409,7 @@ TEST(port_extraction, concat_of_repetitions) {
                 .stream_in({{3{1'b1}},{DATA_PATH_WIDTH-1{1'b0}}})
             );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -438,7 +438,7 @@ TEST(port_extraction, concat_of_repetitions) {
 }
 
 TEST(port_extraction, port_extraction_with_declarations) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 
         module test_mod #()();
 
@@ -454,7 +454,7 @@ TEST(port_extraction, port_extraction_with_declarations) {
         );
 
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -474,7 +474,7 @@ TEST(port_extraction, port_extraction_with_declarations) {
 }
 
 TEST(port_extraction, other_port_concat) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
         axil_crossbar_interface  axi_xbar (
@@ -483,7 +483,7 @@ TEST(port_extraction, other_port_concat) {
             .masters('{timebase_axi, gpio_axi, fcore_axi})
         );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -503,7 +503,7 @@ TEST(port_extraction, other_port_concat) {
 
 
 TEST(port_extraction, replication_with_parameter) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
             axil_crossbar_interface #(
@@ -521,7 +521,7 @@ TEST(port_extraction, replication_with_parameter) {
             );
 
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -542,14 +542,14 @@ TEST(port_extraction, replication_with_parameter) {
 
 
 TEST(port_extraction, interface_component_port ) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_mod #()();
 
         axil_skid_buffer address_read_buffer (
             .in_valid(axil.ARVALID)
         );
         endmodule
-    )");
+    )";
 
     sv_analyzer analyzer;
     

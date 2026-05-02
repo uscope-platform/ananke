@@ -42,11 +42,11 @@ TEST( app_def_generation , generate_app_def) {
     for(auto &p:paths){
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv"){
-                std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
+                auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
 
 
-                for(auto &entity:analyzer.analyze("", test_file)){
+                for(auto &entity:analyzer.analyze("", test_file.view())){
                     d_store->store_hdl_entity(entity);
                 }
             }

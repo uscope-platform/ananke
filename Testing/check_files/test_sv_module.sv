@@ -1,5 +1,4 @@
 `timescale 10 ns / 1 ns
-`include "interfaces.svh"
 
 module Decoder (
     input wire clock,

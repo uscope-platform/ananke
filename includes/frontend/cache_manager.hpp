@@ -34,6 +34,7 @@ public:
     void add_file(std::filesystem::path &file);
     bool is_changed(std::filesystem::path &file);
     bool is_cached(std::filesystem::path &file);
+    void purge();
     ~cache_manager();
 protected:
     std::string get_cache_line(const std::string& s) {return cache[s];};

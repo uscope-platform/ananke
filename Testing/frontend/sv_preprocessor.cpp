@@ -22,11 +22,11 @@
 using namespace preprocessor;
 
 TEST(preprocessor, file_directive) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         module test_module ();
             parameter string FILENAME = `__FILE__;
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -42,12 +42,11 @@ TEST(preprocessor, file_directive) {
 }
 
 TEST(preprocessor, line_directive) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(
-    R"(module test_module ();
+    auto test_pattern = R"(module test_module ();
 
             parameter LINE_NUMBER = `__LINE__;
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -65,12 +64,12 @@ TEST(preprocessor, line_directive) {
 
 
 TEST(preprocessor, empty_define) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  a
         module test_module ();
             parameter TEST_PARAM = `a;
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -86,12 +85,12 @@ TEST(preprocessor, empty_define) {
 
 
 TEST(preprocessor, simple_define) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  a  12
         module test_module ();
             parameter TEST_PARAM = `a;
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -106,12 +105,12 @@ TEST(preprocessor, simple_define) {
 }
 
 TEST(preprocessor, simple_define_with_tabs) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  a	 	 12
         module test_module ();
             parameter TEST_PARAM = `a;
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -127,13 +126,13 @@ TEST(preprocessor, simple_define_with_tabs) {
 
 
 TEST(preprocessor, multiple_defines) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define a 12
         `define b 15
         module test_module ();
             parameter TEST_PARAM = `a + `b;
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -150,13 +149,13 @@ TEST(preprocessor, multiple_defines) {
 
 
 TEST(preprocessor, undef) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  a  12
         `undef   a
         module test_module ();
             parameter TEST_PARAM = `a;
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -166,9 +165,9 @@ TEST(preprocessor, undef) {
 
 
 TEST(preprocessor, line_comment_elimination) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         wire a;// This is a comment needs to go
-    )");
+    )";
 
     sv_preprocessor proc;
     auto res = proc.preprocess(test_pattern);
@@ -179,10 +178,10 @@ TEST(preprocessor, line_comment_elimination) {
 }
 
 TEST(preprocessor, comment_continuation_elimination) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         // This is a comment \
            that should also go away!
-        wire a;)");
+        wire a;)";
 
     sv_preprocessor proc;
     auto res = proc.flatten_source(test_pattern);
@@ -191,12 +190,12 @@ TEST(preprocessor, comment_continuation_elimination) {
 }
 
 TEST(preprocessor, block_comment_elimination) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         /*
            This is a block comment \
            that should also go away!
         */
-        wire a;)");
+        wire a;)";
     sv_preprocessor proc;
     auto res = proc.flatten_source(test_pattern);
     auto check_string ="\n        \n        wire a;";
@@ -205,12 +204,12 @@ TEST(preprocessor, block_comment_elimination) {
 
 
 TEST(preprocessor, string_continuation) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 parameter string ML_STRING = "TEST \
   parameter";
 endmodule
-    )");
+    )";
     sv_preprocessor proc;
     auto res = proc.flatten_source(test_pattern);
     auto check_string = R"(
@@ -223,12 +222,12 @@ endmodule
 
 
 TEST(preprocessor, macro_continuation) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define SUM(a,b) a + \
 b
 endmodule
-    )");
+    )";
     sv_preprocessor proc;
     auto res = proc.flatten_source(test_pattern);
     auto check_string = R"(
@@ -241,13 +240,13 @@ endmodule
 
 
 TEST(preprocessor, multiline_macro_continuation) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define SUM(a,b) a \
 + \
 b
 endmodule
-    )");
+    )";
     sv_preprocessor proc;
     auto res = proc.flatten_source(test_pattern);
     auto check_string = R"(
@@ -259,13 +258,13 @@ endmodule
 }
 
 TEST(preprocessor, ifdef_false) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `ifdef A
     parameter TEST_PARAM = 3;
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -279,14 +278,14 @@ endmodule
 
 
 TEST(preprocessor, ifdef_true) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 `define A
 module test;
 `ifdef A
     parameter TEST_PARAM = 3;
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -303,13 +302,13 @@ endmodule
 
 
 TEST(preprocessor, ifndef_true) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `ifndef A
     parameter TEST_PARAM = 3;
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -324,14 +323,14 @@ endmodule
 
 
 TEST(preprocessor, ifndef_false) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 `define A
 module test;
 `ifndef A
     parameter TEST_PARAM = 3;
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -346,7 +345,7 @@ endmodule
 
 
 TEST(preprocessor, ifdef_else) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `ifdef A
     parameter TEST_PARAM = 3;
@@ -354,7 +353,7 @@ module test;
     parameter TEST_PARAM = 5;
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -371,7 +370,7 @@ endmodule
 
 
 TEST(preprocessor, ifdef_elseif_taken) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 `define B
 module test;
 `ifdef A
@@ -382,7 +381,7 @@ module test;
     parameter TEST_PARAM = 7;
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -398,7 +397,7 @@ endmodule
 
 
 TEST(preprocessor, ifdef_elseif_shadowed) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 `define A
 `define B
 module test;
@@ -410,7 +409,7 @@ module test;
     parameter TEST_PARAM = 7;
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -426,7 +425,7 @@ endmodule
 
 
 TEST(preprocessor, nested_ifdefs_skipped) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define B
 `ifdef A
@@ -435,7 +434,7 @@ module test;
     `endif
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -449,7 +448,7 @@ endmodule
 
 
 TEST(preprocessor, nested_ifdef_else_skipped) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define B
 `define C
@@ -463,7 +462,7 @@ module test;
     `endif
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -477,7 +476,7 @@ endmodule
 
 
 TEST(preprocessor, nested_ifdefs_outer_taken) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define A
 `ifdef A
@@ -486,7 +485,7 @@ module test;
     `endif
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -500,7 +499,7 @@ endmodule
 
 
 TEST(preprocessor, nested_ifdefs_fully_taken) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define A
 `define B
@@ -510,7 +509,7 @@ module test;
     `endif
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -526,7 +525,7 @@ endmodule
 
 
 TEST(preprocessor, nested_ifdefs_fully_taken_repeat) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define A
 `define B
@@ -539,7 +538,7 @@ module test;
     `endif
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -554,7 +553,7 @@ endmodule
 
 
 TEST(preprocessor, nested_elsif_taken) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define C
 `define A
@@ -568,7 +567,7 @@ module test;
     `endif
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -583,7 +582,7 @@ endmodule
 
 
 TEST(preprocessor, nested_else_taken) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define A
 `ifdef A
@@ -596,7 +595,7 @@ module test;
     `endif
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -611,7 +610,7 @@ endmodule
 
 
 TEST(preprocessor, nested_else_taken_with_outer_elseif) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define A
 `define D
@@ -634,7 +633,7 @@ module test;
     `endif
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -649,7 +648,7 @@ endmodule
 
 
 TEST(preprocessor, nested_else_taken_with_outer_else) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 module test;
 `define A
 `define E
@@ -671,7 +670,7 @@ module test;
     `endif
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -686,7 +685,7 @@ endmodule
 
 
 TEST(preprocessor, triple_nested_ifdef) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 `define LEVEL_1
 `define LEVEL_3
 module test;
@@ -707,7 +706,7 @@ module test;
     parameter L1_FAIL = 1;
 `endif
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -726,12 +725,12 @@ endmodule
 
 
 TEST(preprocessor, simple_macro_with_args) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  ADD(a, b)  a+b
         module test_module ();
             parameter TEST_PARAM = `ADD(5,7);
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -747,14 +746,14 @@ TEST(preprocessor, simple_macro_with_args) {
 
 
 TEST(preprocessor, multiline_macro_preprocessing) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 `define SUM(a,b) a \
 + \
 b
 module test_module ();
     parameter TEST_PARAM = `SUM(5,7);
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -770,12 +769,12 @@ endmodule
 
 
 TEST(preprocessor, macro_pattern_in_line_comment) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 // `UNDEFINED macro in a commend
 module test_module ();
     parameter TEST_PARAM = 5;
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -791,14 +790,14 @@ endmodule
 
 
 TEST(preprocessor, macro_pattern_in_block_comment) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
 /*
  `UNDEFINED macro in a commend
 */
 module test_module ();
     parameter TEST_PARAM = 5;
 endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -814,12 +813,12 @@ endmodule
 
 
 TEST(preprocessor, simple_macro_with_default_args) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  ADD(a=5, b=7)  a+b
         module test_module ();
             parameter TEST_PARAM = `ADD(,);
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -834,12 +833,12 @@ TEST(preprocessor, simple_macro_with_default_args) {
 }
 
 TEST(preprocessor, simple_macro_with_default_args_overriden) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  ADD(a=5, b=7)  a+b
         module test_module ();
             parameter TEST_PARAM = `ADD(,3);
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -855,12 +854,12 @@ TEST(preprocessor, simple_macro_with_default_args_overriden) {
 
 
 TEST(preprocessor, multiple_macros) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  ADD(a=5, b=7)  a+b
         module test_module ();
             parameter TEST_PARAM = `ADD(,3) * `ADD(7,);
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -876,12 +875,12 @@ TEST(preprocessor, multiple_macros) {
 
 
 TEST(preprocessor, simple_macro_full_defaults) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  ADD(a=5, b=7)  a+b
         module test_module ();
             parameter TEST_PARAM = `ADD(,);
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -896,12 +895,12 @@ TEST(preprocessor, simple_macro_full_defaults) {
 }
 
 TEST(preprocessor, simple_macro_full_defaults_no_comma) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  ADD(a=5, b=7)  a+b
         module test_module ();
             parameter TEST_PARAM = `ADD();
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -918,12 +917,12 @@ TEST(preprocessor, simple_macro_full_defaults_no_comma) {
 
 
 TEST(preprocessor, simple_macro_empty_without_defaults) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  ADD(a, b)  a 2+b 1
         module test_module ();
             parameter TEST_PARAM = `ADD(,);
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -939,10 +938,10 @@ TEST(preprocessor, simple_macro_empty_without_defaults) {
 
 
 TEST(preprocessor, comma_in_string_argument) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    std::string test_pattern = R"(
         `define DISPLAY_MSG( msg, suffix) initial $display("%s %s", msg, suffix);
         `DISPLAY_MSG("Hello, World", "!!!")
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -957,10 +956,10 @@ TEST(preprocessor, comma_in_string_argument) {
 
 
 TEST(preprocessor, parenthesis_in_string_argument) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define DISPLAY_MSG( msg, suffix) initial $display("%s %s", msg, suffix);
         `DISPLAY_MSG("Hello( World", "!!!")
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -974,14 +973,14 @@ TEST(preprocessor, parenthesis_in_string_argument) {
 
 
 TEST(preprocessor, nested_macros) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define A 12
         `define B 57
         `define  ADD(a=5, b=7)  a+b
         module test_module ();
             parameter TEST_PARAM = `ADD(`A,`B);
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -998,13 +997,13 @@ TEST(preprocessor, nested_macros) {
 
 
 TEST(preprocessor, nested_macros_with_arguments) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define  MUL(c, d)  c*d
         `define  ADD(a=5, b=7)  `MUL(a, b)+`MUL(a, b)
         module test_module ();
             parameter TEST_PARAM = `ADD(12,32);
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -1020,12 +1019,12 @@ TEST(preprocessor, nested_macros_with_arguments) {
 
 
 TEST(preprocessor, self_nested_macro) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define TOP(a,b) a + b
         module test_module ();
             parameter TEST_PARAM = `TOP( `TOP(b,1), `TOP(42,a));
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -1040,12 +1039,12 @@ TEST(preprocessor, self_nested_macro) {
 }
 
 TEST(preprocessor, escaped_quotes_in_macro_args) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `define DISPLAY_VAL(prefix, msg) initial $display("%s: %s", prefix, msg);
         module test_module ();
             `DISPLAY_VAL("DEBUG", "Value is \"hidden in quotes")
         endmodule
-    )");
+    )";
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
@@ -1063,12 +1062,12 @@ TEST(preprocessor, escaped_quotes_in_macro_args) {
 
 
 TEST(preprocessor, include_absolute_path) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `include "/tmp/include_test.svh"
         module test_module ();
             parameter TEST_PARAM = `A + `B;
         endmodule
-    )");
+    )";
 
     std::ofstream ofs("/tmp/include_test.svh");
 
@@ -1092,12 +1091,12 @@ TEST(preprocessor, include_absolute_path) {
 
 
 TEST(preprocessor, include_relative_path) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `include "include_test.svh"
         module test_module ();
             parameter TEST_PARAM = `A + `B;
         endmodule
-    )");
+    )";
 
     std::ofstream ofs("/tmp/include_test.svh");
 
@@ -1121,12 +1120,12 @@ TEST(preprocessor, include_relative_path) {
 
 
 TEST(preprocessor, include_with_comment) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `include "include_test.svh" // COMMENT
         module test_module ();
             parameter TEST_PARAM = `A + `B;
         endmodule
-    )");
+    )";
 
     std::ofstream ofs("/tmp/include_test.svh");
 
@@ -1150,12 +1149,12 @@ TEST(preprocessor, include_with_comment) {
 
 
 TEST(preprocessor, absolute_include) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::istringstream>(R"(
+    auto test_pattern = R"(
         `include <include_test.svh>
         module test_module ();
             parameter TEST_PARAM = `A + `B;
         endmodule
-    )");
+    )";
 
     std::ofstream ofs("/tmp/include_test.svh");
 

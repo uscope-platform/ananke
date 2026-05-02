@@ -83,9 +83,10 @@ namespace preprocessor {
         bool in_string_literal = false;
         for (; args_last< in.size(); args_last++) {
             if (in[args_last]=='"') {
-                if (in[args_last] == 0 || in[args_last-1] != '\\') {
+                if (args_last == 0 || in[args_last-1] != '\\') {
                     in_string_literal = !in_string_literal;
                 }
+
             }
             if (in[args_last] == '(' && !in_string_literal) nesting_level++;
             if (in[args_last] == ')'&& !in_string_literal) {
@@ -103,7 +104,7 @@ namespace preprocessor {
         for (int i = 0; i< raw_arguments.size(); i++) {
             const auto c = raw_arguments[i];
             if (c=='"') {
-                if (c == 0 || raw_arguments[i-1] != '\\') {
+                if (i == 0 || raw_arguments[i-1] != '\\') {
                     in_string_literal = !in_string_literal;
                 }
             }

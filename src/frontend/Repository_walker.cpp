@@ -230,8 +230,8 @@ std::vector<HDL_Resource> analyze_verilog(const std::filesystem::path &file) {
     spdlog::trace("PARSING: {}", file.c_str());
     try {
         sv_analyzer file_processor;
-        std::unique_ptr<std::istream> f = std::make_unique<std::ifstream>(file);
-        return file_processor.analyze(file, f);
+        mm_file f(file);
+        return file_processor.analyze(file, f.view());
     } catch (std::runtime_error &err) {
         spdlog::error(err.what());
         return {};

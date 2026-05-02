@@ -58,14 +58,14 @@ void new_app_generator::write_depfile() {
 }
 
 void new_app_generator::write_synth_hdl() {
-    std::string file_content = "`timescale 10ns / 1ns\n`include \"interfaces.svh\"\n\nmodule " + name + " (\n);\n\nendmodule";
+    std::string file_content = "`timescale 10ns / 1ns\n\nmodule " + name + " (\n);\n\nendmodule";
 
     std::ofstream stream(name+"/rtl/"+name+"."+lang);
     stream<<file_content;
 }
 
 void new_app_generator::write_sim_hdl() {
-    std::string file_content = "`timescale 10ns / 1ns\n`include \"interfaces.svh\"\n\nmodule " + name + "_tb ();\n\n\nendmodule";
+    std::string file_content = "`timescale 10ns / 1ns\n\nmodule " + name + "_tb ();\n\n\nendmodule";
 
     std::ofstream stream(name+"/tb/"+name+"_tb."+lang);
     stream<<file_content;

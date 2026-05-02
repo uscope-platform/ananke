@@ -90,15 +90,16 @@ TEST_F(cache_manager_Test , file_hashing) {
 }
 
 TEST_F(cache_manager_Test , file_is_cached) {
+    auto file_path = "check_files/test_package.sv";
     cache_manager cm(s_store, d_store, false);
-    std::filesystem::path p("check_files/test_package.sv");
+    std::filesystem::path p(file_path);
     cm.add_file(p);
 
     bool is_cached = cm.is_cached(p);
 
     ASSERT_TRUE(is_cached);
-
-    std::filesystem::path p2("check_files/test_sv_module.sv");
+    cm.purge();
+    std::filesystem::path p2(file_path);
     is_cached = cm.is_cached(p2);
     ASSERT_FALSE(is_cached);
 }

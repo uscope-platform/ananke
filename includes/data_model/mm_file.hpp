@@ -17,11 +17,25 @@
 #ifndef ANANKE_MM_FILE_HPP
 #define ANANKE_MM_FILE_HPP
 
+#include <string>
+#include <stdexcept>
+#include <string_view>
+
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 class mm_file {
-
+public:
+    explicit mm_file(const std::string &file);
+    ~mm_file();
+    std::string_view view();
+private:
+    int fd = -1;
+    size_t file_size = 0;
+    void* addr = MAP_FAILED;
 };
-
 
 
 #endif //ANANKE_MM_FILE_HPP

@@ -399,7 +399,7 @@ TEST(Initialization_list, get_values_1d_mixed_packed_unpacked) {
 
 
 TEST(Initialization_list, get_array_dependencies) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
         module dependency #(
             parameter SS_POLARITY_DEFAULT = 0
         )();
@@ -411,7 +411,7 @@ TEST(Initialization_list, get_array_dependencies) {
 
         endmodule
 
-    )");
+    )";
 
     sv_analyzer analyzer;
 
@@ -431,7 +431,7 @@ TEST(Initialization_list, get_array_dependencies) {
 }
 
 TEST(Initialization_list, concatenation_of_packed_arrays) {
-    std::unique_ptr<std::istream> test_pattern = std::make_unique<std::stringstream>(R"(
+    auto test_pattern = R"(
         module dependency #(
             parameter SS_POLARITY_DEFAULT = 0,
             N_CHANNELS=3
@@ -450,7 +450,7 @@ TEST(Initialization_list, concatenation_of_packed_arrays) {
 
         endmodule
 
-    )");
+    )";
 
 
     sv_analyzer analyzer;
