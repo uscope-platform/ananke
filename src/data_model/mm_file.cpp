@@ -19,24 +19,31 @@
 
 mm_file::mm_file(const std::string &file) {
     fd = open(file.c_str(), O_RDONLY);
-    if (fd == -1) throw std::runtime_error("Match error: open");
+    if (fd == -1) {
+        throw std::runtime_error("mmaped IO error: open");
+    }
 
     struct stat sb;
     if (fstat(fd, &sb) == -1) {
         close(fd);
-        throw std::runtime_error("Match error: fstat");
+        throw std::runtime_error("mmaped IO error: fstat");
     }
     file_size = sb.st_size;
 
+    if (file_size == 0) {
+        addr = nullptr;
+        return;
+    }
     addr = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (addr == MAP_FAILED) {
         close(fd);
-        throw std::runtime_error("Match error: mmap");
+        printf("mmap failed: %s\n", strerror(errno));
+        throw std::runtime_error("mmaped IO error: mmap");
     }
 }
 
 mm_file::~mm_file() {
-    if (addr != MAP_FAILED) munmap(addr, file_size);
+    if (addr != nullptr && addr != MAP_FAILED) munmap(addr, file_size);
     if (fd != -1) close(fd);
 }
 

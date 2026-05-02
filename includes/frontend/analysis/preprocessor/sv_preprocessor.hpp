@@ -41,7 +41,7 @@ namespace preprocessor {
         std::vector<std::string> get_documentation_comments() {return documentation_comments;}
     private:
         typedef std::unordered_map<std::string, std::variant<std::string, function_macro>> definitions_map;
-        std::string parse_include_path(const std::string_view &v);
+        std::optional<std::string> parse_include_path(const std::string_view &v);
         std::string get_define_replacement(const std::string_view &v);
         void parse_definition(const std::string_view &sv, int prefix_length);
         static std::string_view parse_one_arg_directive(const std::string_view &sv, int prefix_length);

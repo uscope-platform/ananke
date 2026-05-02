@@ -18,6 +18,8 @@
 #define ANANKE_MM_FILE_HPP
 
 #include <string>
+#include <errno.h>
+#include <cstring>
 #include <stdexcept>
 #include <string_view>
 

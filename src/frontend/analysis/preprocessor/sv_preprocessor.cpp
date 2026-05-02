@@ -16,6 +16,8 @@
 
 #include "frontend/analysis/preprocessor/sv_preprocessor.hpp"
 
+#include <spdlog/spdlog.h>
+
 
 namespace preprocessor {
 
@@ -52,13 +54,15 @@ namespace preprocessor {
                 parse_definition(trimmed_line, 7);
             } else if (trimmed_line.starts_with("`include")&& c_solver.is_active()) {
                 auto included_file = parse_include_path(trimmed_line);
-                auto current_line =line_number;
-                auto current_path = path;
-                path = included_file;
-                mm_file file(path);
-                preprocess(file.view());
-                line_number = current_line;
-                path = current_path;
+                if (included_file.has_value()) {
+                    auto current_line =line_number;
+                    auto current_path = path;
+                    path = included_file.value();
+                    mm_file file(path);
+                    preprocess(file.view());
+                    line_number = current_line;
+                    path = current_path;
+                }
             } else if (trimmed_line.starts_with("`ifdef")) {
                 auto condition = parse_one_arg_directive(trimmed_line, 6);
                 c_solver.start_loop(definitions.contains(std::string(condition)));
@@ -84,12 +88,12 @@ namespace preprocessor {
             line_number++;
         }
         auto retval = out.str();
-        retval.pop_back();
+        if (!retval.empty()) retval.pop_back();
         return retval;
     }
 
 
-    std::string sv_preprocessor::parse_include_path(const std::string_view &line) {
+    std::optional<std::string> sv_preprocessor::parse_include_path(const std::string_view &line) {
         auto start_identifier = line.find_first_of("\"<");
         std::string file_path;
         if (start_identifier == std::string_view::npos) {
@@ -106,7 +110,8 @@ namespace preprocessor {
                 if (std::filesystem::exists(tmp_path)) full_path = tmp_path;
             }
             if (full_path.empty()) {
-                throw std::runtime_error("include file not found: " + std::string(name));
+                spdlog::warn("include file not found: {}", std::string(name));
+                return {};
             }
             return full_path;
         } else {
