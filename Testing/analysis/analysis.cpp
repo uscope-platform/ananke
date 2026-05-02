@@ -25,10 +25,10 @@
 
 TEST( analysis_test , package) {
     std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>("check_files/test_package.sv");
-    sv_analyzer analyzer("", test_file);
+    sv_analyzer analyzer;
 
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("", test_file)[0];
 
     Parameters_map parameters = resource.get_parameters();
 
@@ -102,8 +102,8 @@ TEST( analysis_test , package) {
 
 TEST( analysis_test , sv_module) {
     std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>("check_files/test_sv_module.sv");
-    sv_analyzer analyzer("check_files/test_sv_module.sv", test_file);
-    auto res = analyzer.analyze();
+    sv_analyzer analyzer;
+    auto res = analyzer.analyze("check_files/test_sv_module.sv",test_file);
     auto resource = res[0];
 
     HDL_instance d3("SC", "SyndromeCalculator", module);
@@ -197,9 +197,9 @@ TEST(analysis_test, port_concat_assignment) {
     endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("",test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     auto dep = resource.get_dependencies()[0];
@@ -225,9 +225,9 @@ TEST(analysis_test, interfaces_array) {
     endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     auto dep = resource.get_dependencies()[0];
@@ -260,9 +260,9 @@ TEST(analysis_test, parameter_array_assignment) {
     endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     auto param = resource.get_dependencies()[0].get_parameters().get("TEST_PARAM");

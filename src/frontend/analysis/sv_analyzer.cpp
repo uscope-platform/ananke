@@ -19,29 +19,26 @@
 
 #include "frontend/analysis/preprocessor/sv_preprocessor.hpp"
 
-sv_analyzer::sv_analyzer(const std::string &p, std::unique_ptr<std::istream> &iss) : sv_modules_explorer(p) {
-    path = p;
-    input = std::move(iss);
-}
 
-void sv_analyzer::preprocess() {
+std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const std::string &path, std::unique_ptr<std::istream> &input) {
 
     preprocessor::sv_preprocessor preproc;
     preproc.set_path(path);
-    processed_content = preproc.preprocess(input);
-    documentation_comments = preproc.get_documentation_comments();
+    auto processed_content = preproc.preprocess(input);
+    auto documentation_comments = preproc.get_documentation_comments();
+    return {processed_content, documentation_comments};
 }
 
 
-std::vector<HDL_Resource> sv_analyzer::analyze() {
-    preprocess();
-    process_hdl();
+std::vector<HDL_Resource> sv_analyzer::analyze(const std::string &path, std::unique_ptr<std::istream> &input) {
+    auto [preprocessed_content, documentation_comments] = preprocess(path, input);
+    auto entities = process_hdl(path, preprocessed_content);
 
-    auto entities = sv_modules_explorer.get_entities();
 
     documentation_analyzer doc(documentation_comments);
     doc.set_source_path(path);
 
+    Parameters_map parameters;
     doc.process_documentation(parameters);
 
     auto modules_doc = doc.get_modules_documentation();
@@ -79,9 +76,8 @@ std::vector<HDL_Resource> sv_analyzer::analyze() {
 }
 
 
-void sv_analyzer::process_hdl() {
-
-    std::istringstream istream(processed_content);
+std::vector<HDL_Resource> sv_analyzer::process_hdl(const std::string &path, const std::string &preprocessed_content) {
+    std::istringstream istream(preprocessed_content);
 
 
     antlr4::ANTLRInputStream antlr_istream(istream);
@@ -100,8 +96,10 @@ void sv_analyzer::process_hdl() {
 
     //parser.getInterpreter<antlr4::atn::ParserATNSimulator>()->setPredictionMode(antlr4::atn::PredictionMode::SLL);
     antlr4::tree::ParseTree *Tree = parser.source_text();
-    antlr4::tree::ParseTreeWalker::DEFAULT.walk(&sv_modules_explorer, Tree);
 
+    sv_visitor sv_modules_explorer(path);
+    antlr4::tree::ParseTreeWalker::DEFAULT.walk(&sv_modules_explorer, Tree);
+    return sv_modules_explorer.get_entities();
 }
 
 

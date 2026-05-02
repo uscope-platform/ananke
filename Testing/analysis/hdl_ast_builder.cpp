@@ -41,10 +41,10 @@ TEST( hdl_ast_builder, pid_ast_build) {
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv"){
                 std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
-                sv_analyzer analyzer("", test_file);
+                sv_analyzer analyzer;
 
 
-                for(auto &entity:analyzer.analyze()){
+                for(auto &entity:analyzer.analyze("", test_file)){
                     d_store->store_hdl_entity(entity);
                 }
             }
@@ -87,9 +87,9 @@ TEST( hdl_ast_builder, spi_ast_build) {
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv"){
                 std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
-                sv_analyzer analyzer("", test_file);
+                sv_analyzer analyzer;
 
-                for(auto &entity:analyzer.analyze()){
+                for(auto &entity:analyzer.analyze("", test_file)){
                     d_store->store_hdl_entity(entity);
                 }
             }
@@ -133,10 +133,10 @@ TEST( hdl_ast_builder, pwm_ast_build) {
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv" || f.path().extension() == ".svh"){
                 std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
-                sv_analyzer analyzer("", test_file);
+                sv_analyzer analyzer;
                 
 
-                for(auto &entity:analyzer.analyze()){
+                for(auto &entity:analyzer.analyze("", test_file)){
                     d_store->store_hdl_entity(entity);
                 }
             }
@@ -182,9 +182,9 @@ TEST( hdl_ast_builder, adc_ast_build) {
             if(f.path().extension() == ".v" || f.path().extension() == ".sv" || f.path().extension() == ".svh"){
 
                 std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
-                sv_analyzer analyzer("", test_file);
+                sv_analyzer analyzer;
 
-                for(auto &entity:analyzer.analyze()){
+                for(auto &entity:analyzer.analyze("", test_file)){
                     d_store->store_hdl_entity(entity);
                 }
             }
@@ -226,10 +226,10 @@ TEST( hdl_ast_builder, interface_parameter) {
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv" || f.path().extension() == ".svh"){
                 std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
-                sv_analyzer analyzer("", test_file);
+                sv_analyzer analyzer;
                 
 
-                for(auto &entity:analyzer.analyze()){
+                for(auto &entity:analyzer.analyze("", test_file)){
                     d_store->store_hdl_entity(entity);
                 }
             }
@@ -245,9 +245,9 @@ TEST( hdl_ast_builder, interface_parameter) {
         endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("",test_pattern)[0];
     d_store->store_hdl_entity(resource);
 
     HDL_ast_builder_v2 b(s_store, d_store, Depfile());
@@ -293,9 +293,9 @@ TEST( hdl_ast_builder, package_dependency) {
     )");
 
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto entities = analyzer.analyze();
+    auto entities = analyzer.analyze("", test_pattern);
     entities[0].set_path("/tmp/dep.sv");
     for(auto &entity: entities){
         d_store->store_hdl_entity(entity);
@@ -330,9 +330,9 @@ TEST( hdl_ast_builder, memory_dependency) {
     )");
 
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto entities = analyzer.analyze();
+    auto entities = analyzer.analyze("", test_pattern);
     for(auto &entity: entities){
         d_store->store_hdl_entity(entity);
     }

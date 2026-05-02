@@ -32,9 +32,9 @@ TEST(function_processing, simple_function_scalar) {
         endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("",test_pattern)[0];
     auto functions = resource.get_functions();
 
     EXPECT_EQ(functions.size(), 1);
@@ -71,9 +71,9 @@ TEST(function_processing, simple_function_array) {
         endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("", test_pattern)[0];
     auto functions = resource.get_functions();
 
     EXPECT_EQ(functions.size(), 1);
@@ -129,9 +129,9 @@ TEST(function_processing, simple_loop_function) {
         endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto functions = resource.get_functions();
 
@@ -196,9 +196,9 @@ TEST(function_processing, parametric_loop_function) {
         endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("",test_pattern)[0];
 
     auto functions = resource.get_functions();
 
@@ -267,9 +267,9 @@ TEST(function_processing, complex_loop_function) {
         endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("",test_pattern)[0];
 
     auto functions = resource.get_functions();
 
@@ -350,9 +350,9 @@ TEST(function_processing, parametrized_function) {
         endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("",test_pattern)[0];
 
     auto functions = resource.get_functions();
 
@@ -405,9 +405,9 @@ TEST(function_processing, package_assignment) {
         endmodule
     )");
 
-    sv_analyzer analyzer("", test_pattern);
+    sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze()[0];
+    auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto functions = resource.get_functions();
 

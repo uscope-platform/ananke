@@ -29,6 +29,7 @@ target_sources(ananke_lib
     data_model/HDL/HDL_Resource.cpp
     data_model/HDL/HDL_instance.cpp
     data_model/HDL/HDL_instance_AST.cpp
+    data_model/mm_file.cpp
     data_model/HDL/factories/HDL_instances_factory.cpp
     data_model/HDL/factories/HDL_modules_factory.cpp
     data_model/HDL/factories/HDL_interfaces_factory.cpp

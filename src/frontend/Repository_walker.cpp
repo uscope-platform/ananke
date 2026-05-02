@@ -228,10 +228,10 @@ bool Repository_walker::file_is_data(const std::filesystem::path &file) {
 /// \param file Target file
 std::vector<HDL_Resource> analyze_verilog(const std::filesystem::path &file) {
     spdlog::trace("PARSING: {}", file.c_str());
-    std::unique_ptr<std::istream> f = std::make_unique<std::ifstream>(file);
-    sv_analyzer file_processor(file, f);
     try {
-        return file_processor.analyze();
+        sv_analyzer file_processor;
+        std::unique_ptr<std::istream> f = std::make_unique<std::ifstream>(file);
+        return file_processor.analyze(file, f);
     } catch (std::runtime_error &err) {
         spdlog::error(err.what());
         return {};

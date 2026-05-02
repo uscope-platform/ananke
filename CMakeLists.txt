@@ -30,6 +30,21 @@ else()
     add_definitions(-DSPECS_FOLDER="/usr/local/etc/ananke/specs")
 endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
+
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+
+if(ENABLE_ASAN)
+    message(STATUS "Enabling AddressSanitizer")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+elseif(ENABLE_TSAN)
+    message(STATUS "Enabling ThreadSanitizer")
+    # TSan requires at least -O1 optimization to be effective
+    add_compile_options(-fsanitize=thread -g -O1 -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=thread)
+endif()
+
 add_subdirectory(includes)
 add_subdirectory(src)
 add_subdirectory(Testing)

@@ -42,9 +42,9 @@ TEST( periph_def_generation , generate_periph_def) {
         for(auto &f:std::filesystem::directory_iterator(prefix + p)){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv"){
                 std::unique_ptr<std::istream> test_file = std::make_unique<std::ifstream>(f.path());
-                sv_analyzer analyzer(f.path(), test_file);
+                sv_analyzer analyzer;
 
-                for(auto &entity:analyzer.analyze()){
+                for(auto &entity:analyzer.analyze(f.path(), test_file)){
                     d_store->store_hdl_entity(entity);
                 }
             }

@@ -36,21 +36,13 @@
 
 class sv_analyzer {
 public:
-    sv_analyzer(const std::string &path, std::unique_ptr<std::istream> &iss);
-    void preprocess();
-    std::vector<HDL_Resource> analyze();
+    std::pair<std::string, std::vector<std::string>> preprocess(const std::string &path, std::unique_ptr<std::istream> &input);
+    std::vector<HDL_Resource> analyze(const std::string &path,std::unique_ptr<std::istream> &iss);
 
 private:
 
-    void process_hdl();
+    std::vector<HDL_Resource> process_hdl(const std::string &path, const std::string &preprocessed_content);
 
-    Parameters_map parameters;
-    std::string raw_content;
-    std::unique_ptr<std::istream> input;
-    std::string path;
-    std::string processed_content;
-    std::vector<std::string> documentation_comments;
-    sv_visitor sv_modules_explorer;
 };
 
 

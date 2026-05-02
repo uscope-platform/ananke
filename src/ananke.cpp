@@ -89,8 +89,8 @@ void ananke::directed_parsing() const {
             }
             std::unique_ptr<std::istream> is = std::make_unique<std::ifstream>(target);
             try {
-                sv_analyzer analyzer(target, is);
-                auto resources = analyzer.analyze();
+                sv_analyzer analyzer;
+                auto resources = analyzer.analyze(target, is);
             } catch (std::runtime_error &err) {
                 std::cout << err.what();
                 exit(51);
