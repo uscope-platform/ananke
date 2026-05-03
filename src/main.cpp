@@ -53,6 +53,7 @@ int main(int argc, char *argv[]){
     std::optional<int> return_code = engine.clear_cache();
     if (return_code.has_value()) return return_code.value();
     engine.set_settings();
+    engine.get_settings();
     return_code = engine.generate_new_app();
     if (return_code.has_value()) return return_code.value();
     return_code = engine.directed_parsing();

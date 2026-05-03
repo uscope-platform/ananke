@@ -39,13 +39,8 @@ void new_app_generator::write_depfile() {
     depfile["general"]["sim_modules"] = std::vector<std::string>();
     depfile["general"]["sim_tl"] = name + "_tb";
 
-    depfile["general"]["include_paths"] = {"Components/Common"};
+    depfile["general"]["include_paths"] = {"/public/Components/Common"};
     std::vector<nlohmann::json> scripts;
-    nlohmann::json sc;
-    sc["name"] = "set_properties.tcl";
-    sc["type"] = "tcl";
-    sc["arguments"] = std::vector<std::string>();
-    scripts.push_back(sc);
     depfile["scripts"] = scripts;
 
     depfile["excluded_modules"] = std::vector<std::string>();

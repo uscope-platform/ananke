@@ -27,6 +27,7 @@ settings_store::settings_store(bool e, std::string cache_dir_path) {
 
 void settings_store::set_setting(const std::string& name, const std::string& value) {
     settings_backend[name] = value;
+    flush();
 }
 
 std::string settings_store::get_setting(const std::string& setting) {

@@ -78,7 +78,6 @@ public:
     static void clear_cache(const std::string &cache_dir_path) {
         std::filesystem::remove_all( cache_dir_path + "/unified_cache");
     }
-
     ~data_store();
 private:
     void clean_up_caches();

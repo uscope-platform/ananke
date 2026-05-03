@@ -29,9 +29,7 @@ ananke::ananke(const CLI_opt &options) {
     }
 
     s_store = std::make_shared<settings_store>(false, opts.cache_dir);
-    if(!opts.get_setting.empty()){
-        spdlog::info(s_store->get_setting(opts.get_setting));
-    }
+
     t1 = std::chrono::high_resolution_clock::now();
 }
 
@@ -55,11 +53,15 @@ std::optional<int> ananke::clear_cache() const {
 
 void ananke::set_settings() const {
     if(!opts.set_setting.empty()) {
-        std::string line;
-        std::istringstream ss(opts.set_setting);
-        std::vector<std::string> setting;
-        while(std::getline(ss,line,'=')) setting.push_back(line);
-        s_store->set_setting(setting[0], setting[1]);
+        auto name = opts.set_setting.substr(0, opts.set_setting.find_first_of('='));
+        auto value = opts.set_setting.substr(opts.set_setting.find_first_of('=')+1);
+        s_store->set_setting( name, value);
+    }
+}
+
+void ananke::get_settings() const {
+    if(!opts.get_setting.empty()){
+        std::cout << s_store->get_setting(opts.get_setting) << std::endl;
     }
 }
 
@@ -67,11 +69,9 @@ std::optional<int> ananke::generate_new_app() const {
     if(!opts.new_app_name.empty()){
         std::string lang = "sv";
         if(!opts.new_app_lang.empty()){
-            if(opts.new_app_lang == "vlog")
-                lang = "v";
-            else if(opts.new_app_lang == "sv"|| opts.new_app_lang == "vhdl")
+            if(opts.new_app_lang == "sv"|| opts.new_app_lang == "vhdl") {
                 lang = opts.new_app_lang;
-            else{
+            } else {
                 spdlog::error("Unknown language option: ", opts.new_app_lang);
                 return 1;
             }
