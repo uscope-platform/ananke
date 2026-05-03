@@ -27,9 +27,18 @@ TEST( end_to_end , clear_cache) {
     opts.cache_dir = "/tmp/ananke_test_cache";
     std::filesystem::create_directory(opts.cache_dir);
     std::ofstream ofs(opts.cache_dir + "/settings");
-    ofs << "test";
+    ofs << "cache_dump,/home/vivado/hdl/public/Applications/uscope_testing/tb/uscope_testing_tb.sv>32:c5:3b:35:ee:4b:fb:aa:d9:b1:5c:a2:94:a4:2d:e4:ee:26:aa:ff:e0:45:9e:f3:63:86:42:d4:f2:4c:6e:03;" << std::endl;
+    ofs << "hdl_store,/home/vivado/hdl" << std::endl;
     ofs.flush();
     ofs = std::ofstream(opts.cache_dir + "/unified_cache");
+    ofs << "test2";
+    ofs.flush();
+
     ananke uut(opts);
-    int i = 0;
+    auto rc = uut.clear_cache();
+    EXPECT_EQ(rc, 0);
+    std::ifstream ifs(opts.cache_dir + "/settings");
+    std::string settings;
+    ifs >> settings;
+    EXPECT_EQ(settings, "hdl_store,/home/vivado/hdl");
 }
