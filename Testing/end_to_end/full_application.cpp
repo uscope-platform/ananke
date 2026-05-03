@@ -150,3 +150,55 @@ TEST( end_to_end , new_sv_application) {
 
     std::filesystem::remove_all(app_dir);
 }
+
+TEST( end_to_end , directed_parsing) {
+
+
+    ananke::CLI_opt opts;
+    opts.no_cache = true;
+    opts.parse_targets = {"check_files/test_data/Components/controls/PID/rtl/PID.sv"};
+
+
+    ananke uut(opts);
+    auto rc = uut.directed_parsing();
+
+    EXPECT_EQ(rc, 0);
+
+}
+
+
+TEST( end_to_end , directed_parsing_file_not_found) {
+
+
+    ananke::CLI_opt opts;
+    opts.no_cache = true;
+    opts.parse_targets = {"check_files/test_data/Components/controls/PID/rtl/PID.sv.error"};
+
+
+    ananke uut(opts);
+    auto rc = uut.directed_parsing();
+
+    EXPECT_EQ(rc, 50);
+
+}
+
+
+TEST( end_to_end , directed_parsing_preprocessor_error) {
+
+
+    auto test_file = "/tmp/test_preproc.sv";
+    ananke::CLI_opt opts;
+    opts.no_cache = true;
+    opts.parse_targets = {test_file};
+
+    std::ofstream ofs(test_file);
+
+    ofs << "`define ADD(a, b) a+b\nmodule test_module();\n integer a = `ADD();\nendmodule\n";
+    ofs.close();
+
+    ananke uut(opts);
+    auto rc = uut.directed_parsing();
+
+    EXPECT_EQ(rc, 51);
+    std::filesystem::remove(test_file);
+}
