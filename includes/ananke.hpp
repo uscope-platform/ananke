@@ -74,11 +74,11 @@ class ananke {
 
     explicit ananke(const CLI_opt &options);
     ~ananke();
-    void clear_cache() const;
+    [[nodiscard]] std::optional<int> clear_cache() const;
     void set_settings() const;
-    void generate_new_app() const;
-    void directed_parsing() const;
-    void load_data_cache();
+    [[nodiscard]] std::optional<int> generate_new_app() const;
+    [[nodiscard]] std::optional<int> directed_parsing() const;
+    std::optional<int> load_data_cache();
     void build_flow();
 private:
     std::shared_ptr<settings_store>  s_store;

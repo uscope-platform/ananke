@@ -50,11 +50,13 @@ int main(int argc, char *argv[]){
     CLI11_PARSE(app, argc, argv);
 
     ananke engine(opts);
-
-    engine.clear_cache();
+    std::optional<int> return_code = engine.clear_cache();
+    if (return_code.has_value()) return return_code.value();
     engine.set_settings();
-    engine.generate_new_app();
-    engine.directed_parsing();
+    return_code = engine.generate_new_app();
+    if (return_code.has_value()) return return_code.value();
+    return_code = engine.directed_parsing();
+    if (return_code.has_value()) return return_code.value();
     engine.load_data_cache();
     engine.build_flow();
 

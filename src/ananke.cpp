@@ -43,13 +43,14 @@ ananke::~ananke() {
     }
 }
 
-void ananke::clear_cache() const {
+std::optional<int> ananke::clear_cache() const {
     if(opts.clear_cache) {
         data_store::clear_cache(opts.cache_dir);
         s_store->remove_setting("cache_dump");
         s_store->flush();
-        exit(0);
+        return 0;
     }
+    return std::nullopt;
 }
 
 void ananke::set_settings() const {
@@ -62,7 +63,7 @@ void ananke::set_settings() const {
     }
 }
 
-void ananke::generate_new_app() const {
+std::optional<int> ananke::generate_new_app() const {
     if(!opts.new_app_name.empty()){
         std::string lang = "sv";
         if(!opts.new_app_lang.empty()){
@@ -72,20 +73,21 @@ void ananke::generate_new_app() const {
                 lang = opts.new_app_lang;
             else{
                 spdlog::error("Unknown language option: ", opts.new_app_lang);
-                exit(1);
+                return 1;
             }
         }
         new_app_generator gen(opts.new_app_name, lang);
-        exit(0);
+        return 0;
     }
+    return std::nullopt;
 }
 
-void ananke::directed_parsing() const {
+std::optional<int> ananke::directed_parsing() const {
     if (!opts.parse_targets.empty()) {
         for (auto &target :opts.parse_targets) {
             if (!std::filesystem::exists(target)) {
                 std::cout << "Target: " << target << " not found" << std::endl;
-                exit(50);
+                return 50;
             }
             try {
                 sv_analyzer analyzer;
@@ -93,15 +95,16 @@ void ananke::directed_parsing() const {
                 auto resources = analyzer.analyze(target, file.view());
             } catch (std::runtime_error &err) {
                 std::cout << err.what();
-                exit(51);
+                return 51;
             }
 
         }
-        exit(0);
+        return 0;
     }
+    return std::nullopt;
 }
 
-void ananke::load_data_cache() {
+std::optional<int> ananke::load_data_cache() {
 
     d_store = std::make_shared<data_store>(opts.no_cache, opts.cache_dir);
 
@@ -109,9 +112,9 @@ void ananke::load_data_cache() {
     Repository_walker walker(s_store, d_store, opts.no_cache, s_store->get_setting_list("excluded_paths"));
 
     if(opts.refresh_cache) {
-        exit(0);
+       return 0;
     }
-
+    return std::nullopt;
 }
 
 void ananke::build_flow() {
