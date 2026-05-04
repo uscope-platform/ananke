@@ -200,5 +200,118 @@ TEST( end_to_end , directed_parsing_preprocessor_error) {
     auto rc = uut.directed_parsing();
 
     EXPECT_EQ(rc, 51);
-    std::filesystem::remove(test_file);
+    std::filesystem::remove_all(test_file);
+}
+
+
+
+TEST( end_to_end , sim_script_generation) {
+
+    ananke::CLI_opt opts;
+    opts.no_cache = true;
+    opts.generate_xilinx = true;
+    opts.generate_sim_script = true;
+
+    opts.cache_dir = "/tmp/ananke_test_cache";
+    auto test_dir = opts.cache_dir + "/PID";
+
+
+    std::filesystem::create_directory(opts.cache_dir);
+    std::ofstream ofs(opts.cache_dir + "/settings");
+    ofs << "hdl_store,/tmp/ananke_test_cache" << std::endl;
+    ofs.flush();
+    auto wd = std::filesystem::current_path();
+    const auto copyOptions = std::filesystem::copy_options::recursive |
+                             std::filesystem::copy_options::overwrite_existing;
+
+    auto components = wd / "check_files/test_data/Components";
+    std::filesystem::copy(components/"controls/PID", opts.cache_dir +"/PID", copyOptions);
+    std::filesystem::remove_all(opts.cache_dir +"/PID/sim.tcl");
+    std::filesystem::remove_all(opts.cache_dir +"/PID/sim.sh");
+    EXPECT_FALSE(std::filesystem::exists(opts.cache_dir +"/PID/sim.tcl"));
+    EXPECT_FALSE(std::filesystem::exists(opts.cache_dir +"/PID/sim.sh"));
+    std::filesystem::copy(components/"Common", opts.cache_dir +"/Common", copyOptions);
+    std::filesystem::copy(components/"system/axi_lite/simple_register_cu",  opts.cache_dir +"/simple_register_cu", copyOptions);
+    std::filesystem::copy(components/"system/axi_lite/skid_buffer", opts.cache_dir +"/skid_buffer", copyOptions);
+    std::filesystem::copy(components/"controls/integrator", opts.cache_dir +"/integrator", copyOptions);
+
+
+
+    std::filesystem::current_path(test_dir);
+
+    ananke uut(opts);
+    uut.load_data_cache();
+    uut.build_flow();
+
+    EXPECT_TRUE(std::filesystem::exists(opts.cache_dir +"/PID/sim.tcl"));
+    EXPECT_TRUE(std::filesystem::exists(opts.cache_dir +"/PID/sim.sh"));
+
+
+    auto ifs = std::ifstream(opts.cache_dir +"/PID/sim.sh");
+    std::stringstream ss;
+    ss << ifs.rdbuf();
+    std::string result = ss.str();
+    EXPECT_EQ(result, "FILES=( \n    /tmp/ananke_test_cache/PID/rtl/PID.sv\n    /tmp/ananke_test_cache/integrator/rtl/Integrator.v\n    /tmp/ananke_test_cache/simple_register_cu/rtl/axil_simple_register_cu.sv\n    /tmp/ananke_test_cache/skid_buffer/rtl/axil_skid_buffer.sv\n    /data/verilog/src/glbl.v\n    /tmp/ananke_test_cache/Common/interfaces.sv\n    /tmp/ananke_test_cache/PID/tb/PID_tb.sv\n)\n\nmkdir -p /tmp/ananke_test_cache/PID/sim\ncp sim.tcl /tmp/ananke_test_cache/PID/sim/sim.tcl\n\n\n(\n    cd /tmp/ananke_test_cache/PID/sim|| exit\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 1: XVLOG (Analysis) <<<\\033[0m\"\n    xvlog -sv \"${FILES[@]}\" -i /tmp/ananke_test_cache/public/Components/Common -i /data/rsb/busdef\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XVLOG FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 2: XELAB (Elaboration) <<<\\033[0m\"\n    xelab -debug typical --relax -top PID_tb -top glbl -L xil_defaultlib -L unisims_ver -L unimacro_ver -L xpm  -snapshot sim_snapshot  -timescale 10ns/1ps\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XELAB FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 3: XSIM (Simulation) <<<\\033[0m\"\n    xsim sim_snapshot -tclbatch sim.tcl\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XSIM FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n)\nif [ -f /tmp/ananke_test_cache/PID/sim/dump.vcd  ]; then\n    vcd2fst /tmp/ananke_test_cache/PID/sim/dump.vcd dump.fst\n    rm /tmp/ananke_test_cache/PID/sim/dump.vcd\nfi\nrm -r /tmp/ananke_test_cache/PID/sim\n");
+
+    ifs = std::ifstream(opts.cache_dir +"/PID/sim.tcl");
+    ss = std::stringstream();
+    ss << ifs.rdbuf();
+    result = ss.str();
+    EXPECT_EQ(result, "\nopen_vcd dump.vcd\n\nlog_vcd [get_objects -recursive /*]\n\nrun 2ms\n\nflush_vcd\nclose_vcd\nexit\n");
+
+    std::filesystem::current_path(wd);
+
+    std::filesystem::remove_all(opts.cache_dir);
+}
+
+
+
+TEST( end_to_end , synth_script_generation) {
+
+    ananke::CLI_opt opts;
+    opts.no_cache = true;
+    opts.generate_xilinx = true;
+    opts.generate_synth_script = true;
+
+    opts.cache_dir = "/tmp/ananke_test_cache";
+    auto test_dir = opts.cache_dir + "/PID";
+
+
+    std::filesystem::create_directory(opts.cache_dir);
+    std::ofstream ofs(opts.cache_dir + "/settings");
+    ofs << "hdl_store,/tmp/ananke_test_cache" << std::endl;
+    ofs.flush();
+    auto wd = std::filesystem::current_path();
+    const auto copyOptions = std::filesystem::copy_options::recursive |
+                             std::filesystem::copy_options::overwrite_existing;
+
+    auto components = wd / "check_files/test_data/Components";
+    std::filesystem::copy(components/"controls/PID", opts.cache_dir +"/PID", copyOptions);
+    std::filesystem::remove_all(opts.cache_dir +"/PID/synth.tcl");
+    EXPECT_FALSE(std::filesystem::exists(opts.cache_dir +"/PID/synth.tcl"));
+    std::filesystem::copy(components/"Common", opts.cache_dir +"/Common", copyOptions);
+    std::filesystem::copy(components/"system/axi_lite/simple_register_cu",  opts.cache_dir +"/simple_register_cu", copyOptions);
+    std::filesystem::copy(components/"system/axi_lite/skid_buffer", opts.cache_dir +"/skid_buffer", copyOptions);
+    std::filesystem::copy(components/"controls/integrator", opts.cache_dir +"/integrator", copyOptions);
+
+
+
+    std::filesystem::current_path(test_dir);
+
+    ananke uut(opts);
+    uut.load_data_cache();
+    uut.build_flow();
+
+    EXPECT_TRUE(std::filesystem::exists(opts.cache_dir +"/PID/synth.tcl"));
+
+
+    auto ifs = std::ifstream(opts.cache_dir +"/PID/synth.tcl");
+    std::stringstream ss;
+    ss << ifs.rdbuf();
+    std::string result = ss.str();
+    EXPECT_EQ(result, "set outputDir ./project_output\nfile mkdir $outputDir\ncd $outputDir\nset data_files_set {\n}\nset sources_set {\n\t/tmp/ananke_test_cache/PID/rtl/PID.sv\n\t/tmp/ananke_test_cache/integrator/rtl/Integrator.v\n\t/tmp/ananke_test_cache/simple_register_cu/rtl/axil_simple_register_cu.sv\n\t/tmp/ananke_test_cache/skid_buffer/rtl/axil_skid_buffer.sv\n}\nset inc_dirs {\n\t/tmp/ananke_test_cache/public/Components/Common\n}\nset constr_dirs {\n}\nforeach f $data_files_set {\n    file copy -force $f .\n}\nset_part xc7z020clg400\ngenerate_target all [get_files ps.bd]\nexport_ip_user_files -of_objects [get_files ps.bd] -no_script -force\nread_verilog $sources_set\nif {[llength $constr_dirs] > 0} { read_xdc $constr_dirs }\nsynth_design -top PID -part xc7z020clg400 -include_dirs $inc_dirs\nwrite_checkpoint -force $outputDir/post_synth.dcp\nopt_design\nplace_design\nwrite_checkpoint  -force $outputDir/post_place.dcp\nroute_design\nwrite_checkpoint  -force $outputDir/post_route.dcp\nwrite_bitstream -force $outputDir/top_module.bit\n");
+
+    std::filesystem::current_path(wd);
+
+    std::filesystem::remove_all(opts.cache_dir);
 }
