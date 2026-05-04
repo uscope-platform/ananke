@@ -315,3 +315,62 @@ TEST( end_to_end , synth_script_generation) {
 
     std::filesystem::remove_all(opts.cache_dir);
 }
+
+
+
+
+TEST( end_to_end , vivado_project_generation) {
+
+    ananke::CLI_opt opts;
+    opts.no_cache = true;
+    opts.generate_xilinx = true;
+    opts.keep_makefile = true;
+    opts.makefile_only = true;
+    opts.no_open = true;
+
+    opts.cache_dir = "/tmp/ananke_test_cache";
+    auto test_dir = opts.cache_dir + "/PID";
+
+
+    std::filesystem::create_directory(opts.cache_dir);
+    std::ofstream ofs(opts.cache_dir + "/settings");
+    ofs << "hdl_store,/tmp/ananke_test_cache" << std::endl;
+    ofs << "vivado_path,/tmp/vivado" << std::endl;
+    ofs.flush();
+    auto wd = std::filesystem::current_path();
+    const auto copyOptions = std::filesystem::copy_options::recursive |
+                             std::filesystem::copy_options::overwrite_existing;
+
+
+    std::filesystem::create_directory("/tmp/vivado");
+
+    auto components = wd / "check_files/test_data/Components";
+    std::filesystem::copy(components/"controls/PID", opts.cache_dir +"/PID", copyOptions);
+    std::filesystem::remove_all(opts.cache_dir +"/PID/makefile.tcl");
+    EXPECT_FALSE(std::filesystem::exists(opts.cache_dir +"/PID/makefile.tcl"));
+    std::filesystem::copy(components/"Common", opts.cache_dir +"/Common", copyOptions);
+    std::filesystem::copy(components/"system/axi_lite/simple_register_cu",  opts.cache_dir +"/simple_register_cu", copyOptions);
+    std::filesystem::copy(components/"system/axi_lite/skid_buffer", opts.cache_dir +"/skid_buffer", copyOptions);
+    std::filesystem::copy(components/"controls/integrator", opts.cache_dir +"/integrator", copyOptions);
+
+
+
+    std::filesystem::current_path(test_dir);
+
+    ananke uut(opts);
+    uut.load_data_cache();
+    uut.build_flow();
+
+    EXPECT_TRUE(std::filesystem::exists(opts.cache_dir +"/PID/makefile.tcl"));
+
+
+    auto ifs = std::ifstream(opts.cache_dir +"/PID/makefile.tcl");
+    std::stringstream ss;
+    ss << ifs.rdbuf();
+    std::string result = ss.str();
+    EXPECT_EQ(result, "set project_name PID\nset origin_dir \".\"\nset base_dir /tmp/ananke_test_cache\nset commons_dir [list \"/tmp/ananke_test_cache/public/Components/Common\" ]\nset synth_sources [list \"${base_dir}/PID/rtl/PID.sv\" \"${base_dir}/integrator/rtl/Integrator.v\" \"${base_dir}/simple_register_cu/rtl/axil_simple_register_cu.sv\" \"${base_dir}/skid_buffer/rtl/axil_skid_buffer.sv\" ]\nset sim_sources [list \"${base_dir}/Common/interfaces.sv\" \"${base_dir}/PID/tb/PID_tb.sv\" ]\nset constraints_sources [list ]\n# Create project\ncreate_project ${project_name} ./${project_name}\nset_property part xc7z020clg400-1 [current_project]\n# Set the directory path for the new project\nset proj_dir [get_property directory [current_project]]\nset obj [current_project]\nadd_files -norecurse $synth_sources\nset_property top PID [get_filesets sources_1]\nset_property include_dirs $commons_dir [get_filesets sources_1]\nset_property SOURCE_SET sources_1 [get_filesets sim_1]\nadd_files -fileset sim_1 -norecurse $sim_sources\nset_property top PID_tb [get_filesets sim_1]\nupdate_compile_order\n");
+
+    std::filesystem::current_path(wd);
+    std::filesystem::remove_all("/tmp/vivado");
+    std::filesystem::remove_all(opts.cache_dir);
+}

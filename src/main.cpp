@@ -42,6 +42,7 @@ int main(int argc, char *argv[]){
     app.add_flag("--trace", opts.trace, "Enable extended internal state tracing");
     app.add_option("--cache_dir", opts.cache_dir, "Specify a non-default repository cache file");
     app.add_flag("--no_open", opts.no_open, "Do not open the generated project");
+    app.add_flag("--makefile_only", opts.makefile_only, "Only generate the setup script and not the project");
     app.add_flag("--sim_script", opts.generate_sim_script, "Generate simulation script for the chosen platform");
     app.add_flag("--synth_script", opts.generate_synth_script, "Generate Synthesis script for the chosen platform");
     app.add_flag("--dump_ast", opts.dump_ast, "Dump AST to /tmp/ast.json");

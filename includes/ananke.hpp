@@ -57,6 +57,7 @@ class ananke {
         bool synth_design = false;
         bool dump_ast = false;
         bool keep_makefile = false;
+        bool makefile_only = false;
         std::string get_setting;
         std::string set_setting;
         std::string new_app_name;

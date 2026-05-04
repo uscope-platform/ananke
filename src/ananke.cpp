@@ -216,7 +216,7 @@ void ananke::build_flow() {
 
 
                 Vivado_manager manager(s_store, !opts.keep_makefile, dep.get_project_name());
-                manager.create_project("makefile.tcl",  !opts.no_open);
+                if (!opts.makefile_only) manager.create_project("makefile.tcl",  !opts.no_open);
             }
         }
 
@@ -240,7 +240,7 @@ void ananke::build_flow() {
             generator.write_makefile(makefile);
 
             Radiant_manager manager(s_store, !opts.keep_makefile, dep.get_project_name());
-            manager.create_project("makefile.tcl",  !opts.no_open);
+            if (!opts.makefile_only) manager.create_project("makefile.tcl",  !opts.no_open);
         }
 
         peripheral_definition_generator periph_def_gen(d_store, synth_ast);
