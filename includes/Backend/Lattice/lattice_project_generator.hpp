@@ -25,6 +25,8 @@ public:
     void write_makefile(std::ostream &output) override;
     void generate_sim_script(std::ostream &output) override;
     void generate_synth_script(std::ostream &output) override;
+private:
+    void generate_project(std::ostream &output);
 };
 
 #endif //ANANKE_LATTICE_PROJECT_GENERATOR_HPP
