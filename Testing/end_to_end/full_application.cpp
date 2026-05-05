@@ -151,7 +151,7 @@ TEST( end_to_end , new_sv_application) {
     std::filesystem::remove_all(app_dir);
 }
 
-TEST( end_to_end , directed_parsing) {
+TEST( end_to_end , directed_parsing ) {
 
 
     ananke::CLI_opt opts;
@@ -162,7 +162,10 @@ TEST( end_to_end , directed_parsing) {
     ananke uut(opts);
     auto rc = uut.directed_parsing();
 
-    EXPECT_EQ(rc, 0);
+    std::unordered_map<std::string,std::string> expected =  {{"PID", "check_files/test_data/Components/controls/PID/rtl/PID.sv"}};
+
+    ASSERT_TRUE(rc);
+    EXPECT_EQ(rc, expected);
 
 }
 
@@ -178,7 +181,8 @@ TEST( end_to_end , directed_parsing_file_not_found) {
     ananke uut(opts);
     auto rc = uut.directed_parsing();
 
-    EXPECT_EQ(rc, 50);
+    ASSERT_FALSE(rc);
+    EXPECT_EQ(rc.error(), 50);
 
 }
 
@@ -199,7 +203,8 @@ TEST( end_to_end , directed_parsing_preprocessor_error) {
     ananke uut(opts);
     auto rc = uut.directed_parsing();
 
-    EXPECT_EQ(rc, 51);
+    ASSERT_FALSE(rc);
+    EXPECT_EQ(rc.error(), 51);
     std::filesystem::remove_all(test_file);
 }
 

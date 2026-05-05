@@ -82,26 +82,30 @@ std::optional<int> ananke::generate_new_app() const {
     return std::nullopt;
 }
 
-std::optional<int> ananke::directed_parsing() const {
+std::expected<std::unordered_map<std::string, std::string>, int> ananke::directed_parsing() const {
     if (!opts.parse_targets.empty()) {
         for (auto &target :opts.parse_targets) {
             if (!std::filesystem::exists(target)) {
                 std::cout << "Target: " << target << " not found" << std::endl;
-                return 50;
+                return std::unexpected(50);
             }
             try {
                 sv_analyzer analyzer;
                 mm_file file(target);
                 auto resources = analyzer.analyze(target, file.view());
+                std::unordered_map<std::string, std::string> res_map;
+                for (auto &res:resources) {
+                    res_map.insert({res.getName(), res.get_path()});
+                }
+                return res_map;
             } catch (std::runtime_error &err) {
                 std::cout << err.what();
-                return 51;
+                return std::unexpected(51);
             }
 
         }
-        return 0;
     }
-    return std::nullopt;
+    return {};
 }
 
 std::optional<int> ananke::load_data_cache() {

@@ -21,6 +21,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <expected>
 #include <spdlog/spdlog.h>
 
 #include "data_model/settings_store.hpp"
@@ -80,7 +81,7 @@ class ananke {
     void get_settings() const;
 
     [[nodiscard]] std::optional<int> generate_new_app() const;
-    [[nodiscard]] std::optional<int> directed_parsing() const;
+    [[nodiscard]] std::expected<std::unordered_map<std::string, std::string>, int> directed_parsing() const;
     std::optional<int> load_data_cache();
     void build_flow();
 
