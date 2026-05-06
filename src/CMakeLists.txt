@@ -82,6 +82,7 @@ target_sources(ananke_lib
     frontend/analysis/documentation_analyzer.cpp
     frontend/analysis/vhdl_visitor.cpp
     frontend/analysis/preprocessor/sv_preprocessor.cpp
+    frontend/analysis/preprocessor/source_mapper.cpp
     frontend/analysis/preprocessor/conditional_solver.cpp
     frontend/analysis/preprocessor/macro_processor.cpp
     frontend/cache_manager.cpp
