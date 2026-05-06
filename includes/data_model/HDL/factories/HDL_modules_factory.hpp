@@ -25,7 +25,7 @@
 class HDL_modules_factory : protected resources_factory_base<HDL_Resource> {
 
 public:
-    void new_module(std::string &p,const dependency_class &type);
+    void new_module(std::string &p,const dependency_class &type, unsigned int line_n);
     HDL_Resource get_module();
     void set_module_name(const std::string &n) { set_name(n);};
 

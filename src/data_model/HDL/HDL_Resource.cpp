@@ -37,6 +37,7 @@ HDL_Resource::HDL_Resource(dependency_class t, std::string n, std::string p) {
 HDL_Resource::HDL_Resource(const HDL_Resource &c) {
     name = c.name;
     path = c.path;
+    line_n = c.line_n;
     hdl_type = c.hdl_type;
     dependencies = c.dependencies;
     functions = c.functions;
@@ -91,6 +92,7 @@ std::unordered_map<std::string, HDL_Resource>::mapped_type HDL_Resource::clone()
 
     ret.name = name;
     ret.path = path;
+    ret.line_n = line_n;
     ret.hdl_type = hdl_type;
     ret.ports = ports;
     ret.if_specs  = if_specs;
@@ -121,6 +123,7 @@ bool operator==(const HDL_Resource &lhs, const HDL_Resource &rhs) {
     bool ret = true;
 
     ret &= lhs.name == rhs.name;
+    ret &= lhs.line_n == rhs.line_n;
     ret &= lhs.path == rhs.path;
     ret &= lhs.hdl_type == rhs.hdl_type;
     ret &= lhs.dependencies == rhs.dependencies;
@@ -155,7 +158,7 @@ void PrintTo(const HDL_Resource &res, std::ostream *os) {
 
     std::string result = "\n----------------------------------------------------";
     result += "\nHDL Resource:\n  NAME: " + res.name;
-    result += "\n  PATH: " + res.path;
+    result += "\n  PATH: " + res.path + "[" + std::to_string(res.line_n) + "]";
     result += "\n  PARAMETERS: \n";
     for(const auto& item:res.parameters_spec){
         result += item->to_string();

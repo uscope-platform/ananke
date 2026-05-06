@@ -22,7 +22,8 @@ sv_visitor::sv_visitor(std::string p) {
 
 void sv_visitor::enterModule_declaration(sv2017::Module_declarationContext *ctx) {
     current_declaration_type = "module";
-    modules_factory.new_module(path, module);
+    size_t line_number = ctx->getStart()->getLine();
+    modules_factory.new_module(path, module, line_number);
 }
 
 
@@ -32,7 +33,8 @@ void sv_visitor::exitModule_declaration(sv2017::Module_declarationContext *ctx) 
 
 void sv_visitor::enterInterface_declaration(sv2017::Interface_declarationContext *ctx) {
     current_declaration_type = "interface";
-    interfaces_factory.new_interface(path);
+    size_t line_number = ctx->getStart()->getLine();
+    interfaces_factory.new_interface(path, line_number);
 }
 
 void sv_visitor::exitInterface_declaration(sv2017::Interface_declarationContext *ctx) {
@@ -161,7 +163,8 @@ void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
 }
 
 void sv_visitor::enterPackage_declaration(sv2017::Package_declarationContext *ctx) {
-    modules_factory.new_module(path, package);
+    size_t line_number = ctx->getStart()->getLine();
+    modules_factory.new_module(path, package, line_number);
 }
 
 void sv_visitor::exitPackage_declaration(sv2017::Package_declarationContext *ctx) {

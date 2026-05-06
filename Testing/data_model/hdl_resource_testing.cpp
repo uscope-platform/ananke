@@ -32,7 +32,7 @@ TEST( HDL_resource_test , ser_des_hdl_resource) {
 
 
     HDL_Resource hdl_out(module, "test", "/bin/sh");
-
+    hdl_out.set_line_n(13);
     std::stringstream os;
     {
         cereal::BinaryOutputArchive archive_out(os);

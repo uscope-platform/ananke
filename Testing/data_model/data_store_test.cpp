@@ -70,6 +70,7 @@ TEST( data_store_test , evict_hdl_entity) {
 
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
     HDL_Resource test_entity(module, "test", "/test/path");
+    test_entity.set_line_n(15);
 
     store_1->store_hdl_entity(test_entity);
     store_1->evict_hdl_entity(test_entity.getName());
@@ -86,6 +87,7 @@ TEST( data_store_test , evict_interface_entity) {
 
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
     HDL_Resource test_entity(interface, "test", "/test/path");
+    test_entity.set_line_n(15);
 
     store_1->store_hdl_entity(test_entity);
     store_1->evict_hdl_entity(test_entity.getName());
@@ -286,6 +288,7 @@ TEST( data_store_test , resource_clean_up) {
     auto *store_1 = new data_store(true,"/tmp/test_data_store");
 
     HDL_Resource test_entity(module, "test", "/test");
+    test_entity.set_line_n(15);
 
     store_1->store_hdl_entity(test_entity);
     delete store_1;

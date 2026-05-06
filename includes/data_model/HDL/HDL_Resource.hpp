@@ -68,6 +68,7 @@
         void set_type(const dependency_class t) {
             hdl_type  = t;
         };
+        void set_line_n(unsigned int n){ line_n = n;}
         dependency_class get_type() {return hdl_type;};
         bool is_interface();
 
@@ -115,7 +116,7 @@
 
         template<class Archive>
         void serialize( Archive & ar ) {
-            ar(name, path, hdl_type, dependencies, if_specs, parameters_spec, ports, doc, processor_docs, functions, default_values);
+            ar(name, path, hdl_type, dependencies, if_specs, parameters_spec, ports, doc, processor_docs, functions, default_values, line_n);
         }
 
         bool is_empty();
@@ -128,6 +129,7 @@
 private:
         std::string name;
         std::string path;
+        unsigned int line_n = 0;
         dependency_class hdl_type;
         std::vector<HDL_instance> dependencies;
         std::unordered_map<std::string, port_direction_t> ports;

@@ -24,7 +24,7 @@
 class HDL_interfaces_factory : protected resources_factory_base<HDL_Resource>{
 
 public:
-    void new_interface(std::string &p);
+    void new_interface(const std::string &p, unsigned int line_n);
     HDL_Resource get_interface();
     void set_interface_name(const std::string &n) { set_name(n);};
     bool is_current_valid(){return valid_resource;}
