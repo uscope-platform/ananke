@@ -44,6 +44,7 @@ set(ANANKE_TESTS
         Backend/project_generator.cpp
         Backend/dependency_resolver.cpp
         end_to_end/full_application.cpp
+        frontend/source_mapping.cpp
 )
 
 

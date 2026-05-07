@@ -28,11 +28,12 @@ namespace preprocessor {
         auto flat_source= flatten_source(file_content);
         std::istringstream iss(flat_source);
         std::ostringstream out;
+        output_line_n = initial_output_line;
         source_map.open_range(output_line_n, path);
 
         std::string line;
         line_number = 1;
-        output_line_n = initial_output_line;
+
         while (std::getline(iss, line)) {
             std::string_view trimmed_line = macro_processor::ltrim(line);
 
@@ -62,9 +63,12 @@ namespace preprocessor {
                     auto current_path = path;
                     path = included_file.value();
                     mm_file file(path);
-                    preprocess(file.view(), output_line_n);
+                    source_map.close_range(output_line_n);
+                    auto content = preprocess(file.view(), output_line_n);
+                    out << content + '\n';
                     line_number = current_line;
                     path = current_path;
+                    source_map.open_range(output_line_n, path);
 
                 }
             } else if (trimmed_line.starts_with("`ifdef")) {
@@ -86,9 +90,14 @@ namespace preprocessor {
             } else if (trimmed_line.starts_with("`undefineall") && c_solver.is_active()) {
                 definitions.clear();
             } else if (!skipped_directive && c_solver.is_active()) {
-                auto output_line = macro_engine.process_macro(uncommented_line);
+                std::string output_line;
+                if (uncommented_line.empty()) {
+                    output_line = '\n';
+                } else {
+                    output_line = macro_engine.process_macro(uncommented_line) + '\n';
+                }
                 output_line_n += std::count(output_line.begin(), output_line.end(), '\n');
-                out << output_line << std::endl;
+                out << output_line;
             }
             line_number++;
         }

@@ -42,7 +42,7 @@ namespace preprocessor {
         void set_include_directories(const std::vector<std::string> &i_d){include_directories = i_d;}
         void set_path(const std::string &s){path = s;}
         std::vector<std::string> get_documentation_comments() {return documentation_comments;}
-        std::vector<source_mapper::source_range> get_source_map() const {return  source_map.get_map();}
+        source_map_t get_source_map() const {return  source_map.get_map();}
     private:
         typedef std::unordered_map<std::string, std::variant<std::string, function_macro>> definitions_map;
         std::optional<std::string> parse_include_path(const std::string_view &v);

@@ -17,9 +17,9 @@
 #include "frontend/analysis/preprocessor/source_mapper.hpp"
 
 
-std::optional<std::string> source_mapper::get_path(unsigned int line_n) {
+std::optional<std::string> source_mapper::get_path(unsigned int line_n, std::vector<source_range>map) {
     for (auto &[start, stop, path]: map) {
-        if (line_n>start && line_n < stop) return path;
+        if (line_n>=start && line_n <= stop) return path;
     }
     return std::nullopt;
 }
@@ -29,21 +29,11 @@ void source_mapper::add_range(unsigned int start, unsigned int stop, const std::
 }
 
 void source_mapper::open_range(unsigned int line_n, const std::string &path) {
-    if (constructing_range) {
-        ranges_stack.push_back(current_range);
-    }
     current_range = {line_n, line_n, path};
-    constructing_range = true;
 }
 
 void source_mapper::close_range(unsigned int line_n) {
-    if (ranges_stack.empty()) {
-        constructing_range = false;
-    } else {
-        current_range = ranges_stack.back();
-        ranges_stack.pop_back();
-    }
-    current_range.end_line = line_n;
+    current_range.end_line = line_n-1;
     map.push_back(current_range);
     current_range = {};
 }

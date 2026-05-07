@@ -21,25 +21,27 @@
 #include <vector>
 #include <optional>
 
+
 class source_mapper {
 public:
     struct source_range {
         unsigned int start_line;
         unsigned int end_line;
         std::string source_path;
+        auto operator<=>(const source_range&) const = default;
     };
-    std::optional<std::string> get_path(unsigned int line_n);
+    static std::optional<std::string> get_path(unsigned int line_n, std::vector<source_range>);
     void add_range(unsigned int start, unsigned int stop, const std::string &path);
     void open_range(unsigned int line_n,const std::string &path);
     void close_range(unsigned int line_n);
     [[nodiscard]] std::vector<source_range> get_map() const {return map;}
 private:
     std::vector<source_range> map;
-    std::vector<source_range> ranges_stack;
     source_range current_range{};
     bool constructing_range = false;
 
 };
 
+typedef std::vector<source_mapper::source_range> source_map_t;
 
 #endif //ANANKE_SOURCE_MAPPER_HPP
