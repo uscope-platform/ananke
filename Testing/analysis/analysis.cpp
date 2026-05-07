@@ -313,3 +313,59 @@ TEST(analysis_test, parameter_array_assignment) {
 
     ASSERT_EQ(reference_param, *param);
 }
+
+
+TEST(analysis_test, included_declaration) {
+    auto test_pattern = R"(
+        `include "/tmp/include_test.svh"
+        module test_module ();
+            parameter TEST_PARAM = 6;
+        endmodule
+    )";
+
+    std::ofstream ofs("/tmp/include_test.svh");
+    if (!ofs.is_open()) {
+        std::cerr << "CRITICAL ERROR: Could not create the file in /tmp!" << std::endl;
+    }
+    ofs<< "module test_module_2 ();\n wire test_wire;\nassign test_wire = 5;\nendmodule;"<< std::endl;
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("/tmp/file.sv",test_pattern);
+    EXPECT_EQ(resource[0].getName(), "test_module_2");
+    EXPECT_EQ(resource[0].get_path(), "/tmp/include_test.svh");
+    EXPECT_EQ(resource[1].getName(), "test_module");
+    EXPECT_EQ(resource[1].get_path(), "/tmp/file.sv");
+}
+
+
+
+
+TEST(analysis_test, nested_included_declaration) {
+    auto test_pattern = R"(
+        `include "/tmp/include_test.svh"
+        module test_module ();
+            parameter TEST_PARAM = 6;
+        endmodule
+    )";
+
+    std::ofstream ofs("/tmp/include_test.svh");
+
+    ofs<< "\n\n`include \"/tmp/include_nested.svh\"\n\n\nmodule test_module_2 ();\n wire test_wire;\nassign test_wire = 5;\nendmodule;";
+    ofs.close();
+
+    ofs = std::ofstream("/tmp/include_nested.svh");
+
+    ofs<< "module test_module_3 ();\n wire test_wire;\nassign test_wire = 4;\nendmodule;";
+    ofs.close();
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("/tmp/file.sv",test_pattern);
+    EXPECT_EQ(resource[0].getName(), "test_module_3");
+    EXPECT_EQ(resource[0].get_path(), "/tmp/include_nested.svh");
+    EXPECT_EQ(resource[1].getName(), "test_module_2");
+    EXPECT_EQ(resource[1].get_path(), "/tmp/include_test.sv");
+    EXPECT_EQ(resource[2].getName(), "test_module");
+    EXPECT_EQ(resource[2].get_path(), "/tmp/file.sv");
+}

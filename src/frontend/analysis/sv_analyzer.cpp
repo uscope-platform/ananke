@@ -32,9 +32,19 @@ std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const s
 
 
 std::vector<HDL_Resource> sv_analyzer::analyze(const std::string &path, const std::string_view &file_content) {
-    auto [preprocessed_content, documentation_comments] = preprocess(path, file_content);
-    auto entities = process_hdl(path, preprocessed_content);
 
+    preprocessor::sv_preprocessor preproc;
+    preproc.set_path(path);
+    preproc.set_include_directories(include_directories);
+    auto processed_content = preproc.preprocess(file_content);
+    auto documentation_comments = preproc.get_documentation_comments();
+    auto sources_map = preproc.get_source_map();
+
+    auto entities = process_hdl(path, processed_content);
+
+    for (auto &e: entities) {
+        e.set_path(source_mapper::get_path(e.get_line_n(), sources_map).value());
+    }
 
     documentation_analyzer doc(documentation_comments);
     doc.set_source_path(path);

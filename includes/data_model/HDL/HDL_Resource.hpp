@@ -69,6 +69,8 @@
             hdl_type  = t;
         };
         void set_line_n(unsigned int n){ line_n = n;}
+        [[nodiscard]] unsigned int get_line_n()const{return  line_n;}
+
         dependency_class get_type() {return hdl_type;};
         bool is_interface();
 
