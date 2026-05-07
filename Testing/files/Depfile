@@ -4,7 +4,6 @@
         "target_part":"test_part",
 	    "synth_modules":["test_synth_module_add_1", "test_synth_module_add_2"],
         "synth_tl": "test_synth_tl",
-        "bus_defining_package":"package_name",
         "sim_modules":["test_sim_module_add_1", "test_sim_module_add_2"],
         "sim_tl":"test_sim_tl",
         "include_paths":[

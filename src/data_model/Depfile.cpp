@@ -31,10 +31,6 @@ std::string Depfile::get_sim_tl() {
     return content["general"]["sim_tl"];
 }
 
-std::string Depfile::get_bus_defining_package() {
-    return content["general"]["bus_defining_package"];
-}
-
 std::vector<std::string> Depfile::get_additional_synth_modules() {
     return content["general"]["synth_modules"];
 }

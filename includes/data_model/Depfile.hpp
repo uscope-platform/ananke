@@ -27,6 +27,11 @@
 
 using json = nlohmann::json;
 
+
+struct  general_settings {
+
+};
+
 class Depfile {
 public:
     Depfile();
@@ -41,7 +46,6 @@ public:
     std::string get_synth_tl();
     [[nodiscard]] json get_content() const {return content;};
     std::string get_sim_tl();
-    std::string get_bus_defining_package();
     std::string get_project_name();
     std::string get_board_def();
     std::string get_target();
