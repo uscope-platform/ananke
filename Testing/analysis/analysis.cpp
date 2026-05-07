@@ -365,7 +365,7 @@ TEST(analysis_test, nested_included_declaration) {
     EXPECT_EQ(resource[0].getName(), "test_module_3");
     EXPECT_EQ(resource[0].get_path(), "/tmp/include_nested.svh");
     EXPECT_EQ(resource[1].getName(), "test_module_2");
-    EXPECT_EQ(resource[1].get_path(), "/tmp/include_test.sv");
+    EXPECT_EQ(resource[1].get_path(), "/tmp/include_test.svh");
     EXPECT_EQ(resource[2].getName(), "test_module");
     EXPECT_EQ(resource[2].get_path(), "/tmp/file.sv");
 }
