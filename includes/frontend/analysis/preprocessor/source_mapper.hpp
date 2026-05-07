@@ -32,10 +32,11 @@ public:
     void add_range(unsigned int start, unsigned int stop, const std::string &path);
     void open_range(unsigned int line_n,const std::string &path);
     void close_range(unsigned int line_n);
+    [[nodiscard]] std::vector<source_range> get_map() const {return map;}
 private:
     std::vector<source_range> map;
     std::vector<source_range> ranges_stack;
-    source_range current_range;
+    source_range current_range{};
     bool constructing_range = false;
 
 };

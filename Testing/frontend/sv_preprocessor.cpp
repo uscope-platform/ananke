@@ -1174,3 +1174,38 @@ TEST(preprocessor, absolute_include) {
 
     EXPECT_EQ(result, check_string);
 }
+
+
+TEST(preprocessor, nested_includes) {
+    auto test_pattern = R"(
+        `include "/tmp/include_test.svh"
+        module test_module ();
+            parameter TEST_PARAM = `A + `B;
+        endmodule
+    )";
+
+    std::ofstream ofs("/tmp/include_test.svh");
+
+    ofs<< "\n\n`include \"/tmp/include_nested.svh\"\n\n";
+    ofs.close();
+
+    ofs = std::ofstream("/tmp/include_nested.svh");
+
+    ofs<< "`define A 5\n`define B 6\n";
+    ofs.close();
+
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    std::filesystem::remove("/tmp/include_test.svh");
+    std::filesystem::remove("/tmp/include_nested.svh");
+    auto check_string = R"(
+        module test_module ();
+            parameter TEST_PARAM = 5 + 6;
+        endmodule
+    )";
+
+    EXPECT_EQ(result, check_string);
+}

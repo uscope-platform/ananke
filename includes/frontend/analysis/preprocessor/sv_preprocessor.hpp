@@ -26,7 +26,9 @@
 #include <variant>
 #include <iterator>
 #include <fmt/format.h>
+#include <spdlog/spdlog.h>
 #include "frontend/analysis/preprocessor/conditional_solver.hpp"
+#include "frontend/analysis/preprocessor/source_mapper.hpp"
 #include "frontend/analysis/preprocessor/macro_processor.hpp"
 #include "data_model/mm_file.hpp"
 
@@ -34,24 +36,27 @@ namespace preprocessor {
     class sv_preprocessor {
     public:
         sv_preprocessor() = default;
-        std::string preprocess(const std::string_view &file_content);
+        std::string preprocess(const std::string_view &file_content) {return  preprocess(file_content, 1);}
+        std::string preprocess(const std::string_view &file_content, unsigned int initial_output_line);
         std::string flatten_source(const std::string_view &file_content);
         void set_include_directories(const std::vector<std::string> &i_d){include_directories = i_d;}
         void set_path(const std::string &s){path = s;}
         std::vector<std::string> get_documentation_comments() {return documentation_comments;}
+        std::vector<source_mapper::source_range> get_source_map() const {return  source_map.get_map();}
     private:
         typedef std::unordered_map<std::string, std::variant<std::string, function_macro>> definitions_map;
         std::optional<std::string> parse_include_path(const std::string_view &v);
         std::string get_define_replacement(const std::string_view &v);
         void parse_definition(const std::string_view &sv, int prefix_length);
         static std::string_view parse_one_arg_directive(const std::string_view &sv, int prefix_length);
-        uint64_t line_number;
+        uint64_t line_number = 1;
         definitions_map definitions;
         std::vector<std::string> documentation_comments;
         std::string path;
         conditional_solver c_solver;
         std::vector<std::string> include_directories;
-
+        source_mapper source_map;
+        unsigned int output_line_n = 0;
         static constexpr auto identifier_pattern = ctre::search<R"(`([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()*)">;
     };
 }

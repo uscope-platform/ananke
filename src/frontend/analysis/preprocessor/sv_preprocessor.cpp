@@ -16,21 +16,23 @@
 
 #include "frontend/analysis/preprocessor/sv_preprocessor.hpp"
 
-#include <spdlog/spdlog.h>
+
 
 
 namespace preprocessor {
 
 
-    std::string sv_preprocessor::preprocess(const std::string_view &file_content) {
+    std::string sv_preprocessor::preprocess(const std::string_view &file_content, unsigned int initial_output_line) {
         macro_processor macro_engine(definitions , line_number, path);
 
         auto flat_source= flatten_source(file_content);
         std::istringstream iss(flat_source);
         std::ostringstream out;
+        source_map.open_range(output_line_n, path);
 
         std::string line;
         line_number = 1;
+        output_line_n = initial_output_line;
         while (std::getline(iss, line)) {
             std::string_view trimmed_line = macro_processor::ltrim(line);
 
@@ -53,15 +55,17 @@ namespace preprocessor {
             if (trimmed_line.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed_line, 7);
             } else if (trimmed_line.starts_with("`include")&& c_solver.is_active()) {
+
                 auto included_file = parse_include_path(trimmed_line);
                 if (included_file.has_value()) {
                     auto current_line =line_number;
                     auto current_path = path;
                     path = included_file.value();
                     mm_file file(path);
-                    preprocess(file.view());
+                    preprocess(file.view(), output_line_n);
                     line_number = current_line;
                     path = current_path;
+
                 }
             } else if (trimmed_line.starts_with("`ifdef")) {
                 auto condition = parse_one_arg_directive(trimmed_line, 6);
@@ -82,13 +86,15 @@ namespace preprocessor {
             } else if (trimmed_line.starts_with("`undefineall") && c_solver.is_active()) {
                 definitions.clear();
             } else if (!skipped_directive && c_solver.is_active()) {
-
-                out << macro_engine.process_macro(uncommented_line) << std::endl;
+                auto output_line = macro_engine.process_macro(uncommented_line);
+                output_line_n += std::count(output_line.begin(), output_line.end(), '\n');
+                out << output_line << std::endl;
             }
             line_number++;
         }
         auto retval = out.str();
         if (!retval.empty()) retval.pop_back();
+        source_map.close_range(output_line_n);
         return retval;
     }
 
@@ -223,7 +229,7 @@ namespace preprocessor {
 
                         size_t end = content.find("*/", cursor + 2);
                         if (content[cursor + 2] == '*') {
-                            documentation_comments.push_back( std::string(content.substr(cursor+3, end - cursor-4)));
+                            documentation_comments.emplace_back(content.substr(cursor+3, end - cursor-4));
                         }
                         if (end == std::string_view::npos) end = content.size() - 2;
                         cursor = end + 2;
