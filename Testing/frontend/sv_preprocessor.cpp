@@ -1080,6 +1080,7 @@ TEST(preprocessor, include_absolute_path) {
     auto result = preproc.preprocess(test_pattern);
     std::filesystem::remove("/tmp/include_test.svh");
     auto check_string = R"(
+
         module test_module ();
             parameter TEST_PARAM = 5 + 6;
         endmodule
@@ -1109,6 +1110,7 @@ TEST(preprocessor, include_relative_path) {
     auto result = preproc.preprocess(test_pattern);
     std::filesystem::remove("/tmp/include_test.svh");
     auto check_string = R"(
+
         module test_module ();
             parameter TEST_PARAM = 5 + 6;
         endmodule
@@ -1138,6 +1140,7 @@ TEST(preprocessor, include_with_comment) {
     auto result = preproc.preprocess(test_pattern);
     std::filesystem::remove("/tmp/include_test.svh");
     auto check_string = R"(
+
         module test_module ();
             parameter TEST_PARAM = 5 + 6;
         endmodule
@@ -1167,6 +1170,7 @@ TEST(preprocessor, absolute_include) {
     auto result = preproc.preprocess(test_pattern);
     std::filesystem::remove("/tmp/include_test.svh");
     auto check_string = R"(
+
         module test_module ();
             parameter TEST_PARAM = 5 + 6;
         endmodule
@@ -1202,6 +1206,10 @@ TEST(preprocessor, nested_includes) {
     std::filesystem::remove("/tmp/include_test.svh");
     std::filesystem::remove("/tmp/include_nested.svh");
     auto check_string = R"(
+
+
+
+
         module test_module ();
             parameter TEST_PARAM = 5 + 6;
         endmodule
