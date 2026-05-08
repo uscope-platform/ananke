@@ -57,6 +57,7 @@ namespace preprocessor {
         std::vector<std::string> include_directories;
         source_mapper source_map;
         unsigned int output_line_n = 0;
+        bool disable_preprocessor = false;
         static constexpr auto identifier_pattern = ctre::search<R"(`([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()*)">;
     };
 }

@@ -51,7 +51,11 @@ namespace preprocessor {
             std::string uncommented_line = line;
             if (line.contains("//")) {
                 uncommented_line = line.substr(0, line.find("//"));
+                auto comment = line.substr(line.find("//"));
+                if (comment.contains("pragma translate_off"))disable_preprocessor = true;
+                if (comment.contains("pragma translate_on")) disable_preprocessor = false;
             }
+            if (disable_preprocessor) uncommented_line = "";
 
             if (trimmed_line.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed_line, 7);
@@ -228,11 +232,17 @@ namespace preprocessor {
             } else if (trigger == '/') {
                 if (cursor != content.size()-1) {
                     if (content[cursor + 1] == '/') {
-                        size_t end = content.find('\n', cursor + 2);
-                        if (end == std::string_view::npos) end = content.size();
-                        cursor = end;
-                        if (content[end-1] =='\\') {
-                            cursor = content.find('\n', end+1);
+                        result.append("//");
+                        cursor += 2;
+                        while (cursor < content.size() && content[cursor] != '\n' && content[cursor] != '\r') {
+                            if (content[cursor] == '\\') {
+                                size_t next = content.find_first_of("\n\r", cursor + 1);
+                                if (next != std::string_view::npos) {
+                                    cursor = next + (content[next] == '\r' && content[next+1] == '\n' ? 2 : 1);
+                                    continue; // Skip backslash and newline, stay in comment
+                                }
+                            }
+                            result.push_back(content[cursor++]);
                         }
                     } else if (content[cursor + 1] == '*') {
 

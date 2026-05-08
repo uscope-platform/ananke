@@ -185,7 +185,7 @@ TEST(preprocessor, comment_continuation_elimination) {
 
     sv_preprocessor proc;
     auto res = proc.flatten_source(test_pattern);
-    auto check_string ="\n        \n        wire a;";
+    auto check_string ="\n        // This is a comment            that should also go away!\n        wire a;";
     EXPECT_EQ(check_string, res);
 }
 
@@ -1214,6 +1214,27 @@ TEST(preprocessor, nested_includes) {
             parameter TEST_PARAM = 5 + 6;
         endmodule
     )";
+
+    EXPECT_EQ(result, check_string);
+}
+
+
+TEST(preprocessor, translate_on_off) {
+    auto test_pattern = R"(
+        module test_module ();
+            parameter TEST_PARAM = 5 + 6;
+            //pragma translate_off
+            parameter TEST_PARAM2 = 7;
+            //pragma translate_on
+        endmodule
+    )";
+
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = "\n        module test_module ();\n            parameter TEST_PARAM = 5 + 6;\n\n\n            \n        endmodule\n    ";
 
     EXPECT_EQ(result, check_string);
 }

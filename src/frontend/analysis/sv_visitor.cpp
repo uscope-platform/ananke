@@ -184,6 +184,7 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
 }
 
 void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
+    if (ctx->list_of_type_assignments()  != nullptr) return;
     in_param_declaration = true;
     if (ctx->list_of_param_assignments() == nullptr) {
         throw std::runtime_error("Encountered non existent list of parameter declarations");
