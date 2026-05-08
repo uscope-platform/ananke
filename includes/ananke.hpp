@@ -31,7 +31,7 @@
 #include "frontend/analysis/sv_analyzer.hpp"
 #include "Backend/python_script_runner.hpp"
 #include "Backend/Auxiliary_resolver.hpp"
-#include "data_model/Depfile.hpp"
+#include "data_model/Depfile/Depfile.hpp"
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "Backend/Dependency_resolver.hpp"
 #include "analysis/control_bus_analysis.hpp"
@@ -83,7 +83,7 @@ class ananke {
     [[nodiscard]] std::optional<int> generate_new_app() const;
     [[nodiscard]] std::expected<std::unordered_map<std::string, std::string>, int> directed_parsing() const;
     std::optional<int> load_data_cache();
-    void build_flow();
+    std::optional<int> build_flow();
 
 private:
     std::shared_ptr<settings_store>  s_store;

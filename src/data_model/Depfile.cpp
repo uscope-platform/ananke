@@ -13,113 +13,105 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "data_model/Depfile.hpp"
+#include "../../includes/data_model/Depfile/Depfile.hpp"
 
+#include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
-Depfile::Depfile(const std::string& filename) {
-// read a JSON file
-    std::ifstream dfstream(filename);
-    dfstream >> content;
+Depfile::Depfile(std::istream &in) {
+
+
+    nlohmann::json file_content;
+    in >> file_content;
+    set_content(file_content);
 }
 
-std::string Depfile::get_synth_tl() {
-    return content["general"]["synth_tl"];
-}
+void Depfile::set_content(const nlohmann::json &file_content) {
 
-std::string Depfile::get_sim_tl() {
-    return content["general"]["sim_tl"];
-}
-
-std::vector<std::string> Depfile::get_additional_synth_modules() {
-    return content["general"]["synth_modules"];
-}
-
-std::vector<std::string> Depfile::get_additional_sim_modules() {
-    return content["general"]["sim_modules"];
-}
-
-std::vector<std::string> Depfile::get_excluded_modules() {
-    return content["excluded_modules"];
-}
-
-std::vector<Constraints> Depfile::get_constraints() {
-    std::vector<Constraints> retval;
-    for(const auto& item : content["constraints"]){
-        Constraints constr(item);
-        retval.push_back(constr);
+    depfile_validator::validate(file_content);
+    auto gen = file_content["general"];
+    general.project_name = gen["project_name"];
+    if ( gen.contains("target_part"))
+        general.target_part = gen["target_part"];
+    else if ( gen.contains("board"))
+        general.board = gen["board"];
+    else {
+        spdlog::warn("The selected Depfile does not define a target");
     }
-    return retval;
+    general.synth_tl = gen["synth_tl"];
+    general.sim_tl = gen["sim_tl"];
+    if (gen.contains("sim_modules")) general.sim_modules = gen["sim_modules"];
+    if (gen.contains("synth_modules")) general.synth_modules = gen["synth_modules"];
+    if (gen.contains("include_paths")) general.include_paths = gen["include_paths"];
+    if (file_content.contains("constraints")) {
+        for(const auto& item : file_content["constraints"]){
+            constraints.emplace_back(item);
+        }
+    }
 
+    if (file_content.contains("excluded_modules")) excluded_modules = file_content["excluded_modules"];
+    if (file_content.contains("scripts")) {
+        for (auto &scr:file_content["scripts"]) {
+            script_specs s;
+            s.name = scr["name"];
+            s.type = scr["type"];
+
+            if (scr.contains("function_mode")) s.function_mode = scr["function_mode"];
+            else s.function_mode = false;
+
+            if (scr.contains("include_products")) s.include_products = scr["include_products"];
+            else s.include_products = false;
+            if (scr.contains("products_type")) s.products_type = scr["products_type"];
+            if (scr.contains("arguments") && !scr["arguments"].empty()) {
+                if (scr["arguments"][0].is_string()) {
+                    s.positional_arguments =  scr["arguments"];
+                } else {
+                    for (auto &arg:scr["arguments"]) {
+                        s.named_arguments.emplace_back(arg["name"], arg["value"]);
+                    }
+
+                }
+            }
+            scripts.emplace_back(s);
+        }
+    }
+
+    if (file_content.contains("bus")) {
+        for (auto &[bus_name, bus_obj]:file_content["bus"].items()) {
+            bus.insert({
+                bus_name,
+                {bus_obj["type"], bus_obj["starting_module"], bus_obj["bus_interface"]}
+            });
+        }
+    }
 }
+
+
 
 std::vector<Script> Depfile::get_scripts() {
     std::vector<Script> retval;
-    for(auto item : content["scripts"]){
-        Script scr(item["name"], item["type"]);
-        auto args =  item["arguments"];
-        if(args.is_array() && args.size() > 0) {
-            if(args[0].is_string()) scr.set_arguments(static_cast<std::vector<std::string>>( item["arguments"]));
-            else scr.set_arguments(static_cast<std::vector<nlohmann::json>>(item["arguments"]));
-            if(item.contains("function_mode") && item["function_mode"]) {
-                scr.set_function_mode(true);
-            } else {
-                scr.set_function_mode(false);
-            }
-        }
-
-        if(item.contains("product_include")) {
-            scr.set_product(item["product_include"], item["product_type"]);
-        }
-        retval.push_back(scr);
+    for(const auto& item : scripts){
+        retval.emplace_back(item);
     }
     return retval;
 }
 
-std::string Depfile::get_project_name() {
-    return content["general"]["project_name"];
-}
 
-std::vector<std::string> Depfile::get_include_directories() {
-    return content["general"]["include_paths"];
-}
 
-json Depfile::get_bus_section() {
-    return content["bus"];
+std::optional<bus_specs> Depfile::get_bus_section(const std::string &bus_type) {
+    if (bus.contains(bus_type)) return bus.at(bus_type);
+    else return std::nullopt;
 }
 
 bool Depfile::is_module_excluded(const std::string &s) {
-    bool ret = false;
-    for(auto &item: content["excluded_modules"]){
-        ret |= (std::string) item == s;
-    }
-    return ret;
+    return std::ranges::contains(excluded_modules, s);
 }
 
 void Depfile::add_excluded_module(const std::string &s) {
-    std::vector<std::string> exm = content["excluded_modules"];
-    exm.insert(exm.end(), s);
-    content["excluded_modules"] = exm;
+    excluded_modules.push_back(s);
 }
 
 Depfile::Depfile() {
-    content["excluded_modules"] = std::vector<std::string>();
-}
-
-bool Depfile::has_mappable_bus() {
-    if(content.contains("bus")) return !content["bus"].empty();
-    return false;
-}
-
-std::string Depfile::get_board_def() {
-    return content["general"]["board"];
-}
-
-std::string Depfile::get_target() {
-    return content["general"]["target_part"];
-}
-
-bool Depfile::has_board_def() {
-    return content["general"].contains("board");
+    excluded_modules = std::vector<std::string>();
 }
 

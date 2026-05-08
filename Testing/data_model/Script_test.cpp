@@ -22,12 +22,18 @@
 
 
 TEST( Script_test , get_name) {
-    Script cnstr("test","py");
+    script_specs s;
+    s.name = "test";
+    s.type = "tcl";
+    Script cnstr(s);
     ASSERT_EQ(cnstr.get_name(), "test");
 }
 
 TEST( Script_test , path) {
-    Script cnstr("test", "python");
+    script_specs s;
+    s.name = "test";
+    s.type = "python";
+    Script cnstr(s);
     cnstr.set_path("test_path");
     ASSERT_EQ(cnstr.get_path(), "test_path");
 }
@@ -35,7 +41,11 @@ TEST( Script_test , path) {
 
 TEST( Script_test , ser_des_script) {
 
-    Script scr_out("test", "tcl");
+    script_specs s;
+    s.name = "test";
+    s.type = "tcl";
+    Script scr_out(s);
+
     scr_out.set_path("/test/path");
 
     std::stringstream os;
@@ -54,20 +64,25 @@ TEST( Script_test , ser_des_script) {
 }
 
 TEST( Script_test , string_arguments) {
-    Script test_script("test", "tcl");
-    std::vector<std::string> arg = {"test_arg_1", "test_arg_2"};
-    test_script.set_arguments(arg);
+    script_specs s;
+    s.name = "test";
+    s.type = "tcl";
+    s.positional_arguments =  {"test_arg_1", "test_arg_2"};
+    Script test_script(s);
     auto args = test_script.get_arguments();
     std::vector<std::pair<std::string, std::string>> results = {{"test_arg_1", ""}, {"test_arg_2",""}};
 
     ASSERT_THAT(args, testing::ContainerEq(results));
 }
 
-TEST( Script_test , variables_arguments) {
+TEST( Script_test , named_arguments) {
 
-    Script test_script("test", "tcl");
-    std::vector<nlohmann::json> arg = {{{"name", "A"}, {"value", "1"}}, {{"name", "B"}, {"value", "2"}}};
-    test_script.set_arguments(arg);
+    script_specs s;
+    s.name = "test";
+    s.type = "tcl";
+    s.named_arguments.emplace_back("A", "1");
+    s.named_arguments.emplace_back("B", "2");
+    Script test_script(s);
     auto args = test_script.get_arguments();
     std::vector<std::pair<std::string, std::string>> results = {{"A", "1"}, {"B","2"}};
 
@@ -77,7 +92,10 @@ TEST( Script_test , variables_arguments) {
 
 
 TEST( Script_test , get_type) {
-    Script test_script("test", "tcl");
+    script_specs s;
+    s.name = "test";
+    s.type = "tcl";
+    Script test_script(s);
     script_type_t type = test_script.get_type();
 
     ASSERT_EQ(type, tcl_script);
@@ -85,7 +103,10 @@ TEST( Script_test , get_type) {
 
 
 TEST( Script_test , uninit_script) {
-    Script test_script("Test", "unknown");
+    script_specs s;
+    s.name = "test";
+    s.type = "unknown";
+    Script test_script(s);
     script_type_t type = test_script.get_type();
 
     ASSERT_EQ(type, uninit_script);

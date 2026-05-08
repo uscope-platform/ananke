@@ -714,10 +714,6 @@ TEST(parameter_processing, override_with_system_task) {
     d_store->store_hdl_entity(resources[0]);
     d_store->store_hdl_entity(resources[1]);
 
-    nlohmann::json df_content;
-
-    Depfile df;
-    df.set_content(df_content);
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -757,10 +753,6 @@ TEST(parameter_processing, interface_default_parameters) {
 
     auto raw_param = resources[1].get_dependencies()[0].get_parameters();
 
-    nlohmann::json df_content;
-
-    Depfile df;
-    df.set_content(df_content);
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -814,10 +806,6 @@ TEST(parameter_processing, override_with_interface_param) {
 
     auto raw_param = resources[2].get_dependencies()[1].get_parameters();
 
-    nlohmann::json df_content;
-
-    Depfile df;
-    df.set_content(df_content);
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -866,10 +854,6 @@ TEST(parameter_processing, override_with_package_parameter) {
     d_store->store_hdl_entity(resources[1]);
     d_store->store_hdl_entity(resources[2]);
 
-    nlohmann::json df_content;
-
-    Depfile df;
-    df.set_content(df_content);
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -930,10 +914,6 @@ TEST(parameter_processing, override_with_function_parameter) {
     d_store->store_hdl_entity(resources[0]);
     d_store->store_hdl_entity(resources[1]);
 
-    nlohmann::json df_content;
-
-    Depfile df;
-    df.set_content(df_content);
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -1003,10 +983,6 @@ TEST(parameter_processing, override_package_function) {
     d_store->store_hdl_entity(resources[1]);
     d_store->store_hdl_entity(resources[2]);
 
-    nlohmann::json df_content;
-
-    Depfile df;
-    df.set_content(df_content);
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -1063,12 +1039,6 @@ TEST(parameter_processing, parameter_with_for_loop) {
 
     d_store->store_hdl_entity(resources[0]);
     d_store->store_hdl_entity(resources[1]);
-
-    nlohmann::json df_content;
-
-    Depfile df;
-    df.set_content(df_content);
-
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];

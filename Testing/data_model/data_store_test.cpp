@@ -37,7 +37,10 @@ TEST( data_store_test , evict_constr) {
 TEST( data_store_test , evict_script) {
 
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
-    Script test_scr("test","py");
+    script_specs s;
+    s.name = "test";
+    s.type = "py";
+    Script test_scr(s);
 
     store_1->store_script(test_scr);
     store_1->evict_script(test_scr.get_name());
@@ -126,8 +129,13 @@ TEST( data_store_test , ser_des_data_File) {
 TEST( data_store_test , store_script_vect) {
 
     auto *store = new data_store(true, "/tmp/test_data_store");
-    Script test_scr_1("test_1","py");
-    Script test_scr_2("test_2","py");
+    script_specs s;
+    s.name = "test_1";
+    s.type = "py";
+    Script test_scr_1(s);
+    s.name = "test_2";
+    s.type = "py";
+    Script test_scr_2(s);
     std::vector<Script> test_vect = {test_scr_1,test_scr_2};
     store->store_script(test_vect);
     std::string name = "test_1";
@@ -270,7 +278,10 @@ TEST( data_store_test , data_file_clean_up) {
 TEST( data_store_test , script_clean_up) {
 
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
-    Script test_scr("test","py");
+    script_specs s;
+    s.name = "test";
+    s.type = "py";
+    Script test_scr(s);
     test_scr.set_path("/test");
     store_1->store_script(test_scr);
     delete store_1;

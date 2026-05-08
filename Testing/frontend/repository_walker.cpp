@@ -53,12 +53,18 @@ TEST_F(repository_walker , directory_analysis) {
     data_check["data"] = d;
     ASSERT_EQ(data_results, data_check);
 
-    Script s1("script_1", "tcl");
+    script_specs s;
+    s.name = "script_1";
+    s.type = "tcl";
+    Script s1(s);
+
     s1.set_path("repository_walker/script_1.tcl");
     std::unordered_map<std::string,Script> script_check;
     script_check["script_1"] = s1;
 
-    Script s2("script_2", "py");
+    s.name = "script_2";
+    s.type = "py";
+    Script s2(s);
     s2.set_path("repository_walker/script_2.py");
     script_check["script_2"] = s2;
 

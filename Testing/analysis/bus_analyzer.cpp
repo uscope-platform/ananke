@@ -57,6 +57,11 @@ TEST( bus_analysis, simple_bus_analysis) {
     }
 
     nlohmann::json df_content;
+    df_content["general"] = nlohmann::json();
+    df_content["general"]["project_name"] = "project";
+    df_content["general"]["sim_tl"] = "ad2s1210";
+    df_content["general"]["synth_tl"] = "ad2s1210";
+    df_content["general"]["board"] = "test";
     df_content["bus"] = nlohmann::json();
     df_content["bus"]["control"] = nlohmann::json();
     df_content["bus"]["control"]["bus_interface"] = "axi_in";

@@ -23,11 +23,16 @@ protected:
     void SetUp() {
         d_store = std::make_shared<data_store>(true,"/tmp/test_data_store");
 
-        Script s1_spec("python_test", "py");
+        script_specs s;
+        s.name = "python_test";
+        s.type = "py";
+        Script s1_spec(s);
         s1_spec.set_path("/tests/script.py");
         d_store->store_script(s1_spec);
 
-        Script s2_spec("tcl_test", "tcl");
+        s.name = "tcl_test";
+        s.type = "tcl";
+        Script s2_spec(s);
         s2_spec.set_path("/tests/tcl_test.tcl");
         d_store->store_script(s2_spec);
 
@@ -46,16 +51,21 @@ protected:
 
 TEST_F(aux_resolver, get_py_obj){
     Auxiliary_resolver res(d_store);
-    Script s1("python_test", "py");
-    std::vector<std::string> arg ={"arg1", "arg2", "arg3"};
-    s1.set_arguments(arg);
-    s1.set_product(true, "test.tcl");
+    script_specs s;
+    s.name = "python_test";
+    s.type = "py";
+    s.positional_arguments={"arg1", "arg2", "arg3"};
+    s.products_type = "test.tcl";
+    s.include_products = true;
+    Script s1(s);
     auto result = res.get_python_objects({s1});
-
-    Script s1_check("python_test", "py");
+    s.name = "python_test";
+    s.type = "py";
+    s.positional_arguments={"arg1", "arg2", "arg3"};
+    s.products_type = "test.tcl";
+    s.include_products = true;
+    Script s1_check(s);
     s1_check.set_path("/tests/script.py");
-    s1_check.set_arguments(arg);
-    s1_check.set_product(true, "test.tcl");
     ASSERT_EQ(result[0], s1_check);
 }
 
@@ -63,10 +73,13 @@ TEST_F(aux_resolver, get_py_obj){
 
 TEST_F(aux_resolver, get_python_path){
     Auxiliary_resolver res(d_store);
-    Script s1("python_test", "py");
-    std::vector<std::string> arg ={"arg1", "arg2", "arg3"};
-    s1.set_arguments(arg);
-    s1.set_product(true, "test.tcl");
+    script_specs s;
+    s.name = "python_test";
+    s.type = "py";
+    s.positional_arguments={"arg1", "arg2", "arg3"};
+    s.products_type = "test.tcl";
+    s.include_products = true;
+    Script s1(s);
     auto result = res.get_python_script_paths({s1});
     std::unordered_set<std::string> check = {"/tests/script.py"};
     ASSERT_EQ(result, check);
@@ -76,23 +89,31 @@ TEST_F(aux_resolver, get_python_path){
 
 TEST_F(aux_resolver, get_tcl_script){
     Auxiliary_resolver res(d_store);
-    Script s1("tcl_test", "tcl");
-    std::vector<std::string> arg ={"arg1", "arg2", "arg3"};
-    s1.set_arguments(arg);
+    script_specs s;
+    s.name = "tcl_test";
+    s.type = "tcl";
+    s.positional_arguments={"arg1", "arg2", "arg3"};
+    Script s1(s);
+
     auto result = res.get_tcl_objects({s1});
 
-    Script s2_check("tcl_test", "tcl");
+    s.name = "tcl_test";
+    s.type = "tcl";
+    s.positional_arguments={"arg1", "arg2", "arg3"};
+    Script s2_check(s);
+
     s2_check.set_path("/tests/tcl_test.tcl");
-    s2_check.set_arguments(arg);
     ASSERT_EQ(result[0], s2_check);
 }
 
 
 TEST_F(aux_resolver, get_tcl_path){
     Auxiliary_resolver res(d_store);
-    Script s1("tcl_test", "tcl");
-    std::vector<std::string> arg ={"arg1", "arg2", "arg3"};
-    s1.set_arguments(arg);
+    script_specs s;
+    s.name = "tcl_test";
+    s.type = "tcl";
+    s.positional_arguments={"arg1", "arg2", "arg3"};
+    Script s1(s);
     auto result = res.get_tcl_script_paths({s1});
     std::vector<script_source> check = {{"tcl_test","/tests/tcl_test.tcl",false,{{"arg1", ""}, {"arg2", ""}, {"arg3", ""}}}};
     ASSERT_EQ(result, check);

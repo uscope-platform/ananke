@@ -21,7 +21,7 @@
 
 #include "data_model/HDL/HDL_instance_AST.hpp"
 #include "data_model/data_store.hpp"
-#include "data_model/Depfile.hpp"
+#include "../../data_model/Depfile/Depfile.hpp"
 
 class peripheral_definition_generator {
 public:

@@ -97,6 +97,7 @@ target_link_libraries(ananke_lib PUBLIC
         Threads::Threads
         cereal
         nlohmann_json::nlohmann_json
+        ValiJSON::valijson
         OpenSSL::SSL
         gtest::gtest
 )

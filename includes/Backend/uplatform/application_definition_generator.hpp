@@ -22,7 +22,7 @@
 
 #include "data_model/documentation/channel_group.hpp"
 #include "data_model/documentation/channel.hpp"
-#include "data_model/Depfile.hpp"
+#include "../../data_model/Depfile/Depfile.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/scope.hpp"
 

@@ -19,13 +19,16 @@
 #include "Backend/python_script_runner.hpp"
 
 TEST(python_script_runner, run_script){
+    script_specs specs;
+    specs.name = "python_test";
+    specs.type = "py";
+    specs.positional_arguments = {"test_file.tcl"};
+    specs.products_type = "tcl";
+    specs.include_products = true;
 
-    Script s("python_test", "py");
+    Script s(specs);
     s.set_path("check_files/python_test.py");
-    std::vector<std::string> arg = {"test_file.tcl"};
-    s.set_arguments(arg);
-    s.set_product(true, "tcl");
-    std::vector<Script> script_vect = {s};
+    std::vector script_vect = {s};
 
     python_script_runner runner;
     runner.run_python_scripts(script_vect);

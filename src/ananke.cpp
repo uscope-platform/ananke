@@ -121,12 +121,13 @@ std::optional<int> ananke::load_data_cache() {
     return std::nullopt;
 }
 
-void ananke::build_flow() {
+std::optional<int> ananke::build_flow() {
 
     // Parse depfile
     if(opts.target.empty()) opts.target = std::filesystem::current_path().string() + "/Depfile";
     if(std::filesystem::exists(opts.target)) {
-        Depfile dep(opts.target);
+        std::ifstream ifs(opts.target);
+        Depfile dep(ifs);
 
         // Resolve auxiliary files (scripts and constraints)
         Auxiliary_resolver aux_resolver(d_store);
@@ -142,18 +143,18 @@ void ananke::build_flow() {
         script_deps.insert(script_deps.end(), additional_script_deps.begin(), additional_script_deps.end());
 
         std::set<std::string> additional_constr_deps = py_runner.get_constraints_dependencies();
-        std::unordered_set<std::string> constr_deps = aux_resolver.get_constraints(dep.get_constraints());
+        std::unordered_set<std::string> constr_deps = aux_resolver.get_constraints(dep.constraints);
         constr_deps.insert(additional_constr_deps.begin(), additional_constr_deps.end());
 
 
         // BUILD ASTs FOR TOP LEVEL AND ADDITIONAL MODULES
         HDL_ast_builder_v2 b(s_store, d_store, dep);
-        auto synth_ast = b.build_ast(std::vector({dep.get_synth_tl()}))[0];
-        auto additional_synth_modules = b.build_ast(dep.get_additional_synth_modules());
+        auto synth_ast = b.build_ast(std::vector({dep.general.synth_tl}))[0];
+        auto additional_synth_modules = b.build_ast(dep.general.synth_modules);
         additional_synth_modules.insert(additional_synth_modules.end(), synth_ast);
 
-        auto sim_ast = b.build_ast(std::vector({dep.get_sim_tl()}))[0];
-        auto additional_sim_modules = b.build_ast(dep.get_additional_sim_modules());
+        auto sim_ast = b.build_ast(std::vector({dep.general.sim_tl}))[0];
+        auto additional_sim_modules = b.build_ast(dep.general.sim_modules);
         additional_sim_modules.insert(additional_sim_modules.end(), sim_ast);
 
 
@@ -182,7 +183,7 @@ void ananke::build_flow() {
 
             project_data data;
 
-            data.name = dep.get_project_name();
+            data.name = dep.general.project_name;
             data.synth_sources = synth_sources;
             data.package_synth_sources = synth_packages;
             data.data_synth_sources = synth_data;
@@ -191,13 +192,16 @@ void ananke::build_flow() {
             data.data_sim_sources = sim_data;
             data.scripts = script_deps;
             data.constraints_sources = constr_deps;
-            data.tb_tl = dep.get_sim_tl();
-            data.synth_tl = dep.get_synth_tl();
-            data.commons_dir = dep.get_include_directories();
+            data.tb_tl = dep.general.sim_tl;
+            data.synth_tl = dep.general.synth_tl;
+            data.commons_dir = dep.general.include_paths;
             data.repo_dir = std::filesystem::current_path();
-            data.target_part = dep.get_target();
-            if(dep.has_board_def()){
-                data.board_part = dep.get_board_def();
+            if (dep.general.target_part) {
+                data.target_part = dep.general.target_part.value();
+            } else if(dep.general.board){
+                data.board_part = dep.general.board.value();
+            } else {
+                return 76;
             }
 
             generator.set_data(data);
@@ -219,7 +223,7 @@ void ananke::build_flow() {
                 generator.write_makefile(makefile);
 
 
-                Vivado_manager manager(s_store, !opts.keep_makefile, dep.get_project_name());
+                Vivado_manager manager(s_store, !opts.keep_makefile, dep.general.project_name);
                 if (!opts.makefile_only) manager.create_project("makefile.tcl",  !opts.no_open);
             }
         }
@@ -228,7 +232,7 @@ void ananke::build_flow() {
             lattice_project_generator generator(s_store);
             project_data data;
 
-            data.name = dep.get_project_name();
+            data.name = dep.general.project_name;
             data.synth_sources = synth_sources;
             data.package_synth_sources = synth_packages;
             data.data_synth_sources = synth_data;
@@ -237,13 +241,13 @@ void ananke::build_flow() {
             data.data_sim_sources = sim_data;
             data.scripts = script_deps;
             data.constraints_sources = constr_deps;
-            data.tb_tl = dep.get_sim_tl();
-            data.synth_tl = dep.get_sim_tl();
+            data.tb_tl = dep.general.sim_tl;
+            data.synth_tl = dep.general.synth_tl;
 
             std::ofstream makefile("makefile.tcl");
             generator.write_makefile(makefile);
 
-            Radiant_manager manager(s_store, !opts.keep_makefile, dep.get_project_name());
+            Radiant_manager manager(s_store, !opts.keep_makefile, dep.general.project_name);
             if (!opts.makefile_only) manager.create_project("makefile.tcl",  !opts.no_open);
         }
 
@@ -261,15 +265,15 @@ void ananke::build_flow() {
         app_def_gen.add_channel_groups(daq_analyzer.get_channel_groups());
         app_def_gen.add_scope(daq_analyzer.get_scope_data());
 
-        app_def_gen.construct_application(dep.get_project_name());
+        app_def_gen.construct_application(dep.general.project_name);
 
 
         if(opts.generate_periph_definition){
-            periph_def_gen.write_definition_file(dep.get_project_name() + "_periph_def.json");
+            periph_def_gen.write_definition_file(dep.general.project_name + "_periph_def.json");
         }
 
         if(opts.generate_app_definition){
-            app_def_gen.write_definition_file(dep.get_project_name() + "_app_def.json");
+            app_def_gen.write_definition_file(dep.general.project_name + "_app_def.json");
         }
         if (opts.dump_ast) {
             auto ast_dump = synth_ast->dump().dump(4);
@@ -278,5 +282,5 @@ void ananke::build_flow() {
             ast_file.close();
         }
     }
-
+    return std::nullopt;
 }

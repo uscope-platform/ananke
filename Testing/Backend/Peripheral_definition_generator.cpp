@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "data_model/Depfile.hpp"
+#include "../../includes/data_model/Depfile/Depfile.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/settings_store.hpp"
 #include "frontend/analysis/sv_analyzer.hpp"
@@ -53,6 +53,11 @@ TEST( periph_def_generation , generate_periph_def) {
 
 
     nlohmann::json df_content;
+    df_content["general"] = nlohmann::json();
+    df_content["general"]["project_name"] = "project";
+    df_content["general"]["sim_tl"] = "PID";
+    df_content["general"]["synth_tl"] = "PID";
+    df_content["general"]["board"] = "test";
     df_content["bus"] = nlohmann::json();
     df_content["bus"]["control"] = nlohmann::json();
     df_content["bus"]["control"]["bus_interface"] = "axil";

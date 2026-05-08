@@ -306,7 +306,7 @@ TEST( xilinx_project_gen, soc_synth_script) {
 
     s_store->set_setting("hdl_store", "/tmp/rb");
 
-    nlohmann::json d_f = nlohmann::json::parse(R"(
+    auto d_f = std::stringstream(R"(
         {
             "general":{
                 "project_name":"simple_vsi_base",
@@ -314,7 +314,7 @@ TEST( xilinx_project_gen, soc_synth_script) {
                 "synth_modules":[],
                 "synth_tl": "simple_vsi_base",
                 "sim_modules":[],
-                "sim_tl":"",
+                "sim_tl":"simple_vsi_base",
                 "include_paths":[]
             },
             "scripts":[
@@ -338,7 +338,6 @@ TEST( xilinx_project_gen, soc_synth_script) {
         }
     )");
 
-
     Depfile dep_file(d_f);
     HDL_ast_builder_v2 b(s_store, d_store, dep_file);
     auto ast_v2 = b.build_ast(std::vector<std::string>({"simple_vsi_base"}))[0];
@@ -350,10 +349,10 @@ TEST( xilinx_project_gen, soc_synth_script) {
     xilinx_project_generator generator(s_store);
 
     project_data d;
-    d.name = dep_file.get_project_name();
+    d.name = dep_file.general.project_name;
     d.synth_sources = sources;
     d.sim_sources = {};
-    d.synth_tl = dep_file.get_synth_tl();
+    d.synth_tl = dep_file.general.synth_tl;
     d.commons_dir = {};
     d.scripts = {
         {

@@ -28,12 +28,20 @@ Script::Script(const Script &S) {
     function_mode = S.function_mode;
 }
 
-Script::Script(std::string n, const std::string& t) {
-    name = std::move(n);
-    if(t=="tcl") type = tcl_script;
-    else if (t=="python" || t == "py") type = python_script;
+Script::Script(const script_specs &specs) {
+    name = specs.name;
+    if(specs.type=="tcl") type = tcl_script;
+    else if (specs.type=="python" || specs.type == "py") type = python_script;
     else type = uninit_script;
-    product_include = false;
+    if (!specs.named_arguments.empty()) arguments = specs.named_arguments;
+    else {
+        for (const auto& arg:specs.positional_arguments) {
+            arguments.emplace_back(arg,"");
+        }
+    }
+    function_mode = specs.function_mode;
+    product_include = specs.include_products;
+    product_type = specs.products_type;
 }
 
 std::string Script::get_name() {
@@ -46,22 +54,6 @@ script_type_t Script::get_type() {
 
 std::vector<std::pair<std::string,std::string>> Script::get_arguments() {
     return arguments;
-}
-
-void Script::set_arguments(std::vector<std::string> args) {
-    for(auto &item: args) {
-        arguments.push_back({item, ""});
-    }
-}
-
-void Script::set_arguments(std::vector<nlohmann::json> args) {
-    for(auto &item: args) {
-        arguments.push_back({item["name"], item["value"]});
-    }
-}
-
-void Script::set_arguments(std::vector<std::pair<std::string, std::string>> args) {
-    arguments = std::move(args);
 }
 
 
@@ -93,11 +85,6 @@ bool operator==(const Script &lhs, const Script &rhs) {
     ret &= lhs.product_include == rhs.product_include;
 
     return ret;
-}
-
-void Script::set_product(bool gen, std::string t) {
-    product_include = gen;
-    product_type = std::move(t);
 }
 
 bool Script::get_product_include() const {

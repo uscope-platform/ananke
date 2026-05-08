@@ -41,21 +41,28 @@ auto script_to_integer(script_type_t const value)
     return static_cast<typename std::underlying_type<script_type_t>::type>(value);
 }
 
+struct script_specs {
+    std::string name = "";
+    std::string type = "";
+    std::string products_type = "";
+    bool function_mode = false;
+    bool include_products = false;
+    std::vector<std::pair<std::string, std::string>> named_arguments = {};
+    std::vector<std::string> positional_arguments = {};
+};
+
 class Script {
 public:
     Script() = default;
     Script(const Script &S);
-    Script(std::string n, const std::string& t);
+    Script(const script_specs &specs);
     std::string get_name();
     script_type_t get_type();
-    void set_function_mode(const bool f) {function_mode = f;}
     bool get_function_mode() const {return function_mode;}
-    void set_product(bool gen, std::string t);
+    void set_product(const bool gen,const std::string &t) {product_include = gen, product_type = t;}
     [[nodiscard]] bool get_product_include() const;
     [[nodiscard]] std::string get_product_type() const;
-    void set_arguments(std::vector<std::string> args);
-    void set_arguments(std::vector<nlohmann::json> args);
-    void set_arguments(std::vector<std::pair<std::string,std::string>> args);
+    void set_arguments(const std::vector<std::pair<std::string,std::string>> &args) {arguments = args;}
     void set_path(std::string p);
     std::string get_path();
     std::map<std::string,std::string> get_arguments_map();

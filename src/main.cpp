@@ -57,10 +57,11 @@ int main(int argc, char *argv[]){
     engine.get_settings();
     return_code = engine.generate_new_app();
     if (return_code.has_value()) return return_code.value();
-    return_code = engine.directed_parsing();
-    if (return_code.has_value()) return return_code.value();
+    auto parsing_result = engine.directed_parsing();
+    if (!parsing_result) return parsing_result.error();
     engine.load_data_cache();
-    engine.build_flow();
+    return_code = engine.build_flow();
+    if (return_code.has_value()) return return_code.value();
 
     return 0;
 }

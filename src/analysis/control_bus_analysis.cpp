@@ -22,14 +22,12 @@ control_bus_analysis::control_bus_analysis(const Depfile &df) : specs_manager("a
 }
 
 void control_bus_analysis::analyze_bus(std::shared_ptr<HDL_instance_AST> &ast) {
-    if(!dfile.has_mappable_bus()){
-        return;
-    }
 
-    auto bus = dfile.get_bus_section()["control"];
-    std::string bus_if = bus["bus_interface"];
+    if (!dfile.get_bus_section("control")) return;
+    auto bus = dfile.get_bus_section("control").value();
+    std::string bus_if = bus.bus_interface;
 
-    analysis_context top = {ast, bus_if, 0, "",
+    analysis_context top = {ast, bus.bus_interface, 0, "",
         {}, "","",-1};
     analize_node({top});
 }

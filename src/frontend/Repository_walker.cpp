@@ -259,7 +259,10 @@ std::vector<DataFile> analyze_data(const std::filesystem::path &file) {
 std::vector<Script> analyze_script(const std::filesystem::path &file) {
     std::string ext = file.extension();
     ext = std::regex_replace(ext, std::regex("\\."), "");
-    Script scr(file.stem(), ext);
+    script_specs s;
+    s.name = file.stem();
+    s.type = ext;
+    Script scr(s);
     scr.set_path(file);
     return {scr};
 }
