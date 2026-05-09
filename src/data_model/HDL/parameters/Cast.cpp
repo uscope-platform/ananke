@@ -29,13 +29,17 @@ Cast::Cast() {
 Cast::Cast(const Cast &other) {
     size = other.size;
     type = other.type;
-    content = other.content->clone_ptr();
+    type_cast = other.type_cast;
+    target_type = other.target_type;
+    if (other.content != nullptr) content = other.content->clone_ptr();
 }
 
 Cast::Cast(Cast &&other) noexcept {
     size = other.size;
     type = other.type;
-    content = other.content->clone_ptr();
+    type_cast = other.type_cast;
+    target_type = other.target_type;
+    if (other.content != nullptr) content = other.content->clone_ptr();
 }
 
 std::set<qualified_identifier> Cast::get_dependencies() const {
@@ -78,7 +82,10 @@ std::optional<resolved_parameter> Cast::evaluate(bool pack_result) {
 }
 
 std::string Cast::print() const {
-    return size.print() + "'(" + content->print() + ")";
+    std::string prefix;
+    if (type_cast) prefix = target_type;
+    else prefix = size.print();
+    return  prefix + "'(" + content->print() + ")";
 }
 
 int64_t Cast::get_size() {
@@ -91,8 +98,10 @@ int64_t Cast::get_depth() {
 
 std::shared_ptr<Parameter_value_base> Cast::clone_ptr() const {
     Cast c;
-    c.content = content->clone_ptr();
+    if (content != nullptr) c.content = content->clone_ptr();
     c.size = size;
+    c.type_cast = type_cast;
+    c.target_type = target_type;
     return std::make_shared<Cast>(c);
 }
 
@@ -102,5 +111,7 @@ bool Cast::isEqual(const Parameter_value_base &other) const {
     bool res = true;
     res &= *content == *rhs.content;
     res &= size == rhs.size;
+    res &= type_cast == rhs.type_cast;
+    res &= target_type == rhs.target_type;
     return res;
 }

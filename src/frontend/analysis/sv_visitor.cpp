@@ -147,11 +147,18 @@ void sv_visitor::exitPrimaryCast2(sv2017::PrimaryCast2Context *ctx) {
 }
 
 void sv_visitor::enterPrimaryCast(sv2017::PrimaryCastContext *ctx) {
-    int i = 0;
+    params_factory.start_cast(false);
+    if (ctx->signing() != nullptr) {
+        params_factory.set_cast_type(ctx->signing()->getText());
+    }else if (ctx->integer_type() != nullptr) {
+        params_factory.set_cast_type(ctx->integer_type()->getText());
+    } else if (ctx->non_integer_type() != nullptr) {
+        params_factory.set_cast_type(ctx->non_integer_type()->getText());
+    }
 }
 
 void sv_visitor::exitPrimaryCast(sv2017::PrimaryCastContext *ctx) {
-    int i = 0;
+    params_factory.stop_cast();
 }
 
 
@@ -751,8 +758,10 @@ void sv_visitor::enterGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
 }
 
 void sv_visitor::exitGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
+    auto line = ctx->getStart()->getLine();
+    auto dbg = ctx->getText();
     auto param = params_factory.get_parameter();
-    if(!param->get_expression()->is_expression()) {
+    if(!(param->get_expression()->is_expression() || param->get_expression()->is_cast())) {
         throw std::runtime_error("Concatenations or replications are not allowed in loop declarations");
     }
     auto ex = static_cast<Expression *>(param->get_expression().get());

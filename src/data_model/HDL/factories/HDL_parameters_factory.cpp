@@ -285,31 +285,45 @@ void HDL_parameters_factory::start_cast(bool expression_size) {
     }
 }
 
+void HDL_parameters_factory::set_cast_type(const std::string &t) {
+    c_factory.set_type(t);
+}
+
 void HDL_parameters_factory::stop_cast() {
     if(c_factory.in_cast()){
         auto expr = expr_factory.get_expression();
-        if (expr.has_value()) c_factory.set_content(std::make_shared<Expression>(expr.value()));
-        if (concat_factory.in_concatenation()) {
-            concat_factory.add_component(c_factory.get_cast());
-        } else {
-            init_list.set_scalar( c_factory.get_cast());
+        expr_factory.clear_expression();
+        if (expr.has_value()) {
+            c_factory.set_content(std::make_shared<Expression>(expr.value()));
+
         }
+
+        auto cast_value = c_factory.get_cast(); // This restores the outer cast context
         expr_factory.increase_level();
+
+        // --- THE FIX ---
+        if (c_factory.in_cast()) {
+            // Hand the finished inner cast to the outer cast
+            c_factory.set_content(cast_value);
+        } else if (concat_factory.in_concatenation()) {
+            concat_factory.add_component(cast_value);
+        } else {
+            init_list.set_scalar(cast_value);
+        }
     }
 }
 
 void HDL_parameters_factory::advance_cast() {
-    if (c_factory.in_cast()) {
+if (c_factory.in_cast()) {
         auto expr = expr_factory.get_expression();
-        c_factory.set_content(std::make_shared<Expression>(expr.value()));
+        if (expr.has_value()) {
+            c_factory.set_content(std::make_shared<Expression>(expr.value()));
+            expr_factory.clear_expression();
+        }
         c_factory.advance_cast();
-        expr_factory.clear_expression();
     }
 }
 
-void HDL_parameters_factory::set_cast_type(std::string type) {
-
-}
 
 void HDL_parameters_factory::start_function_assignment(const std::string &f_name) {
     calls_factory.start_function(f_name);

@@ -37,6 +37,12 @@ void cast_factory::set_content(const std::shared_ptr<Parameter_value_base> &c) {
     }
 }
 
+void cast_factory::set_type(const std::string &t) {
+    new_cast.set_type_cast();
+    new_cast.set_target_type(t);
+    state = build_phase::content;
+}
+
 
 std::shared_ptr<Cast> cast_factory::get_cast() {
     auto cast = new_cast;
@@ -45,7 +51,8 @@ std::shared_ptr<Cast> cast_factory::get_cast() {
         state = phases_stack.top();
         cast_stack.pop();
         phases_stack.pop();
+    }else {
+        state = build_phase::inactive;
     }
-    state = build_phase::inactive;
-    return std::make_shared<Cast>(new_cast);
+    return std::make_shared<Cast>(cast);
 }

@@ -27,6 +27,7 @@ class cast_factory {
 public:
     void start();
     void set_content(const std::shared_ptr<Parameter_value_base> &c);
+    void set_type(const std::string &t);
     void advance_cast() {state = build_phase::content;}
     std::shared_ptr<Cast> get_cast();
     bool in_cast() const {return state != build_phase::inactive;}

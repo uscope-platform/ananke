@@ -30,7 +30,9 @@ public:
             return *this;
         Parameter_value_base::operator =(other);
         type = other.type;
-        content = other.content->clone_ptr();
+        if (other.content != nullptr) content = other.content->clone_ptr();
+        type_cast = other.type_cast;
+        target_type = other.target_type;
         size = other.size;
         return *this;
     }
@@ -40,8 +42,9 @@ public:
             return *this;
         Parameter_value_base::operator =(std::move(other));
         type = other.type;
-        if (other.content != nullptr)
-            content = std::move(other.content->clone_ptr());
+        type_cast = other.type_cast;
+        target_type = other.target_type;
+        if (other.content != nullptr) content = std::move(other.content->clone_ptr());
         size = std::move(other.size);
         return *this;
     }
@@ -49,6 +52,8 @@ public:
     Cast(const Cast &other);
     Cast(Cast &&other) noexcept;
 
+    void set_type_cast(){type_cast = true;}
+    void set_target_type(const std::string &tt){target_type = tt;}
 
     void add_size_component(const Expression_component &c) {size.components.push_back(c);}
     void add_content_component(const Expression_component &c){content = nullptr;}
@@ -68,7 +73,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(content, size);
+        ar(content, size, type_cast, target_type);
     }
 
 protected:
@@ -76,6 +81,8 @@ protected:
     [[nodiscard]] bool isEqual(const Parameter_value_base& other) const override;
 
 private:
+    bool type_cast = false;
+    std::string target_type;
     std::shared_ptr<Parameter_value_base> content;
     Expression size;
 

@@ -163,6 +163,179 @@ TEST(parameter_extraction, paretesized_cast) {
 }
 
 
+TEST(parameter_extraction, type_cast) {
+    auto test_pattern = R"(
+        module test_mod #()();
+
+            parameter reg [7:0] TEST_PARAM = unsigned'(-5);
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+
+    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p->set_name("TEST_PARAM");
+    Initialization_list il;
+    Cast c;
+    c.set_type_cast();
+    c.set_target_type("unsigned");
+    c.set_content(std::make_shared<Expression>(Expression({
+        Expression_component("-", Expression_component::operation),
+        Expression_component("5", Expression_component::number)
+    })));
+    dimension_t d;
+    d.first_bound = {Expression_component("7", Expression_component::number)};
+    d.second_bound =  {Expression_component("0", Expression_component::number)};
+    d.packed = true;
+    il.add_dimension(d);
+    il.set_scalar(std::make_shared<Cast>(c));
+
+    p->add_initialization_list(il);
+    check_params.insert(p);
+
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& item:check_params){
+        ASSERT_TRUE(parameters.contains(item->get_name()));
+        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    }
+    ASSERT_TRUE(false);
+    auto defaults = resource.get_default_parameters();
+
+    ASSERT_EQ(251, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
+}
+
+
+TEST(parameter_extraction, nested_type_cast) {
+    auto test_pattern = R"(
+        module test_mod #()();
+
+            parameter reg [7:0] TEST_PARAM = (NumLevels)'(unsigned'(j));
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+
+
+    Cast inner_c;
+    inner_c.set_type_cast();
+    inner_c.set_target_type("unsigned");
+    inner_c.set_content(std::make_shared<Expression>(Expression({
+        Expression_component("j", Expression_component::identifier)
+    })));
+
+    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p->set_name("TEST_PARAM");
+    Initialization_list il;
+    Cast outer_c;
+    outer_c.set_size(Expression({
+        Expression_component("(",Expression_component::parenthesis),
+        Expression_component("NumLevels", Expression_component::identifier),
+        Expression_component(")",Expression_component::parenthesis)
+    }));
+    outer_c.set_content(std::make_shared<Cast>(inner_c));
+    dimension_t d;
+    d.first_bound = {Expression_component("7", Expression_component::number)};
+    d.second_bound =  {Expression_component("0", Expression_component::number)};
+    d.packed = true;
+    il.add_dimension(d);
+    il.set_scalar(std::make_shared<Cast>(outer_c));
+    p->add_initialization_list(il);
+    check_params.insert(p);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& item:check_params){
+        ASSERT_TRUE(parameters.contains(item->get_name()));
+        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    }
+    ASSERT_TRUE(false);
+    auto defaults = resource.get_default_parameters();
+
+    ASSERT_EQ(251, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
+}
+
+
+TEST(parameter_extraction, multiple_type_cast) {
+    auto test_pattern = R"(
+        module test_mod #()();
+
+            parameter reg [7:0] TEST_PARAM = unsigned'(-5);
+            parameter TEST_PARAM_2 = int'(2.5);
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+
+    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p->set_name("TEST_PARAM");
+    Initialization_list il;
+    Cast c;
+    c.set_type_cast();
+    c.set_target_type("unsigned");
+    c.set_content(std::make_shared<Expression>(Expression({
+        Expression_component("-", Expression_component::operation),
+        Expression_component("5", Expression_component::number)
+    })));
+    dimension_t d;
+    d.first_bound = {Expression_component("7", Expression_component::number)};
+    d.second_bound =  {Expression_component("0", Expression_component::number)};
+    d.packed = true;
+    il.add_dimension(d);
+    il.set_scalar(std::make_shared<Cast>(c));
+    p->add_initialization_list(il);
+    check_params.insert(p);
+
+
+    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p->set_name("TEST_PARAM_2");
+    il = Initialization_list();
+    c = Cast();
+    c.set_type_cast();
+    c.set_target_type("int");
+    c.set_content(std::make_shared<Expression>(Expression({
+        Expression_component("2.5", Expression_component::number)
+    })));
+    il.set_scalar(std::make_shared<Cast>(c));
+    p->add_initialization_list(il);
+    check_params.insert(p);
+
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& item:check_params){
+        ASSERT_TRUE(parameters.contains(item->get_name()));
+        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    }
+    ASSERT_TRUE(false);
+    auto defaults = resource.get_default_parameters();
+
+    ASSERT_EQ(251, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
+    ASSERT_EQ(2, std::get<int64_t>(defaults.at({"","", "TEST_PARAM_2"})));
+}
+
 TEST(parameter_extraction,time_literal) {
     auto test_pattern = R"(
         module test_mod #(

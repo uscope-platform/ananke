@@ -81,9 +81,9 @@ public:
     void stop_array_quantifier();
 
     void start_cast(bool expression_size);
+    void set_cast_type(const std::string &t);
     void stop_cast();
     void advance_cast();
-    void set_cast_type(std::string type);
 
     void start_function_assignment(const std::string &f_name);
     void stop_function_assignment();

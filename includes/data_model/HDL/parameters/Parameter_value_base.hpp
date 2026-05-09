@@ -54,6 +54,8 @@ public:
     [[nodiscard]] bool is_concatenation() const {return type == concatenation;}
     [[nodiscard]] bool is_function() const {return type == function;}
     [[nodiscard]] bool is_ternary() const {return type == ternary;}
+    [[nodiscard]] bool is_cast() const {return type == cast;}
+
 
     virtual std::shared_ptr<Parameter_value_base> clone_ptr() const = 0;
 
