@@ -113,6 +113,55 @@ TEST(parameter_extraction, size_cast) {
     ASSERT_EQ(3, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
 }
 
+TEST(parameter_extraction, paretesized_cast) {
+    auto test_pattern = R"(
+        module test_mod #(
+            )();
+            parameter integer SIZE = 4;
+            parameter integer TEST_PARAM = (SIZE)'(31'h100003);
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p->set_name("SIZE");
+    p->add_component(Expression_component(4, 2));
+    check_params.insert(p);
+
+    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p->set_name("TEST_PARAM");
+    Initialization_list il;
+    Cast c;
+    c.set_size(Expression({
+        Expression_component("(",Expression_component::parenthesis),
+        Expression_component("SIZE", Expression_component::identifier),
+        Expression_component(")",Expression_component::parenthesis)
+    }));
+    c.set_content(std::make_shared<Expression>(Expression({Expression_component("31'h100003", Expression_component::number)})));
+    il.set_scalar(std::make_shared<Cast>(c));
+    p->add_initialization_list(il);
+    check_params.insert(p);
+
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& item:check_params){
+        ASSERT_TRUE(parameters.contains(item->get_name()));
+        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    }
+
+    auto defaults = resource.get_default_parameters();
+
+    ASSERT_EQ(3, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
+}
+
 
 TEST(parameter_extraction,time_literal) {
     auto test_pattern = R"(
@@ -419,7 +468,7 @@ TEST(parameter_extraction, float_parameter) {
     ASSERT_FLOAT_EQ(0.17453292519943295, std::get<double>(defaults.at({"","", "STEP"})));
 }
 
-TEST(parameter_extraction, simple_cast) {
+TEST(parameter_extraction, simple_system_task) {
     auto test_pattern = R"(
 
     module test_mod #(
@@ -464,7 +513,7 @@ TEST(parameter_extraction, simple_cast) {
     }
 }
 
-TEST(parameter_extraction, multiple_casts) {
+TEST(parameter_extraction, multiple_system_task) {
     auto test_pattern = R"(
 
     module test_mod #(
@@ -523,7 +572,7 @@ TEST(parameter_extraction, multiple_casts) {
     }
 }
 
-TEST(parameter_extraction, cast_propagation) {
+TEST(parameter_extraction, system_task_propagation) {
     auto test_pattern = R"(
 
     module test_mod #(
@@ -578,7 +627,7 @@ TEST(parameter_extraction, cast_propagation) {
     }
 }
 
-TEST(parameter_extraction, complex_cast) {
+TEST(parameter_extraction, nested_system_task) {
     auto test_pattern = R"(
 
     module test_mod #(

@@ -274,9 +274,9 @@ void HDL_parameters_factory::stop_array_quantifier() {
     index_factory.set_quantifier(false);
 }
 
-void HDL_parameters_factory::start_cast() {
+void HDL_parameters_factory::start_cast(bool expression_size) {
     if (in_param_assignment || in_initialization_list || in_param_override || in_packed_assignment|| f_factory.is_active()) {
-        if (concat_factory.in_concatenation()) {
+        if (concat_factory.in_concatenation() || expression_size) {
             expr_factory.start_expression();
         } else {
             expr_factory.decrease_level();
@@ -305,6 +305,10 @@ void HDL_parameters_factory::advance_cast() {
         c_factory.advance_cast();
         expr_factory.clear_expression();
     }
+}
+
+void HDL_parameters_factory::set_cast_type(std::string type) {
+
 }
 
 void HDL_parameters_factory::start_function_assignment(const std::string &f_name) {

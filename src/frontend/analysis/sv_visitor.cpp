@@ -138,12 +138,22 @@ void sv_visitor::enterCast_separator(sv2017::Cast_separatorContext *ctx) {
 }
 
 void sv_visitor::enterPrimaryCast2(sv2017::PrimaryCast2Context *ctx) {
-    params_factory.start_cast();
+    auto expression_size = ctx->primary()->getText().starts_with("(");
+    params_factory.start_cast(expression_size);
 }
 
 void sv_visitor::exitPrimaryCast2(sv2017::PrimaryCast2Context *ctx) {
     params_factory.stop_cast();
 }
+
+void sv_visitor::enterPrimaryCast(sv2017::PrimaryCastContext *ctx) {
+    int i = 0;
+}
+
+void sv_visitor::exitPrimaryCast(sv2017::PrimaryCastContext *ctx) {
+    int i = 0;
+}
+
 
 void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
     std::string call_name = ctx->any_system_tf_identifier()->getText();
