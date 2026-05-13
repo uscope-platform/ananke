@@ -23,7 +23,8 @@ sv_visitor::sv_visitor(std::string p) {
 void sv_visitor::enterModule_declaration(sv2017::Module_declarationContext *ctx) {
     current_declaration_type = "module";
     size_t line_number = ctx->getStart()->getLine();
-    modules_factory.new_module(path, module, line_number);
+    auto module_name = ctx->module_header_common()->identifier()->getText();
+    modules_factory.new_module(module_name, path, module, line_number);
 }
 
 
@@ -34,19 +35,14 @@ void sv_visitor::exitModule_declaration(sv2017::Module_declarationContext *ctx) 
 void sv_visitor::enterInterface_declaration(sv2017::Interface_declarationContext *ctx) {
     current_declaration_type = "interface";
     size_t line_number = ctx->getStart()->getLine();
-    interfaces_factory.new_interface(path, line_number);
+    std::string interface_name = ctx->interface_header()->identifier()->getText();
+    interfaces_factory.new_interface(interface_name, path, line_number);
 }
 
 void sv_visitor::exitInterface_declaration(sv2017::Interface_declarationContext *ctx) {
-    std::string interface_name = ctx->interface_header()->identifier()->getText();
-    interfaces_factory.set_interface_name(interface_name);
     entities.push_back(interfaces_factory.get_interface());
 }
 
-void sv_visitor::exitModule_header_common(sv2017::Module_header_commonContext *ctx) {
-    std::string module_name = ctx->identifier()->getText();
-    modules_factory.set_module_name(module_name);
-}
 
 void sv_visitor::enterModule_or_interface_or_program_or_udp_instantiation(sv2017::Module_or_interface_or_program_or_udp_instantiationContext *ctx) {
     std::string module_name = ctx->identifier()->getText();
@@ -69,8 +65,7 @@ void sv_visitor::exitModule_or_interface_or_program_or_udp_instantiation(sv2017:
 void sv_visitor::enterName_of_instance(sv2017::Name_of_instanceContext *ctx) {
     if(!ctx->unpacked_dimension().empty()){
         params_factory.start_param_assignment();
-        params_factory.new_parameter();
-        params_factory.set_parmeter_name("instance_array_qualifier");
+        params_factory.new_parameter("instance_array_qualifier");
         params_factory.start_array_quantifier();
     }
 }
@@ -181,13 +176,12 @@ void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
 
 void sv_visitor::enterPackage_declaration(sv2017::Package_declarationContext *ctx) {
     size_t line_number = ctx->getStart()->getLine();
-    modules_factory.new_module(path, package, line_number);
+    auto package_name = ctx->identifier()[0]->getText();
+    modules_factory.new_module(package_name, path, package, line_number);
 }
 
 void sv_visitor::exitPackage_declaration(sv2017::Package_declarationContext *ctx) {
-    std::string package_name = ctx->identifier()[0]->getText();
     auto package = modules_factory.get_module();
-    package.set_name(package_name);
     entities.push_back(package);
 }
 
@@ -478,8 +472,7 @@ void sv_visitor::exitNamed_parameter_assignment(sv2017::Named_parameter_assignme
 void sv_visitor::enterParam_assignment(sv2017::Param_assignmentContext *ctx) {
     auto p_n = ctx->identifier()->getText();
     params_factory.start_param_assignment();
-    params_factory.new_parameter();
-    params_factory.set_parmeter_name(p_n);
+    params_factory.new_parameter(p_n);
 }
 
 
@@ -741,8 +734,7 @@ void sv_visitor::exitLoop_generate_construct(sv2017::Loop_generate_constructCont
 void sv_visitor::enterGenvar_initialization(sv2017::Genvar_initializationContext *ctx) {
     std::string id = ctx->identifier()->getText();
     params_factory.start_param_assignment();
-    params_factory.new_parameter();
-    params_factory.set_parmeter_name(id);
+    params_factory.new_parameter(id);
 }
 
 void sv_visitor::exitGenvar_initialization(sv2017::Genvar_initializationContext *ctx) {
@@ -753,8 +745,7 @@ void sv_visitor::exitGenvar_initialization(sv2017::Genvar_initializationContext 
 
 void sv_visitor::enterGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
     params_factory.start_param_assignment();
-    params_factory.new_parameter();
-    params_factory.set_parmeter_name("genvar_expr");
+    params_factory.new_parameter("genvar_expr");
 }
 
 void sv_visitor::exitGenvar_expression(sv2017::Genvar_expressionContext *ctx) {

@@ -28,8 +28,7 @@ std::vector<HDL_Resource> vhdl_visitor::get_entities() {
 void vhdl_visitor::enterEntity_declaration(mgp_vh::vhdlParser::Entity_declarationContext *ctx) {
     std::string module_name = ctx->identifier()[0]->getText();
     size_t line_number = ctx->getStart()->getLine();
-    modules_factory.new_module(path,module, line_number);
-    modules_factory.set_module_name(module_name);
+    modules_factory.new_module(module_name, path,module, line_number);
 }
 
 void vhdl_visitor::exitArchitecture_body(mgp_vh::vhdlParser::Architecture_bodyContext *ctx) {

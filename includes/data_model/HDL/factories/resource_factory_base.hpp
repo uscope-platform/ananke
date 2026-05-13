@@ -28,8 +28,6 @@ protected:
 
     virtual ~resources_factory_base() = default;
 
-    virtual void set_name(const std::string &n);
-
     T current_resource;
     void push_resource();
     void pop_resource();

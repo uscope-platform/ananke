@@ -132,7 +132,7 @@ private:
         std::string name;
         std::string path;
         unsigned int line_n = 0;
-        dependency_class hdl_type;
+        dependency_class hdl_type = module;
         std::vector<HDL_instance> dependencies;
         std::unordered_map<std::string, port_direction_t> ports;
         std::unordered_map<std::string, std::array<std::string, 2>> if_specs;

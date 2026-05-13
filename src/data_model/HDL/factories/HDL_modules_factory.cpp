@@ -16,9 +16,9 @@
 #include "data_model/HDL/factories/HDL_modules_factory.hpp"
 
 
-void HDL_modules_factory::new_module(std::string &p, const dependency_class &type, unsigned int line_n) {
-    new_basic_resource("");
-    current_resource.set_path(p);
+void HDL_modules_factory::new_module(const std::string &name, const std::string &path, const dependency_class &type, unsigned int line_n) {
+    new_basic_resource(name);
+    current_resource.set_path(path);
     current_resource.set_type(type);
     current_resource.set_line_n(line_n);
 }

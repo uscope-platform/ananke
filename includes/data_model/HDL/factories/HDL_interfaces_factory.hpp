@@ -24,9 +24,8 @@
 class HDL_interfaces_factory : protected resources_factory_base<HDL_Resource>{
 
 public:
-    void new_interface(const std::string &p, unsigned int line_n);
+    void new_interface(const std::string &name, const std::string &path, unsigned int line_n);
     HDL_Resource get_interface();
-    void set_interface_name(const std::string &n) { set_name(n);};
     bool is_current_valid(){return valid_resource;}
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);
 

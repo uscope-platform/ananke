@@ -30,6 +30,7 @@ class HDL_parameter {
 public:
     HDL_parameter() = default;
     HDL_parameter( const HDL_parameter &c );
+    explicit HDL_parameter(const std::string &n){ name = n;}
 
     void set_name(const std::string &n) {
         name  = n;

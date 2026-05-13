@@ -16,9 +16,9 @@
 #include "data_model/HDL/factories/HDL_interfaces_factory.hpp"
 
 
-void HDL_interfaces_factory::new_interface(const std::string &p, unsigned int line_n) {
-    new_basic_resource("");
-    current_resource.set_path(p);
+void HDL_interfaces_factory::new_interface(const std::string &name, const std::string &path, unsigned int line_n) {
+    new_basic_resource(name);
+    current_resource.set_path(path);
     current_resource.set_line_n(line_n);
     current_resource.set_type(interface);
 }

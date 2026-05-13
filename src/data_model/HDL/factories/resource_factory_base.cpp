@@ -21,7 +21,7 @@ template<class T>
 void resources_factory_base<T>::new_basic_resource(const std::string &n) {
     valid_resource = true;
     push_resource();
-    current_resource = T();
+    current_resource = T(n);
 }
 
 
@@ -50,10 +50,6 @@ T resources_factory_base<T>::get_resource() {
     return ret_val;
 }
 
-template<class T>
-void resources_factory_base<T>::set_name(const std::string &n) {
-    current_resource.set_name(n);
-}
 
 
 template class resources_factory_base<HDL_Resource>;
