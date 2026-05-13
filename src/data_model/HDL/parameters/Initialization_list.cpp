@@ -316,14 +316,25 @@ resolved_parameter Initialization_list::process_default_initialization() {
 
     if (!init_value.has_value()) throw std::runtime_error("Error: initializer of default array should be defined");
     if(std::holds_alternative<int64_t>(init_value.value())) {
-        mdarray<int64_t> ret_i = {dimensions,std::get<int64_t>(init_value.value())};
+        mdarray ret_i = {dimensions,std::get<int64_t>(init_value.value())};
         return ret_i;
     }
     if(std::holds_alternative<std::string>(init_value.value())) {
-        mdarray<std::string> ret_s = {dimensions,std::get<std::string>(init_value.value())};
+        mdarray ret_s = {dimensions,std::get<std::string>(init_value.value())};
         return ret_s;
     }
     throw std::runtime_error("Error: initializer of default array should be a string or a number");
+
+}
+
+Initialization_list::parameter_type Initialization_list::get_type() const{
+    if(std::holds_alternative<mdarray<int64_t>>(solved_value)) {
+        return array_parameter;
+    }
+    if(std::holds_alternative<int64_t>(solved_value)) {
+        return numeric_parameter;
+    }
+    return string_parameter;
 
 }
 

@@ -24,16 +24,12 @@
 #include "data_model/HDL/parameters/Expression.hpp"
 #include "data_model/HDL/parameters/Initialization_list.hpp"
 
-#include <cereal/types/vector.hpp>
-#include <cereal/types/variant.hpp>
-#include "cereal/types/utility.hpp"
-
 class HDL_function_def;
 
 class HDL_parameter {
 public:
+    HDL_parameter() = default;
     HDL_parameter( const HDL_parameter &c );
-    HDL_parameter();
 
     void set_name(const std::string &n) {
         name  = n;
@@ -84,12 +80,6 @@ public:
     std::string get_name() const {return name;};
     qualified_identifier get_identifier(){return {"", "", name};}
 
-    enum parameter_type {
-        string_parameter=0,
-        numeric_parameter=1,
-        array_parameter = 2
-    };
-
     bool is_empty();
 
     void add_component(const Expression_component &component);
@@ -122,7 +112,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name ,type, i_l);
+        ar(name , i_l);
     }
 
     nlohmann::json dump();
@@ -132,16 +122,15 @@ public:
 private:
 
     std::string name;
-    parameter_type type;
 
     Initialization_list i_l;
 };
 
-constexpr std::string parameter_type_to_string(HDL_parameter::parameter_type in){
+constexpr std::string parameter_type_to_string(Initialization_list::parameter_type in){
     switch(in){
-        case HDL_parameter::string_parameter: return "string_parameter";
-        case HDL_parameter::numeric_parameter: return "numeric_parameter";
-        case HDL_parameter::array_parameter: return "array_parameter";
+        case Initialization_list::string_parameter: return "string_parameter";
+        case Initialization_list::numeric_parameter: return "numeric_parameter";
+        case Initialization_list::array_parameter: return "array_parameter";
         default: return "unknown parameter type";
     }
 }

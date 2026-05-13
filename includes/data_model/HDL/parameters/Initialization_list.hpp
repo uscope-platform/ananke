@@ -77,6 +77,14 @@ public:
     resolved_parameter process_default_initialization();
 
 
+    enum parameter_type {
+        string_parameter,
+        numeric_parameter,
+        array_parameter
+    };
+
+    parameter_type get_type() const;
+
     std::set<qualified_identifier> get_dependencies();
     void set_default() { default_initialization = true;};
 
