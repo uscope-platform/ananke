@@ -57,7 +57,6 @@ public:
     bool is_array() const{return !scalar;}
     bool is_packed() const{return unpacked_dimensions.empty() && !packed_dimensions.empty();}
 
-    std::optional<resolved_parameter> get_values();
 
     void set_packed_dimensions(const std::vector<dimension_t>  &d) {packed_dimensions = d;};
     void set_unpacked_dimensions(const std::vector<dimension_t>  &d) {unpacked_dimensions = d;};
@@ -103,6 +102,7 @@ public:
 private:
 
 
+    std::optional<resolved_parameter> evaluate_vector();
     bool scalar = true;
 
 

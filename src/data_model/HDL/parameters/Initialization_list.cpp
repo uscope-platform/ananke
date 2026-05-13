@@ -109,7 +109,7 @@ bool Initialization_list::empty() const {
 }
 
 
-std::optional<resolved_parameter>Initialization_list::get_values() {
+std::optional<resolved_parameter>Initialization_list::evaluate_vector() {
     mdarray<int64_t> ret;
     mdarray<std::string> ret_s;
     if(default_initialization){
@@ -239,7 +239,7 @@ std::optional<resolved_parameter> Initialization_list::evaluate() {
             result = expression_leaves[0]->evaluate(packed_concat);
         }
     } else {
-       result  = get_values();
+       result  = evaluate_vector();
     }
     return result;
 }

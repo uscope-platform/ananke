@@ -137,7 +137,7 @@ TEST(Initialization_list, packed_concatenation) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
 
     il.add_item(std::make_shared<Concatenation>(c));
-    auto res = il.get_values();
+    auto res = il.evaluate();
 
 
     ASSERT_TRUE(res.has_value());
