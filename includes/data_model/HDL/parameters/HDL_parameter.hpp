@@ -39,36 +39,22 @@ public:
     void set_value(const resolved_parameter &val);
 
     std::string get_string_value() const {
-        if (std::holds_alternative<std::vector<std::string>>(i_l.get_solved_value()))
-            return std::get<std::vector<std::string>>(i_l.get_solved_value())[0];
-        else
-            return "";
+        if (!i_l.get_solved_value().has_value()) return "";
+        return std::get<std::string>(i_l.get_solved_value().value());
     }
 
     [[nodiscard]] std::optional<int64_t>  get_numeric_value() const {
-        return std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
+        if (!i_l.get_solved_value().has_value()) return 0;
+        return std::get<int64_t>(i_l.get_solved_value().value());
     }
+
     [[nodiscard]] std::optional<mdarray<int64_t>> get_int_array_value() const{
-        if(std::holds_alternative<mdarray<int64_t>>(i_l.get_solved_value()))
-            return std::get<mdarray<int64_t>>(i_l.get_solved_value());
-        return std::nullopt;
+        if (!i_l.get_solved_value().has_value()) return {};
+        return std::get<mdarray<int64_t>>(i_l.get_solved_value().value());
     };
+
     [[nodiscard]] std::optional<resolved_parameter> get_value() const {
-        if(is_array()) {
-            if(std::holds_alternative<mdarray<int64_t>>(i_l.get_solved_value())) {
-                return get_int_array_value();
-            } else {
-                mdarray<std::string> ret_val;
-                ret_val.set_1d_slice({0,0}, std::get<std::vector<std::string>>(i_l.get_solved_value()));
-                return ret_val;
-            }
-        } else {
-            if(std::holds_alternative<std::vector<std::string>>(i_l.get_solved_value())){
-                return get_string_value();
-            } else {
-                return get_numeric_value();
-            }
-        }
+        return i_l.get_solved_value();
     }
 
     bool propagate_constant(const qualified_identifier &constant_name, const resolved_parameter &constant_value);

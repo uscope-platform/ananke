@@ -98,7 +98,7 @@ public:
     }
 
     void set_solved_value(const resolved_parameter &v);
-    [[nodiscard]] std::variant<mdarray<int64_t>, mdarray<std::string>::md_1d_array> get_solved_value() const;
+    [[nodiscard]] std::optional<resolved_parameter> get_solved_value() const;
 
 private:
 

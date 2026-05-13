@@ -179,8 +179,10 @@ void Initialization_list::set_solved_value(const resolved_parameter &val) {
     solved_value = val;
 }
 
-std::variant<mdarray<int64_t>, mdarray<std::string>::md_1d_array> Initialization_list::get_solved_value() const {
-   if (!solved_value.has_value())return {};
+std::optional<resolved_parameter> Initialization_list::get_solved_value() const {
+   return solved_value;
+    /*
+    if (!solved_value.has_value())return {};
     if(std::holds_alternative<std::string>(solved_value.value())) {
         mdarray<std::string>::md_1d_array arr= {std::get<std::string>(solved_value.value())};
         return arr;
@@ -196,6 +198,7 @@ std::variant<mdarray<int64_t>, mdarray<std::string>::md_1d_array> Initialization
     }
 
     return {};
+    */
 }
 
 void PrintTo(const Initialization_list &il, std::ostream *os) {

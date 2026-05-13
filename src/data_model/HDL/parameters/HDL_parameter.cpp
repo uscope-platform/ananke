@@ -58,12 +58,13 @@ void HDL_parameter::propagate_function(const HDL_function_def &def) {
 
 
 HDL_parameter::operator std::string() {
+    if (!i_l.get_solved_value().has_value()) return "";
     std::string ret_val;
     if(i_l.get_type() == Initialization_list::string_parameter) {
-        ret_val = std::get<std::vector<std::string>>(i_l.get_solved_value())[0];
+        ret_val = std::get<std::string>(i_l.get_solved_value().value());
     }
     if(i_l.get_type() == Initialization_list::numeric_parameter) {
-        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
+        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value().value()).get_scalar();
         if(val.has_value()) ret_val =  std::to_string(val.value());
     }
     if(i_l.get_type() == Initialization_list::array_parameter) {
@@ -85,15 +86,15 @@ void PrintTo(const HDL_parameter &param, std::ostream *os) {
 
 std::string HDL_parameter::value_as_string() const {
     if(i_l.get_type() == Initialization_list::string_parameter) {
-        return std::get<std::vector<std::string>>(i_l.get_solved_value())[0];
+        return std::get<std::string>(i_l.get_solved_value().value());
     }
     if(i_l.get_type() == Initialization_list::numeric_parameter) {
-        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
+        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value().value()).get_scalar();
         if(val.has_value()) return std::to_string(val.value());
         else return "";
     }
     if(i_l.get_type() == Initialization_list::array_parameter) {
-        return std::get<mdarray<int64_t>>(i_l.get_solved_value()).to_string();
+        return std::get<mdarray<int64_t>>(i_l.get_solved_value().value()).to_string();
     }
     return "";
 }
@@ -103,7 +104,7 @@ std::string HDL_parameter::to_string() const {
                          "\n  TYPE: " + parameter_type_to_string(i_l.get_type());
 
     if(i_l.get_type() == Initialization_list::numeric_parameter){
-        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
+        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value().value()).get_scalar();
         if(val.has_value()) result += "\n  VALUE: " + std::to_string(val.value());
         else result += "\n  VALUE: xxx";
     }
@@ -129,20 +130,16 @@ nlohmann::json HDL_parameter::dump() {
     ret["type"] = parameter_type_to_string(i_l.get_type());
     if(i_l.get_type() == Initialization_list::string_parameter){
         std::vector<std::string> values_s;
-        auto value = i_l.get_solved_value();
-        if (std::holds_alternative<std::vector<std::string>>(value)) {
-            for(const auto& s:std::get<std::vector<std::string>>(value)) {
-                values_s.push_back(std::regex_replace(s, std::regex(R"ctrl(^"(.*)"$)ctrl"), "$1"));
-            }
-        }
+        auto value = i_l.get_solved_value().value();
+        values_s.push_back(std::regex_replace(std::get<std::string>(value), std::regex(R"ctrl(^"(.*)"$)ctrl"), "$1"));
         ret["value"] = values_s;
     } else if(i_l.get_type() == Initialization_list::numeric_parameter){
         ret["value"]= std::vector<int64_t>();
-        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
-        if(val.has_value()) ret["value"].push_back(val.value());
+        auto val = i_l.get_solved_value();
+        if(val.has_value()) ret["value"].push_back(std::get<int64_t>(val.value()));
 
     } else if(i_l.get_type() == Initialization_list::array_parameter){
-        ret["value"] = std::get<mdarray<int64_t>>(i_l.get_solved_value()).dump();
+        ret["value"] = std::get<mdarray<int64_t>>(i_l.get_solved_value().value()).dump();
     }
 
 
