@@ -17,18 +17,16 @@
 
 
 HDL_parameter::HDL_parameter(const HDL_parameter &c) {
-    name = c.name;
     i_l = c.i_l.clone();
 }
 bool operator==(const HDL_parameter &lhs, const HDL_parameter &rhs) {
     bool ret_val = true;
-    ret_val &= lhs.name == rhs.name;
     ret_val &= lhs.i_l == rhs.i_l;
     return ret_val;
 }
 
 bool operator<(const HDL_parameter &lhs, const HDL_parameter &rhs) {
-    return lhs.name<rhs.name;
+    return lhs.get_name()<rhs.get_name();
 }
 
 void HDL_parameter::set_value(const resolved_parameter &val) {
@@ -92,7 +90,7 @@ std::string HDL_parameter::value_as_string() const {
 }
 
 std::string HDL_parameter::to_string() const {
-    std::string result = "\nHDL parameter:\n  NAME: " + name +
+    std::string result = "\nHDL parameter:\n  NAME: " + i_l.get_name() +
                          "\n  TYPE: " + parameter_type_to_string(i_l.get_type());
 
     if(i_l.get_type() == Initialization_list::numeric_parameter){
@@ -118,7 +116,7 @@ std::set<qualified_identifier> HDL_parameter::get_dependencies() {
 nlohmann::json HDL_parameter::dump() {
     nlohmann::json ret;
 
-    ret["name"] = name;
+    ret["name"] = i_l.get_name();
     ret["type"] = parameter_type_to_string(i_l.get_type());
     if(i_l.get_type() == Initialization_list::string_parameter){
         std::vector<std::string> values_s;

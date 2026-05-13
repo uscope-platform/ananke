@@ -17,6 +17,7 @@
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 Initialization_list::Initialization_list(const Initialization_list &i) {
+    name = i.name;
     unpacked_dimensions = i.unpacked_dimensions;
     packed_dimensions = i.packed_dimensions;
     solved_value = i.solved_value;
@@ -28,6 +29,7 @@ Initialization_list::Initialization_list(const Initialization_list &i) {
 
 Initialization_list Initialization_list::clone() const{
     Initialization_list i_l;
+    i_l.name = name;
     i_l.scalar = scalar;
     i_l.solved_value = solved_value;
     i_l.unpacked_dimensions = unpacked_dimensions;
@@ -69,6 +71,8 @@ void Initialization_list::add_item(const std::shared_ptr<Parameter_value_base> &
 
 bool operator==(const Initialization_list &lhs, const Initialization_list &rhs) {
     bool ret = true;
+
+    ret &= lhs.name == rhs.name;
 
     // last dimension is an internal variable only needed during construction, as such it does not need comparison
     if(lhs.expression_leaves.size() != rhs.expression_leaves.size()) return false;

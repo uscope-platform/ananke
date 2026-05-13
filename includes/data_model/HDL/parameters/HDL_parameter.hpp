@@ -30,10 +30,12 @@ class HDL_parameter {
 public:
     HDL_parameter() = default;
     HDL_parameter( const HDL_parameter &c );
-    explicit HDL_parameter(const std::string &n){ name = n;}
+    explicit HDL_parameter(const std::string &n) {
+        i_l.set_name(n);
+    }
 
     void set_name(const std::string &n) {
-        name  = n;
+        i_l.set_name(n);
     };
     std::shared_ptr<HDL_parameter> clone() const;
 
@@ -65,8 +67,8 @@ public:
     bool is_array() const {return i_l.is_array();}
     bool is_packed_array() const {return i_l.is_packed();}
 
-    std::string get_name() const {return name;};
-    qualified_identifier get_identifier(){return {"", "", name};}
+    std::string get_name() const {return i_l.get_name();};
+    qualified_identifier get_identifier(){return {"", "", i_l.get_name()};}
 
 
     void add_component(const Expression_component &component);
@@ -93,13 +95,15 @@ public:
     std::set<qualified_identifier> get_dependencies();
 
     void add_initialization_list(const Initialization_list &i){
+        auto n = i_l.get_name();
         i_l = i;
+        i_l.set_name(n);
     }
     Initialization_list get_i_l() {return i_l;}
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name , i_l);
+        ar(i_l);
     }
 
     nlohmann::json dump();
@@ -108,7 +112,6 @@ public:
 
 private:
 
-    std::string name;
 
     Initialization_list i_l;
 };

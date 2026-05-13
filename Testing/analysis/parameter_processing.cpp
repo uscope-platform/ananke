@@ -283,7 +283,6 @@ TEST(parameter_processing, array_instance_parameter_override) {
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_name("param_2");
     Initialization_list il;
     il.add_dimension({
         {Expression_component("1", Expression_component::number)},
@@ -296,7 +295,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     ec.set_value(av);
     il.set_scalar(std::make_shared<Expression>(Expression({ec})));
     p->add_initialization_list(il);
-
+    p->set_name("param_2");
     p->set_value(av);
     check_params.insert(p);
 

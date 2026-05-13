@@ -48,6 +48,45 @@ public:
     Initialization_list() = default;
     Initialization_list( const Initialization_list &i);
 
+    Initialization_list(Initialization_list &&other) noexcept
+        : name(std::move(other.name)),
+          scalar(other.scalar),
+          unpacked_dimensions(std::move(other.unpacked_dimensions)),
+          packed_dimensions(std::move(other.packed_dimensions)),
+          expression_leaves(std::move(other.expression_leaves)),
+          solved_value(std::move(other.solved_value)),
+          default_initialization(other.default_initialization) {
+    }
+
+    Initialization_list & operator=(const Initialization_list &other) {
+        if (this == &other)
+            return *this;
+        name = other.name;
+        scalar = other.scalar;
+        unpacked_dimensions = other.unpacked_dimensions;
+        packed_dimensions = other.packed_dimensions;
+        expression_leaves = other.expression_leaves;
+        solved_value = other.solved_value;
+        default_initialization = other.default_initialization;
+        return *this;
+    }
+
+    Initialization_list & operator=(Initialization_list &&other) noexcept {
+        if (this == &other)
+            return *this;
+        name = std::move(other.name);
+        scalar = other.scalar;
+        unpacked_dimensions = std::move(other.unpacked_dimensions);
+        packed_dimensions = std::move(other.packed_dimensions);
+        expression_leaves = std::move(other.expression_leaves);
+        solved_value = std::move(other.solved_value);
+        default_initialization = other.default_initialization;
+        return *this;
+    }
+
+    void set_name(const std::string &n) {name  = n;}
+    std::string get_name()const{return name;}
+
     Initialization_list clone() const;
     explicit Initialization_list(const std::shared_ptr<Parameter_value_base> &e);
     void add_dimension(const dimension_t &d);
@@ -93,7 +132,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(unpacked_dimensions, packed_dimensions, expression_leaves, default_initialization, scalar);
+        ar(name, unpacked_dimensions, packed_dimensions, expression_leaves, default_initialization, scalar);
     }
 
     void set_solved_value(const resolved_parameter &v);
@@ -101,6 +140,7 @@ public:
 
 private:
 
+    std::string name;
 
     std::optional<resolved_parameter> evaluate_vector();
     bool scalar = true;
