@@ -68,7 +68,6 @@ public:
     std::string get_name() const {return name;};
     qualified_identifier get_identifier(){return {"", "", name};}
 
-    bool is_empty();
 
     void add_component(const Expression_component &component);
     void set_expression(const std::shared_ptr<Parameter_value_base>  &e) {

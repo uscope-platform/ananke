@@ -19,9 +19,9 @@
 
 template<class T>
 void resources_factory_base<T>::new_basic_resource(const std::string &n) {
-    valid_resource = true;
     push_resource();
     current_resource = T(n);
+    valid_resource = true;
 }
 
 
@@ -38,7 +38,8 @@ void resources_factory_base<T>::pop_resource() {
 
 template<class T>
 void resources_factory_base<T>::push_resource() {
-    if(!current_resource.is_empty()){
+    if(valid_resource){
+        valid_resource = false;
         resource_stack.push(current_resource);
     }
 }

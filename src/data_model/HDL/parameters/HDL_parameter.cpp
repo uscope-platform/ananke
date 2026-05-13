@@ -31,14 +31,6 @@ bool operator<(const HDL_parameter &lhs, const HDL_parameter &rhs) {
     return lhs.name<rhs.name;
 }
 
-bool HDL_parameter::is_empty() {
-    bool ret = true;
-
-    ret &= name.empty();
-    ret &= i_l.empty();
-    return ret;
-}
-
 void HDL_parameter::set_value(const resolved_parameter &val) {
     i_l.set_solved_value(val);
 }
