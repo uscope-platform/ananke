@@ -21,7 +21,6 @@
 #include "frontend/analysis/vhdl_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
-#define EXPRESSION_WITH_TYPE(str) str, Expression_component::get_type(str)
 
 TEST( analysis_test , package) {
     auto  test_file = mm_file("check_files/test_package.sv");
@@ -36,44 +35,44 @@ TEST( analysis_test , package) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("bus_base");
-    Expression e = {Expression_component(EXPRESSION_WITH_TYPE("32'h43c00000"))};
+    Expression e = {Expression_component("32'h43c00000", Expression_component::number)};
     p->set_expression(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("timebase");
-    e = { Expression_component(EXPRESSION_WITH_TYPE("bus_base"))};
+    e = { Expression_component("bus_base", Expression_component::identifier)};
     p->set_expression(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("gpio");
     e = {
-        Expression_component(EXPRESSION_WITH_TYPE("timebase")), Expression_component(EXPRESSION_WITH_TYPE("+")),
-        Expression_component(EXPRESSION_WITH_TYPE("32'h1000")), Expression_component(EXPRESSION_WITH_TYPE("*")),
-        Expression_component(EXPRESSION_WITH_TYPE("2")), Expression_component(EXPRESSION_WITH_TYPE("/")),
-        Expression_component(EXPRESSION_WITH_TYPE("2")), Expression_component(EXPRESSION_WITH_TYPE("+")),
-        Expression_component(EXPRESSION_WITH_TYPE("1"))
+        Expression_component("timebase", Expression_component::identifier), Expression_component("+", Expression_component::operation),
+        Expression_component("32'h1000", Expression_component::number), Expression_component("*", Expression_component::operation),
+        Expression_component("2", Expression_component::number), Expression_component("/", Expression_component::operation),
+        Expression_component("2", Expression_component::number), Expression_component("+", Expression_component::operation),
+        Expression_component("1", Expression_component::number)
     };
     p->set_expression(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("scope_mux");
-    e = { Expression_component(EXPRESSION_WITH_TYPE("gpio"))};
+    e = { Expression_component("gpio", Expression_component::identifier)};
     p->set_expression(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("out_of_order");
-    e = { Expression_component(EXPRESSION_WITH_TYPE("scope_mux"))};
+    e = { Expression_component("scope_mux", Expression_component::identifier)};
     p->set_expression(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("modulo_parameter");
     e = {
-        Expression_component(EXPRESSION_WITH_TYPE("3")),Expression_component(EXPRESSION_WITH_TYPE("%")),Expression_component(EXPRESSION_WITH_TYPE("2"))
+        Expression_component("3", Expression_component::number),Expression_component("%", Expression_component::operation),Expression_component("2", Expression_component::number)
     };
     p->set_expression(std::make_shared<Expression>(e));
     check_map.insert(p);
@@ -81,7 +80,7 @@ TEST( analysis_test , package) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("subtraction_parameter");
     e = {
-        Expression_component(EXPRESSION_WITH_TYPE("'o4")),Expression_component(EXPRESSION_WITH_TYPE("-")),Expression_component(EXPRESSION_WITH_TYPE("'b10"))
+        Expression_component("'o4", Expression_component::number),Expression_component("-", Expression_component::operation),Expression_component("'b10", Expression_component::number)
     };
     p->set_expression(std::make_shared<Expression>(e));
     check_map.insert(p);
@@ -152,7 +151,7 @@ TEST( analysis_test , sv_module) {
     HDL_instance d0("if_array", "axi_lite", module);
     p = std::make_shared<HDL_parameter>();
     p->set_name("instance_array_qualifier");
-    e = {Expression_component(EXPRESSION_WITH_TYPE("module_parameter_2")),Expression_component(EXPRESSION_WITH_TYPE("+")),Expression_component(EXPRESSION_WITH_TYPE("1"))};
+    e = {Expression_component("module_parameter_2", Expression_component::identifier),Expression_component("+", Expression_component::operation),Expression_component("1", Expression_component::number)};
     p->set_expression(std::make_shared<Expression>(e));
     d0.add_array_quantifier(p);
     std::vector deps = {d0, d1, d2, d3};
@@ -176,13 +175,13 @@ TEST( analysis_test , sv_module) {
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("module_parameter_1");
-    p->add_component(Expression_component(EXPRESSION_WITH_TYPE("56")));
+    p->add_component(Expression_component("56", Expression_component::number));
     check_res.add_parameter(p);
 
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("module_parameter_2");
-    p->add_component(Expression_component(EXPRESSION_WITH_TYPE("74")));
+    p->add_component(Expression_component("74", Expression_component::number));
     check_res.add_parameter(p);
     std::map<qualified_identifier, resolved_parameter> check_defaults;
     check_defaults[{"","", "module_parameter_1"}] = 56;
@@ -264,7 +263,7 @@ TEST(analysis_test, interfaces_array) {
     check_dependency.set_dependency_class(module);
     auto array_qual = std::make_shared<HDL_parameter>();
     array_qual->set_name("instance_array_qualifier");
-    array_qual->add_component(Expression_component(EXPRESSION_WITH_TYPE("3")));
+    array_qual->add_component(Expression_component("3", Expression_component::number));
     check_dependency.add_array_quantifier(array_qual);
     ASSERT_EQ(dep, check_dependency);
 }
@@ -294,7 +293,7 @@ TEST(analysis_test, parameter_array_assignment) {
     HDL_parameter reference_param;
     reference_param.set_name("TEST_PARAM");
     Expression_component ec("TEST_ARRAY", Expression_component::identifier);
-    ec.add_array_index({Expression_component(EXPRESSION_WITH_TYPE("2"))});
+    ec.add_array_index({Expression_component("2", Expression_component::number)});
     auto e = {ec};
     reference_param.set_expression(std::make_shared<Expression>(e));
 

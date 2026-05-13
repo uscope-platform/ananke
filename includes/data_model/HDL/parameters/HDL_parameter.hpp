@@ -90,11 +90,6 @@ public:
         array_parameter = 2
     };
 
-    parameter_type get_type() const {return type;}
-    void set_type(parameter_type t) {
-        type = t;
-    }
-
     bool is_empty();
 
     void add_component(const Expression_component &component);

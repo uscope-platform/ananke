@@ -20,10 +20,9 @@
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 
-#define EXPRESSION_WITH_TYPE(str) str, Expression_component::get_type(str)
 
 TEST(Expression_component, sized_binary_sv_constant_parsing){
-    Expression_component ec(EXPRESSION_WITH_TYPE("8'b10110"));
+    Expression_component ec("8'b10110", Expression_component::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(std::get<int64_t>(ec.get_value().value()), 22);
@@ -32,7 +31,7 @@ TEST(Expression_component, sized_binary_sv_constant_parsing){
 
 
 TEST(Expression_component, sized_octal_sv_constant_parsing){
-    Expression_component ec(EXPRESSION_WITH_TYPE("12'o547"));
+    Expression_component ec("12'o547", Expression_component::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(std::get<int64_t>(ec.get_value().value()), 359);
@@ -41,7 +40,7 @@ TEST(Expression_component, sized_octal_sv_constant_parsing){
 
 
 TEST(Expression_component, sized_decimal_sv_constant_parsing){
-    Expression_component ec(EXPRESSION_WITH_TYPE("14'd1542"));
+    Expression_component ec("14'd1542", Expression_component::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(std::get<int64_t>(ec.get_value().value()), 1542);
@@ -50,7 +49,7 @@ TEST(Expression_component, sized_decimal_sv_constant_parsing){
 
 
 TEST(Expression_component, sized_hexadecimal_sv_constant_parsing){
-    Expression_component ec(EXPRESSION_WITH_TYPE("20'hCA54"));
+    Expression_component ec("20'hCA54", Expression_component::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(std::get<int64_t>(ec.get_value().value()), 51796);
@@ -60,7 +59,7 @@ TEST(Expression_component, sized_hexadecimal_sv_constant_parsing){
 
 
 TEST(Expression_component, unsized_binary_sv_constant_parsing){
-    Expression_component ec(EXPRESSION_WITH_TYPE("'b10110"));
+    Expression_component ec("'b10110", Expression_component::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(std::get<int64_t>(ec.get_value().value()), 22);
@@ -69,7 +68,7 @@ TEST(Expression_component, unsized_binary_sv_constant_parsing){
 
 
 TEST(Expression_component, unsized_octal_sv_constant_parsing){
-    Expression_component ec(EXPRESSION_WITH_TYPE("'o547"));
+    Expression_component ec("'o547", Expression_component::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(std::get<int64_t>(ec.get_value().value()), 359);
@@ -78,7 +77,7 @@ TEST(Expression_component, unsized_octal_sv_constant_parsing){
 
 
 TEST(Expression_component, unsized_decimal_sv_constant_parsing){
-    Expression_component ec(EXPRESSION_WITH_TYPE("'d1542"));
+    Expression_component ec("'d1542", Expression_component::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(std::get<int64_t>(ec.get_value().value()), 1542);
@@ -87,7 +86,7 @@ TEST(Expression_component, unsized_decimal_sv_constant_parsing){
 
 
 TEST(Expression_component, unsized_hexadecimal_sv_constant_parsing){
-    Expression_component ec(EXPRESSION_WITH_TYPE("'hCA54"));
+    Expression_component ec("'hCA54", Expression_component::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(std::get<int64_t>(ec.get_value().value()), 51796);
@@ -96,7 +95,7 @@ TEST(Expression_component, unsized_hexadecimal_sv_constant_parsing){
 
 
 TEST(Expression_component, string){
-    Expression_component ec(EXPRESSION_WITH_TYPE("\"FALSE\""));
+    Expression_component ec("\"FALSE\"", Expression_component::string);
 
     ASSERT_TRUE(ec.is_string());
     ASSERT_FALSE(ec.is_identifier());
@@ -105,7 +104,7 @@ TEST(Expression_component, string){
 
 
 TEST(Expression_component, identifier){
-    Expression_component ec(EXPRESSION_WITH_TYPE("FALSE"));
+    Expression_component ec("FALSE", Expression_component::identifier);
 
     ASSERT_TRUE(ec.is_identifier());
     ASSERT_FALSE(ec.is_string());
