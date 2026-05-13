@@ -18,7 +18,7 @@
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 template<class T>
-void resources_factory_base<T>::new_basic_resource() {
+void resources_factory_base<T>::new_basic_resource(const std::string &n) {
     valid_resource = true;
     push_resource();
     current_resource = T();

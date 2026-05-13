@@ -17,7 +17,7 @@
 
 
 void HDL_interfaces_factory::new_interface(const std::string &p, unsigned int line_n) {
-    new_basic_resource();
+    new_basic_resource("");
     current_resource.set_path(p);
     current_resource.set_line_n(line_n);
     current_resource.set_type(interface);

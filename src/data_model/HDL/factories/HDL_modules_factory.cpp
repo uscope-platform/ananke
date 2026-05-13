@@ -17,7 +17,7 @@
 
 
 void HDL_modules_factory::new_module(std::string &p, const dependency_class &type, unsigned int line_n) {
-    new_basic_resource();
+    new_basic_resource("");
     current_resource.set_path(p);
     current_resource.set_type(type);
     current_resource.set_line_n(line_n);

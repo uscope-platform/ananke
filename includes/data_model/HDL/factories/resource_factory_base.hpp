@@ -23,7 +23,7 @@ template <class T>
 class resources_factory_base {
 
 protected:
-    void new_basic_resource();
+    void new_basic_resource(const std::string &n);
     T get_resource();
 
     virtual ~resources_factory_base() = default;

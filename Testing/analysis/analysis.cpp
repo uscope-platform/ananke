@@ -164,7 +164,10 @@ TEST( analysis_test , sv_module) {
     test_ports["data_in"] = modport;
     test_ports["data_out"] = modport;
 
-    HDL_Resource check_res(module, "Decoder", "/test/file.sv");
+    HDL_Resource check_res;
+    check_res.set_name("Decoder");
+    check_res.set_type(module);
+    check_res.set_path("/test/file.sv");
     check_res.set_line_n(3);
     check_res.add_dependencies(deps);
     check_res.set_ports(test_ports);
@@ -189,7 +192,10 @@ TEST( analysis_test , sv_module) {
     check_res.set_default_parameters(check_defaults);
     ASSERT_EQ(resource, check_res);
     resource = res[1];
-    check_res = HDL_Resource(interface, "test_if", "/test/file.sv");
+    check_res = HDL_Resource();
+    check_res.set_name("test_if");
+    check_res.set_type(interface);
+    check_res.set_path("/test/file.sv");
     check_res.set_line_n(30);
     ASSERT_EQ(resource, check_res);
 }
@@ -200,7 +206,10 @@ TEST( analysis_test , vhdl_module) {
     analyzer.cleanup_content("`(.*)");
     auto resource = analyzer.analyze()[0];
     HDL_instance dep("and_component", "ANDGATE", module);
-    HDL_Resource check_res (module, "half_adder", "check_files/test_vhdl_module.vhd");
+    HDL_Resource check_res;
+    check_res.set_name("half_adder");
+    check_res.set_type(module);
+    check_res.set_path("check_files/test_vhdl_module.vhd");
     check_res.set_line_n(4);
     check_res.add_dependency(dep);
     ASSERT_EQ(resource, check_res);

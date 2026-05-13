@@ -41,8 +41,8 @@
  class HDL_Resource {
     public:
         HDL_Resource( const HDL_Resource &c );
+        explicit HDL_Resource(const std::string &n){name = n;}
         HDL_Resource();
-        HDL_Resource(dependency_class type, std::string n, std::string p);
 
         std::vector<HDL_instance> get_dependencies(){return dependencies;}
 

@@ -28,17 +28,29 @@ protected:
         HDL_instance d3("exm", "excluded_module", module);
         HDL_instance d4("pkg", "test_package", package);
         std::vector<HDL_instance> deps = {d1, d2, d3, d4};
-        HDL_Resource mod_entity(module, "test_module", "test/mod.sv");
+        HDL_Resource mod_entity;
+        mod_entity.set_name("test_module");
+        mod_entity.set_path("test/mod.sv");
+        mod_entity.set_type(module);
         mod_entity.add_dependencies(deps);
         d_store->store_hdl_entity(mod_entity);
 
         DataFile D("test_mem_init", "test/mem_init.mem");
         d_store->store_data_file(D);
-        HDL_Resource expl_dep(module, "expl_dep", "test/explicit/dep.sv");
+        HDL_Resource expl_dep;
+        expl_dep.set_name("expl_dep");
+        expl_dep.set_path("test/explicit/dep.sv");
+        expl_dep.set_type(module);
         d_store->store_hdl_entity(expl_dep);
-        HDL_Resource dep_entity(module, "test_dep", "test/dep.sv");
+        HDL_Resource dep_entity;
+        dep_entity.set_name("test_dep");
+        dep_entity.set_path("test/dep.sv");
+        dep_entity.set_type(module);
         d_store->store_hdl_entity(dep_entity);
-        HDL_Resource pkg_entity(package, "test_package", "test/pkg.sv");
+        HDL_Resource pkg_entity;
+        pkg_entity.set_name("test_package");
+        pkg_entity.set_path("test/pkg.sv");
+        pkg_entity.set_type(package);
         d_store->store_hdl_entity(pkg_entity);
     }
 

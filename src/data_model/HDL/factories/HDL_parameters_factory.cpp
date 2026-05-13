@@ -17,7 +17,7 @@
 
 
 void HDL_parameters_factory::new_parameter() {
-      new_basic_resource();
+      new_basic_resource("");
       init_list.set_dimensions(index_factory.get_dimensions(), true);
 }
 
@@ -217,7 +217,7 @@ void HDL_parameters_factory::stop_packed_dimension() {
 
 
 void HDL_parameters_factory::start_instance_parameter_assignment(const std::string& parameter_name) {
-    new_basic_resource();
+    new_basic_resource("");
     current_resource.set_name(parameter_name);
 }
 

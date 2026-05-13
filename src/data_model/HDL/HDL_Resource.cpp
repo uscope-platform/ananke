@@ -22,18 +22,6 @@ HDL_Resource::HDL_Resource() {
     path = "";
 }
 
-
-///  Resource object creator
-/// \param t HDL entity feature
-/// \param n Name of the feature
-/// \param p Path of the file
-/// \param r_type type of resource
-HDL_Resource::HDL_Resource(dependency_class t, std::string n, std::string p) {
-    hdl_type = t;
-    name = std::move(n);
-    path = std::move(p);
-}
-
 HDL_Resource::HDL_Resource(const HDL_Resource &c) {
     name = c.name;
     path = c.path;

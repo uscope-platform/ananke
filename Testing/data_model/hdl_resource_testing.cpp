@@ -31,7 +31,10 @@ TEST( HDL_resource_test , is_interface) {
 TEST( HDL_resource_test , ser_des_hdl_resource) {
 
 
-    HDL_Resource hdl_out(module, "test", "/bin/sh");
+    HDL_Resource hdl_out;
+    hdl_out.set_name("test");
+    hdl_out.set_type(module);
+    hdl_out.set_path("/bin/sh");
     hdl_out.set_line_n(13);
     std::stringstream os;
     {
@@ -72,7 +75,10 @@ TEST( HDL_resource_test , ser_des_hdl_resource) {
 
 TEST( HDL_resource_test , get_path) {
 
-    HDL_Resource res(module, "test_module","/test_path/test.sv");
+    HDL_Resource res;
+    res.set_name("test_module");
+    res.set_type(module);
+    res.set_path("/test_path/test.sv");
 
     ASSERT_EQ(res.get_path(), "/test_path/test.sv");
 }
@@ -91,7 +97,10 @@ TEST( HDL_resource_test , get_dependencies) {
 
 TEST( HDL_resource_test , get_name) {
 
-    HDL_Resource test_item(module, "test","/test/test.sv");
+    HDL_Resource test_item;
+    test_item.set_name("test");
+    test_item.set_type(module);
+    test_item.set_path("/test/test.sv");
 
     ASSERT_EQ(test_item.getName(), "test");
 }

@@ -72,7 +72,10 @@ TEST( data_store_test , evict_data_file) {
 TEST( data_store_test , evict_hdl_entity) {
 
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
-    HDL_Resource test_entity(module, "test", "/test/path");
+    HDL_Resource test_entity;
+    test_entity.set_name("test");
+    test_entity.set_path("/test/path");
+    test_entity.set_type(module);
     test_entity.set_line_n(15);
 
     store_1->store_hdl_entity(test_entity);
@@ -89,7 +92,10 @@ TEST( data_store_test , evict_hdl_entity) {
 TEST( data_store_test , evict_interface_entity) {
 
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
-    HDL_Resource test_entity(interface, "test", "/test/path");
+    HDL_Resource test_entity;
+    test_entity.set_name("test");
+    test_entity.set_path("/test/path");
+    test_entity.set_type(interface);
     test_entity.set_line_n(15);
 
     store_1->store_hdl_entity(test_entity);
@@ -182,8 +188,13 @@ TEST( data_store_test , store_data_file_vect) {
 TEST( data_store_test , store_interface_vect) {
 
     auto *store = new data_store(true, "/tmp/test_data_store");
-    HDL_Resource test_res_1(interface, "test_1", "/bin/sh");
-    HDL_Resource test_res_2(interface, "test_2", "/bin/sh");
+    HDL_Resource test_res_1, test_res_2;
+    test_res_1.set_name("test_1");
+    test_res_2.set_name("test_2");
+    test_res_1.set_type(interface);
+    test_res_2.set_type(interface);
+    test_res_2.set_path("/bin/sh");
+    test_res_1.set_path("/bin/sh");
     std::vector<HDL_Resource> test_vect = {test_res_1,test_res_2};
     store->store_hdl_entity(test_vect);
     std::string name = "test_1";
@@ -203,8 +214,13 @@ TEST( data_store_test , store_interface_vect) {
 TEST( data_store_test , store_hdl_vect) {
 
     auto *store = new data_store(true, "/tmp/test_data_store");
-    HDL_Resource test_res_1(module, "test_1", "/bin/sh");
-    HDL_Resource test_res_2(module, "test_2", "/bin/sh");
+    HDL_Resource test_res_1, test_res_2;
+    test_res_1.set_name("test_1");
+    test_res_1.set_path("/bin/sh");
+    test_res_1.set_type(module);
+    test_res_2.set_name("test_2");
+    test_res_2.set_path("/bin/sh");
+    test_res_2.set_type(module);
     std::vector<HDL_Resource> test_vect = {test_res_1,test_res_2};
     store->store_hdl_entity(test_vect);
     std::string name = "test_1";
@@ -298,7 +314,10 @@ TEST( data_store_test , resource_clean_up) {
 
     auto *store_1 = new data_store(true,"/tmp/test_data_store");
 
-    HDL_Resource test_entity(module, "test", "/test");
+    HDL_Resource test_entity;
+    test_entity.set_name("test");
+    test_entity.set_path("/test");
+    test_entity.set_type(module);
     test_entity.set_line_n(15);
 
     store_1->store_hdl_entity(test_entity);
