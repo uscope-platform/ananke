@@ -146,8 +146,10 @@ nlohmann::json HDL_parameter::dump() {
     if(type == string_parameter){
         std::vector<std::string> values_s;
         auto value = i_l.get_solved_value();
-        for(const auto& s:std::get<std::vector<std::string>>(value)) {
-            values_s.push_back(std::regex_replace(s, std::regex(R"ctrl(^"(.*)"$)ctrl"), "$1"));
+        if (std::holds_alternative<std::vector<std::string>>(value)) {
+            for(const auto& s:std::get<std::vector<std::string>>(value)) {
+                values_s.push_back(std::regex_replace(s, std::regex(R"ctrl(^"(.*)"$)ctrl"), "$1"));
+            }
         }
         ret["value"] = values_s;
     } else if(type == numeric_parameter){

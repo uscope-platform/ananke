@@ -146,7 +146,6 @@ TEST(function_processing, simple_loop_function) {
     HDL_parameter p;
     p.set_name("i");
     p.add_component(Expression_component("0", Expression_component::number));
-    p.set_type(HDL_parameter::expression_parameter);
     metadata.set_init(p);
     metadata.set_end_c({
         Expression_component("i", Expression_component::identifier),
@@ -213,7 +212,6 @@ TEST(function_processing, parametric_loop_function) {
     HDL_parameter p;
     p.set_name("i");
     p.add_component(Expression_component("0", Expression_component::number));
-    p.set_type(HDL_parameter::expression_parameter);
     metadata.set_init(p);
     metadata.set_end_c({
         Expression_component("i", Expression_component::identifier),
@@ -284,7 +282,6 @@ TEST(function_processing, complex_loop_function) {
     HDL_parameter p;
     p.set_name("i");
     p.add_component(Expression_component("1", Expression_component::number));
-    p.set_type(HDL_parameter::expression_parameter);
     metadata.set_init(p);
     metadata.set_end_c({
                 Expression_component("i", Expression_component::identifier),

@@ -87,8 +87,7 @@ public:
     enum parameter_type {
         string_parameter=0,
         numeric_parameter=1,
-        array_parameter = 2,
-        expression_parameter = 4
+        array_parameter = 2
     };
 
     parameter_type get_type() const {return type;}
@@ -148,7 +147,6 @@ constexpr std::string parameter_type_to_string(HDL_parameter::parameter_type in)
         case HDL_parameter::string_parameter: return "string_parameter";
         case HDL_parameter::numeric_parameter: return "numeric_parameter";
         case HDL_parameter::array_parameter: return "array_parameter";
-        case HDL_parameter::expression_parameter: return "expression_parameter";
         default: return "unknown parameter type";
     }
 }

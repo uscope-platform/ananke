@@ -209,7 +209,7 @@ TEST(parameter_processing, package_parameters_use) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("package_param");
     Expression_component ec("bus_base", Expression_component::identifier);
     ec.set_package_prefix("test_package");
@@ -275,14 +275,14 @@ TEST(parameter_processing, array_instance_parameter_override) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("param_1");
     p->add_component(Expression_component(4, 0));
     p->set_value(4);
 
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("param_2");
     Initialization_list il;
     il.add_dimension({
@@ -300,7 +300,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p->set_value(av);
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("param_3");
     p->add_component(Expression_component("(", Expression_component::parenthesis));
     p->add_component(Expression_component(4, 0));
@@ -312,7 +312,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p->set_value(11);
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("p1_t");
     ec = Expression_component("param_2", Expression_component::identifier);
     ec.add_array_index({Expression_component(0, 1)});
@@ -321,7 +321,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     check_params.insert(p);
 
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("p2_t");
     ec = Expression_component("param_2", Expression_component::identifier);
     ec.add_array_index({Expression_component(1, 1)});

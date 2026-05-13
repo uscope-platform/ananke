@@ -44,12 +44,12 @@ TEST(parameter_extraction, init_list_after_reg) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("low_control_p");
     p->add_component(Expression_component("'b001111", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("low_control_n");
     p->add_component(Expression_component("'b110000", Expression_component::number));
     check_params.insert(p);
@@ -90,7 +90,7 @@ TEST(parameter_extraction, size_cast) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     Initialization_list il;
     Cast c;
@@ -130,12 +130,12 @@ TEST(parameter_extraction, paretesized_cast) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("SIZE");
     p->add_component(Expression_component(4, 2));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     Initialization_list il;
     Cast c;
@@ -180,7 +180,7 @@ TEST(parameter_extraction, type_cast) {
     Parameters_map check_params;
 
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     Initialization_list il;
     Cast c;
@@ -239,7 +239,7 @@ TEST(parameter_extraction, nested_type_cast) {
         Expression_component("j", Expression_component::identifier)
     })));
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     Initialization_list il;
     Cast outer_c;
@@ -289,7 +289,7 @@ TEST(parameter_extraction, multiple_type_cast) {
     Parameters_map check_params;
 
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     Initialization_list il;
     Cast c;
@@ -309,7 +309,7 @@ TEST(parameter_extraction, multiple_type_cast) {
     check_params.insert(p);
 
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM_2");
     il = Initialization_list();
     c = Cast();
@@ -353,7 +353,7 @@ TEST(parameter_extraction,time_literal) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     p->add_component(Expression_component("10ns", Expression_component::string));
     check_params.insert(p);
@@ -389,7 +389,7 @@ TEST(parameter_extraction, cast_in_concat  ) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     Initialization_list il;
     Concatenation concat;
@@ -438,12 +438,12 @@ TEST(parameter_extraction, strings_dafault_init) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("N_CORES");
     p->add_component(Expression_component("3", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("TRANSLATION_TABLE_INIT");
     Initialization_list  il;
     il.add_dimension({{Expression_component("3", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
@@ -488,12 +488,12 @@ TEST(parameter_extraction, string_array_selection) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("N_CORES");
     p->add_component(Expression_component("3", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("TRANSLATION_TABLE_INIT");
     Initialization_list  il;
     il.add_dimension({{Expression_component("3", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
@@ -503,7 +503,7 @@ TEST(parameter_extraction, string_array_selection) {
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("SEL");
     Expression_component e = Expression_component("TRANSLATION_TABLE_INIT", Expression_component::identifier);
     std::vector<Expression> ai;
@@ -549,12 +549,12 @@ TEST(parameter_extraction, strings_array) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("N_CORES");
     p->add_component(Expression_component("3", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("TRANSLATION_TABLE_INIT");
     Initialization_list  il;
     il.add_dimension({
@@ -606,12 +606,12 @@ TEST(parameter_extraction, float_parameter) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("LUT_DEPTH");
     p->add_component(Expression_component("9", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("STEP");
     p->add_component(Expression_component("(", Expression_component::parenthesis));
     p->add_component(Expression_component("2", Expression_component::number));
@@ -659,7 +659,7 @@ TEST(parameter_extraction, simple_system_task) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("CAST");
     HDL_function_call call("$rtoi");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("16.8", Expression_component::number)})));
@@ -705,7 +705,7 @@ TEST(parameter_extraction, multiple_system_task) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("CAST");
     HDL_function_call call("$rtoi");
     call.add_argument(std::make_shared<Expression>(Expression({
@@ -718,7 +718,7 @@ TEST(parameter_extraction, multiple_system_task) {
     p->add_initialization_list(i_l);
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("CAST_2");
     call = HDL_function_call("$rtoi");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("12.2", Expression_component::number)})));
@@ -764,7 +764,7 @@ TEST(parameter_extraction, system_task_propagation) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("CAST");
     HDL_function_call call("$rtoi");
     call.add_argument(std::make_shared<Expression>(Expression({
@@ -776,7 +776,7 @@ TEST(parameter_extraction, system_task_propagation) {
     i_l.set_scalar(std::make_shared<HDL_function_call>(call));
     p->add_initialization_list(i_l);
     check_params.insert(p);
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("PARAMETER_1");
     p->add_component(Expression_component("5", Expression_component:: number));
     check_params.insert(p);
@@ -818,12 +818,12 @@ TEST(parameter_extraction, nested_system_task) {
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("PARAMETER_1");
     p->add_component(Expression_component("46", Expression_component:: number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("CAST");
     auto inner_call = std::make_shared<HDL_function_call>("$ceil");
     Expression e;
@@ -880,17 +880,17 @@ TEST(parameter_extraction, package_parameters) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("bus_base");
     p->add_component(Expression_component("32'h43c00000", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("timebase");
     p->add_component(Expression_component("bus_base", Expression_component::identifier));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("gpio");
     p->add_component(Expression_component("timebase" , Expression_component::identifier));
     p->add_component(Expression_component("+" , Expression_component::operation));
@@ -903,14 +903,14 @@ TEST(parameter_extraction, package_parameters) {
     p->add_component(Expression_component("1" , Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("modulo_parameter");
     p->add_component(Expression_component("3" , Expression_component::number));
     p->add_component(Expression_component("%" , Expression_component::operation));
     p->add_component(Expression_component("2" , Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("subtraction_parameter");
     p->add_component(Expression_component("'o4" , Expression_component::number));
     p->add_component(Expression_component("-" , Expression_component::operation));
@@ -961,32 +961,32 @@ TEST(parameter_extraction, simple_parameters) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("simple_numeric_p");
     p->add_component(Expression_component("32", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("local_p");
     p->add_component(Expression_component("74", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("sv_numeric_p");
     p->add_component(Expression_component("5'o10" , Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("dimensionless_sv_numeric_p");
     p->add_component(Expression_component("'h3F", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("string_p");
     p->add_component(Expression_component("\"423\"", Expression_component::string));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("nested_p");
     p->add_component(Expression_component("string_p", Expression_component::identifier));
     check_params.insert(p);
@@ -1040,36 +1040,36 @@ TEST(parameter_extraction, simple_expressions) {
 
     Parameters_map check_params;
 
-    auto p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("simple_numeric_p");
     p->add_component(Expression_component("32", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("sv_numeric_p");
     p->add_component(Expression_component("5'o10", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("dimensionless_sv_numeric_p");
     p->add_component(Expression_component("'h3F", Expression_component::number));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("add_expr_p");
     p->add_component(Expression_component("simple_numeric_p", Expression_component::identifier));
     p->add_component(Expression_component("+", Expression_component::operation));
     p->add_component(Expression_component("sv_numeric_p", Expression_component::identifier));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("sub_expr_p");
     p->add_component(Expression_component("simple_numeric_p", Expression_component::identifier));
     p->add_component(Expression_component("-", Expression_component::operation));
     p->add_component(Expression_component("sv_numeric_p", Expression_component::identifier));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("mul_expr_p");
     p->add_component(Expression_component("simple_numeric_p", Expression_component::identifier));
     p->add_component(Expression_component("*", Expression_component::operation));
@@ -1077,21 +1077,21 @@ TEST(parameter_extraction, simple_expressions) {
     check_params.insert(p);
 
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("div_expr_p");
     p->add_component(Expression_component("simple_numeric_p", Expression_component::identifier));
     p->add_component(Expression_component("/", Expression_component::operation));
     p->add_component(Expression_component("sv_numeric_p", Expression_component::identifier));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("modulo_expr_p");
     p->add_component(Expression_component("simple_numeric_p", Expression_component::identifier));
     p->add_component(Expression_component("%", Expression_component::operation));
     p->add_component(Expression_component("sv_numeric_p", Expression_component::identifier));
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("chained_expression");
     p->add_component(Expression_component("add_expr_p", Expression_component::identifier));
     p->add_component(Expression_component("+", Expression_component::operation));
@@ -1101,7 +1101,7 @@ TEST(parameter_extraction, simple_expressions) {
     check_params.insert(p);
 
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("complex_log_expr_p");
     HDL_function_call call("$clog2");
     call.add_argument(std::make_shared<Expression>(Expression({
@@ -1115,7 +1115,7 @@ TEST(parameter_extraction, simple_expressions) {
     check_params.insert(p);
 
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("simple_log_expr_p");
     call = HDL_function_call("$clog2");
     call.add_argument(std::make_shared<Expression>(Expression({
@@ -1126,7 +1126,7 @@ TEST(parameter_extraction, simple_expressions) {
     p->add_initialization_list(i_l);
     check_params.insert(p);
 
-    p = std::make_shared<HDL_parameter>(); p->set_type(HDL_parameter::expression_parameter);
+    p = std::make_shared<HDL_parameter>();
     p->set_name("parenthesised_expr_p");
     p->add_component(Expression_component("(", Expression_component::parenthesis));
     p->add_component(Expression_component("add_expr_p", Expression_component::identifier));
@@ -1186,18 +1186,18 @@ TEST(parameter_extraction, assay_assignment) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("simple_numeric_p");
     p->add_component(Expression_component("32", Expression_component::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("sv_numeric_p");
     p->add_component(Expression_component("5'o10", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("concatenation");
 
     Initialization_list il;
@@ -1256,7 +1256,7 @@ TEST(parameter_extraction, default_assign) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("test_array");
 
     Initialization_list il;
@@ -1313,18 +1313,18 @@ TEST(parameter_extraction, array_concatenation) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("simple_numeric_p");
     p->add_component(Expression_component("32", Expression_component::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("sv_numeric_p");
     p->add_component(Expression_component("5'o10", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("concatenation");
 
     Initialization_list il;
@@ -1381,7 +1381,7 @@ TEST(parameter_extraction, array_parameter) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("array_parameter");
 
 
@@ -1438,7 +1438,7 @@ TEST(parameter_extraction, integer_localparams) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("serial_msb_out_first");
     Expression e = {Expression_component("0", Expression_component::number)};
     p->set_expression(std::make_shared<Expression>(e));
@@ -1447,7 +1447,7 @@ TEST(parameter_extraction, integer_localparams) {
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("serial_lsb_out_first");
     e = {Expression_component("1", Expression_component::number)};
     p->set_expression(std::make_shared<Expression>(e));
@@ -1490,7 +1490,7 @@ TEST(parameter_extraction, simple_array_propagation) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("array_parameter");
 
 
@@ -1514,7 +1514,7 @@ TEST(parameter_extraction, simple_array_propagation) {
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("array_parameter_expr_p");
     Expression_component e = Expression_component("array_parameter", Expression_component::identifier);
     std::vector<Expression> ai;
@@ -1568,7 +1568,7 @@ TEST(parameter_extraction, array_expression) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("array_parameter");
 
 
@@ -1592,7 +1592,7 @@ TEST(parameter_extraction, array_expression) {
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("array_parameter_expr_p");
     Expression_component e = Expression_component("array_parameter", Expression_component::identifier);
     std::vector<Expression> ai;
@@ -1607,7 +1607,7 @@ TEST(parameter_extraction, array_expression) {
     p->add_component(e);
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("sv_numeric_p");
     p->add_component(Expression_component("1", Expression_component::number));
     check_params.insert(p);
@@ -1653,13 +1653,13 @@ TEST(parameter_extraction, multidimensional_array_expression) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("repetition_size");
     p->add_component(Expression_component("2", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("multidim_array_parameter");
 
 
@@ -1684,7 +1684,7 @@ TEST(parameter_extraction, multidimensional_array_expression) {
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("multidim_array_access");
     Expression_component ec = Expression_component("multidim_array_parameter", Expression_component::identifier);
     std::vector<Expression> ai;
@@ -1741,14 +1741,14 @@ TEST(parameter_extraction, simple_repetition_initialization) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("repetition_size");
     p->add_component(Expression_component("2", Expression_component::number));
     check_params.insert(p);
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("repetition_parameter_1");
 
     Initialization_list il;
@@ -1805,14 +1805,14 @@ TEST(parameter_extraction, packed_repetition_initialization) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("repetition_size");
     p->add_component(Expression_component("2", Expression_component::number));
     check_params.insert(p);
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("repetition_parameter_1");
 
     Initialization_list il;
@@ -1868,14 +1868,14 @@ TEST(parameter_extraction, repetition_initialization) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("repetition_size");
     p->add_component(Expression_component("2", Expression_component::number));
     check_params.insert(p);
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("repetition_parameter_1");
 
     Initialization_list il;
@@ -1889,7 +1889,7 @@ TEST(parameter_extraction, repetition_initialization) {
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("repetition_parameter_2");
 
     il = Initialization_list();
@@ -1903,7 +1903,7 @@ TEST(parameter_extraction, repetition_initialization) {
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("multi_repetition_parameter");
 
     il = Initialization_list();
@@ -1921,7 +1921,7 @@ TEST(parameter_extraction, repetition_initialization) {
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("mixed_repetition_parameter");
 
     il = Initialization_list();
@@ -1985,7 +1985,7 @@ TEST(parameter_extraction, packed_array) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("packed_param");
 
     dimension_t d;
@@ -2046,7 +2046,7 @@ TEST(parameter_extraction, multpidim_packed_array) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("packed_param");
 
 
@@ -2123,7 +2123,7 @@ TEST(parameter_extraction, package_parameters_use) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("package_param");
     Expression_component ec("bus_base", Expression_component::identifier);
     ec.set_package_prefix("test_package");
@@ -2176,7 +2176,7 @@ TEST(parameter_extraction, interface_parameter_use) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("TEST_PARAM");
     Expression_component ec("DATA_WIDTH", Expression_component::identifier);
     ec.set_package_prefix("test_interface");
@@ -2205,7 +2205,7 @@ TEST(parameter_extraction, negative_number_parameters) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("negative_param");
     p->add_component(Expression_component("-", Expression_component::operation));
     p->add_component(Expression_component("16'sd32767", Expression_component::number));
@@ -2249,7 +2249,7 @@ TEST(parameter_extraction, packed_bit_access) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("param_a");
 
     p->add_component(Expression_component("-", Expression_component::operation));
@@ -2258,7 +2258,7 @@ TEST(parameter_extraction, packed_bit_access) {
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("param_b");
     Expression_component ec("param_a", Expression_component::identifier);
     ec.add_array_index({Expression_component("3", Expression_component::number)});
@@ -2303,7 +2303,7 @@ TEST(parameter_extraction, negative_number_array_init) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("negative_array_param");
 
     Initialization_list il;
@@ -2352,7 +2352,7 @@ TEST(parameter_extraction, expression_array_init) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("expression_array_param");
 
 
@@ -2414,7 +2414,7 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("param_a");
 
 
@@ -2450,7 +2450,7 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("param_b");
 
 
@@ -2525,7 +2525,7 @@ TEST(parameter_extraction, instance_parameter) {
 
     Parameters_map check_params;
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("test_param");
     p->add_component(Expression_component("4", Expression_component::number));
     check_params.insert(p);
@@ -2540,19 +2540,19 @@ TEST(parameter_extraction, instance_parameter) {
     check_params.clear();
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("param_1");
     p->add_component(Expression_component("test_param", Expression_component::identifier));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("param_2");
     p->add_component(Expression_component("test_param", Expression_component::identifier));
     p->add_component(Expression_component("+", Expression_component::operation));
     p->add_component(Expression_component("5", Expression_component::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("param_3");
     p->add_component(Expression_component("(", Expression_component::parenthesis));
     p->add_component(Expression_component("test_param", Expression_component::identifier));
@@ -2604,14 +2604,14 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
     check_params.clear();
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("SS_POLARITY_DEFAULT");
     p->add_component(Expression_component("0", Expression_component::number));
     check_params.insert(p);
 
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("FIXED_REGISTER_VALUES");
 
 
@@ -2715,7 +2715,7 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     };
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("param_a");
 
     Initialization_list il;
@@ -2789,7 +2789,7 @@ TEST(parameter_extraction, packed_replication_init) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("test_parameter");
 
     Initialization_list il;
@@ -2841,7 +2841,7 @@ TEST(parameter_extraction, array_initialization_default) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("test_parameter");
-    p->set_type(HDL_parameter::expression_parameter);
+   
     Initialization_list i;
     dimension_t d;
     d.first_bound = {Expression_component("4", Expression_component::number)};
@@ -2908,7 +2908,7 @@ TEST(parameter_extraction, simple_function_parameter) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    p.set_type(HDL_parameter::expression_parameter);
+    
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("CTRL_ADDR_CALC");
     assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number)})));
@@ -2951,7 +2951,7 @@ TEST(parameter_extraction, concat_in_function) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    p.set_type(HDL_parameter::expression_parameter);
+    
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("get_axis_metadata");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("11", Expression_component::number)})));
@@ -3008,7 +3008,7 @@ TEST(parameter_extraction, replication_in_function) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    p.set_type(HDL_parameter::expression_parameter);
+    
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("get_axis_metadata");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("11", Expression_component::number)})));
@@ -3067,7 +3067,7 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    p.set_type(HDL_parameter::expression_parameter);
+    
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("get_axis_metadata");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("11", Expression_component::number)})));
@@ -3164,13 +3164,12 @@ TEST(parameter_extraction, loop_function_parameter) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    p.set_type(HDL_parameter::expression_parameter);
+    
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("CTRL_ADDR_CALC");
     HDL_loop_metadata loop;
     HDL_parameter idx;
     idx.set_name("i");
-    idx.set_type(HDL_parameter::expression_parameter);
     idx.add_component(Expression_component("0", Expression_component::number));
     loop.set_init(idx);
     loop.set_end_c({
@@ -3242,13 +3241,12 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    p.set_type(HDL_parameter::expression_parameter);
+    
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("CTRL_ADDR_CALC");
     HDL_loop_metadata loop;
     HDL_parameter idx;
     idx.set_name("i");
-    idx.set_type(HDL_parameter::expression_parameter);
     idx.add_component(Expression_component("0", Expression_component::number));
     loop.set_init(idx);
     loop.set_end_c({
@@ -3315,7 +3313,7 @@ TEST(parameter_extraction, function_with_arguments) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    p.set_type(HDL_parameter::expression_parameter);
+    
     HDL_function_call call("add");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::component_type::number)})));
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("7", Expression_component::component_type::number)})));
@@ -3363,7 +3361,6 @@ TEST(parameter_extraction, unrelated_wire_dependency_conflict) {
 
     auto check_param = std::make_shared<HDL_parameter>();
     check_param->set_name("DECIMATED");
-    check_param->set_type(HDL_parameter::expression_parameter);
     check_param->add_component({Expression_component("DECIMATE", Expression_component::identifier)});
 
     ASSERT_EQ(*parameter, *check_param);
@@ -3385,19 +3382,19 @@ TEST(parameter_extraction, interface_parameters) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("DATA_WIDTH");
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->add_component(Expression_component("32", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("USER_WIDTH");
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->add_component(Expression_component("24", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("DEST_WIDTH");
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->add_component(Expression_component("8", Expression_component::number));
     check_params.insert(p);
 
@@ -3453,7 +3450,7 @@ TEST(parameter_extraction, generate_for) {
 
     HDL_parameter p;
     p.set_name("n");
-    p.set_type(HDL_parameter::expression_parameter);
+    
     p.add_component(Expression_component("0", Expression_component::number));
 
     check_loop.set_init(p);
@@ -3486,13 +3483,13 @@ TEST(parameter_extraction, param_ternary_conditional) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("condition");
     p->add_component(Expression_component("2", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("test_positive");
     Ternary t;
     t.set_condition(Expression({
@@ -3511,7 +3508,7 @@ TEST(parameter_extraction, param_ternary_conditional) {
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("test_negative");
     t = Ternary();
     t.set_condition(Expression({
@@ -3568,13 +3565,13 @@ TEST(parameter_extraction, nested_ternary_conditional) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("condition");
     p->add_component(Expression_component("2", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("test_positive");
     Ternary t;
     t.set_condition(Expression({
@@ -3642,13 +3639,13 @@ TEST(parameter_extraction, complex_ternary_conditional) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("NM");
     p->add_component(Expression_component("4", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->set_type(HDL_parameter::expression_parameter);
+   
     p->set_name("LGNM");
     Ternary t;
     t.set_condition(Expression({
