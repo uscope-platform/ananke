@@ -180,18 +180,19 @@ void Initialization_list::set_solved_value(const resolved_parameter &val) {
 }
 
 std::variant<mdarray<int64_t>, mdarray<std::string>::md_1d_array> Initialization_list::get_solved_value() const {
-    if(std::holds_alternative<std::string>(solved_value)) {
-        mdarray<std::string>::md_1d_array arr= {std::get<std::string>(solved_value)};
+   if (!solved_value.has_value())return {};
+    if(std::holds_alternative<std::string>(solved_value.value())) {
+        mdarray<std::string>::md_1d_array arr= {std::get<std::string>(solved_value.value())};
         return arr;
-    } else if(std::holds_alternative<int64_t>(solved_value)) {
-        if (!std::holds_alternative<mdarray<int64_t>>(solved_value)) {
-            return mdarray({1,1,1}, std::get<int64_t>(solved_value));
+    } else if(std::holds_alternative<int64_t>(solved_value.value())) {
+        if (!std::holds_alternative<mdarray<int64_t>>(solved_value.value())) {
+            return mdarray({1,1,1}, std::get<int64_t>(solved_value.value()));
         } else {
             mdarray<int64_t> v;
-            v.set_scalar(std::get<int64_t>(solved_value));
+            v.set_scalar(std::get<int64_t>(solved_value.value()));
         }
-    } else if(std::holds_alternative<mdarray<int64_t>>(solved_value)) {
-        return std::get<mdarray<int64_t>>(solved_value);
+    } else if(std::holds_alternative<mdarray<int64_t>>(solved_value.value())) {
+        return std::get<mdarray<int64_t>>(solved_value.value());
     }
 
     return {};
@@ -328,10 +329,11 @@ resolved_parameter Initialization_list::process_default_initialization() {
 }
 
 Initialization_list::parameter_type Initialization_list::get_type() const{
-    if(std::holds_alternative<mdarray<int64_t>>(solved_value)) {
+    if (!solved_value.has_value()) return empty_parameter;
+    if(std::holds_alternative<mdarray<int64_t>>(solved_value.value())) {
         return array_parameter;
     }
-    if(std::holds_alternative<int64_t>(solved_value)) {
+    if(std::holds_alternative<int64_t>(solved_value.value())) {
         return numeric_parameter;
     }
     return string_parameter;

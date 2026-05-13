@@ -44,6 +44,7 @@ public:
         else
             return "";
     }
+
     [[nodiscard]] std::optional<int64_t>  get_numeric_value() const {
         return std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
     }
@@ -75,7 +76,7 @@ public:
     explicit operator std::string();
 
     bool is_array() const {return i_l.is_array();}
-    bool is_packed_array() {return i_l.is_packed();}
+    bool is_packed_array() const {return i_l.is_packed();}
 
     std::string get_name() const {return name;};
     qualified_identifier get_identifier(){return {"", "", name};}

@@ -80,7 +80,8 @@ public:
     enum parameter_type {
         string_parameter,
         numeric_parameter,
-        array_parameter
+        array_parameter,
+        empty_parameter
     };
 
     parameter_type get_type() const;
@@ -109,7 +110,7 @@ private:
     std::vector<dimension_t> packed_dimensions;
 
     std::vector<std::shared_ptr<Parameter_value_base>> expression_leaves;
-    resolved_parameter solved_value;
+    std::optional<resolved_parameter> solved_value;
 
     bool default_initialization = false;
 };
