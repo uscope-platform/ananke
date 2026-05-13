@@ -78,7 +78,6 @@ public:
     void propagate_function(const HDL_function_def &def);
     explicit operator std::string();
 
-    bool is_function() const {return type == function_parameter;}
     bool is_array() const {return i_l.is_array();}
     bool is_packed_array() {return i_l.is_packed();}
 
@@ -89,8 +88,7 @@ public:
         string_parameter=0,
         numeric_parameter=1,
         array_parameter = 2,
-        expression_parameter = 4,
-        function_parameter = 5
+        expression_parameter = 4
     };
 
     parameter_type get_type() const {return type;}
@@ -151,7 +149,6 @@ constexpr std::string parameter_type_to_string(HDL_parameter::parameter_type in)
         case HDL_parameter::numeric_parameter: return "numeric_parameter";
         case HDL_parameter::array_parameter: return "array_parameter";
         case HDL_parameter::expression_parameter: return "expression_parameter";
-        case HDL_parameter::function_parameter: return "function_parameter";
         default: return "unknown parameter type";
     }
 }

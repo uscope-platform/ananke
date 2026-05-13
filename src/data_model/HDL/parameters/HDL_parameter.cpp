@@ -48,22 +48,13 @@ bool HDL_parameter::is_empty() {
 }
 
 void HDL_parameter::set_value(const resolved_parameter &val) {
+    i_l.set_solved_value(val);
     if(std::holds_alternative<std::string>(val)) {
         type = string_parameter;
-        mdarray<std::string>::md_1d_array arr= {std::get<std::string>(val)};
-        i_l.set_solved_value(arr);
     } else if(std::holds_alternative<int64_t>(val)) {
         type = numeric_parameter;
-        auto value = i_l.get_solved_value();
-        if (!std::holds_alternative<mdarray<int64_t>>(value)) {
-            value = mdarray({1,1,1}, std::get<int64_t>(val));
-        } else {
-            std::get<mdarray<int64_t>>(value).set_scalar(std::get<int64_t>(val));
-        }
-        i_l.set_solved_value(value);
     } else if(std::holds_alternative<mdarray<int64_t>>(val)) {
         type = array_parameter;
-        i_l.set_solved_value(std::get<mdarray<int64_t>>(val));
     }
 
 }

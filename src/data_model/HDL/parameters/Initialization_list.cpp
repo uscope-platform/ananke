@@ -175,7 +175,24 @@ std::set<qualified_identifier> Initialization_list::get_dependencies() {
 
 }
 
+void Initialization_list::set_solved_value(const resolved_parameter &val) {
+    if(std::holds_alternative<std::string>(val)) {
+        mdarray<std::string>::md_1d_array arr= {std::get<std::string>(val)};
+        solved_value = arr;
+    } else if(std::holds_alternative<int64_t>(val)) {
+        if (!std::holds_alternative<mdarray<int64_t>>(solved_value)) {
+            solved_value = mdarray({1,1,1}, std::get<int64_t>(val));
+        } else {
+            std::get<mdarray<int64_t>>(solved_value).set_scalar(std::get<int64_t>(val));
+        }
+    } else if(std::holds_alternative<mdarray<int64_t>>(val)) {
+        solved_value = std::get<mdarray<int64_t>>(val);
+    }
+}
 
+std::variant<mdarray<int64_t>, mdarray<std::string>::md_1d_array> Initialization_list::get_solved_value() const {
+    return solved_value;
+}
 
 void PrintTo(const Initialization_list &il, std::ostream *os) {
     if (il.scalar) {
