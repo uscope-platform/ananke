@@ -18,21 +18,18 @@
 
 HDL_parameter::HDL_parameter(const HDL_parameter &c) {
     name = c.name;
-    value = c.value;
     type = c.type;
     i_l = c.i_l.clone();
 }
 
 HDL_parameter::HDL_parameter() {
     type = string_parameter;
-    value = std::vector<std::string>({""});
 }
 
 
 bool operator==(const HDL_parameter &lhs, const HDL_parameter &rhs) {
     bool ret_val = true;
     ret_val &= lhs.name == rhs.name;
-    ret_val &= lhs.value == rhs.value;
     ret_val &= lhs.type == rhs.type;
     ret_val &= lhs.i_l == rhs.i_l;
     return ret_val;
@@ -46,10 +43,6 @@ bool HDL_parameter::is_empty() {
     bool ret = true;
 
     ret &= name.empty();
-    if(type == string_parameter) {
-        auto str_arr = std::get<std::vector<std::string>>(value);
-        ret &= str_arr.empty() || str_arr.size() == 1 && str_arr[0].empty();
-    }
     ret &= i_l.empty();
     return ret;
 }
@@ -57,17 +50,20 @@ bool HDL_parameter::is_empty() {
 void HDL_parameter::set_value(const resolved_parameter &val) {
     if(std::holds_alternative<std::string>(val)) {
         type = string_parameter;
-        std::get<std::vector<std::string>>(value)[0] = std::get<std::string>(val);
+        mdarray<std::string>::md_1d_array arr= {std::get<std::string>(val)};
+        i_l.set_solved_value(arr);
     } else if(std::holds_alternative<int64_t>(val)) {
         type = numeric_parameter;
+        auto value = i_l.get_solved_value();
         if (!std::holds_alternative<mdarray<int64_t>>(value)) {
             value = mdarray({1,1,1}, std::get<int64_t>(val));
         } else {
             std::get<mdarray<int64_t>>(value).set_scalar(std::get<int64_t>(val));
         }
+        i_l.set_solved_value(value);
     } else if(std::holds_alternative<mdarray<int64_t>>(val)) {
         type = array_parameter;
-        value = std::get<mdarray<int64_t>>(val);
+        i_l.set_solved_value(std::get<mdarray<int64_t>>(val));
     }
 
 }
@@ -89,10 +85,10 @@ void HDL_parameter::propagate_function(const HDL_function_def &def) {
 HDL_parameter::operator std::string() {
     std::string ret_val;
     if(type == string_parameter) {
-        ret_val = std::get<std::vector<std::string>>(value)[0];
+        ret_val = std::get<std::vector<std::string>>(i_l.get_solved_value())[0];
     }
     if(type == numeric_parameter) {
-        auto val = std::get<mdarray<int64_t>>(value).get_scalar();
+        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
         if(val.has_value()) ret_val =  std::to_string(val.value());
     }
     if(type == array_parameter) {
@@ -114,15 +110,15 @@ void PrintTo(const HDL_parameter &param, std::ostream *os) {
 
 std::string HDL_parameter::value_as_string() const {
     if(type == string_parameter) {
-        return std::get<std::vector<std::string>>(value)[0];
+        return std::get<std::vector<std::string>>(i_l.get_solved_value())[0];
     }
     if(type == numeric_parameter) {
-        auto val = std::get<mdarray<int64_t>>(value).get_scalar();
+        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
         if(val.has_value()) return std::to_string(val.value());
         else return "";
     }
     if(type == array_parameter) {
-        return std::get<mdarray<int64_t>>(value).to_string();
+        return std::get<mdarray<int64_t>>(i_l.get_solved_value()).to_string();
     }
     return "";
 }
@@ -132,7 +128,7 @@ std::string HDL_parameter::to_string() const {
                          "\n  TYPE: " + parameter_type_to_string(type);
 
     if(type == numeric_parameter){
-        auto val = std::get<mdarray<int64_t>>(value).get_scalar();
+        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
         if(val.has_value()) result += "\n  VALUE: " + std::to_string(val.value());
         else result += "\n  VALUE: xxx";
     }
@@ -158,17 +154,18 @@ nlohmann::json HDL_parameter::dump() {
     ret["type"] = parameter_type_to_string(type);
     if(type == string_parameter){
         std::vector<std::string> values_s;
-        for(auto s:std::get<std::vector<std::string>>(value)) {
+        auto value = i_l.get_solved_value();
+        for(const auto& s:std::get<std::vector<std::string>>(value)) {
             values_s.push_back(std::regex_replace(s, std::regex(R"ctrl(^"(.*)"$)ctrl"), "$1"));
         }
         ret["value"] = values_s;
     } else if(type == numeric_parameter){
         ret["value"]= std::vector<int64_t>();
-        auto val = std::get<mdarray<int64_t>>(value).get_scalar();
+        auto val = std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
         if(val.has_value()) ret["value"].push_back(val.value());
 
     } else if(type == array_parameter){
-        ret["value"] = std::get<mdarray<int64_t>>(value).dump();
+        ret["value"] = std::get<mdarray<int64_t>>(i_l.get_solved_value()).dump();
     }
 
 

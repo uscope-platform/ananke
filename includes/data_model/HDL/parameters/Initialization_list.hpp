@@ -88,6 +88,9 @@ public:
         ar(unpacked_dimensions, packed_dimensions, expression_leaves, default_initialization, scalar);
     }
 
+    void set_solved_value(const std::variant<mdarray<int64_t>, mdarray<std::string>::md_1d_array> &v) {solved_value = v;}
+    [[nodiscard]] std::variant<mdarray<int64_t>, mdarray<std::string>::md_1d_array> get_solved_value() const {return solved_value;}
+
 
 private:
 
@@ -99,6 +102,8 @@ private:
     std::vector<dimension_t> packed_dimensions;
 
     std::vector<std::shared_ptr<Parameter_value_base>> expression_leaves;
+    std::variant<mdarray<int64_t>, mdarray<std::string>::md_1d_array> solved_value;
+
     bool default_initialization = false;
 };
 

@@ -19,6 +19,7 @@
 Initialization_list::Initialization_list(const Initialization_list &i) {
     unpacked_dimensions = i.unpacked_dimensions;
     packed_dimensions = i.packed_dimensions;
+    solved_value = i.solved_value;
 
     expression_leaves = i.expression_leaves;
     default_initialization = i.default_initialization;
@@ -28,8 +29,9 @@ Initialization_list::Initialization_list(const Initialization_list &i) {
 Initialization_list Initialization_list::clone() const{
     Initialization_list i_l;
     i_l.scalar = scalar;
+    i_l.solved_value = solved_value;
     i_l.unpacked_dimensions = unpacked_dimensions;
-    i_l.packed_dimensions = packed_dimensions;\
+    i_l.packed_dimensions = packed_dimensions;
     i_l.default_initialization = default_initialization;
     for(auto &item:expression_leaves) {
         i_l.expression_leaves.push_back(item->clone_ptr());
@@ -90,6 +92,8 @@ bool operator==(const Initialization_list &lhs, const Initialization_list &rhs) 
         ret &= lhs.packed_dimensions[i].first_bound == rhs.packed_dimensions[i].first_bound;
         ret &= lhs.packed_dimensions[i].second_bound == rhs.packed_dimensions[i].second_bound;
     }
+
+    ret &= lhs.solved_value == rhs.solved_value;
 
     return ret;
 }

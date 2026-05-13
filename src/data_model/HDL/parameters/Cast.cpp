@@ -66,19 +66,24 @@ void Cast::propagate_expression(const qualified_identifier &constant_id,
 }
 
 std::optional<resolved_parameter> Cast::evaluate(bool pack_result) {
-    auto content_val = content->evaluate(pack_result);
-    if (!content_val.has_value()) return std::nullopt;
-    if (!std::holds_alternative<int64_t>(content_val.value())) return content_val.value();
-    auto raw_cast_size = size.evaluate(pack_result);
-    if (!raw_cast_size.has_value()) return std::nullopt;
-    if (!std::holds_alternative<int64_t>(raw_cast_size.value())) {
-        spdlog::warn("Cast size evaluates to a non integer");
-        return content_val.value();
+    if (type_cast) {
+        int i = 0;
+    } else {
+        auto content_val = content->evaluate(pack_result);
+        if (!content_val.has_value()) return std::nullopt;
+        if (!std::holds_alternative<int64_t>(content_val.value())) return content_val.value();
+        auto raw_cast_size = size.evaluate(pack_result);
+        if (!raw_cast_size.has_value()) return std::nullopt;
+        if (!std::holds_alternative<int64_t>(raw_cast_size.value())) {
+            spdlog::warn("Cast size evaluates to a non integer");
+            return content_val.value();
+        }
+        auto raw_value = std::get<int64_t>(content_val.value());
+        auto cast_size = std::get<int64_t>(raw_cast_size.value());
+        int64_t mask = (1ULL << cast_size) - 1;
+        return raw_value &  mask;
     }
-    auto raw_value = std::get<int64_t>(content_val.value());
-    auto cast_size = std::get<int64_t>(raw_cast_size.value());
-    int64_t mask = (1ULL << cast_size) - 1;
-    return raw_value &  mask;
+        return std::nullopt;
 }
 
 std::string Cast::print() const {

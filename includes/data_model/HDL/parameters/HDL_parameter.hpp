@@ -43,30 +43,30 @@ public:
     void set_value(const resolved_parameter &val);
 
     std::string get_string_value() const {
-        if (std::holds_alternative<std::vector<std::string>>(value))
-            return std::get<std::vector<std::string>>(value)[0];
+        if (std::holds_alternative<std::vector<std::string>>(i_l.get_solved_value()))
+            return std::get<std::vector<std::string>>(i_l.get_solved_value())[0];
         else
             return "";
     }
     [[nodiscard]] std::optional<int64_t>  get_numeric_value() const {
-        return std::get<mdarray<int64_t>>(value).get_scalar();
+        return std::get<mdarray<int64_t>>(i_l.get_solved_value()).get_scalar();
     }
     [[nodiscard]] std::optional<mdarray<int64_t>> get_int_array_value() const{
-        if(std::holds_alternative<mdarray<int64_t>>(value))
-            return std::get<mdarray<int64_t>>(value);
+        if(std::holds_alternative<mdarray<int64_t>>(i_l.get_solved_value()))
+            return std::get<mdarray<int64_t>>(i_l.get_solved_value());
         return std::nullopt;
     };
     [[nodiscard]] std::optional<resolved_parameter> get_value() const {
         if(is_array()) {
-            if(std::holds_alternative<mdarray<int64_t>>(value)) {
+            if(std::holds_alternative<mdarray<int64_t>>(i_l.get_solved_value())) {
                 return get_int_array_value();
             } else {
                 mdarray<std::string> ret_val;
-                ret_val.set_1d_slice({0,0}, std::get<std::vector<std::string>>(value));
+                ret_val.set_1d_slice({0,0}, std::get<std::vector<std::string>>(i_l.get_solved_value()));
                 return ret_val;
             }
         } else {
-            if(std::holds_alternative<std::vector<std::string>>(value)){
+            if(std::holds_alternative<std::vector<std::string>>(i_l.get_solved_value())){
                 return get_string_value();
             } else {
                 return get_numeric_value();
@@ -140,7 +140,6 @@ public:
 private:
 
     std::string name;
-    std::variant<mdarray<int64_t>, mdarray<std::string>::md_1d_array> value;
     parameter_type type;
 
     Initialization_list i_l;
