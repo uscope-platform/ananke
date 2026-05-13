@@ -205,6 +205,28 @@ std::optional<resolved_parameter> Initialization_list::get_solved_value() const 
     */
 }
 
+nlohmann::json Initialization_list::dump() {
+    nlohmann::json ret;
+
+    ret["name"] = name;
+    ret["type"] = parameter_type_to_string(get_type());
+    if(get_type() == string_parameter){
+        std::vector<std::string> values_s;
+        auto value = solved_value.value();
+        values_s.push_back(std::regex_replace(std::get<std::string>(value), std::regex(R"ctrl(^"(.*)"$)ctrl"), "$1"));
+        ret["value"] = values_s;
+    } else if(get_type() == numeric_parameter){
+        ret["value"]= std::vector<int64_t>();
+        if(solved_value.has_value()) ret["value"].push_back(std::get<int64_t>(solved_value.value()));
+
+    } else if(get_type() == array_parameter){
+        ret["value"] = std::get<mdarray<int64_t>>(solved_value.value()).dump();
+    }
+
+    return ret;
+}
+
+
 void PrintTo(const Initialization_list &il, std::ostream *os) {
     if (il.scalar) {
         if (il.expression_leaves.empty()) *os << "!!EMPTY SCALAR!!";
@@ -346,7 +368,3 @@ Initialization_list::parameter_type Initialization_list::get_type() const{
     return string_parameter;
 
 }
-
-
-
-

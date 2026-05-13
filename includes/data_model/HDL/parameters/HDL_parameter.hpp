@@ -30,16 +30,12 @@ class HDL_parameter {
 public:
     HDL_parameter() = default;
     HDL_parameter( const HDL_parameter &c );
-    explicit HDL_parameter(const std::string &n) {
-        i_l.set_name(n);
-    }
+    explicit HDL_parameter(const std::string &n) {i_l.set_name(n);}
 
-    void set_name(const std::string &n) {
-        i_l.set_name(n);
-    };
+    void set_name(const std::string &n) {i_l.set_name(n);}
     std::shared_ptr<HDL_parameter> clone() const;
 
-    void set_value(const resolved_parameter &val);
+    void set_value(const resolved_parameter &val){i_l.set_solved_value(val);}
 
     std::string get_string_value() const {
         if (!i_l.get_solved_value().has_value()) return "";
@@ -56,12 +52,12 @@ public:
         return std::get<mdarray<int64_t>>(i_l.get_solved_value().value());
     };
 
-    [[nodiscard]] std::optional<resolved_parameter> get_value() const {
-        return i_l.get_solved_value();
-    }
+    [[nodiscard]] std::optional<resolved_parameter> get_value() const {return i_l.get_solved_value();}
 
-    bool propagate_constant(const qualified_identifier &constant_name, const resolved_parameter &constant_value);
-    void propagate_function(const HDL_function_def &def);
+    bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value) {
+        return i_l.propagate_constant(constant_id, constant_value);
+    };
+    void propagate_function(const HDL_function_def &def) {i_l.propagate_function(def);}
     explicit operator std::string();
 
     bool is_array() const {return i_l.is_array();}
@@ -71,10 +67,8 @@ public:
     qualified_identifier get_identifier(){return {"", "", i_l.get_name()};}
 
 
-    void add_component(const Expression_component &component);
-    void set_expression(const std::shared_ptr<Parameter_value_base>  &e) {
-        i_l.set_scalar(e);
-    };
+    void add_component(const Expression_component &component) {i_l.push_scalar_component(component);}
+    void set_expression(const std::shared_ptr<Parameter_value_base>  &e) {i_l.set_scalar(e);}
     std::shared_ptr<Parameter_value_base> get_expression() {
         auto exp =  i_l.get_scalar();
         if (!exp.has_value()) throw std::runtime_error("A scalar parameter has been initialized with an array");
@@ -84,7 +78,6 @@ public:
         i_l.clear_scalar();
     }
 
-    std::string value_as_string() const;
     std::string to_string() const;
 
     friend bool operator <(const HDL_parameter& lhs, const HDL_parameter& rhs);
@@ -92,7 +85,7 @@ public:
 
     friend void PrintTo(const HDL_parameter& point, std::ostream* os);
 
-    std::set<qualified_identifier> get_dependencies();
+    std::set<qualified_identifier> get_dependencies() {return i_l.get_dependencies();}
 
     void add_initialization_list(const Initialization_list &i){
         auto n = i_l.get_name();
@@ -106,7 +99,7 @@ public:
         ar(i_l);
     }
 
-    nlohmann::json dump();
+    nlohmann::json dump() {return i_l.dump();}
 
 
 

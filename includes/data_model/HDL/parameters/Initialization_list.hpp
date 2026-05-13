@@ -138,6 +138,7 @@ public:
     void set_solved_value(const resolved_parameter &v);
     [[nodiscard]] std::optional<resolved_parameter> get_solved_value() const;
 
+    nlohmann::json dump();
 private:
 
     std::string name;
