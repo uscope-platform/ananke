@@ -101,7 +101,7 @@ private:
     std::vector<dimension_t> packed_dimensions;
 
     std::vector<std::shared_ptr<Parameter_value_base>> expression_leaves;
-    std::variant<mdarray<int64_t>, mdarray<std::string>::md_1d_array> solved_value;
+    resolved_parameter solved_value;
 
     bool default_initialization = false;
 };
