@@ -118,7 +118,7 @@ void parameter_solver::update_parameters_map(
             ast_param = std::make_shared<HDL_parameter>(*param);
         resolved_parameter param_val;
         if(solved_parameters.contains(param->get_identifier())) {
-            param_val = solved_parameters[param->get_identifier()];
+            param_val = solved_parameters.at(param->get_identifier());
         } else {
             param_val = resource.get_default_parameters()[param->get_identifier()];
         }
@@ -152,7 +152,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     auto package_parameters =solved_parameters;
 
     // Handle overridden parameters
-    deps_map = get_dependency_map(node_overrides);
     if(node_overrides.empty()) {
         for(auto &[name, value]:node_defaults) {
             if(std::holds_alternative<std::string>(value)) {
@@ -166,91 +165,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
             }
         }
     } else{
-        Parameters_map to_solve;
-        for(const auto& override:node_overrides) {
-            for(const auto &param: node_parameters) {
-                auto deps = param->get_dependencies();
-                if(deps.contains(override->get_identifier()) && !node_overrides.contains(param->get_name())) {
-                    to_solve.insert(param);
-                }
-            }
-        }
-
-        for(auto &param:node_overrides) {
-            if (node_parameters.contains(param->get_name())) {
-                param->set_packed_dimensions(node_parameters.get(param->get_name())->get_packed_dimensions());
-                param->set_unpacked_dimensions(node_parameters.get(param->get_name())->get_unpacked_dimensions());
-            }
-        }
-
-        int solution_rounds = 0;
-        std::unordered_map<std::string, uint32_t> parameters_progress;
-        std::set<std::string> completed_parameters;
-        while(completed_parameters.size() != node_overrides.size()) {
-            if(solution_rounds > 100) throw std::runtime_error("Exceded maximum number of iterations when solving a parameter override");
-            for(auto &param:node_overrides) {
-                if(completed_parameters.contains(param->get_name())) continue;
-                auto deps = param->get_dependencies();
-                if(deps.empty()) {
-                    if(!to_solve.contains(param->get_name())) {
-                        completed_parameters.insert(param->get_name());
-                        to_solve.insert(param);
-                    }
-                }
-                for(auto &dep:deps) {
-                    resolved_parameter value;
-                    bool internal_dependency = false;
-                    if (work.parent_parameters.contains(dep)) {
-                        value = work.parent_parameters[dep];
-                    }else if(!dep.prefix.empty()) {
-                        auto package = d_store->get_HDL_resource(dep.prefix);
-                        value = package.get_default_parameters()[{"", "", dep.name}];
-                    }else if (!dep.instance.empty()){
-                        bool inst_param_found = false;
-                        for (const auto &brother_inst:work.node->get_parent()->get_dependencies()) {
-                            if (brother_inst->get_name() == dep.instance) {
-                                auto inst_param = brother_inst->get_parameters().get(dep.name)->get_numeric_value();
-                                if (!inst_param.has_value()) {
-                                    spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.instance, dep.name);
-                                    value = 0;
-                                } else {
-                                    value = inst_param.value();
-                                }
-                                inst_param_found = true;
-                                break;
-                            }
-                        }
-                        if (!inst_param_found) {
-                            auto path = get_full_path(work.node);
-                            spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.instance, dep.name);
-                            value = 0;
-                        }
-                    }else if(node_overrides.contains(dep.name)) {
-                        internal_dependency = true;
-                    }else if(node_defaults.contains({"", "", dep.name})) {
-                        value = node_defaults[{"", "", dep.name}];
-                    } else {
-                        spdlog::warn("Parameter {}::{} is not defined in the design", dep.prefix, dep.name);
-                    }
-
-                    bool propagation_done = false;
-                    if(!internal_dependency) propagation_done = param->propagate_constant(dep, value);
-                    if(internal_dependency || propagation_done) {
-                        parameters_progress[param->get_name()]++;
-                        if(parameters_progress[param->get_name()]>= deps_map[param->get_identifier()].size()) {
-                            to_solve.insert(param);
-                            completed_parameters.insert(param->get_name());
-                        }
-                    }
-                }
-            }
-            ++solution_rounds;
-        }
-
-        solved_parameters = process_parameters(to_solve, work.node->get_name(), package_parameters, node_defaults);
-        for(auto &param:solved_parameters) {
-            node_defaults[param.first] = param.second;
-        }
+        solved_parameters = solve_complex_overrides(work, d_store, node_defaults, package_parameters);
     }
 
 
@@ -259,12 +174,112 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
 
     for (auto &[name, value]: node_defaults) {
         if (runtime_params.contains(name)) {
-            value = runtime_params[name];
+            value = runtime_params.at(name);
         }
     }
     update_parameters_map(solved_parameters, work.node, d_store);
     return node_defaults;
 }
+
+std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_complex_overrides(work_order &work,
+    const std::shared_ptr<data_store> &d_store, std::map<qualified_identifier, resolved_parameter> &node_defaults,
+    const std::map<qualified_identifier, resolved_parameter> &package_parameters) {
+
+    std::map<qualified_identifier, resolved_parameter> solved_parameters;
+
+    auto node_spec = d_store->get_HDL_resource(work.node->get_type());
+    auto node_parameters = node_spec.get_parameters();
+    auto node_overrides = work.node->get_parameters();
+
+    auto deps_map = get_dependency_map(node_overrides);
+
+    Parameters_map to_solve;
+    for(const auto& override:node_overrides) {
+        for(const auto &param: node_parameters) {
+            auto deps = param->get_dependencies();
+            if(deps.contains(override->get_identifier()) && !node_overrides.contains(param->get_name())) {
+                to_solve.insert(param);
+            }
+        }
+    }
+
+    for(auto &param:node_overrides) {
+        if (node_parameters.contains(param->get_name())) {
+            param->set_packed_dimensions(node_parameters.get(param->get_name())->get_packed_dimensions());
+            param->set_unpacked_dimensions(node_parameters.get(param->get_name())->get_unpacked_dimensions());
+        }
+    }
+
+    int solution_rounds = 0;
+    std::unordered_map<std::string, uint32_t> parameters_progress;
+    std::set<std::string> completed_parameters;
+    while(completed_parameters.size() != node_overrides.size()) {
+        if(solution_rounds > 100) throw std::runtime_error("Exceded maximum number of iterations when solving a parameter override");
+        for(auto &param:node_overrides) {
+            if(completed_parameters.contains(param->get_name())) continue;
+            auto deps = param->get_dependencies();
+            if(deps.empty()) {
+                if(!to_solve.contains(param->get_name())) {
+                    completed_parameters.insert(param->get_name());
+                    to_solve.insert(param);
+                }
+            }
+            for(auto &dep:deps) {
+                resolved_parameter value;
+                bool internal_dependency = false;
+                if (work.parent_parameters.contains(dep)) {
+                    value = work.parent_parameters.at(dep);
+                }else if(!dep.prefix.empty()) {
+                    auto package = d_store->get_HDL_resource(dep.prefix);
+                    value = package.get_default_parameters()[{"", "", dep.name}];
+                }else if (!dep.instance.empty()){
+                    bool inst_param_found = false;
+                    for (const auto &brother_inst:work.node->get_parent()->get_dependencies()) {
+                        if (brother_inst->get_name() == dep.instance) {
+                            auto inst_param = brother_inst->get_parameters().get(dep.name)->get_numeric_value();
+                            if (!inst_param.has_value()) {
+                                spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.instance, dep.name);
+                            }
+                            value = inst_param.value_or(0);
+
+                            inst_param_found = true;
+                            break;
+                        }
+                    }
+                    if (!inst_param_found) {
+                        auto path = get_full_path(work.node);
+                        spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.instance, dep.name);
+                        value = 0;
+                    }
+                }else if(node_overrides.contains(dep.name)) {
+                    internal_dependency = true;
+                }else if(node_defaults.contains({"", "", dep.name})) {
+                    value = node_defaults.at({"", "", dep.name});
+                } else {
+                    spdlog::warn("Parameter {}::{} is not defined in the design", dep.prefix, dep.name);
+                }
+
+                bool propagation_done = false;
+                if(!internal_dependency) propagation_done = param->propagate_constant(dep, value);
+                if(internal_dependency || propagation_done) {
+                    parameters_progress[param->get_name()]++;
+                    if(parameters_progress[param->get_name()]>= deps_map[param->get_identifier()].size()) {
+                        to_solve.insert(param);
+                        completed_parameters.insert(param->get_name());
+                    }
+                }
+            }
+        }
+        ++solution_rounds;
+    }
+
+    solved_parameters = process_parameters(to_solve, work.node->get_name(), package_parameters, node_defaults);
+    for(auto &param:solved_parameters) {
+        node_defaults[param.first] = param.second;
+    }
+    return solved_parameters;
+}
+
 
 std::map<qualified_identifier, std::set<qualified_identifier>> parameter_solver::get_dependency_map(const Parameters_map &map) {
 
