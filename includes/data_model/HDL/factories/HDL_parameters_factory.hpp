@@ -17,7 +17,6 @@
 #define ANANKE_HDL_PARAMETERS_FACTORY_HPP
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
-#include "data_model/HDL/parameters/Initialization_list.hpp"
 #include "data_model/HDL/parameters/HDL_function_call.hpp"
 #include "data_model/HDL/factories/HDL_functions_factory.hpp"
 #include "resource_factory_base.hpp"
@@ -138,7 +137,6 @@ private:
     bool paused = false;
 
 
-    Initialization_list init_list;
 
 };
 

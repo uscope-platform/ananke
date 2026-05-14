@@ -18,7 +18,7 @@
 
 void HDL_parameters_factory::new_parameter(const std::string &name) {
       new_basic_resource(name);
-      init_list.set_dimensions(index_factory.get_dimensions(), true);
+      current_resource.set_dimensions(index_factory.get_dimensions(), true);
 }
 
 std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
@@ -59,11 +59,9 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
         }
         in_initialization_list = false;
         if (default_assignment){
-            init_list.set_default();
+            current_resource.set_default();
         }
-        init_list.set_dimensions(index_factory.get_dimensions(), false);
-        current_resource.add_initialization_list(init_list);
-        init_list = Initialization_list();
+        current_resource.set_dimensions(index_factory.get_dimensions(), false);
         expr_factory.increase_level();
     }
 }
@@ -92,9 +90,6 @@ void HDL_parameters_factory::start_param_assignment() {
 
 void HDL_parameters_factory::stop_param_assignment() {
     in_param_assignment = false;
-    if (!init_list.empty()  && current_resource.get_i_l().empty()) {
-        current_resource.add_initialization_list(init_list);
-    }
 }
 
 void HDL_parameters_factory::stop_unpacked_dimension_declaration() {
@@ -108,7 +103,7 @@ void HDL_parameters_factory::stop_replication() {
         if (f_factory.is_active()) {
             f_factory.add_value(repl_factory.finish());
         } else {
-            init_list.add_item(repl_factory.finish());
+            current_resource.add_item(repl_factory.finish());
         }
         expr_factory.increase_level();
     }
@@ -119,14 +114,12 @@ void HDL_parameters_factory::start_replication_assignment() {
 }
 
 void HDL_parameters_factory::stop_replication_assignment() {
-    init_list.set_scalar(repl_factory.finish());
+    current_resource.set_scalar(repl_factory.finish());
 }
 
 void HDL_parameters_factory::stop_packed_assignment() {
     if(in_packed_assignment && !in_initialization_list){
-        init_list.set_dimensions(index_factory.get_dimensions(), false);
-        current_resource.add_initialization_list(init_list);
-        init_list = Initialization_list();
+        current_resource.set_dimensions(index_factory.get_dimensions(), false);
         in_packed_assignment = false;
     }
 }
@@ -153,9 +146,9 @@ void HDL_parameters_factory::stop_expression_new() {
             } else if(calls_factory.in_function_call()) {
                 calls_factory.add_argument(std::make_shared<Expression>(expr.value()));
             } else if(in_initialization_list) {
-                init_list.add_item(std::make_shared<Expression>(expr.value()));
+                current_resource.add_item(std::make_shared<Expression>(expr.value()));
             } else {
-                current_resource.set_expression(std::make_shared<Expression>(expr.value()));
+                current_resource.set_scalar(std::make_shared<Expression>(expr.value()));
             }
         }
         expr_factory.clear_expression();
@@ -181,9 +174,9 @@ void HDL_parameters_factory::stop_concatenation() {
             if (f_factory.is_active()) {
                 f_factory.add_value(concat_factory.get_concatenation());
             }else if(in_initialization_list) {
-                init_list.add_item(concat_factory.get_concatenation());
+                current_resource.add_item(concat_factory.get_concatenation());
             } else {
-                init_list.set_scalar(concat_factory.get_concatenation());
+                current_resource.set_scalar(concat_factory.get_concatenation());
             }
 
         }
@@ -234,9 +227,9 @@ void HDL_parameters_factory::stop_ternary(){
     expr_factory.pop_level();
     if (!t_factory.is_nested()) {
         if (in_initialization_list) {
-            init_list.add_item(t_factory.finish());
+            current_resource.add_item(t_factory.finish());
         } else {
-            current_resource.set_expression(t_factory.finish());
+            current_resource.set_scalar(t_factory.finish());
         }
     }else {
         t_factory.add_component(t_factory.finish());
@@ -249,9 +242,6 @@ void HDL_parameters_factory::start_param_override()  {
 
 void HDL_parameters_factory::stop_param_override() {
     in_param_override = false;
-    if (!init_list.empty()  && current_resource.get_i_l().empty()) {
-        current_resource.add_initialization_list(init_list);
-    }
 }
 
 void HDL_parameters_factory::start_function_decl(const std::string &name) {
@@ -305,7 +295,7 @@ void HDL_parameters_factory::stop_cast() {
         } else if (concat_factory.in_concatenation()) {
             concat_factory.add_component(cast_value);
         } else {
-            init_list.set_scalar(cast_value);
+            current_resource.set_scalar(cast_value);
         }
     }
 }
@@ -331,9 +321,9 @@ void HDL_parameters_factory::start_function_assignment(const std::string &f_name
 void HDL_parameters_factory::stop_function_assignment() {
     if (!calls_factory.is_nested()) {
         if (in_initialization_list) {
-            init_list.add_item(calls_factory.get_function());
+            current_resource.add_item(calls_factory.get_function());
         } else {
-            current_resource.set_expression(calls_factory.get_function());
+            current_resource.set_scalar(calls_factory.get_function());
         }
     }
 
@@ -364,9 +354,9 @@ void HDL_parameters_factory::stop_function_call() {
         } else if (repl_factory.in_replication()) {
             repl_factory.add_expression(Expression({ec}));
         } else if (in_packed_assignment || in_param_assignment || in_param_override) {
-            init_list.set_scalar(call);
+            current_resource.set_scalar(call);
         } else if (in_initialization_list) {
-            init_list.add_item(call);
+            current_resource.add_item(call);
         }
     }
 }

@@ -283,8 +283,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    Initialization_list il;
-    il.add_dimension({
+    p->add_dimension({
         {Expression_component("1", Expression_component::number)},
         {Expression_component("0", Expression_component::number)},
         false
@@ -293,8 +292,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     av.set_1d_slice({0,0}, {9,8});
     auto ec = Expression_component(0, 0);
     ec.set_value(av);
-    il.set_scalar(std::make_shared<Expression>(Expression({ec})));
-    p->add_initialization_list(il);
+    p->set_scalar(std::make_shared<Expression>(Expression({ec})));
     p->set_name("param_2");
     p->set_value(av);
     check_params.insert(p);
@@ -1152,8 +1150,8 @@ TEST(parameter_processing, override_after_function_localparam) {
 
     auto deps = ast_v2->get_dependencies();
     ASSERT_EQ(deps[0]->get_parameters().get("INITIAL_STOPPED_STATE")->get_numeric_value(), 52);
-    auto i_l = deps[0]->get_parameters().get("INITIAL_STOPPED_STATE")->get_i_l().get_scalar();
-    ASSERT_FALSE(i_l.value()->as<Expression>().empty());
+    auto i_l = deps[0]->get_parameters().get("INITIAL_STOPPED_STATE")->get_expression();
+    ASSERT_FALSE(i_l->as<Expression>().empty());
 }
 
 
@@ -1208,27 +1206,26 @@ TEST(parameter_processing, init_list_override) {
     Parameters_map check_params;
     HDL_parameter p;
     p.set_name("NS");
-    p.set_expression(std::make_shared<Expression>(Expression({Expression_component("2", Expression_component::number)})));
+    p.set_scalar(std::make_shared<Expression>(Expression({Expression_component("2", Expression_component::number)})));
     p.set_value(2);
     check_params.insert(std::make_shared<HDL_parameter>(p));
     p = HDL_parameter();
     p.set_name("SLAVE_ADDR");
-    Initialization_list il;
-    il.add_dimension({
+
+    p.add_dimension({
         {Expression_component("NS", Expression_component::identifier),Expression_component("-", Expression_component::operation),Expression_component("1", Expression_component::number),},
         {Expression_component("0", Expression_component::number)},
         false});
-    il.add_dimension({
+    p.add_dimension({
     {Expression_component("31", Expression_component::number),},
     {Expression_component("0", Expression_component::number)},
     true});
-    il.add_item(std::make_shared<Expression>(Expression({
+    p.add_item(std::make_shared<Expression>(Expression({
         Expression_component(1136656384, 0)
     })));
-    il.add_item(std::make_shared<Expression>(Expression({
+    p.add_item(std::make_shared<Expression>(Expression({
           Expression_component(1136656448, 0)
       })));
-    p.add_initialization_list(il);
 
 
     mdarray<int64_t> av;
@@ -1238,20 +1235,18 @@ TEST(parameter_processing, init_list_override) {
     check_params.insert(std::make_shared<HDL_parameter>(p));
     p = HDL_parameter();
     p.set_name("SLAVE_MASK");
-    il = Initialization_list();
     Replication r;
     r.set_item(std::make_shared<Expression>(Expression({Expression_component(64, 32)})));
     r.set_size({Expression_component(2, 1)});
-    il.add_dimension({
+    p.add_dimension({
     {Expression_component("NS", Expression_component::identifier),Expression_component("-", Expression_component::operation),Expression_component("1", Expression_component::number),},
     {Expression_component("0", Expression_component::number)},
     false});
-    il.add_dimension({
+    p.add_dimension({
     {Expression_component("31", Expression_component::number),},
     {Expression_component("0", Expression_component::number)},
     true});
-    il.set_scalar(std::make_shared<Replication>(r));
-    p.add_initialization_list(il);
+    p.set_scalar(std::make_shared<Replication>(r));
 
     av.set_1d_slice({0,0}, {64,64});
     p.set_value(av);

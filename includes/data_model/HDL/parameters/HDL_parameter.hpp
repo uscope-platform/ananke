@@ -22,7 +22,7 @@
 #include <spdlog/spdlog.h>
 
 #include "data_model/HDL/parameters/Expression.hpp"
-#include "data_model/HDL/parameters/Initialization_list.hpp"
+#include "data_model/HDL/parameters/dimension.hpp"
 
 class HDL_function_def;
 
@@ -30,53 +30,100 @@ class HDL_parameter {
 public:
     HDL_parameter() = default;
     HDL_parameter( const HDL_parameter &c );
-    explicit HDL_parameter(const std::string &n) {i_l.set_name(n);}
+    explicit HDL_parameter(const std::string &n) {name = n;}
 
-    void set_name(const std::string &n) {i_l.set_name(n);}
+    HDL_parameter(HDL_parameter &&other) noexcept
+        : name(std::move(other.name)),
+          scalar(other.scalar),
+          unpacked_dimensions(std::move(other.unpacked_dimensions)),
+          packed_dimensions(std::move(other.packed_dimensions)),
+          expression_leaves(std::move(other.expression_leaves)),
+          solved_value(std::move(other.solved_value)),
+          default_initialization(other.default_initialization) {
+    }
+
+    HDL_parameter & operator=(const HDL_parameter &other) {
+        if (this == &other)
+            return *this;
+        name = other.name;
+        scalar = other.scalar;
+        unpacked_dimensions = other.unpacked_dimensions;
+        packed_dimensions = other.packed_dimensions;
+        expression_leaves = other.expression_leaves;
+        solved_value = other.solved_value;
+        default_initialization = other.default_initialization;
+        return *this;
+    }
+
+    HDL_parameter & operator=(HDL_parameter &&other) noexcept {
+        if (this == &other)
+            return *this;
+        name = std::move(other.name);
+        scalar = other.scalar;
+        unpacked_dimensions = std::move(other.unpacked_dimensions);
+        packed_dimensions = std::move(other.packed_dimensions);
+        expression_leaves = std::move(other.expression_leaves);
+        solved_value = std::move(other.solved_value);
+        default_initialization = other.default_initialization;
+        return *this;
+    }
+
+    void set_name(const std::string &n) {name = n;}
     std::shared_ptr<HDL_parameter> clone() const;
 
-    void set_value(const resolved_parameter &val){i_l.set_solved_value(val);}
+    void set_value(const resolved_parameter &val){solved_value = val;}
 
     std::string get_string_value() const {
-        if (!i_l.get_solved_value().has_value()) return "";
-        return std::get<std::string>(i_l.get_solved_value().value());
+        if (!solved_value.has_value()) return "";
+        return std::get<std::string>(solved_value.value());
     }
 
     [[nodiscard]] std::optional<int64_t>  get_numeric_value() const {
-        if (!i_l.get_solved_value().has_value()) return 0;
-        return std::get<int64_t>(i_l.get_solved_value().value());
+        if (!solved_value.has_value()) return 0;
+        return std::get<int64_t>(solved_value.value());
     }
 
     [[nodiscard]] std::optional<mdarray<int64_t>> get_int_array_value() const{
-        if (!i_l.get_solved_value().has_value()) return {};
-        return std::get<mdarray<int64_t>>(i_l.get_solved_value().value());
+        if (!solved_value.has_value()) return {};
+        return std::get<mdarray<int64_t>>(solved_value.value());
     };
 
-    [[nodiscard]] std::optional<resolved_parameter> get_value() const {return i_l.get_solved_value();}
+    [[nodiscard]] std::optional<resolved_parameter> get_value() const {return solved_value;}
 
-    bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value) {
-        return i_l.propagate_constant(constant_id, constant_value);
-    };
-    void propagate_function(const HDL_function_def &def) {i_l.propagate_function(def);}
+    void add_dimension(const dimension_t &d);
+    void set_dimensions(const std::vector<dimension_t> &d, bool packed);
+
+    std::optional<resolved_parameter> evaluate();
+
+    bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value);
+    void propagate_function(const HDL_function_def &def);
     explicit operator std::string();
 
-    bool is_array() const {return i_l.is_array();}
-    bool is_packed_array() const {return i_l.is_packed();}
+    bool is_array() const{return !scalar;}
+    bool is_packed_array() const {return unpacked_dimensions.empty() && !packed_dimensions.empty();}
 
-    std::string get_name() const {return i_l.get_name();};
-    qualified_identifier get_identifier(){return {"", "", i_l.get_name()};}
+    std::string get_name() const {return name;}
+    qualified_identifier get_identifier(){return {"", "", name};}
 
+    void set_packed_dimensions(const std::vector<dimension_t>  &d) {packed_dimensions = d;};
+    void set_unpacked_dimensions(const std::vector<dimension_t>  &d) {unpacked_dimensions = d;};
+    std::vector<dimension_t> get_packed_dimensions(){return  packed_dimensions;};
+    std::vector<dimension_t> get_unpacked_dimensions(){return  unpacked_dimensions;};
 
-    void add_component(const Expression_component &component) {i_l.push_scalar_component(component);}
-    void set_expression(const std::shared_ptr<Parameter_value_base>  &e) {i_l.set_scalar(e);}
+    bool empty() const;
+
+    void add_component(const Expression_component &component);
+    void set_scalar(const std::shared_ptr<Parameter_value_base>  &e);
     std::shared_ptr<Parameter_value_base> get_expression() {
-        auto exp =  i_l.get_scalar();
-        if (!exp.has_value()) throw std::runtime_error("A scalar parameter has been initialized with an array");
-        return exp.value();
+        if (scalar) return expression_leaves[0];
+        throw std::runtime_error("A scalar parameter has been initialized with an array");
     }
     void clear_expression() {
-        i_l.clear_scalar();
+        if (scalar) expression_leaves[0] = std::make_shared<Expression>();
     }
+
+    void set_default() { default_initialization = true;};
+    void add_item(const std::shared_ptr<Parameter_value_base> &e);
 
     std::string to_string() const;
 
@@ -85,37 +132,36 @@ public:
 
     friend void PrintTo(const HDL_parameter& point, std::ostream* os);
 
-    std::set<qualified_identifier> get_dependencies() {return i_l.get_dependencies();}
-
-    void add_initialization_list(const Initialization_list &i){
-        auto n = i_l.get_name();
-        i_l = i;
-        i_l.set_name(n);
-    }
-    Initialization_list get_i_l() {return i_l;}
+    std::set<qualified_identifier> get_dependencies();
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(i_l);
+        ar(name, unpacked_dimensions, packed_dimensions, expression_leaves, default_initialization, scalar);
     }
 
-    nlohmann::json dump() {return i_l.dump();}
+    nlohmann::json dump();
 
 
 
 private:
 
+    std::optional<resolved_parameter> evaluate_vector();
+    resolved_parameter process_default_initialization();
 
-    Initialization_list i_l;
+    std::string name;
+    bool scalar = true;
+
+    std::vector<dimension_t> unpacked_dimensions;
+    std::vector<dimension_t> packed_dimensions;
+
+    std::vector<std::shared_ptr<Parameter_value_base>> expression_leaves;
+    std::optional<resolved_parameter> solved_value;
+
+    bool default_initialization = false;
 };
 
-constexpr std::string parameter_type_to_string(Initialization_list::parameter_type in){
-    switch(in){
-        case Initialization_list::string_parameter: return "string_parameter";
-        case Initialization_list::numeric_parameter: return "numeric_parameter";
-        case Initialization_list::array_parameter: return "array_parameter";
-        default: return "unknown parameter type";
-    }
-}
+
+
+
 
 #endif //ANANKE_HDL_PARAMETER_HPP

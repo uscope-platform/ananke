@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "analysis/parameter_solver.hpp"
+#include "data_model/data_store.hpp"
 
 std::map<qualified_identifier, resolved_parameter> parameter_solver::process_parameters(
     const Parameters_map &map_in,
@@ -32,7 +33,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
             for (auto &[param_id, dependencies] : dependencies_map ) {
                 if (dependencies.empty() && !solved_parameters.contains(param_id)) {
                     auto to_solve = map.const_get(param_id.name);
-                    std::optional<resolved_parameter> value = to_solve->get_i_l().evaluate();
+                    std::optional<resolved_parameter> value = to_solve->evaluate();
 
                     if (value.has_value()) {
                         solved_parameters.insert({param_id, value.value()});
@@ -176,11 +177,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
         }
 
         for(auto &param:node_overrides) {
-            auto i_l = param->get_i_l();
             if (node_parameters.contains(param->get_name())) {
-                i_l.set_packed_dimensions(node_parameters.get(param->get_name())->get_i_l().get_packed_dimensions());
-                i_l.set_unpacked_dimensions(node_parameters.get(param->get_name())->get_i_l().get_unpacked_dimensions());
-                param->add_initialization_list(i_l);
+                param->set_packed_dimensions(node_parameters.get(param->get_name())->get_packed_dimensions());
+                param->set_unpacked_dimensions(node_parameters.get(param->get_name())->get_unpacked_dimensions());
             }
         }
 

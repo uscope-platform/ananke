@@ -20,9 +20,12 @@ void indexing_factory::start_index(bool r) {
     if (!quantifier) {
         active = true;
         range = r;
-        first_bound = true;
-        index = Expression();
-        dim.emplace_back();
+        if(r) {
+            first_bound = true;
+            dim.emplace_back();
+        } else {
+            index = Expression();
+        }
     }
 }
 

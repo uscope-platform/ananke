@@ -21,8 +21,9 @@
 #include "data_model/HDL/HDL_Resource.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
 #include "data_model/HDL/parameters/Expression_evaluator.hpp"
-#include "data_model/data_store.hpp"
 
+
+class data_store;
 
 struct work_order {
     std::shared_ptr<HDL_instance_AST> node;

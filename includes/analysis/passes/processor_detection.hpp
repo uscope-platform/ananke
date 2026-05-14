@@ -18,6 +18,7 @@
 #define ANANKE_PROCESSORS_DETECTION_HPP
 
 #include "analysis/passes/pass_base.hpp"
+#include "data_model/data_store.hpp"
 
 class processor_detection : public pass_base{
 public:

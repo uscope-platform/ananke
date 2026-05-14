@@ -176,7 +176,7 @@ void HDL_ast_builder_v2::process_quantifier(const std::shared_ptr<HDL_parameter>
             complete &= quantifier->propagate_constant(param.first, param.second);
         }
         if (!complete) throw std::runtime_error("unknown indentifiers remain in an array quantifier");
-        auto value = quantifier->get_i_l().evaluate();
+        auto value = quantifier->evaluate();
         quantifier->set_value(value.value());
     }
 }
@@ -194,7 +194,7 @@ std::map<qualified_identifier, resolved_parameter> HDL_ast_builder_v2::process_r
                         raw_param->propagate_constant(dep, pv);
                     }
                 }
-                auto val = raw_param->get_i_l().evaluate();
+                auto val = raw_param->evaluate();
                 if (val.has_value()) runtime_parameters.insert({name, val.value()});
             }
         }

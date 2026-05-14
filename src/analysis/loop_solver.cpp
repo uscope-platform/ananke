@@ -40,7 +40,7 @@ bool loop_solver::is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression en
 
 std::shared_ptr<HDL_parameter> loop_solver::get_init_variable(const HDL_loop_metadata &l) {
     auto loop_variable = std::make_shared<HDL_parameter>(l.get_init());
-    auto variable_val = loop_variable->get_i_l().evaluate();
+    auto variable_val = loop_variable->evaluate();
     if (!variable_val.has_value()) return{};
     if (!std::holds_alternative<int64_t>(variable_val.value())) return {};
 
