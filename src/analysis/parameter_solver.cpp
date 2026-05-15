@@ -41,7 +41,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
                 } else {
                     for(const auto&[prefix, identifier, name]:dependencies) {
                          if(!prefix.empty()) {
-                            // Package parameters can only be evaluated during_ast_construction, thus use a placeholder
+                            // At parse time, package parameters are not yet known. Insert a sentinel so downstream code knows to defer evaluation.
                             solved_parameters.insert({param_id, "__RUNTIME_ONLY_PARAMETER__"});
                         }
                     }
@@ -132,11 +132,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     auto node_overrides = work.node->get_parameters();
     auto node_parameters = node_spec.get_parameters();
 
-    std::map<qualified_identifier, resolved_parameter> solved_parameters;
-
     //retreive default package parameters
 
-    solved_parameters =retreive_package_parameters(node_parameters, d_store);
+    std::map<qualified_identifier, resolved_parameter> solved_parameters = retreive_package_parameters(node_parameters, d_store);
 
     auto overrides_solution = solve_complex_overrides(work, d_store, node_defaults);
     solved_parameters.insert(overrides_solution.begin(), overrides_solution.end());
@@ -146,13 +144,17 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     auto runtime_params = specialize_runtime_parameters(solved_parameters, node_parameters, work.node->get_name());
     solved_parameters.insert(runtime_params.begin(), runtime_params.end());
 
-    for (auto &[name, value]: node_defaults) {
+    std::map<qualified_identifier, resolved_parameter> results;
+    for (auto &name: std::views::keys(node_defaults)) {
         if (runtime_params.contains(name)) {
-            value = runtime_params.at(name);
+            results.insert({name, runtime_params.at(name)});
+        } else {
+            results.insert({name, solved_parameters.at(name)});
         }
     }
+
     update_parameters_map(solved_parameters, work.node, d_store);
-    return node_defaults;
+    return results;
 }
 
 std::map<qualified_identifier, resolved_parameter> parameter_solver::retreive_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store) {
@@ -173,7 +175,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retreive_pa
 std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_complex_overrides(
     work_order &work,
     const std::shared_ptr<data_store> &d_store,
-    std::map<qualified_identifier, resolved_parameter> &node_defaults
+    const std::map<qualified_identifier, resolved_parameter> &node_defaults
 ) {
 
     std::map<qualified_identifier, resolved_parameter> solved_parameters;
@@ -265,9 +267,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     }
 
     solved_parameters = process_parameters(to_solve, work.node->get_name(), node_defaults);
-    for(auto &param:solved_parameters) {
-        node_defaults[param.first] = param.second;
-    }
+
     return solved_parameters;
 }
 
@@ -278,7 +278,6 @@ std::map<qualified_identifier, std::set<qualified_identifier>> parameter_solver:
     for (auto &param: map) {
         auto param_id = param->get_identifier();
         dependencies_map[param_id] = {};
-        std::set<std::string> param_deps;
         auto deps = param->get_dependencies();
         dependencies_map[param_id].insert(deps.begin(), deps.end());
     }

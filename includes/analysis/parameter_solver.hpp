@@ -50,7 +50,7 @@ public:
     static std::map<qualified_identifier, resolved_parameter> solve_complex_overrides(
             work_order &work,
             const std::shared_ptr<data_store> &d_store,
-            std::map<qualified_identifier, resolved_parameter> &node_defaults
+            const std::map<qualified_identifier, resolved_parameter> &node_defaults
         );
 
 
