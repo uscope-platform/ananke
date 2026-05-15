@@ -39,13 +39,13 @@ public:
         const std::map<qualified_identifier, resolved_parameter> &default_parameters
     );
     static void update_parameters_map(
-        std::map<qualified_identifier, resolved_parameter> parameters,
-        std::shared_ptr<HDL_instance_AST> node,
+        const std::map<qualified_identifier, resolved_parameter> &parameters,
+        const std::shared_ptr<HDL_instance_AST>& node,
         const std::shared_ptr<data_store> &d_store
         );
 
     static std::map<qualified_identifier, resolved_parameter> override_parameters(work_order &work, const std::shared_ptr<data_store> &d_store);
-    static std::map<qualified_identifier, resolved_parameter> retreive_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store);
+    static std::map<qualified_identifier, resolved_parameter> retrieve_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store);
 
     static std::map<qualified_identifier, resolved_parameter> solve_complex_overrides(
             work_order &work,

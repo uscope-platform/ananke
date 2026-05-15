@@ -27,81 +27,83 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
     auto dependencies_map = get_dependency_map(map_in);
 
 
-        int rounds_counter = 0;
-        while (!dependencies_map.empty() && rounds_counter < 100) {
-            for (auto &[param_id, dependencies] : dependencies_map ) {
-                if (dependencies.empty() && !solved_parameters.contains(param_id)) {
-                    auto to_solve = map.const_get(param_id.name);
-                    std::optional<resolved_parameter> value = to_solve->evaluate();
+    int rounds_counter = 0;
+    while (!dependencies_map.empty() && rounds_counter < 100) {
+        for (auto &[param_id, dependencies] : dependencies_map ) {
+            if (dependencies.empty() && !solved_parameters.contains(param_id)) {
+                auto to_solve = map.const_get(param_id.name);
+                std::optional<resolved_parameter> value = to_solve->evaluate();
 
-                    if (value.has_value()) {
-                        solved_parameters.insert({param_id, value.value()});
-                    }
+                if (value.has_value()) {
+                    solved_parameters.insert({param_id, value.value()});
+                }
 
-                } else {
-                    for(const auto&[prefix, identifier, name]:dependencies) {
-                         if(!prefix.empty()) {
-                            // At parse time, package parameters are not yet known. Insert a sentinel so downstream code knows to defer evaluation.
-                            solved_parameters.insert({param_id, "__RUNTIME_ONLY_PARAMETER__"});
-                        }
+            } else {
+                for(const auto&[prefix, identifier, name]:dependencies) {
+                     if(!prefix.empty()) {
+                        // At parse time, package parameters are not yet known. Insert a sentinel so downstream code knows to defer evaluation.
+                        solved_parameters.insert({param_id, "__RUNTIME_ONLY_PARAMETER__"});
                     }
                 }
             }
-
-            for (auto &[param_id, param_value]: solved_parameters) {
-                bool propagation_complete = true;
-                for (auto &dep: dependencies_map) {
-                    if (dep.second.contains(param_id)) {
-                        auto target = map.get(dep.first.name);
-                        propagation_complete &= target->propagate_constant(param_id, param_value);
-                        if (propagation_complete) dep.second.erase(param_id);
-                    }
-                }
-                    dependencies_map.erase(param_id);
-            }
-            std::map<qualified_identifier, qualified_identifier> to_erase;
-            for (auto &[param_id, dependencies] : dependencies_map ) {
-
-                for (auto &dep: dependencies) {
-                    if (!dependencies_map.contains(dep) && !parent_module.starts_with("module::")) {
-                        auto target = map.get(param_id.name);
-                        if (!default_parameters.contains(dep)) {
-                            spdlog::error("The parameter {} does not exist in module {}", dep.name, parent_module);
-                            exit(-1);
-                        }
-                        target->propagate_constant(dep, default_parameters.at(dep));
-                        to_erase.insert({param_id, dep});
-                    }
-                }
-
-            }
-            for (auto&e: to_erase) {
-                dependencies_map[e.first].erase(e.second);
-            }
-            rounds_counter++;
         }
 
-        if (rounds_counter >=100) {
-            std::string parameters;
-            int i = 0;
-            for(const auto &name: dependencies_map | std::views::keys) {
-                parameters += name.name;
-                if(dependencies_map.size()>1 && i<dependencies_map.size()-1) {
-                    parameters += ", ";
-                    i++;
+        for (auto &[param_id, param_value]: solved_parameters) {
+            bool propagation_complete = true;
+            for (auto &dep: dependencies_map) {
+                if (dep.second.contains(param_id)) {
+                    auto target = map.get(dep.first.name);
+                    propagation_complete &= target->propagate_constant(param_id, param_value);
+                    if (propagation_complete) dep.second.erase(param_id);
                 }
             }
-            spdlog::warn("Parameters {} could not be solved in 100 passes while processing instance {}",
-                parameters,  parent_module);
+                dependencies_map.erase(param_id);
         }
+        std::map<qualified_identifier, std::set<qualified_identifier>> to_erase;
+        for (auto &[param_id, dependencies] : dependencies_map ) {
+
+            for (auto &dep: dependencies) {
+                if (!dependencies_map.contains(dep) && !parent_module.starts_with("module::")) {
+                    auto target = map.get(param_id.name);
+                    if (!default_parameters.contains(dep)) {
+                        spdlog::error("The parameter {} does not exist in module {}", dep.name, parent_module);
+                        exit(-1);
+                    }
+                    target->propagate_constant(dep, default_parameters.at(dep));
+                    to_erase[param_id].insert(dep);
+                }
+            }
+
+        }
+        for (auto&e: to_erase) {
+            for (auto & dep: e.second) {
+                dependencies_map[e.first].erase(dep);
+            }
+        }
+        rounds_counter++;
+    }
+
+    if (rounds_counter >=100) {
+        std::string parameters;
+        int i = 0;
+        for(const auto &name: dependencies_map | std::views::keys) {
+            parameters += name.name;
+            if(dependencies_map.size()>1 && i<dependencies_map.size()-1) {
+                parameters += ", ";
+                i++;
+            }
+        }
+        spdlog::warn("Parameters {} could not be solved in 100 passes while processing instance {}",
+            parameters,  parent_module);
+    }
 
     return solved_parameters;
 }
 
 
 void parameter_solver::update_parameters_map(
-    std::map<qualified_identifier, resolved_parameter> solved_parameters,
-    std::shared_ptr<HDL_instance_AST> node,
+    const std::map<qualified_identifier, resolved_parameter> &solved_parameters,
+    const std::shared_ptr<HDL_instance_AST>& node,
     const std::shared_ptr<data_store> &d_store
 ) {
     auto node_parameters = node->get_parameters();
@@ -132,9 +134,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     auto node_overrides = work.node->get_parameters();
     auto node_parameters = node_spec.get_parameters();
 
-    //retreive default package parameters
+    //retrieve default package parameters
 
-    std::map<qualified_identifier, resolved_parameter> solved_parameters = retreive_package_parameters(node_parameters, d_store);
+    std::map<qualified_identifier, resolved_parameter> solved_parameters = retrieve_package_parameters(node_parameters, d_store);
 
     auto overrides_solution = solve_complex_overrides(work, d_store, node_defaults);
     solved_parameters.insert(overrides_solution.begin(), overrides_solution.end());
@@ -157,7 +159,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     return results;
 }
 
-std::map<qualified_identifier, resolved_parameter> parameter_solver::retreive_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store) {
+std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store) {
     std::map<qualified_identifier, resolved_parameter> package_parameters;
     auto deps_map = get_dependency_map(node_parameters);
     for (auto &param_deps: deps_map | std::views::values) {
