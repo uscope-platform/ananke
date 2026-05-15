@@ -21,6 +21,11 @@
 
 #include "data_model/HDL/parameters/dimension.hpp"
 
+struct resolved_type {
+    std::vector<uint64_t> unpacked_sizes;
+    std::vector<uint64_t> packed_sizes;
+};
+
 class HDL_type {
 public:
     HDL_type() = default;
@@ -84,6 +89,9 @@ public:
 
     bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value);
     std::set<qualified_identifier> get_dependencies();
+
+
+    std::optional<resolved_type> evaluate_type();
 
     template<class Archive>
     void serialize( Archive & ar ) {

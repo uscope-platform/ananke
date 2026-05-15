@@ -21,6 +21,7 @@
 #include <vector>
 #include "data_model/HDL/parameters/qualified_identifier.hpp"
 #include "data_model/mdarray.hpp"
+#include "data_model/HDL/parameters/HDL_type.hpp"
 
 class HDL_function_def;
 
@@ -56,7 +57,7 @@ public:
     [[nodiscard]] bool is_ternary() const {return type == ternary;}
     [[nodiscard]] bool is_cast() const {return type == cast;}
 
-
+    virtual void set_container_sizes(const resolved_type &s) const = 0;
     virtual std::shared_ptr<Parameter_value_base> clone_ptr() const = 0;
 
     template<typename T>

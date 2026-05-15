@@ -110,6 +110,10 @@ std::shared_ptr<Parameter_value_base> Cast::clone_ptr() const {
     return std::make_shared<Cast>(c);
 }
 
+void Cast::set_container_sizes(const resolved_type &s) const {
+    int i = 0;
+}
+
 bool Cast::isEqual(const Parameter_value_base &other) const {
 
     const auto& rhs = static_cast<const Cast&>(other);
