@@ -150,21 +150,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     }
     auto package_parameters =solved_parameters;
 
-    // Handle overridden parameters
-    if(node_overrides.empty()) {
-        for(auto &[name, value]:node_defaults) {
-            if(std::holds_alternative<std::string>(value)) {
-                if(std::get<std::string>(value) != "__RUNTIME_ONLY_PARAMETER__") {
-                    solved_parameters.insert({name, value});
-                }
-            } else {
-                solved_parameters.insert({name, value});
-            }
-        }
-    } else{
-        solved_parameters = solve_complex_overrides(work, d_store, node_defaults, package_parameters);
-    }
+    auto overrides_solution = solve_complex_overrides(work, d_store, node_defaults, package_parameters);
+    solved_parameters.insert(overrides_solution.begin(), overrides_solution.end());
 
+    // Handle overridden parameters
 
     auto runtime_params = specialize_runtime_parameters(solved_parameters, node_parameters, work.node->get_name());
     solved_parameters.insert(runtime_params.begin(), runtime_params.end());
