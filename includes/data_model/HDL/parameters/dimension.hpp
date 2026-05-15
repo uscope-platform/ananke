@@ -28,6 +28,7 @@ typedef struct dims_struct{
     void serialize( Archive & ar ) {
         ar(first_bound, second_bound, packed);
     }
+    bool operator==(const dims_struct&) const = default;
 
 } dimension_t;
 

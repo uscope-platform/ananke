@@ -19,13 +19,11 @@
 HDL_parameter::HDL_parameter(const HDL_parameter &c) {
 
     name = c.name;
-    unpacked_dimensions = c.unpacked_dimensions;
-    packed_dimensions = c.packed_dimensions;
+    type = c.type;
     solved_value = c.solved_value;
 
     expression_leaves = c.expression_leaves;
     default_initialization = c.default_initialization;
-    scalar = c.scalar;
 }
 
 
@@ -42,20 +40,7 @@ bool operator==(const HDL_parameter &lhs, const HDL_parameter &rhs) {
 
 
     ret &= lhs.default_initialization == rhs.default_initialization;
-    ret &= lhs.scalar == rhs.scalar;
-    if(lhs.unpacked_dimensions.size() != rhs.unpacked_dimensions.size()) return false;
-    for(int i = 0; i<lhs.unpacked_dimensions.size(); i++){
-        ret &= lhs.unpacked_dimensions[i].packed == rhs.unpacked_dimensions[i].packed;
-        ret &= lhs.unpacked_dimensions[i].first_bound == rhs.unpacked_dimensions[i].first_bound;
-        ret &= lhs.unpacked_dimensions[i].second_bound == rhs.unpacked_dimensions[i].second_bound;
-    }
-
-    if(lhs.packed_dimensions.size() != rhs.packed_dimensions.size()) return false;
-    for(int i = 0; i<lhs.packed_dimensions.size(); i++){
-        ret &= lhs.packed_dimensions[i].packed == rhs.packed_dimensions[i].packed;
-        ret &= lhs.packed_dimensions[i].first_bound == rhs.packed_dimensions[i].first_bound;
-        ret &= lhs.packed_dimensions[i].second_bound == rhs.packed_dimensions[i].second_bound;
-    }
+    ret &= lhs.type == rhs.type;
 
     ret &= lhs.solved_value == rhs.solved_value;
 
@@ -70,10 +55,8 @@ bool operator<(const HDL_parameter &lhs, const HDL_parameter &rhs) {
 std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
     HDL_parameter par;
     par.name = name;
-    par.scalar = scalar;
+    par.type = type;
     par.solved_value = solved_value;
-    par.unpacked_dimensions = unpacked_dimensions;
-    par.packed_dimensions = packed_dimensions;
     par.default_initialization = default_initialization;
     for(auto &item:expression_leaves) {
         par.expression_leaves.push_back(item->clone_ptr());
@@ -83,31 +66,16 @@ std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
 
 
 void HDL_parameter::add_dimension(const dimension_t &d) {
-    scalar = false;
-    if(d.packed){
-        packed_dimensions.push_back(d);
-    } else{
-        unpacked_dimensions.push_back(d);
-    }
-
-}
-
-void HDL_parameter::set_dimensions(const std::vector<dimension_t> &d, bool packed) {
-    if (packed) {
-        packed_dimensions = d;
-    } else {
-        unpacked_dimensions = d;
-    }
+    type.add_dimension(d);
 }
 
 std::optional<resolved_parameter> HDL_parameter::evaluate() {
     std::optional<resolved_parameter> result;
-    if (scalar) {
+        if (type.is_scalar()) {
         if(expression_leaves[0]->is_expression() || expression_leaves[0]->is_function()) {
             result = expression_leaves[0]->evaluate(false);
         } else if(expression_leaves[0]->is_concatenation() || expression_leaves[0]->is_replication()) {
-            bool packed_concat = unpacked_dimensions.empty();
-            result = expression_leaves[0]->evaluate(packed_concat);
+            result = expression_leaves[0]->evaluate(type.get_unpacked_dimensions().empty());
         }
     } else {
         result  = evaluate_vector();
@@ -117,16 +85,7 @@ std::optional<resolved_parameter> HDL_parameter::evaluate() {
 
 bool HDL_parameter::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value) {
     bool retval = true;
-
-    for (auto &dim: packed_dimensions) {
-        retval &= dim.first_bound.propagate_constant(constant_id, constant_value);
-        retval &= dim.second_bound.propagate_constant(constant_id, constant_value);
-    }
-
-    for (auto &dim: unpacked_dimensions) {
-        retval &= dim.first_bound.propagate_constant(constant_id, constant_value);
-        retval &= dim.second_bound.propagate_constant(constant_id, constant_value);
-    }
+    retval &= type.propagate_constant(constant_id, constant_value);
 
     for (auto &expr:expression_leaves) {
         retval &=  expr->propagate_constant(constant_id, constant_value);
@@ -165,7 +124,7 @@ void PrintTo(const HDL_parameter &param, std::ostream *os) {
 }
 
 bool HDL_parameter::empty() const {
-    if (scalar) {
+    if (type.is_scalar()) {
         if (expression_leaves.empty()) return true;
         return expression_leaves[0]->empty();
 
@@ -182,12 +141,12 @@ void HDL_parameter::add_component(const Expression_component &component) {
 }
 
 void HDL_parameter::set_scalar(const std::shared_ptr<Parameter_value_base> &expr) {
-    scalar = true;
+    type.set_scalar(true);
     expression_leaves  = {expr};
 }
 
 void HDL_parameter::add_item(const std::shared_ptr<Parameter_value_base> &e) {
-    scalar = false;
+    type.set_scalar(false);
     expression_leaves.push_back(e);
 }
 
@@ -209,18 +168,18 @@ std::string HDL_parameter::to_string() const {
 
     std::ostringstream s;
 
-    if (scalar) {
+    if (type.is_scalar()) {
         if (expression_leaves.empty()) result += "!!EMPTY SCALAR!!";
         else  result += expression_leaves[0]->print();
     }
     result += "-----------------------------\n";
     result += "-----------------------------\n";
     result += "UNPACKED DIMENSIONS\n";
-    for(const auto &item:unpacked_dimensions){
+    for(const auto &item:type.get_unpacked_dimensions()){
         result +="[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
     }
     result += "PACKED DIMENSIONS\n";
-    for(const auto &item:packed_dimensions){
+    for(const auto &item:type.get_packed_dimensions()){
         result +="[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
     }
 
@@ -236,20 +195,8 @@ std::string HDL_parameter::to_string() const {
 }
 
 std::set<qualified_identifier> HDL_parameter::get_dependencies() {
-    std::set<qualified_identifier> result;
-    for (auto &dim:unpacked_dimensions) {
-        auto deps = dim.first_bound.get_dependencies();
-        result.insert(deps.begin(), deps.end());
-        deps = dim.second_bound.get_dependencies();
-        result.insert(deps.begin(), deps.end());
-    }
+    std::set<qualified_identifier> result = type.get_dependencies();
 
-    for (auto &dim:packed_dimensions) {
-        auto deps = dim.first_bound.get_dependencies();
-        result.insert(deps.begin(), deps.end());
-        deps = dim.second_bound.get_dependencies();
-        result.insert(deps.begin(), deps.end());
-    }
     for (auto &expr:expression_leaves) {
         std::set<qualified_identifier> deps = expr->get_dependencies();
         result.insert(deps.begin(), deps.end());
@@ -264,11 +211,11 @@ inline resolved_parameter HDL_parameter::process_default_initialization() {
     std::vector<uint64_t> dimensions;
     mdarray<int64_t> result;
 
-    if(unpacked_dimensions.size()>3){
+    if(type.get_unpacked_dimensions().size()>3){
         throw std::runtime_error("Error: unpacked arrays with more than 3 dimensions are not supported");
     }
 
-    for(auto &item : unpacked_dimensions){
+    for(auto &item : type.get_unpacked_dimensions()){
         auto first_dim = item.first_bound.evaluate(false);
         auto second_dim = item.second_bound.evaluate(false);
         if (!first_dim.has_value() || !second_dim.has_value())   throw std::runtime_error("Error: dimensions of default initialized parameters should be fully defined");
@@ -333,7 +280,7 @@ inline std::optional<resolved_parameter> HDL_parameter::evaluate_vector() {
     bool ret_string = true;
     for(auto &expr:expression_leaves | std::views::reverse) {
         auto expr_depth = expr->get_depth();
-        bool pack = unpacked_dimensions.size() <= expr_depth;
+        bool pack = type.get_unpacked_dimensions().size() <= expr_depth;
         auto expr_value = expr->evaluate(pack);
         if (expr_value.has_value()) {
             if (std::holds_alternative<std::string>(expr_value.value())) {
@@ -361,6 +308,6 @@ inline std::optional<resolved_parameter> HDL_parameter::evaluate_vector() {
         return ret_s;
     }
 
-    if(unpacked_dimensions.empty()) return ret.get_scalar();
+    if(type.get_unpacked_dimensions().empty()) return ret.get_scalar();
     return ret;
 }

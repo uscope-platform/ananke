@@ -18,7 +18,7 @@
 
 void HDL_parameters_factory::new_parameter(const std::string &name) {
       new_basic_resource(name);
-      current_resource.set_dimensions(index_factory.get_dimensions(), true);
+      current_resource.set_packed_dimensions(index_factory.get_dimensions());
 }
 
 std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
@@ -61,7 +61,7 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
         if (default_assignment){
             current_resource.set_default();
         }
-        current_resource.set_dimensions(index_factory.get_dimensions(), false);
+        current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
         expr_factory.increase_level();
     }
 }
@@ -119,7 +119,7 @@ void HDL_parameters_factory::stop_replication_assignment() {
 
 void HDL_parameters_factory::stop_packed_assignment() {
     if(in_packed_assignment && !in_initialization_list){
-        current_resource.set_dimensions(index_factory.get_dimensions(), false);
+        current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
         in_packed_assignment = false;
     }
 }

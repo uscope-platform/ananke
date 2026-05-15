@@ -22,6 +22,7 @@
 #include <spdlog/spdlog.h>
 
 #include "data_model/HDL/parameters/Expression.hpp"
+#include "data_model/HDL/parameters/HDL_type.hpp"
 #include "data_model/HDL/parameters/dimension.hpp"
 
 class HDL_function_def;
@@ -34,9 +35,7 @@ public:
 
     HDL_parameter(HDL_parameter &&other) noexcept
         : name(std::move(other.name)),
-          scalar(other.scalar),
-          unpacked_dimensions(std::move(other.unpacked_dimensions)),
-          packed_dimensions(std::move(other.packed_dimensions)),
+          type(other.type),
           expression_leaves(std::move(other.expression_leaves)),
           solved_value(std::move(other.solved_value)),
           default_initialization(other.default_initialization) {
@@ -46,9 +45,7 @@ public:
         if (this == &other)
             return *this;
         name = other.name;
-        scalar = other.scalar;
-        unpacked_dimensions = other.unpacked_dimensions;
-        packed_dimensions = other.packed_dimensions;
+        type = other.type;
         expression_leaves = other.expression_leaves;
         solved_value = other.solved_value;
         default_initialization = other.default_initialization;
@@ -59,9 +56,7 @@ public:
         if (this == &other)
             return *this;
         name = std::move(other.name);
-        scalar = other.scalar;
-        unpacked_dimensions = std::move(other.unpacked_dimensions);
-        packed_dimensions = std::move(other.packed_dimensions);
+        type = std::move(other.type);
         expression_leaves = std::move(other.expression_leaves);
         solved_value = std::move(other.solved_value);
         default_initialization = other.default_initialization;
@@ -91,7 +86,6 @@ public:
     [[nodiscard]] std::optional<resolved_parameter> get_value() const {return solved_value;}
 
     void add_dimension(const dimension_t &d);
-    void set_dimensions(const std::vector<dimension_t> &d, bool packed);
 
     std::optional<resolved_parameter> evaluate();
 
@@ -99,27 +93,27 @@ public:
     void propagate_function(const HDL_function_def &def);
     explicit operator std::string();
 
-    bool is_array() const{return !scalar;}
-    bool is_packed_array() const {return unpacked_dimensions.empty() && !packed_dimensions.empty();}
+    bool is_array() const{return !type.is_scalar();}
+    bool is_packed_array() const {return type.is_packed_array();}
 
     std::string get_name() const {return name;}
     qualified_identifier get_identifier(){return {"", "", name};}
 
-    void set_packed_dimensions(const std::vector<dimension_t>  &d) {packed_dimensions = d;};
-    void set_unpacked_dimensions(const std::vector<dimension_t>  &d) {unpacked_dimensions = d;};
-    std::vector<dimension_t> get_packed_dimensions(){return  packed_dimensions;};
-    std::vector<dimension_t> get_unpacked_dimensions(){return  unpacked_dimensions;};
+    void set_packed_dimensions(const std::vector<dimension_t>  &d) {type.set_packed_dimensions(d);}
+    void set_unpacked_dimensions(const std::vector<dimension_t>  &d) {type.set_unpacked_dimensions(d);}
+    std::vector<dimension_t> get_packed_dimensions(){return type.get_packed_dimensions();}
+    std::vector<dimension_t> get_unpacked_dimensions(){return type.get_unpacked_dimensions();}
 
     bool empty() const;
 
     void add_component(const Expression_component &component);
     void set_scalar(const std::shared_ptr<Parameter_value_base>  &e);
     std::shared_ptr<Parameter_value_base> get_expression() {
-        if (scalar) return expression_leaves[0];
+        if (type.is_scalar()) return expression_leaves[0];
         throw std::runtime_error("A scalar parameter has been initialized with an array");
     }
     void clear_expression() {
-        if (scalar) expression_leaves[0] = std::make_shared<Expression>();
+        if (type.is_scalar()) expression_leaves[0] = std::make_shared<Expression>();
     }
 
     void set_default() { default_initialization = true;};
@@ -136,7 +130,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name, unpacked_dimensions, packed_dimensions, expression_leaves, default_initialization, scalar);
+        ar(name, expression_leaves, default_initialization, type);
     }
 
     nlohmann::json dump();
@@ -149,10 +143,8 @@ private:
     resolved_parameter process_default_initialization();
 
     std::string name;
-    bool scalar = true;
 
-    std::vector<dimension_t> unpacked_dimensions;
-    std::vector<dimension_t> packed_dimensions;
+    HDL_type type;
 
     std::vector<std::shared_ptr<Parameter_value_base>> expression_leaves;
     std::optional<resolved_parameter> solved_value;

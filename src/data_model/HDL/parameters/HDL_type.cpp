@@ -1,0 +1,58 @@
+//  Copyright 2026 Filippo Savi
+//  Author: Filippo Savi <filssavi@gmail.com>
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
+
+#include "data_model/HDL/parameters/HDL_type.hpp"
+
+void HDL_type::add_dimension(const dimension_t &d) {
+    scalar = false;
+    if(d.packed){
+        packed_dimensions.push_back(d);
+    } else{
+        unpacked_dimensions.push_back(d);
+    }
+}
+
+bool HDL_type::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value) {
+    bool retval = true;
+    for (auto &dim: packed_dimensions) {
+        retval &= dim.first_bound.propagate_constant(constant_id, constant_value);
+        retval &= dim.second_bound.propagate_constant(constant_id, constant_value);
+    }
+
+    for (auto &dim: unpacked_dimensions) {
+        retval &= dim.first_bound.propagate_constant(constant_id, constant_value);
+        retval &= dim.second_bound.propagate_constant(constant_id, constant_value);
+    }
+    return retval;
+}
+
+std::set<qualified_identifier> HDL_type::get_dependencies() {
+    std::set<qualified_identifier> result;
+    for (auto &dim:unpacked_dimensions) {
+        auto deps = dim.first_bound.get_dependencies();
+        result.insert(deps.begin(), deps.end());
+        deps = dim.second_bound.get_dependencies();
+        result.insert(deps.begin(), deps.end());
+    }
+
+    for (auto &dim:packed_dimensions) {
+        auto deps = dim.first_bound.get_dependencies();
+        result.insert(deps.begin(), deps.end());
+        deps = dim.second_bound.get_dependencies();
+        result.insert(deps.begin(), deps.end());
+    }
+    return result;
+}
