@@ -42,7 +42,7 @@ bool HDL_Resource::is_interface() {
 }
 
 void HDL_Resource::process_parameters() {
-    default_values = parameter_solver::process_parameters(parameters_spec, "module::" + name, {}, {});
+    default_values = parameter_solver::process_parameters(parameters_spec, "module::" + name, {});
 }
 
 void HDL_Resource::process_calls() {

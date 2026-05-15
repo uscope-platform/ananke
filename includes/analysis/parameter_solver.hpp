@@ -36,7 +36,6 @@ public:
     static std::map<qualified_identifier, resolved_parameter> process_parameters(
         const Parameters_map &map,
         const std::string_view &parent_module,
-        const std::map<qualified_identifier, resolved_parameter> &package_parameters,
         const std::map<qualified_identifier, resolved_parameter> &default_parameters
     );
     static void update_parameters_map(
@@ -46,12 +45,12 @@ public:
         );
 
     static std::map<qualified_identifier, resolved_parameter> override_parameters(work_order &work, const std::shared_ptr<data_store> &d_store);
+    static std::map<qualified_identifier, resolved_parameter> retreive_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store);
 
     static std::map<qualified_identifier, resolved_parameter> solve_complex_overrides(
             work_order &work,
             const std::shared_ptr<data_store> &d_store,
-            std::map<qualified_identifier, resolved_parameter> &node_defaults,
-            const std::map<qualified_identifier, resolved_parameter> &package_parameters
+            std::map<qualified_identifier, resolved_parameter> &node_defaults
         );
 
 
