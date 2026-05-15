@@ -136,7 +136,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     auto node_parameters = node_spec.get_parameters();
 
     std::map<qualified_identifier, resolved_parameter> solved_parameters;
-    bool stop = false;
 
     //retreive default package parameters
     auto deps_map = get_dependency_map(node_parameters);
@@ -157,8 +156,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
             if(std::holds_alternative<std::string>(value)) {
                 if(std::get<std::string>(value) != "__RUNTIME_ONLY_PARAMETER__") {
                     solved_parameters.insert({name, value});
-                } else {
-                    stop = true;
                 }
             } else {
                 solved_parameters.insert({name, value});
