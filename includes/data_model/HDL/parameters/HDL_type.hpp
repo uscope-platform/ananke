@@ -20,11 +20,8 @@
 #include <vector>
 
 #include "data_model/HDL/parameters/dimension.hpp"
+#include "data_model/HDL/parameters/resolved_type.hpp"
 
-struct resolved_type {
-    std::vector<uint64_t> unpacked_sizes;
-    std::vector<uint64_t> packed_sizes;
-};
 
 class HDL_type {
 public:

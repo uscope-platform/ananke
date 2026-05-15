@@ -21,7 +21,7 @@
 #include <vector>
 #include "data_model/HDL/parameters/qualified_identifier.hpp"
 #include "data_model/mdarray.hpp"
-#include "data_model/HDL/parameters/HDL_type.hpp"
+#include "data_model/HDL/parameters/resolved_type.hpp"
 
 class HDL_function_def;
 
