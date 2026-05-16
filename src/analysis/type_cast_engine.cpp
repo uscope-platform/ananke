@@ -30,3 +30,25 @@ int64_t type_cast_engine::to_signed(int64_t in, uint64_t container_size) {
 int64_t type_cast_engine::to_int(int64_t in, uint64_t container_size) {
     return 0;
 }
+
+int64_t type_cast_engine::to_int(double in, uint64_t container_size) {
+    if (std::isnan(in) || std::isinf(in)) return 0;
+
+    double rounded = std::round(in);
+
+    int64_t intermediate;
+    if (rounded >= static_cast<double>(std::numeric_limits<int64_t>::max())) {
+        intermediate = std::numeric_limits<int64_t>::max();
+    } else if (rounded <= static_cast<double>(std::numeric_limits<int64_t>::min())) {
+        intermediate = std::numeric_limits<int64_t>::min();
+    } else {
+        intermediate = static_cast<int64_t>(rounded);
+    }
+
+    if (container_size >= 64) {
+        return intermediate;
+    }
+
+    uint64_t shift_amount = 64 - container_size;
+    return (intermediate << shift_amount) >> shift_amount;
+}

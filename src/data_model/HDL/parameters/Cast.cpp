@@ -73,11 +73,21 @@ std::optional<resolved_parameter> Cast::evaluate(bool pack_result) {
         if (!std::holds_alternative<int64_t>(*content_val)) {
             spdlog::warn("Casting of non scalar integer values is not supported");
         }
+        uint64_t container = 64;
+        if (!container_size->packed_sizes.empty()) container = container_size->packed_sizes[0];
         if (target_type == "signed") {
-            return type_cast_engine::to_signed(std::get<int64_t>(content_val.value()), container_size->packed_sizes[0]);
+            return type_cast_engine::to_signed(std::get<int64_t>(content_val.value()), container);
         }
         if (target_type == "unsigned") {
-            return type_cast_engine::to_unsigned(std::get<int64_t>(content_val.value()), container_size->packed_sizes[0]);
+            return type_cast_engine::to_unsigned(std::get<int64_t>(content_val.value()), container);
+        }
+        if (target_type == "int"){
+            if (std::holds_alternative<double>(content_val.value())) {
+                return type_cast_engine::to_int(std::get<double>(content_val.value()), container);
+            } else {
+                return type_cast_engine::to_int(std::get<int64_t>(content_val.value()), container);
+            }
+
         }
     } else {
         auto content_val = content->evaluate(pack_result);

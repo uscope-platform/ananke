@@ -18,12 +18,14 @@
 #define ANANKE_TYPE_CAST_ENGINE_HPP
 
 #include <cstdint>
+#include <cmath>
 
 class type_cast_engine {
 public:
     static int64_t to_unsigned(int64_t in, uint64_t container_size);
     static int64_t to_signed(int64_t in, uint64_t container_size);
     static int64_t to_int(int64_t in, uint64_t container_size);
+    static int64_t to_int(double in, uint64_t container_size);
 private:
 
 };

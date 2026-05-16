@@ -333,7 +333,7 @@ TEST(parameter_extraction, multiple_type_cast) {
     auto defaults = resource.get_default_parameters();
 
     ASSERT_EQ(251, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
-    ASSERT_EQ(2, std::get<int64_t>(defaults.at({"","", "TEST_PARAM_2"})));
+    ASSERT_EQ(3, std::get<int64_t>(defaults.at({"","", "TEST_PARAM_2"})));
 }
 
 TEST(parameter_extraction,time_literal) {
