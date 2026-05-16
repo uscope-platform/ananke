@@ -163,7 +163,7 @@ std::variant<int64_t, double> Expression::evaluate_binary_expression(resolved_pa
     bool supported_a = (std::holds_alternative<int64_t>(op_a) || std::holds_alternative<double>(op_a) );
     bool supported_b = (std::holds_alternative<int64_t>(op_b) || std::holds_alternative<double>(op_b) );
     if(  !supported_a || !supported_b) {
-        spdlog::warn("Attempted evaluation of operant of unsupported type");
+        spdlog::warn("Attempted evaluation of operand of unsupported type");
         return  0;
     }
     bool int_exec = std::holds_alternative<int64_t>(op_a) && std::holds_alternative<int64_t>(op_b);
@@ -237,7 +237,7 @@ std::variant<int64_t, double> Expression::evaluate_binary_expression(resolved_pa
 std::variant<int64_t, double> Expression::evaluate_unary_expression(resolved_parameter operand, const std::string &operation) {
     if(operation == "$rtoi" || operation == "$itor") return evaluate_cast(operand, operation);
     if( !std::holds_alternative<int64_t>(operand) || std::holds_alternative<double>(operand)) {
-        spdlog::warn("Attempted evaluation of operant of unsupported type");
+        spdlog::warn("Attempted evaluation of operand of unsupported type");
         return  0;
     }
     const bool int_exec = std::holds_alternative<int64_t>(operand);

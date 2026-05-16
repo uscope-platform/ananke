@@ -42,13 +42,13 @@ namespace preprocessor {
                     auto [args, rest_of_line] = get_call_arguments(args_text);
                     if (!definitions.contains(id)) {
                         throw std::runtime_error(
-                           fmt::format("Attempted to use undefined macro {}", id)
+                           fmt::format("Attempted to use undefined macro {} in file {}", id, path)
                        );
                     }
                     auto macro = definitions.at(id);
                     if (std::holds_alternative<std::string>(macro)) {
                         throw std::runtime_error(
-                            fmt::format("Attempted to pass arguments to a macro {} that does not need them", id)
+                            fmt::format("Attempted to pass arguments to a macro {} that does not need them in file {}", id, path)
                         );
                     }
                     auto macro_text = replace_function_macro(args,std::get<function_macro>(macro));
