@@ -189,6 +189,25 @@ TEST(preprocessor, comment_continuation_elimination) {
     EXPECT_EQ(check_string, res);
 }
 
+
+
+TEST(preprocessor, triangle_textmojy_comment) {
+    auto test_pattern = R"(
+       // /!\ Only
+        assign 77
+            && 145;
+    )";
+
+    sv_preprocessor proc;
+    auto res = proc.flatten_source(test_pattern);
+    auto check_string ="\n       // /!\\ Only\n        assign 77\n            && 145;\n    ";
+    EXPECT_EQ(check_string, res);
+}
+
+
+
+
+
 TEST(preprocessor, block_comment_elimination) {
     auto test_pattern = R"(
         /*

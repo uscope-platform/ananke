@@ -235,7 +235,7 @@ namespace preprocessor {
                         result.append("//");
                         cursor += 2;
                         while (cursor < content.size() && content[cursor] != '\n' && content[cursor] != '\r') {
-                            if (content[cursor] == '\\') {
+                            if (content[cursor] == '\\' && (content[cursor+1] == '\n' || content[cursor+1] == '\r')) {
                                 size_t next = content.find_first_of("\n\r", cursor + 1);
                                 if (next != std::string_view::npos) {
                                     cursor = next + (content[next] == '\r' && content[next+1] == '\n' ? 2 : 1);
