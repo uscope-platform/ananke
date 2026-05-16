@@ -67,7 +67,18 @@ void Cast::propagate_expression(const qualified_identifier &constant_id,
 
 std::optional<resolved_parameter> Cast::evaluate(bool pack_result) {
     if (type_cast) {
-        int i = 0;
+        if (!container_size) return std::nullopt;
+        auto content_val = content->evaluate(pack_result);
+        if (!content_val.has_value()) return std::nullopt;
+        if (!std::holds_alternative<int64_t>(*content_val)) {
+            spdlog::warn("Casting of non scalar integer values is not supported");
+        }
+        if (target_type == "signed") {
+            return type_cast_engine::to_signed(std::get<int64_t>(content_val.value()), container_size->packed_sizes[0]);
+        }
+        if (target_type == "unsigned") {
+            return type_cast_engine::to_unsigned(std::get<int64_t>(content_val.value()), container_size->packed_sizes[0]);
+        }
     } else {
         auto content_val = content->evaluate(pack_result);
         if (!content_val.has_value()) return std::nullopt;
@@ -110,9 +121,18 @@ std::shared_ptr<Parameter_value_base> Cast::clone_ptr() const {
     return std::make_shared<Cast>(c);
 }
 
-void Cast::set_container_sizes(const resolved_type &s) const {
-    int i = 0;
+void Cast::set_container_sizes(const resolved_type &s) {
+    container_size = s;
+    if (type_cast)
+        content->set_container_sizes(s);
+    else {
+        auto cast_size = size.evaluate(false);
+        resolved_type t;
+        t.packed_sizes.push_back(std::get<int64_t>(cast_size.value()));
+        if (cast_size) content->set_container_sizes(t);
+    }
 }
+
 
 bool Cast::isEqual(const Parameter_value_base &other) const {
 

@@ -69,7 +69,7 @@ public:
         return std::make_shared<Replication>(*this);  // Copy constructor
     }
 
-    void set_container_sizes(const resolved_type &s) const override {}
+    void set_container_sizes(const resolved_type &s) override {}
 
     template<class Archive>
     void serialize( Archive & ar ) {

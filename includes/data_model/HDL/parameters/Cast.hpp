@@ -19,6 +19,7 @@
 
 
 #include "Expression.hpp"
+#include "analysis/type_cast_engine.hpp"
 #include "data_model/HDL/parameters/Parameter_value_base.hpp"
 
 class Cast : public Parameter_value_base{
@@ -70,7 +71,7 @@ public:
 
     [[nodiscard]] std::shared_ptr<Parameter_value_base> clone_ptr() const override;
 
-    void set_container_sizes(const resolved_type &s) const override;
+    void set_container_sizes(const resolved_type &s) override;
 
     template<class Archive>
     void serialize( Archive & ar ) {
@@ -86,6 +87,7 @@ private:
     std::string target_type;
     std::shared_ptr<Parameter_value_base> content;
     Expression size;
+    std::optional<resolved_type> container_size = std::nullopt;
 
 };
 

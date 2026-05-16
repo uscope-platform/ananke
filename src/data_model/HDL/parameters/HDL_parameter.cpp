@@ -70,6 +70,11 @@ void HDL_parameter::add_dimension(const dimension_t &d) {
 }
 
 std::optional<resolved_parameter> HDL_parameter::evaluate() {
+    for (auto &l:expression_leaves) {
+        auto container_size = type.evaluate_type();
+        if (!container_size) return std::nullopt;
+        l->set_container_sizes(container_size.value());
+    }
     std::optional<resolved_parameter> result;
         if (type.is_scalar()) {
         if(expression_leaves[0]->is_expression() || expression_leaves[0]->is_function()) {

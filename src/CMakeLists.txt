@@ -12,6 +12,7 @@ target_sources(ananke_lib
     analysis/passes/port_solution.cpp
     analysis/data_acquisition_analysis.cpp
     analysis/control_bus_analysis.cpp
+    analysis/type_cast_engine.cpp
     analysis/loop_solver.cpp
     analysis/proxy_bus_analysis.cpp
     Backend/Dependency_resolver.cpp

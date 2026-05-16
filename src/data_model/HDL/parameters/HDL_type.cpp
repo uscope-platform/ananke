@@ -63,15 +63,15 @@ std::optional<resolved_type> HDL_type::evaluate_type() {
         auto f_b = dim.first_bound.evaluate(false);
         auto s_b = dim.second_bound.evaluate(false);
         if (!(f_b.has_value() && s_b.has_value())) return std::nullopt;
-        auto diff = std::abs(std::get<int64_t>(f_b.value()) - std::get<int64_t>(s_b.value()));
+        auto diff = std::abs(std::get<int64_t>(f_b.value()) - std::get<int64_t>(s_b.value()))+1;
         result.unpacked_sizes.push_back(diff);
     }
     for (auto &dim: packed_dimensions) {
         auto f_b = dim.first_bound.evaluate(false);
         auto s_b = dim.second_bound.evaluate(false);
         if (!(f_b.has_value() && s_b.has_value())) return std::nullopt;
-        auto diff = std::abs(std::get<int64_t>(f_b.value()) - std::get<int64_t>(s_b.value()));
-        result.unpacked_sizes.push_back(diff);
+        auto diff = std::abs(std::get<int64_t>(f_b.value()) - std::get<int64_t>(s_b.value()))+1;
+        result.packed_sizes.push_back(diff);
     }
 
     return result;

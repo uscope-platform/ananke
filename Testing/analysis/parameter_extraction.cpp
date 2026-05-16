@@ -203,7 +203,6 @@ TEST(parameter_extraction, type_cast) {
         ASSERT_TRUE(parameters.contains(item->get_name()));
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
-    ASSERT_TRUE(false);
     auto defaults = resource.get_default_parameters();
 
     ASSERT_EQ(251, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
@@ -213,8 +212,8 @@ TEST(parameter_extraction, type_cast) {
 TEST(parameter_extraction, nested_type_cast) {
     auto test_pattern = R"(
         module test_mod #()();
-
-            parameter reg [7:0] TEST_PARAM = (NumLevels)'(unsigned'(j));
+            localparam NumLevels = 4;
+            parameter reg [7:0] TEST_PARAM = (NumLevels)'(unsigned'(-5));
 
         endmodule
     )";
@@ -232,7 +231,8 @@ TEST(parameter_extraction, nested_type_cast) {
     inner_c.set_type_cast();
     inner_c.set_target_type("unsigned");
     inner_c.set_content(std::make_shared<Expression>(Expression({
-        Expression_component("j", Expression_component::identifier)
+        Expression_component("-", Expression_component::operation),
+        Expression_component("5", Expression_component::number)
     })));
 
     auto p = std::make_shared<HDL_parameter>();
@@ -254,16 +254,21 @@ TEST(parameter_extraction, nested_type_cast) {
     
     check_params.insert(p);
 
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("NumLevels");
+    p->add_component(Expression_component(4, 2));
+    check_params.insert(p);
+
     ASSERT_EQ(check_params.size(), parameters.size());
 
     for(const auto& item:check_params){
         ASSERT_TRUE(parameters.contains(item->get_name()));
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
-    ASSERT_TRUE(false);
     auto defaults = resource.get_default_parameters();
 
-    ASSERT_EQ(251, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
+    ASSERT_EQ(11, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
 }
 
 
@@ -325,7 +330,6 @@ TEST(parameter_extraction, multiple_type_cast) {
         ASSERT_TRUE(parameters.contains(item->get_name()));
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
-    ASSERT_TRUE(false);
     auto defaults = resource.get_default_parameters();
 
     ASSERT_EQ(251, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
