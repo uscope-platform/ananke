@@ -156,6 +156,14 @@ void sv_visitor::exitPrimaryCast(sv2017::PrimaryCastContext *ctx) {
     params_factory.stop_cast();
 }
 
+void sv_visitor::enterClass_declaration(sv2017::Class_declarationContext *ctx) {
+    in_class = true;
+}
+
+void sv_visitor::exitClass_declaration(sv2017::Class_declarationContext *ctx) {
+    in_class = false;
+}
+
 
 void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
     std::string call_name = ctx->any_system_tf_identifier()->getText();
@@ -494,17 +502,21 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
             package_prefix.clear();
             package_item.clear();
         } else{
-            auto val = ctx->constant_param_expression()->getText();
-            params_factory.add_component(Expression_component(val, Expression_component::get_type(val)));
+            if (ctx->constant_param_expression()!= nullptr) {
+                auto val = ctx->constant_param_expression()->getText();
+                params_factory.add_component(Expression_component(val, Expression_component::get_type(val)));
+            }
+        }
+    }
+    if (!in_class) {
+        if(modules_factory.is_current_valid()){
+            auto param = params_factory.get_parameter();
+            modules_factory.add_parameter(param);
+        } else if(interfaces_factory.is_current_valid()){
+            interfaces_factory.add_parameter(params_factory.get_parameter());
         }
     }
 
-    if(modules_factory.is_current_valid()){
-        auto param = params_factory.get_parameter();
-        modules_factory.add_parameter(param);
-    } else if(interfaces_factory.is_current_valid()){
-        interfaces_factory.add_parameter(params_factory.get_parameter());
-    }
 
 }
 
@@ -749,8 +761,6 @@ void sv_visitor::enterGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
 }
 
 void sv_visitor::exitGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
-    auto line = ctx->getStart()->getLine();
-    auto dbg = ctx->getText();
     auto param = params_factory.get_parameter();
     if(!(param->get_expression()->is_expression() || param->get_expression()->is_cast())) {
         throw std::runtime_error("Concatenations or replications are not allowed in loop declarations");

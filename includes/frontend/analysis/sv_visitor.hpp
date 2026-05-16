@@ -63,6 +63,9 @@ public:
     void exitPrimaryCast(sv2017::PrimaryCastContext *ctx) override;
 
 
+    void enterClass_declaration(sv2017::Class_declarationContext *ctx) override;
+    void exitClass_declaration(sv2017::Class_declarationContext *ctx) override;
+
     void exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) override;
     void enterPackage_declaration(sv2017::Package_declarationContext *ctx) override;
     void exitPackage_declaration(sv2017::Package_declarationContext *ctx) override;
@@ -197,6 +200,7 @@ public:
 private:
 
     bool in_param_declaration = false;
+    bool in_class = false;
     std::string path;
     std::vector<HDL_Resource> entities;
 
