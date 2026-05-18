@@ -36,6 +36,7 @@ public:
 
     std::shared_ptr<HDL_parameter> get_parameter();
 
+    void set_type(const std::string &type);
     void set_value(const std::string &s);
 
     void add_component(const Expression_component &c){add_component(c, false);}
@@ -94,9 +95,9 @@ public:
     bool is_param_override() const {return in_param_override && ~paused;}
     bool is_component_relevant() const {
         if (paused) return false;
-        return in_initialization_list || expr_factory.is_active() ||
-            index_factory.is_range() && index_factory.is_active() || c_factory.in_cast() ||
-            in_packed_assignment || calls_factory.in_function_call() || t_factory.in_ternary() || f_factory.is_active();
+        return expr_factory.is_active() || index_factory.is_range() && index_factory.is_active() ||
+            c_factory.in_cast() || in_packed_assignment || calls_factory.in_function_call() || concat_factory.in_concatenation() ||
+            t_factory.in_ternary() || f_factory.is_active();
     };
 
     void start_instance_parameter_assignment(const std::string& parameter_name);
@@ -132,10 +133,9 @@ private:
 
     bool in_param_override = false;
     bool in_param_assignment = false;
-    bool in_initialization_list = false;
     bool in_packed_assignment = false;
     bool paused = false;
-
+    bool skip_expression = false;
 
 
 };

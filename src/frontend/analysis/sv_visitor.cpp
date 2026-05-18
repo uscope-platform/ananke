@@ -80,9 +80,9 @@ void sv_visitor::exitName_of_instance(sv2017::Name_of_instanceContext *ctx) {
 void sv_visitor::enterTf_port_item(sv2017::Tf_port_itemContext *ctx) {
     auto dbg = ctx->getText();
     auto identifier = ctx->identifier();
-    if (identifier != nullptr) {
+    if (identifier) {
         params_factory.add_decl_argument(identifier->getText());
-    } else if (ctx->data_type_or_implicit()!= nullptr) {
+    } else if (ctx->data_type_or_implicit()) {
         auto name = ctx->data_type_or_implicit()->getText();
         params_factory.add_decl_argument(name);
     } else {
@@ -112,7 +112,7 @@ void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
     if(params_factory.is_component_relevant()){
         std::string call_name = ctx->any_system_tf_identifier()->getText();
         params_factory.start_function_call(call_name);
-        if(ctx->data_type() != nullptr){
+        if(ctx->data_type()){
             if(!package_prefix.empty()){
                 Expression_component ec(package_item, Expression_component::get_type(package_item));
                 ec.set_package_prefix(package_prefix);
@@ -143,11 +143,11 @@ void sv_visitor::exitPrimaryCast2(sv2017::PrimaryCast2Context *ctx) {
 
 void sv_visitor::enterPrimaryCast(sv2017::PrimaryCastContext *ctx) {
     params_factory.start_cast(false);
-    if (ctx->signing() != nullptr) {
+    if (ctx->signing()) {
         params_factory.set_cast_type(ctx->signing()->getText());
-    }else if (ctx->integer_type() != nullptr) {
+    }else if (ctx->integer_type()) {
         params_factory.set_cast_type(ctx->integer_type()->getText());
-    } else if (ctx->non_integer_type() != nullptr) {
+    } else if (ctx->non_integer_type()) {
         params_factory.set_cast_type(ctx->non_integer_type()->getText());
     }
 }
@@ -203,10 +203,14 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
 }
 
 void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
-    if (ctx->list_of_type_assignments()  != nullptr) return;
+    if (ctx->list_of_type_assignments() ) return;
     in_param_declaration = true;
-    if (ctx->list_of_param_assignments() == nullptr) {
+    if (!ctx->list_of_param_assignments()) {
         throw std::runtime_error("Encountered non existent list of parameter declarations");
+    }
+    if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type() && ctx->data_type_or_implicit()->data_type()->data_type_primitive()) {
+        auto type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
+        params_factory.set_type(type);
     }
     current_parameter = ctx->list_of_param_assignments()[0].param_assignment()[0]->identifier()->getText();
 }
@@ -218,7 +222,7 @@ void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext 
 void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
     if(params_factory.is_component_relevant()|| params_factory.is_param_assignment() || params_factory.is_param_override()) {
         params_factory.start_expression_new();
-        if(ctx->QUESTIONMARK() != nullptr){
+        if(ctx->QUESTIONMARK()){
             params_factory.start_ternary_operator();
         }
     }
@@ -228,7 +232,7 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
 void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
     if (params_factory.is_component_relevant() || params_factory.is_param_assignment() || params_factory.is_param_override()) {
         std::string type;
-        if(ctx->QUESTIONMARK() != nullptr){
+        if(ctx->QUESTIONMARK()){
             params_factory.stop_ternary();
         }
         params_factory.stop_expression_new();
@@ -338,7 +342,7 @@ void sv_visitor::exitOperator_shift(sv2017::Operator_shiftContext *ctx) {
 
 void sv_visitor::exitUnary_operator(sv2017::Unary_operatorContext *ctx) {
 
-    if(ctx->PLUS() != nullptr || ctx->MINUS() != nullptr){
+    if(ctx->PLUS() || ctx->MINUS()){
         auto text  = ctx->getText();
         if(loops_factory.in_loop()) {
             loops_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
@@ -406,7 +410,7 @@ void sv_visitor::exitAnsi_port_declaration(sv2017::Ansi_port_declarationContext 
     if(current_declaration_type == "module"){
         std::string port_name = ctx->port_identifier()->getText();
         port_direction_t dir;
-        if(ctx->port_direction() == nullptr){
+        if(!ctx->port_direction()){
             if(ctx->DOT()){
                 dir = modport;
                 std::string if_type = ctx->identifier(0)->getText();
@@ -430,10 +434,10 @@ void sv_visitor::exitAnsi_port_declaration(sv2017::Ansi_port_declarationContext 
 
 void sv_visitor::enterNamed_port_connection(sv2017::Named_port_connectionContext *ctx) {
     if(deps_factory.is_valid_dependency()){
-        if(ctx->port_concatenation_connection() != nullptr){
+        if(ctx->port_concatenation_connection()){
             deps_factory.start_concat_port(ctx->identifier()->getText());
         }
-        if(ctx->port_replication_connection() != nullptr) {
+        if(ctx->port_replication_connection()) {
             deps_factory.start_replication_port(ctx->identifier()->getText());
         }
         deps_factory.start_port();
@@ -441,23 +445,23 @@ void sv_visitor::enterNamed_port_connection(sv2017::Named_port_connectionContext
 }
 
 void sv_visitor::exitNamed_port_connection(sv2017::Named_port_connectionContext *ctx) {
-    if (ctx->identifier()== nullptr) {
+    if (!ctx->identifier()) {
         throw std::runtime_error("Encountered a named port connection without an identifier, this is not supported yet");
     }
     auto port_name = ctx->identifier()->getText();
 
     deps_factory.stop_port();
-    if(ctx->port_expression_connection() != nullptr){\
+    if(ctx->port_expression_connection()){\
         if(deps_factory.is_valid_dependency()){
             deps_factory.add_port(ctx->identifier()->getText());
         }
     }
-    if(ctx->port_concatenation_connection() != nullptr){
+    if(ctx->port_concatenation_connection()){
         if(deps_factory.is_valid_dependency()){
             deps_factory.stop_concat_port();
         }
     }
-    if(ctx->port_replication_connection() != nullptr){
+    if(ctx->port_replication_connection()){
         if(deps_factory.is_valid_dependency()){
             deps_factory.add_port(ctx->identifier()->getText());
         }
@@ -491,7 +495,7 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
     auto p_n = ctx->identifier()->getText();
     if(params_factory.in_packed_context()) {
         params_factory.stop_packed_assignment();
-    }else if(ctx->replication_assignment() != nullptr){
+    }else if(ctx->replication_assignment()){
         params_factory.start_packed_assignment();
         params_factory.stop_packed_assignment();
     } else {
@@ -502,7 +506,7 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
             package_prefix.clear();
             package_item.clear();
         } else{
-            if (ctx->constant_param_expression()!= nullptr) {
+            if (ctx->constant_param_expression()) {
                 auto val = ctx->constant_param_expression()->getText();
                 params_factory.add_component(Expression_component(val, Expression_component::get_type(val)));
             }
@@ -530,20 +534,20 @@ void sv_visitor::exitPrimaryPar(sv2017::PrimaryParContext *ctx) {
 }
 
 void sv_visitor::enterAssignment_pattern(sv2017::Assignment_patternContext *ctx) {
-    params_factory.start_initialization_list();
+    if (!ctx->replication_assignment()) params_factory.start_initialization_list();
 }
 
 void sv_visitor::exitAssignment_pattern(sv2017::Assignment_patternContext *ctx) {
     bool default_assignment = false;
     if(!ctx->structure_pattern_key().empty()){
-        if(ctx->structure_pattern_key()[0]->assignment_pattern_key() != nullptr){
-            if(ctx->structure_pattern_key()[0]->assignment_pattern_key()->KW_DEFAULT() != nullptr){
+        if(ctx->structure_pattern_key()[0]->assignment_pattern_key()){
+            if(ctx->structure_pattern_key()[0]->assignment_pattern_key()->KW_DEFAULT()){
                 default_assignment = true;
             }
         }
     }
 
-    params_factory.stop_initialization_list(default_assignment);
+    if (!ctx->replication_assignment()) params_factory.stop_initialization_list(default_assignment);
 }
 
 void sv_visitor::enterPrimaryBitSelect(sv2017::PrimaryBitSelectContext *ctx) {
@@ -614,7 +618,7 @@ void sv_visitor::exitPrimaryCall(sv2017::PrimaryCallContext *ctx) {
 }
 
 void sv_visitor::enterConstant_param_expression(sv2017::Constant_param_expressionContext *ctx) {
-    if(ctx->concatenation() != nullptr){
+    if(ctx->concatenation()){
         params_factory.start_packed_assignment();
     }
 }
@@ -633,9 +637,9 @@ void sv_visitor::exitBit_select(sv2017::Bit_selectContext *ctx) {
 
 void sv_visitor::exitRange_separator(sv2017::Range_separatorContext *ctx) {
     if(deps_factory.is_valid_dependency()) {
-        if(ctx->PLUS()!= nullptr) {
+        if(ctx->PLUS()) {
             deps_factory.advance_array_range_phase( "+");
-        } else if(ctx->MINUS()!= nullptr) {
+        } else if(ctx->MINUS()) {
             deps_factory.advance_array_range_phase( "-");
         } else {
             deps_factory.advance_array_range_phase("");
@@ -709,7 +713,7 @@ void sv_visitor::exitConcatenation(sv2017::ConcatenationContext *ctx) {
 
 void sv_visitor::enterData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) {
     bool is_packed = false;
-    if(ctx->implicit_data_type() != nullptr){
+    if(ctx->implicit_data_type()){
         if(!ctx->implicit_data_type()->packed_dimension().empty()){
             is_packed = true;
         }
@@ -851,9 +855,9 @@ void sv_visitor::enterInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPos
             auto name = ctx->variable_lvalue()->getText();
             Expression e;
             e.emplace_back(name, Expression_component::get_type(name));
-            if(ctx->inc_or_dec_operator()->INCR() != nullptr){
+            if(ctx->inc_or_dec_operator()->INCR()){
                 e.emplace_back("+", Expression_component::operation);
-            } else if(ctx->inc_or_dec_operator()->DECR() != nullptr){
+            } else if(ctx->inc_or_dec_operator()->DECR()){
                 e.emplace_back("-",Expression_component::operation);
             }
             e.emplace_back("1", Expression_component::number);
@@ -894,14 +898,14 @@ void sv_visitor::enterGenvar_iteration(sv2017::Genvar_iterationContext *ctx) {
 }
 
 void sv_visitor::exitGenvar_iteration(sv2017::Genvar_iterationContext *ctx) {
-   if(ctx->inc_or_dec_operator() != nullptr) {
+   if(ctx->inc_or_dec_operator()) {
 
        Expression e;
        auto str = ctx->identifier()->getText();
        e.emplace_back(str, Expression_component::get_type(str));
-       if(ctx->inc_or_dec_operator()->INCR() != nullptr){
+       if(ctx->inc_or_dec_operator()->INCR()){
            e.emplace_back("+", Expression_component::operation);
-       } else if(ctx->inc_or_dec_operator()->DECR() != nullptr){
+       } else if(ctx->inc_or_dec_operator()->DECR()){
            e.emplace_back("-", Expression_component::operation);
        }
        e.emplace_back(1);

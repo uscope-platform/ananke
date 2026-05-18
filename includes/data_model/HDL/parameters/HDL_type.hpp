@@ -30,6 +30,7 @@ public:
 
     HDL_type(HDL_type &&other) noexcept
         : scalar(other.scalar),
+          declared_type(std::move(other.declared_type)),
           unpacked_dimensions(std::move(other.unpacked_dimensions)),
           packed_dimensions(std::move(other.packed_dimensions)) {
     }
@@ -38,6 +39,7 @@ public:
         if (this == &other)
             return *this;
         scalar = other.scalar;
+        declared_type = other.declared_type;
         unpacked_dimensions = other.unpacked_dimensions;
         packed_dimensions = other.packed_dimensions;
         return *this;
@@ -48,6 +50,7 @@ public:
             return *this;
         scalar = other.scalar;
         unpacked_dimensions = std::move(other.unpacked_dimensions);
+        declared_type = std::move(other.declared_type);
         packed_dimensions = std::move(other.packed_dimensions);
         return *this;
     }
@@ -56,6 +59,7 @@ public:
         bool ret = true;
 
         ret &= lhs.scalar == rhs.scalar;
+        ret &= lhs.declared_type == rhs.declared_type;
         if(lhs.unpacked_dimensions.size() != rhs.unpacked_dimensions.size()) return false;
         for(int i = 0; i<lhs.unpacked_dimensions.size(); i++){
             ret &= lhs.unpacked_dimensions[i].packed == rhs.unpacked_dimensions[i].packed;
@@ -84,6 +88,7 @@ public:
     [[nodiscard]] std::vector<dimension_t> get_packed_dimensions() const {return  packed_dimensions;};
     [[nodiscard]] std::vector<dimension_t> get_unpacked_dimensions() const {return  unpacked_dimensions;};
 
+    void set_declared_type(const std::string &type) {declared_type = type;}
     bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value);
     std::set<qualified_identifier> get_dependencies();
 
@@ -92,10 +97,11 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(scalar, unpacked_dimensions, packed_dimensions);
+        ar(scalar, declared_type, unpacked_dimensions, packed_dimensions);
     }
 private:
     bool scalar = true;
+    std::string declared_type;
     std::vector<dimension_t> unpacked_dimensions;
     std::vector<dimension_t> packed_dimensions;
 

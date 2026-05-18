@@ -22,7 +22,7 @@ HDL_parameter::HDL_parameter(const HDL_parameter &c) {
     type = c.type;
     solved_value = c.solved_value;
 
-    expression_leaves = c.expression_leaves;
+    raw_value = c.raw_value;
     default_initialization = c.default_initialization;
 }
 
@@ -33,10 +33,7 @@ bool operator==(const HDL_parameter &lhs, const HDL_parameter &rhs) {
     ret &= lhs.name == rhs.name;
 
     // last dimension is an internal variable only needed during construction, as such it does not need comparison
-    if(lhs.expression_leaves.size() != rhs.expression_leaves.size()) return false;
-    for(int i = 0; i<lhs.expression_leaves.size(); i++) {
-        ret &= *lhs.expression_leaves[i] == *rhs.expression_leaves[i];
-    }
+    ret &= *lhs.raw_value == *rhs.raw_value;
 
 
     ret &= lhs.default_initialization == rhs.default_initialization;
@@ -58,29 +55,30 @@ std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
     par.type = type;
     par.solved_value = solved_value;
     par.default_initialization = default_initialization;
-    for(auto &item:expression_leaves) {
-        par.expression_leaves.push_back(item->clone_ptr());
-    }
+    par.raw_value = raw_value->clone_ptr();
     return std::make_shared<HDL_parameter>(par);
 }
 
+
+void HDL_parameter::set_declared_type(const std::string &t) {
+    type.set_declared_type(t);
+}
 
 void HDL_parameter::add_dimension(const dimension_t &d) {
     type.add_dimension(d);
 }
 
 std::optional<resolved_parameter> HDL_parameter::evaluate() {
-    for (auto &l:expression_leaves) {
-        auto container_size = type.evaluate_type();
-        if (!container_size) return std::nullopt;
-        l->set_container_sizes(container_size.value());
-    }
+    auto container_size = type.evaluate_type();
+    if (!container_size) return std::nullopt;
+    raw_value->set_container_sizes(container_size.value());
+
     std::optional<resolved_parameter> result;
-        if (type.is_scalar()) {
-        if(expression_leaves[0]->is_expression() || expression_leaves[0]->is_function()) {
-            result = expression_leaves[0]->evaluate(false);
-        } else if(expression_leaves[0]->is_concatenation() || expression_leaves[0]->is_replication()) {
-            result = expression_leaves[0]->evaluate(type.get_unpacked_dimensions().empty());
+    if (type.is_scalar()) {
+        if(raw_value->is_expression() || raw_value->is_function()) {
+            result = raw_value->evaluate(false);
+        } else if(raw_value->is_concatenation() || raw_value->is_replication()) {
+            result = raw_value->evaluate(type.get_unpacked_dimensions().empty());
         }
     } else {
         result  = evaluate_vector();
@@ -92,16 +90,12 @@ bool HDL_parameter::propagate_constant(const qualified_identifier &constant_id, 
     bool retval = true;
     retval &= type.propagate_constant(constant_id, constant_value);
 
-    for (auto &expr:expression_leaves) {
-        retval &=  expr->propagate_constant(constant_id, constant_value);
-    }
+    retval &=  raw_value->propagate_constant(constant_id, constant_value);
     return retval;
 }
 
 void HDL_parameter::propagate_function(const HDL_function_def &def) {
-    for (auto &expr:expression_leaves) {
-        expr->propagate_function(def);
-    }
+    raw_value->propagate_function(def);
 }
 
 HDL_parameter::operator std::string() {
@@ -129,30 +123,25 @@ void PrintTo(const HDL_parameter &param, std::ostream *os) {
 }
 
 bool HDL_parameter::empty() const {
-    if (type.is_scalar()) {
-        if (expression_leaves.empty()) return true;
-        return expression_leaves[0]->empty();
-
-    }
-    return expression_leaves.empty();
+    return raw_value->empty();
 }
 
 void HDL_parameter::add_component(const Expression_component &component) {
-    if (expression_leaves.empty()) expression_leaves.push_back(std::make_shared<Expression>());
-    if(expression_leaves[0]->is_expression()) {
-        auto expr = static_cast<Expression *>(expression_leaves[0].get());
+    if (!raw_value) raw_value = std::make_shared<Expression>();
+    if(raw_value->is_expression()) {
+        auto expr = static_cast<Expression *>(raw_value.get());
         expr->push_back(component);
     }
 }
 
 void HDL_parameter::set_scalar(const std::shared_ptr<Parameter_value_base> &expr) {
     type.set_scalar(true);
-    expression_leaves  = {expr};
+    raw_value  = {expr};
 }
 
 void HDL_parameter::add_item(const std::shared_ptr<Parameter_value_base> &e) {
     type.set_scalar(false);
-    expression_leaves.push_back(e);
+    raw_value = e;
 }
 
 std::string HDL_parameter::to_string() const {
@@ -174,8 +163,8 @@ std::string HDL_parameter::to_string() const {
     std::ostringstream s;
 
     if (type.is_scalar()) {
-        if (expression_leaves.empty()) result += "!!EMPTY SCALAR!!";
-        else  result += expression_leaves[0]->print();
+        if (!raw_value) result += "!!EMPTY SCALAR!!";
+        else  result += raw_value->print();
     }
     result += "-----------------------------\n";
     result += "-----------------------------\n";
@@ -188,10 +177,8 @@ std::string HDL_parameter::to_string() const {
         result +="[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
     }
 
-    result += "EXPRESSION LEAVES\n";
-    for(const auto &item:expression_leaves){
-        result +=  "  " + item->print() + "\n";
-    }
+    result += "EXPRESSION\n";
+    result +=  "  " + raw_value->print() + "\n";
 
     result += "-----------------------------\n";
     result += "-----------------------------\n";
@@ -202,10 +189,8 @@ std::string HDL_parameter::to_string() const {
 std::set<qualified_identifier> HDL_parameter::get_dependencies() {
     std::set<qualified_identifier> result = type.get_dependencies();
 
-    for (auto &expr:expression_leaves) {
-        std::set<qualified_identifier> deps = expr->get_dependencies();
-        result.insert(deps.begin(), deps.end());
-    }
+    std::set<qualified_identifier> deps = raw_value->get_dependencies();
+    result.insert(deps.begin(), deps.end());
     return result;
 }
 
@@ -234,15 +219,20 @@ inline resolved_parameter HDL_parameter::process_default_initialization() {
         dimensions.insert(dimensions.begin(), 1);
     }
 
-    auto init_value = expression_leaves[0]->evaluate(false);
+    auto init_value = raw_value->evaluate(false);
 
     if (!init_value.has_value()) throw std::runtime_error("Error: initializer of default array should be defined");
-    if(std::holds_alternative<int64_t>(init_value.value())) {
-        mdarray ret_i = {dimensions,std::get<int64_t>(init_value.value())};
+
+    if(std::holds_alternative<mdarray<int64_t>>(init_value.value())) {
+        auto val = std::get<mdarray<int64_t>>(init_value.value()).get_scalar();
+        if (!val) throw std::runtime_error("Error: initializer of default array should be defined");
+        mdarray ret_i = {dimensions,val.value()};
         return ret_i;
     }
-    if(std::holds_alternative<std::string>(init_value.value())) {
-        mdarray ret_s = {dimensions,std::get<std::string>(init_value.value())};
+    if(std::holds_alternative<mdarray<std::string>>(init_value.value())) {
+        auto val = std::get<mdarray<std::string>>(init_value.value()).get_scalar();
+        if (!val) throw std::runtime_error("Error: initializer of default array should be defined");
+        mdarray ret_s = {dimensions,val.value()};
         return ret_s;
     }
     throw std::runtime_error("Error: initializer of default array should be a string or a number");
@@ -283,28 +273,32 @@ inline std::optional<resolved_parameter> HDL_parameter::evaluate_vector() {
         return process_default_initialization();
     }
     bool ret_string = true;
-    for(auto &expr:expression_leaves | std::views::reverse) {
-        auto expr_depth = expr->get_depth();
-        bool pack = type.get_unpacked_dimensions().size() <= expr_depth;
-        auto expr_value = expr->evaluate(pack);
-        if (expr_value.has_value()) {
-            if (std::holds_alternative<std::string>(expr_value.value())) {
-                auto stacked_arr = mdarray<std::string>::stack(ret_s, std::get<std::string>(expr_value.value()));
-                if (stacked_arr.has_value()) {
-                    ret_s = stacked_arr.value();
-                }
-            } else if (std::holds_alternative<int64_t>(expr_value.value())) {
-                ret_string = false;
-                auto stacked_arr = mdarray<int64_t>::stack(ret, std::get<int64_t>(expr_value.value()));
-                if (stacked_arr.has_value()) {
-                    ret = stacked_arr.value();
-                }
-            } else if (std::holds_alternative<mdarray<int64_t>>(expr_value.value())) {
-                ret_string = false;
-                auto stacked_arr = mdarray<int64_t>::stack(ret, std::get<mdarray<int64_t>>(expr_value.value()));
-                if (stacked_arr.has_value()) {
-                    ret = stacked_arr.value();
-                }
+    auto expr_depth = raw_value->get_depth();
+    bool pack = type.get_unpacked_dimensions().size() < expr_depth;
+    auto expr_value = raw_value->evaluate(pack);
+    if (expr_value.has_value()) {
+        if (std::holds_alternative<std::string>(expr_value.value())) {
+            auto stacked_arr = mdarray<std::string>::stack(ret_s, std::get<std::string>(expr_value.value()));
+            if (stacked_arr.has_value()) {
+                ret_s = stacked_arr.value();
+            }
+        } else if (std::holds_alternative<int64_t>(expr_value.value())) {
+            ret_string = false;
+            auto stacked_arr = mdarray<int64_t>::stack(ret, std::get<int64_t>(expr_value.value()));
+            if (stacked_arr.has_value()) {
+                ret = stacked_arr.value();
+            }
+        } else if (std::holds_alternative<mdarray<int64_t>>(expr_value.value())) {
+            ret_string = false;
+            auto stacked_arr = mdarray<int64_t>::stack(ret, std::get<mdarray<int64_t>>(expr_value.value()));
+            if (stacked_arr.has_value()) {
+                ret = stacked_arr.value();
+            }
+        } else if (std::holds_alternative<mdarray<std::string>>(expr_value.value())) {
+            ret_string = true;
+            auto stacked_arr = mdarray<std::string>::stack(ret_s, std::get<mdarray<std::string>>(expr_value.value()));
+            if (stacked_arr.has_value()) {
+                ret_s = stacked_arr.value();
             }
         }
     }

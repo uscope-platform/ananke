@@ -26,6 +26,10 @@ std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
     return std::make_shared<HDL_parameter>(resource);
 }
 
+void HDL_parameters_factory::set_type(const std::string &type) {
+    current_resource.set_declared_type(type);
+}
+
 void HDL_parameters_factory::set_value(const std::string &s) {
     current_resource.set_value(s);
 }
@@ -46,22 +50,23 @@ void HDL_parameters_factory::add_component(const Expression_component &c, bool i
 
 void HDL_parameters_factory::start_initialization_list() {
     if (in_param_assignment || in_packed_assignment ||f_factory.is_active() || in_param_override) {
-        in_initialization_list = true;
+        concat_factory.start_concatenation();
         expr_factory.decrease_level(); // This is needed because in the grammar there is an expression before the list initialization;
     }
 }
 
 
 void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
-    if (in_initialization_list) {
+    if (concat_factory.in_concatenation()) {
         if (repl_factory.in_replication()) {
             stop_replication();
         }
-        in_initialization_list = false;
         if (default_assignment){
             current_resource.set_default();
         }
         current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
+        current_resource.add_item(concat_factory.get_concatenation());
+        concat_factory.stop_concatenation();
         expr_factory.increase_level();
     }
 }
@@ -102,6 +107,8 @@ void HDL_parameters_factory::stop_replication() {
     if(repl_factory.in_replication()){
         if (f_factory.is_active()) {
             f_factory.add_value(repl_factory.finish());
+        } else if (concat_factory.in_concatenation()){
+            concat_factory.add_component(repl_factory.finish());
         } else {
             current_resource.add_item(repl_factory.finish());
         }
@@ -111,14 +118,17 @@ void HDL_parameters_factory::stop_replication() {
 
 void HDL_parameters_factory::start_replication_assignment() {
     repl_factory.start_replication(false);
+    expr_factory.push_level();
 }
 
 void HDL_parameters_factory::stop_replication_assignment() {
-    current_resource.set_scalar(repl_factory.finish());
+    current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
+    current_resource.add_item(repl_factory.finish());
+    expr_factory.pop_level();
 }
 
 void HDL_parameters_factory::stop_packed_assignment() {
-    if(in_packed_assignment && !in_initialization_list){
+    if(in_packed_assignment && !concat_factory.in_concatenation()){
         current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
         in_packed_assignment = false;
     }
@@ -145,8 +155,6 @@ void HDL_parameters_factory::stop_expression_new() {
                 concat_factory.add_component(std::make_shared<Expression>(expr.value()));
             } else if(calls_factory.in_function_call()) {
                 calls_factory.add_argument(std::make_shared<Expression>(expr.value()));
-            } else if(in_initialization_list) {
-                current_resource.add_item(std::make_shared<Expression>(expr.value()));
             } else {
                 current_resource.set_scalar(std::make_shared<Expression>(expr.value()));
             }
@@ -160,7 +168,7 @@ void HDL_parameters_factory::start_packed_assignment() {
 }
 
 void HDL_parameters_factory::start_concatenation() {
-    if(in_param_assignment || in_packed_assignment || in_initialization_list || f_factory.is_active()){
+    if(in_param_assignment || in_packed_assignment || f_factory.is_active()){
         expr_factory.push_level();
         concat_factory.start_concatenation();
     }
@@ -173,10 +181,8 @@ void HDL_parameters_factory::stop_concatenation() {
         if (!concat_factory.in_nested()) {
             if (f_factory.is_active()) {
                 f_factory.add_value(concat_factory.get_concatenation());
-            }else if(in_initialization_list) {
-                current_resource.add_item(concat_factory.get_concatenation());
             } else {
-                current_resource.set_scalar(concat_factory.get_concatenation());
+                current_resource.add_item(concat_factory.get_concatenation());
             }
 
         }
@@ -185,7 +191,7 @@ void HDL_parameters_factory::stop_concatenation() {
 }
 
 void HDL_parameters_factory::start_replication() {
-    if(in_param_assignment || in_initialization_list || in_packed_assignment || f_factory.is_active()){
+    if(in_param_assignment || in_packed_assignment || f_factory.is_active() || concat_factory.in_concatenation()){
         repl_factory.start_replication(true);
         expr_factory.decrease_level();
     }
@@ -226,8 +232,8 @@ void HDL_parameters_factory::start_ternary_operator() {
 void HDL_parameters_factory::stop_ternary(){
     expr_factory.pop_level();
     if (!t_factory.is_nested()) {
-        if (in_initialization_list) {
-            current_resource.add_item(t_factory.finish());
+        if (concat_factory.in_concatenation()) {
+            concat_factory.add_component(t_factory.finish());
         } else {
             current_resource.set_scalar(t_factory.finish());
         }
@@ -262,7 +268,7 @@ void HDL_parameters_factory::stop_array_quantifier() {
 }
 
 void HDL_parameters_factory::start_cast(bool expression_size) {
-    if (in_param_assignment || in_initialization_list || in_param_override || in_packed_assignment|| f_factory.is_active()) {
+    if (in_param_assignment || in_param_override || in_packed_assignment|| f_factory.is_active()|| concat_factory.in_concatenation()) {
         if (concat_factory.in_concatenation() || expression_size) {
             expr_factory.start_expression();
         } else {
@@ -282,13 +288,11 @@ void HDL_parameters_factory::stop_cast() {
         expr_factory.clear_expression();
         if (expr.has_value()) {
             c_factory.set_content(std::make_shared<Expression>(expr.value()));
-
         }
 
         auto cast_value = c_factory.get_cast(); // This restores the outer cast context
         expr_factory.increase_level();
 
-        // --- THE FIX ---
         if (c_factory.in_cast()) {
             // Hand the finished inner cast to the outer cast
             c_factory.set_content(cast_value);
@@ -320,8 +324,8 @@ void HDL_parameters_factory::start_function_assignment(const std::string &f_name
 
 void HDL_parameters_factory::stop_function_assignment() {
     if (!calls_factory.is_nested()) {
-        if (in_initialization_list) {
-            current_resource.add_item(calls_factory.get_function());
+        if (concat_factory.in_concatenation()) {
+            concat_factory.add_component(calls_factory.get_function());
         } else {
             current_resource.set_scalar(calls_factory.get_function());
         }
@@ -355,8 +359,6 @@ void HDL_parameters_factory::stop_function_call() {
             repl_factory.add_expression(Expression({ec}));
         } else if (in_packed_assignment || in_param_assignment || in_param_override) {
             current_resource.set_scalar(call);
-        } else if (in_initialization_list) {
-            current_resource.add_item(call);
         }
     }
 }

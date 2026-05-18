@@ -90,24 +90,38 @@ std::optional<resolved_parameter> Concatenation::evaluate(bool pack_result){
         }
         return pack_values(values, sizes);
     } else {
-
-        mdarray<int64_t> result;
-        for (int64_t i = 0;i<concat_size; i++) {
-            auto value_opt = components[concat_size-i-1]->evaluate(pack_result);
-            if (!value_opt.has_value()) return std::nullopt;
-            if (std::holds_alternative<int64_t>(value_opt.value())) {
-                mdarray<int64_t> to_concat;
-                to_concat.set_value(0,std::get<int64_t>(value_opt.value()));
-                result = mdarray<int64_t>::concatenate(result, to_concat).value();
-            } else {
-                auto array_res = std::get<mdarray<int64_t>>(value_opt.value());
-                if( depth ==1)
-                    result= mdarray<int64_t>::concatenate(result, array_res).value();
-                else
-                    result= mdarray<int64_t>::stack(result, array_res).value();
+        if (components.empty())return std::nullopt;
+        auto v = components[0]->evaluate(pack_result);
+        if (std::holds_alternative<std::string>(v.value())) {
+            mdarray<std::string> result;
+            for (int64_t i = 0;i<concat_size; i++) {
+                auto value_opt = components[concat_size-i-1]->evaluate(pack_result);
+                if (!value_opt.has_value()) return std::nullopt;
+                mdarray<std::string> to_concat;
+                to_concat.set_value(0,std::get<std::string>(value_opt.value()));
+                result = mdarray<std::string>::concatenate(result, to_concat).value();
             }
+            return result;
+        } else {
+            mdarray<int64_t> result;
+            for (int64_t i = 0;i<concat_size; i++) {
+                auto value_opt = components[concat_size-i-1]->evaluate(pack_result);
+                if (!value_opt.has_value()) return std::nullopt;
+                if (std::holds_alternative<int64_t>(value_opt.value())) {
+                    mdarray<int64_t> to_concat;
+                    to_concat.set_value(0,std::get<int64_t>(value_opt.value()));
+                    result = mdarray<int64_t>::concatenate(result, to_concat).value();
+                } else {
+                    auto array_res = std::get<mdarray<int64_t>>(value_opt.value());
+                    if( depth ==1)
+                        result= mdarray<int64_t>::concatenate(result, array_res).value();
+                    else
+                        result= mdarray<int64_t>::stack(result, array_res).value();
+                }
+            }
+            return result;
         }
-        return result;
+
     }
 }
 

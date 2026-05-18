@@ -117,7 +117,7 @@ bool Expression_component::propagate_constant(const qualified_identifier &consta
                         type = number;
                         value = 0; // if the array value is not found (because of some dimensional issue) substitute with a 0 rather than crashing
                     }
-                }else if(std::holds_alternative<mdarray<std::string>>(const_value)){
+                }else if(std::holds_alternative<mdarray<std::string>>(const_value)) {
                     auto values = std::get<mdarray<std::string>>(const_value);
                     auto array_val = values.get_value(indices);
                     if (array_val.has_value()) {

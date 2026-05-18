@@ -36,7 +36,7 @@ public:
     HDL_parameter(HDL_parameter &&other) noexcept
         : name(std::move(other.name)),
           type(other.type),
-          expression_leaves(std::move(other.expression_leaves)),
+          raw_value(std::move(other.raw_value)),
           solved_value(std::move(other.solved_value)),
           default_initialization(other.default_initialization) {
     }
@@ -46,7 +46,7 @@ public:
             return *this;
         name = other.name;
         type = other.type;
-        expression_leaves = other.expression_leaves;
+        raw_value = other.raw_value;
         solved_value = other.solved_value;
         default_initialization = other.default_initialization;
         return *this;
@@ -57,7 +57,7 @@ public:
             return *this;
         name = std::move(other.name);
         type = std::move(other.type);
-        expression_leaves = std::move(other.expression_leaves);
+        raw_value = std::move(other.raw_value);
         solved_value = std::move(other.solved_value);
         default_initialization = other.default_initialization;
         return *this;
@@ -81,7 +81,9 @@ public:
     [[nodiscard]] std::optional<mdarray<int64_t>> get_int_array_value() const{
         if (!solved_value.has_value()) return {};
         return std::get<mdarray<int64_t>>(solved_value.value());
-    };
+    }
+
+    void set_declared_type(const std::string & type);
 
     [[nodiscard]] std::optional<resolved_parameter> get_value() const {return solved_value;}
 
@@ -109,11 +111,11 @@ public:
     void add_component(const Expression_component &component);
     void set_scalar(const std::shared_ptr<Parameter_value_base>  &e);
     std::shared_ptr<Parameter_value_base> get_expression() {
-        if (type.is_scalar()) return expression_leaves[0];
+        if (type.is_scalar()) return raw_value;
         throw std::runtime_error("A scalar parameter has been initialized with an array");
     }
     void clear_expression() {
-        if (type.is_scalar()) expression_leaves[0] = std::make_shared<Expression>();
+        if (type.is_scalar()) raw_value = std::make_shared<Expression>();
     }
 
     void set_default() { default_initialization = true;};
@@ -130,7 +132,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name, expression_leaves, default_initialization, type);
+        ar(name, raw_value, default_initialization, type);
     }
 
     nlohmann::json dump();
@@ -146,7 +148,7 @@ private:
 
     HDL_type type;
 
-    std::vector<std::shared_ptr<Parameter_value_base>> expression_leaves;
+    std::shared_ptr<Parameter_value_base> raw_value;
     std::optional<resolved_parameter> solved_value;
 
     bool default_initialization = false;
