@@ -121,10 +121,6 @@ void PrintTo(const HDL_parameter &param, std::ostream *os) {
     *os << result;
 }
 
-bool HDL_parameter::empty() const {
-    return raw_value->empty();
-}
-
 void HDL_parameter::add_component(const Expression_component &component) {
     if (!raw_value) raw_value = std::make_shared<Expression>();
     if(raw_value->is_expression()) {

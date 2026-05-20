@@ -43,6 +43,7 @@ public:
     Concatenation &operator=(const Concatenation &other) {
         if (this != &other) {
             container_size = other.container_size;
+            unpacked_dimension = other.unpacked_dimension;
             packing = other.packing;
             components.clear();
             components.reserve(other.components.size());
@@ -55,6 +56,7 @@ public:
     Concatenation &operator=(Concatenation &&other) noexcept {
         if (this != &other) {
             container_size = other.container_size;
+            unpacked_dimension = other.unpacked_dimension;
             packing = other.packing;
             components.clear();
             components.reserve(other.components.size());
@@ -65,7 +67,6 @@ public:
     }
 
     std::set<qualified_identifier> get_dependencies()const override;
-    bool empty() const {return components.empty();}
     bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
 
@@ -79,6 +80,7 @@ public:
         if(lhs.components.size() != rhs.components.size()) return false;
         ret &= lhs.container_size == rhs.container_size;
         ret &= lhs.packing == rhs.packing;
+        ret &= lhs.unpacked_dimension == rhs.unpacked_dimension;
         for(int i = 0; i < lhs.components.size(); i++) {
             ret &= *lhs.components[i] == *rhs.components[i];
         }
@@ -102,6 +104,7 @@ public:
 private:
 
     bool packing = false;
+    uint64_t unpacked_dimension  = 0;
     int64_t container_size = 0;
 
     std::vector<std::shared_ptr<Parameter_value_base>> components;

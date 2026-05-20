@@ -27,6 +27,7 @@ Concatenation::Concatenation(const Concatenation &other) {
     }
     container_size = other.container_size;
     packing = other.packing;
+    unpacked_dimension = other.unpacked_dimension;
     type = concatenation;
 }
 
@@ -36,6 +37,7 @@ Concatenation::Concatenation(Concatenation &&other) noexcept {
     }
     container_size = other.container_size;
     packing = other.packing;
+    unpacked_dimension = other.unpacked_dimension;
     type = concatenation;
 }
 
@@ -81,7 +83,6 @@ void Concatenation::propagate_function(const HDL_function_def &def) {
 
 std::optional<resolved_parameter> Concatenation::evaluate(){
     auto concat_size = components.size();
-    auto depth = get_depth();
     if (packing) {
         std::vector<int64_t> sizes(concat_size);
         std::vector<int64_t> values(concat_size);
@@ -119,7 +120,7 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
                     result = mdarray<int64_t>::concatenate(result, to_concat).value();
                 } else {
                     auto array_res = std::get<mdarray<int64_t>>(value_opt.value());
-                    if( depth ==1)
+                    if( unpacked_dimension ==1)
                         result= mdarray<int64_t>::concatenate(result, array_res).value();
                     else
                         result= mdarray<int64_t>::stack(result, array_res).value();
@@ -147,6 +148,7 @@ std::string Concatenation::print()  const{
 
 void Concatenation::set_container_sizes(const resolved_type &s) {
     resolved_type content_sizes;
+    unpacked_dimension = s.unpacked_sizes.size();
     if (!s.unpacked_sizes.empty()) {
         if (s.unpacked_sizes.size()>1) content_sizes.unpacked_sizes.insert(content_sizes.unpacked_sizes.end(), s.unpacked_sizes.begin(), s.unpacked_sizes.end()-1);
         content_sizes.packed_sizes = s.packed_sizes;

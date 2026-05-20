@@ -108,7 +108,6 @@ public:
     std::vector<dimension_t> get_packed_dimensions(){return type.get_packed_dimensions();}
     std::vector<dimension_t> get_unpacked_dimensions(){return type.get_unpacked_dimensions();}
 
-    bool empty() const;
 
     void add_component(const Expression_component &component);
     void set_scalar(const std::shared_ptr<Parameter_value_base>  &e);
