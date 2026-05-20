@@ -212,10 +212,15 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
         auto type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
         params_factory.set_type(type);
     }
+    if (!ctx->data_type_or_implicit()) {
+        params_factory.set_type("implicit");
+    }
     current_parameter = ctx->list_of_param_assignments()[0].param_assignment()[0]->identifier()->getText();
 }
 
 void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
+
+    params_factory.set_type("");
     in_param_declaration = false;
 }
 
@@ -734,6 +739,22 @@ void sv_visitor::exitData_type_or_implicit(sv2017::Data_type_or_implicitContext 
     } else{
         params_factory.clear_expression();
     }
+}
+
+void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
+    in_param_declaration = true;
+    if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type() && ctx->data_type_or_implicit()->data_type()->data_type_primitive()) {
+        auto type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
+        params_factory.set_type(type);
+    }
+    if (!ctx->data_type_or_implicit()) {
+        params_factory.set_type("implicit");
+    }
+}
+
+void sv_visitor::exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
+    in_param_declaration = false;
+    params_factory.set_type("");
 }
 
 void sv_visitor::enterLoop_generate_construct(sv2017::Loop_generate_constructContext *) {

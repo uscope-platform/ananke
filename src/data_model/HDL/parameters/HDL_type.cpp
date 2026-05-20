@@ -30,6 +30,14 @@ void HDL_type::set_packed_dimensions(const std::vector<dimension_t> &d) {
 }
 
 void HDL_type::set_declared_type(const std::string &type) {
+    if (type == "implicit") {
+        is_implicit = true;
+        packed_dimensions.push_back({
+            Expression({Expression_component("31", Expression_component::number)}),
+            Expression({Expression_component("0", Expression_component::number)}),
+            true
+        });
+    }
     if (type == "shortint") {
         is_signed = true;
         packed_dimensions.push_back({

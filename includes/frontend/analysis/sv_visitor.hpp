@@ -151,8 +151,8 @@ public:
     void exitData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) override;
 
 
-    void enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) override { in_param_declaration = true;};
-    void exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) override { in_param_declaration = false;};
+    void enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) override;
+    void exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) override;
 
     void enterLoop_generate_construct(sv2017::Loop_generate_constructContext *ctx) override;
     void exitLoop_generate_construct(sv2017::Loop_generate_constructContext *ctx) override;

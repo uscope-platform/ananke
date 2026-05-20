@@ -137,6 +137,7 @@ private:
     bool paused = false;
     bool skip_expression = false;
 
+    std::string current_type;
 
 };
 

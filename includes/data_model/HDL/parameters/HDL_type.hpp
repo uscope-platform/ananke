@@ -32,6 +32,7 @@ public:
         : scalar(other.scalar),
           is_signed(other.is_signed),
           is_real(other.is_real),
+          is_implicit(other.is_implicit),
           unpacked_dimensions(std::move(other.unpacked_dimensions)),
           packed_dimensions(std::move(other.packed_dimensions)) {
     }
@@ -42,6 +43,7 @@ public:
         scalar = other.scalar;
         is_signed = other.is_signed;
         is_real = other.is_real;
+        is_implicit = other.is_implicit;
         unpacked_dimensions = other.unpacked_dimensions;
         packed_dimensions = other.packed_dimensions;
         return *this;
@@ -53,6 +55,7 @@ public:
         scalar = other.scalar;
         is_signed = other.is_signed;
         is_real = other.is_real;
+        is_implicit = other.is_implicit;
         unpacked_dimensions = std::move(other.unpacked_dimensions);
         packed_dimensions = std::move(other.packed_dimensions);
         return *this;
@@ -63,6 +66,7 @@ public:
 
         ret &= lhs.scalar == rhs.scalar;
         ret &= lhs.is_signed == rhs.is_signed;
+        ret &= lhs.is_implicit == rhs.is_implicit;
         ret &= lhs.is_real == rhs.is_real;
         if(lhs.unpacked_dimensions.size() != rhs.unpacked_dimensions.size()) return false;
         for(int i = 0; i<lhs.unpacked_dimensions.size(); i++){
@@ -107,6 +111,7 @@ private:
     bool scalar = true;
     bool is_signed = false;
     bool is_real = false;
+    bool is_implicit = false;
     std::vector<dimension_t> unpacked_dimensions;
     std::vector<dimension_t> packed_dimensions;
 

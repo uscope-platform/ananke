@@ -17,8 +17,9 @@
 
 
 void HDL_parameters_factory::new_parameter(const std::string &name) {
-      current_resource.set_name(name);
-      current_resource.set_packed_dimensions(index_factory.get_dimensions());
+    current_resource.set_name(name);
+    current_resource.set_declared_type(current_type);
+    current_resource.set_packed_dimensions(index_factory.get_dimensions());
 }
 
 std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
@@ -28,7 +29,7 @@ std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
 }
 
 void HDL_parameters_factory::set_type(const std::string &type) {
-    current_resource.set_declared_type(type);
+    current_type = type;
 }
 
 void HDL_parameters_factory::set_value(const std::string &s) {
