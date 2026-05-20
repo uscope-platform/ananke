@@ -67,7 +67,6 @@ public:
     std::optional<resolved_parameter> evaluate() override;
     [[nodiscard]] std::string print() const override;
     int64_t get_size() override;
-    int64_t get_depth() override;
 
     [[nodiscard]] std::shared_ptr<Parameter_value_base> clone_ptr() const override;
 

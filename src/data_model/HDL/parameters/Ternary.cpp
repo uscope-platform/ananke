@@ -75,11 +75,6 @@ std::string Ternary::print() const {
     return oss.str();
 }
 
-int64_t Ternary::get_depth() {
-    auto true_depth = true_value->get_depth();
-    auto false_depth = false_value->get_depth();
-    return std::max(true_depth, false_depth) +1;
-}
 
 std::shared_ptr<Parameter_value_base> Ternary::clone_ptr() const {
     Ternary t;

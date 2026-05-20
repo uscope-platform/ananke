@@ -57,7 +57,6 @@ public:
 
     std::variant<int64_t, double> evaluate_cast(resolved_parameter operand, const std::string &operation);
 
-    int64_t get_depth() override { return 1;}
     void add_index(const Expression &idx);
 
     friend bool operator==(const Expression &lhs, const Expression &rhs) {

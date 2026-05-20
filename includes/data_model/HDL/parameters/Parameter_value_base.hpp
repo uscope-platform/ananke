@@ -47,8 +47,6 @@ public:
     virtual std::string print() const {return "";}
     virtual int64_t get_size() {return 0;}
 
-    virtual int64_t get_depth() {return 0;}
-
     [[nodiscard]] bool empty() const {return false;}
 
     [[nodiscard]] bool is_expression() const {return type == expression;}

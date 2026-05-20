@@ -144,17 +144,6 @@ std::string Concatenation::print()  const{
     return oss.str();
 }
 
-int64_t Concatenation::get_depth() {
-    int64_t ret = 1;
-    for(auto &comp:components){
-        if(comp->is_concatenation() || comp->is_replication()) {
-           auto child_ret = comp->get_depth();
-           ret = std::max(ret, child_ret+1);
-        }
-
-    }
-    return ret;
-}
 
 void Concatenation::set_container_sizes(const resolved_type &s) {
     resolved_type content_sizes;

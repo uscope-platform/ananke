@@ -35,7 +35,6 @@ public:
     Replication(Replication &&other) noexcept;
 
     Replication clone() const;
-    int64_t get_depth() override;
 
     Replication &operator=(const Replication &other);
 

@@ -118,9 +118,6 @@ int64_t Cast::get_size() {
     return std::get<int64_t>(size.evaluate().value());
 }
 
-int64_t Cast::get_depth() {
-    return std::max(content->get_depth(), size.get_depth()) + 1;
-}
 
 std::shared_ptr<Parameter_value_base> Cast::clone_ptr() const {
     Cast c;

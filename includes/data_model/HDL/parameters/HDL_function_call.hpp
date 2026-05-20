@@ -49,7 +49,6 @@ public:
     std::string print() const  override;
     int64_t get_size()  override;
 
-    int64_t get_depth()  override;
 
     [[nodiscard]] bool empty() const;
 

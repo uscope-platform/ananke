@@ -49,9 +49,6 @@ Replication Replication::clone()  const{
     return result;
 }
 
-int64_t Replication::get_depth() {
-    return repeated_item->get_depth()+1;
-}
 
 Replication & Replication::operator=(const Replication &other) {
     if (this != &other) {

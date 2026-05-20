@@ -72,7 +72,7 @@ public:
     void propagate_function(const HDL_function_def &def) override;
     std::optional<resolved_parameter> evaluate() override;
     std::string print() const override;
-    int64_t get_depth() override;
+
 
     friend bool operator==(const Concatenation &lhs, const Concatenation &rhs) {
         auto ret = true;

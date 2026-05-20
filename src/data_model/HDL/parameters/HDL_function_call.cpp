@@ -207,17 +207,6 @@ int64_t HDL_function_call::get_size() {
     return 0;
 }
 
-int64_t HDL_function_call::get_depth() {
-    int64_t ret = 1;
-    for(auto &comp:arguments){
-        if(comp->is_concatenation() || comp->is_replication()) {
-            auto child_ret = comp->get_depth();
-            ret = std::max(ret, child_ret+1);
-        }
-
-    }
-    return ret;
-}
 
 bool HDL_function_call::empty() const {
     return function_name.empty();
