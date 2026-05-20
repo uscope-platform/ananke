@@ -42,6 +42,7 @@ public:
 
 
     void set_item(std::shared_ptr<Parameter_value_base> item){ repeated_item = std::move(item);}
+    std::shared_ptr<Parameter_value_base> get_item()const { return repeated_item;}
     void set_size(const Expression &size);
 
     std::set<qualified_identifier> get_dependencies()const override;

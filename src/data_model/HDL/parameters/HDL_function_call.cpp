@@ -21,7 +21,10 @@
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
 
+#include "data_model/HDL/parameters/Replication.hpp"
+
 CEREAL_REGISTER_TYPE(HDL_function_call)
+
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, HDL_function_call)
 
 HDL_function_call::HDL_function_call() {
@@ -92,7 +95,19 @@ std::optional<resolved_parameter> HDL_function_call::evaluate() {
 }
 
 std::optional<resolved_parameter> HDL_function_call::evaluate_scalar() {
-    return assignments[0].get_value()->evaluate();
+    auto raw_value = assignments[0].get_value()->evaluate();
+    if (!raw_value) return std::nullopt;
+    if (packing) {
+        if (!std::holds_alternative<mdarray<int64_t>>(*raw_value)) return raw_value;
+        auto components = std::get<mdarray<int64_t>>(raw_value.value()).get_1d_slice({0, 0});
+        auto size = 0;
+        if (assignments[0].get_value()->is_replication()) size = assignments[0].get_value()->as<Replication>().get_item()->get_size();
+        else size = assignments[0].get_value()->get_size();
+        std::vector<int64_t> packing_sizes(components.size(), size);
+        return pack_values(components, packing_sizes);
+    } else {
+        return raw_value;
+    }
 }
 
 std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
@@ -105,12 +120,14 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
         loop_indexes = {};
     }
     std::vector<int64_t> values(assignments.size() + loop_indexes.size());
+    std::vector<int64_t> value_sizes(assignments.size() + loop_indexes.size());
     for(auto &a:assignments) {
         auto idx = a.get_index().value()->evaluate();
         if(!idx.has_value()) return std::nullopt;
         if(!std::holds_alternative<int64_t>(idx.value())) return std::nullopt;
         auto idx_val = std::get<int64_t>(idx.value());
         auto value = a.get_value()->evaluate();
+        value_sizes = a.get_value()->get_size();
         if(!value.has_value()) return std::nullopt;
         values[idx_val] = std::get<int64_t>(value.value());
     }
@@ -124,6 +141,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
                 la.get_index().value()->propagate_constant(loop_var, l);
                 auto idx = la.get_index().value()->evaluate();
                 la.get_value()->propagate_constant(loop_var, l);
+                value_sizes = la.get_value()->get_size();
                 auto var = la.get_value()->evaluate();
                 values[std::get<int64_t>(idx.value())] = std::get<int64_t>(var.value());
             }
@@ -132,6 +150,9 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
 
     mdarray<int64_t> result;
     result.set_1d_slice({0, 0}, values);
+    if (packing) {
+        result.set_1d_slice({0,0}, {pack_values(values, value_sizes)});
+    }
     return result;
 }
 
@@ -191,6 +212,10 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_system_task() {
     return 0;
 }
 
+void HDL_function_call::set_container_sizes(const resolved_type &s) {
+    packing = s.unpacked_sizes.empty();
+}
+
 
 std::string HDL_function_call::print() const {
     std::ostringstream result;
@@ -218,6 +243,7 @@ std::shared_ptr<Parameter_value_base> HDL_function_call::clone_ptr() const {
         c.arguments.push_back(arg->clone_ptr());
     }
     c.function_name = function_name;
+    c.packing = packing;
     if(loop_metadata) c.loop_metadata = loop_metadata.value().clone();
     for (auto &ass:assignments) {
         c.assignments.push_back(ass.clone());

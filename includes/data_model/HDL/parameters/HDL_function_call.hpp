@@ -44,7 +44,7 @@ public:
     std::optional<resolved_parameter> evaluate_vector();
     std::optional<resolved_parameter> evaluate_system_task();
 
-    void set_container_sizes(const resolved_type &s) override {}
+    void set_container_sizes(const resolved_type &s) override;
 
     std::string print() const  override;
     int64_t get_size()  override;
@@ -67,6 +67,7 @@ public:
 
 private:
     std::string function_name;
+    bool packing = false;
     std::vector<std::shared_ptr<Parameter_value_base>> arguments;
 
 

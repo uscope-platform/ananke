@@ -75,29 +75,22 @@ public:
     }
 
 
-    int64_t pack_values(const std::vector<int64_t> &components, std::vector<int64_t> &sizes) {
-        int64_t total_size = 0;
-        for(auto &size:sizes){
-            total_size += size;
-        }
-        std::vector<bool> result(total_size, false);
+    int64_t pack_values(const std::vector<int64_t> &components, const std::vector<int64_t> &sizes) {
+        uint64_t packed_result = 0;
+        int current_shift = 0;
 
-        uint64_t current_wp = 0;
-        for(ssize_t i =0; i<components.size(); i++){
-            std::bitset<64> data = components[i];
-            auto size = sizes[i];
-            for(int j = 0; j<size; j++){
-                result[current_wp] = data[j];
-                current_wp++;
-            }
+        for (size_t i = 0; i < components.size(); ++i) {
+            int64_t size = sizes[i];
+
+            uint64_t mask = (size >= 64) ? ~0ULL : (1ULL << size) - 1;
+            uint64_t masked_component = components[i] & mask;
+
+            packed_result |= (masked_component << current_shift);
+
+            current_shift += size;
         }
 
-        int64_t packed_result = 0;
-        for(int i = 0; i<result.size(); i++){
-            packed_result += result[i]*std::pow(2, i);
-        }
-
-        return packed_result;
+        return static_cast<int64_t>(packed_result);
     }
 
 protected:
