@@ -27,12 +27,13 @@ TEST(Initialization_list, get_values_1d_unpacked)  {
     HDL_parameter p("param");
 
     p.add_dimension({{Expression({Expression_component("4", Expression_component::number)})}, {Expression({Expression_component("0", Expression_component::number)})}, false});
-    p.add_item(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
-    p.add_item(std::make_shared<Expression>(Expression({Expression_component("3", Expression_component::number)})));
-    p.add_item(std::make_shared<Expression>(Expression({Expression_component("4", Expression_component::number)})));
-    p.add_item(std::make_shared<Expression>(Expression({Expression_component("6", Expression_component::number)})));
-    p.add_item(std::make_shared<Expression>(Expression({Expression_component("69", Expression_component::number)})));
-
+    Concatenation c;
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component("3", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component("4", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component("6", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component("69", Expression_component::number)})));
+    p.add_item(std::make_shared<Concatenation>(c));
 
     mdarray<int64_t> check_array;
     check_array.set_1d_slice({0, 0}, {69, 6, 4 , 3, 5});

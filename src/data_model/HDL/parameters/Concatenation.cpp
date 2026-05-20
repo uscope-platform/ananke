@@ -25,6 +25,8 @@ Concatenation::Concatenation(const Concatenation &other) {
     for(auto &item: other.components) {
         components.push_back(item->clone_ptr());
     }
+    container_size = other.container_size;
+    packing = other.packing;
     type = concatenation;
 }
 
@@ -32,14 +34,18 @@ Concatenation::Concatenation(Concatenation &&other) noexcept {
     for(const auto &item: other.components) {
         components.push_back(item->clone_ptr());
     }
+    container_size = other.container_size;
+    packing = other.packing;
     type = concatenation;
 }
 
 Concatenation Concatenation::clone()  const{
     Concatenation ret;
     for(auto &c : components) {
-        ret.add_component(c->clone_ptr());
+        ret.components.push_back(c->clone_ptr());
     }
+    ret.packing = packing;
+    ret.container_size = container_size;
     return ret;
 }
 
@@ -73,15 +79,15 @@ void Concatenation::propagate_function(const HDL_function_def &def) {
     }
 }
 
-std::optional<resolved_parameter> Concatenation::evaluate(bool pack_result){
+std::optional<resolved_parameter> Concatenation::evaluate(){
     auto concat_size = components.size();
     auto depth = get_depth();
-    if (pack_result && depth == 1) {
+    if (packing) {
         std::vector<int64_t> sizes(concat_size);
         std::vector<int64_t> values(concat_size);
         for (int i = 0;i<concat_size; i++) {
 
-            auto value_opt = components[concat_size-i-1]->evaluate(false);
+            auto value_opt = components[concat_size-i-1]->evaluate();
             sizes[i] = components[concat_size-i-1]->get_size();
             if (!value_opt.has_value()) return std::nullopt;
             auto raw_value = value_opt.value();
@@ -91,11 +97,11 @@ std::optional<resolved_parameter> Concatenation::evaluate(bool pack_result){
         return pack_values(values, sizes);
     } else {
         if (components.empty())return std::nullopt;
-        auto v = components[0]->evaluate(pack_result);
+        auto v = components[0]->evaluate();
         if (std::holds_alternative<std::string>(v.value())) {
             mdarray<std::string> result;
             for (int64_t i = 0;i<concat_size; i++) {
-                auto value_opt = components[concat_size-i-1]->evaluate(pack_result);
+                auto value_opt = components[concat_size-i-1]->evaluate();
                 if (!value_opt.has_value()) return std::nullopt;
                 mdarray<std::string> to_concat;
                 to_concat.set_value(0,std::get<std::string>(value_opt.value()));
@@ -105,7 +111,7 @@ std::optional<resolved_parameter> Concatenation::evaluate(bool pack_result){
         } else {
             mdarray<int64_t> result;
             for (int64_t i = 0;i<concat_size; i++) {
-                auto value_opt = components[concat_size-i-1]->evaluate(pack_result);
+                auto value_opt = components[concat_size-i-1]->evaluate();
                 if (!value_opt.has_value()) return std::nullopt;
                 if (std::holds_alternative<int64_t>(value_opt.value())) {
                     mdarray<int64_t> to_concat;
@@ -150,28 +156,19 @@ int64_t Concatenation::get_depth() {
     return ret;
 }
 
-
-int64_t Concatenation::pack_values(const std::vector<int64_t> &components, std::vector<int64_t> &sizes) {
-    int64_t total_size = 0;
-    for(auto &size:sizes){
-        total_size += size;
+void Concatenation::set_container_sizes(const resolved_type &s) {
+    resolved_type content_sizes;
+    if (!s.unpacked_sizes.empty()) {
+        if (s.unpacked_sizes.size()>1) content_sizes.unpacked_sizes.insert(content_sizes.unpacked_sizes.end(), s.unpacked_sizes.begin(), s.unpacked_sizes.end()-1);
+        content_sizes.packed_sizes = s.packed_sizes;
+        container_size = s.unpacked_sizes.back();
+        packing = false;
+    } else {
+        container_size = s.packed_sizes.back();
+        packing = true;
+        content_sizes.packed_sizes.insert(content_sizes.packed_sizes.end(), s.packed_sizes.begin(), s.packed_sizes.end());
     }
-    std::vector<bool> result(total_size, false);
-
-    uint64_t current_wp = 0;
-    for(ssize_t i =0; i<components.size(); i++){
-        std::bitset<64> data = components[i];
-        auto size = sizes[i];
-        for(int j = 0; j<size; j++){
-            result[current_wp] = data[j];
-            current_wp++;
-        }
+    for (auto &item:components) {
+        item->set_container_sizes(content_sizes);
     }
-
-    int64_t packed_result = 0;
-    for(int i = 0; i<result.size(); i++){
-        packed_result += result[i]*std::pow(2, i);
-    }
-
-    return packed_result;
 }

@@ -33,32 +33,32 @@ std::string HDL_net::get_full_name() const {
 }
 
 void HDL_net::evaluate() {
-    auto val = range.accessor.evaluate(true);
+    auto val = range.accessor.evaluate();
     if(val.has_value()) {
         if(std::holds_alternative<int64_t>(val.value())) {
             range.accessor = {Expression_component(std::get<int64_t>(val.value()), 0)};
         }
     }
-    val = range.range.evaluate(true);
+    val = range.range.evaluate();
     if(val.has_value()) {
         if(std::holds_alternative<int64_t>(val.value())) {
             range.range = {Expression_component(std::get<int64_t>(val.value()), 0)};
         }
     }
-    index.evaluate(true);
-    val = index.evaluate(true);
+    index.evaluate();
+    val = index.evaluate();
     if(val.has_value()) {
         if(std::holds_alternative<int64_t>(val.value())) {
             index = {Expression_component(std::get<int64_t>(val.value()), 0)};
         }
     }
-    val = replication.size.evaluate(true);
+    val = replication.size.evaluate();
     if(val.has_value()) {
         if(std::holds_alternative<int64_t>(val.value())) {
             replication.size = {Expression_component(std::get<int64_t>(val.value()), 0)};
         }
     }
-    val = replication.target.evaluate(true);
+    val = replication.target.evaluate();
     if(val.has_value()) {
         if(std::holds_alternative<int64_t>(val.value())) {
             replication.target = {Expression_component(std::get<int64_t>(val.value()), 0)};

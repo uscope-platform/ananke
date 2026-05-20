@@ -19,6 +19,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <bitset>
 #include "data_model/HDL/parameters/qualified_identifier.hpp"
 #include "data_model/mdarray.hpp"
 #include "data_model/HDL/parameters/resolved_type.hpp"
@@ -42,7 +43,7 @@ public:
     virtual bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) {return true;}
     virtual void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value){}
     virtual void propagate_function(const HDL_function_def &def) {}
-    virtual std::optional<resolved_parameter> evaluate(bool pack_result) {return std::nullopt;}
+    virtual std::optional<resolved_parameter> evaluate() {return std::nullopt;}
     virtual std::string print() const {return "";}
     virtual int64_t get_size() {return 0;}
 
@@ -74,6 +75,32 @@ public:
 
         // Delegate to the virtual implementation
         return isEqual(other);
+    }
+
+
+    int64_t pack_values(const std::vector<int64_t> &components, std::vector<int64_t> &sizes) {
+        int64_t total_size = 0;
+        for(auto &size:sizes){
+            total_size += size;
+        }
+        std::vector<bool> result(total_size, false);
+
+        uint64_t current_wp = 0;
+        for(ssize_t i =0; i<components.size(); i++){
+            std::bitset<64> data = components[i];
+            auto size = sizes[i];
+            for(int j = 0; j<size; j++){
+                result[current_wp] = data[j];
+                current_wp++;
+            }
+        }
+
+        int64_t packed_result = 0;
+        for(int i = 0; i<result.size(); i++){
+            packed_result += result[i]*std::pow(2, i);
+        }
+
+        return packed_result;
     }
 
 protected:

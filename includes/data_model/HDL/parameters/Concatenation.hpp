@@ -42,6 +42,8 @@ public:
 
     Concatenation &operator=(const Concatenation &other) {
         if (this != &other) {
+            container_size = other.container_size;
+            packing = other.packing;
             components.clear();
             components.reserve(other.components.size());
             for(auto &item: other.components) components.push_back(item->clone_ptr());
@@ -52,6 +54,8 @@ public:
 
     Concatenation &operator=(Concatenation &&other) noexcept {
         if (this != &other) {
+            container_size = other.container_size;
+            packing = other.packing;
             components.clear();
             components.reserve(other.components.size());
             for(auto &item: other.components) components.push_back(item->clone_ptr());
@@ -66,13 +70,15 @@ public:
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
 
     void propagate_function(const HDL_function_def &def) override;
-    std::optional<resolved_parameter> evaluate(bool pack_result) override;
+    std::optional<resolved_parameter> evaluate() override;
     std::string print() const override;
     int64_t get_depth() override;
 
     friend bool operator==(const Concatenation &lhs, const Concatenation &rhs) {
         auto ret = true;
         if(lhs.components.size() != rhs.components.size()) return false;
+        ret &= lhs.container_size == rhs.container_size;
+        ret &= lhs.packing == rhs.packing;
         for(int i = 0; i < lhs.components.size(); i++) {
             ret &= *lhs.components[i] == *rhs.components[i];
         }
@@ -82,7 +88,7 @@ public:
     friend bool operator!=(const Concatenation &lhs, const Concatenation &rhs) {
         return !(lhs == rhs);
     }
-    void set_container_sizes(const resolved_type &s) override {}
+    void set_container_sizes(const resolved_type &s) override;
 
     std::shared_ptr<Parameter_value_base> clone_ptr() const override {
         return std::make_shared<Concatenation>(*this);  // Copy constructor
@@ -95,8 +101,8 @@ public:
 
 private:
 
-
-    int64_t pack_values(const std::vector<int64_t>&components, std::vector<int64_t> &sizes);
+    bool packing = false;
+    int64_t container_size = 0;
 
     std::vector<std::shared_ptr<Parameter_value_base>> components;
 

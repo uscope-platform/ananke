@@ -64,7 +64,7 @@ public:
     [[nodiscard]] std::set<qualified_identifier> get_dependencies()const override;
     bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
-    std::optional<resolved_parameter> evaluate(bool pack_result) override;
+    std::optional<resolved_parameter> evaluate() override;
     [[nodiscard]] std::string print() const override;
     int64_t get_size() override;
     int64_t get_depth() override;
@@ -88,7 +88,7 @@ private:
     std::shared_ptr<Parameter_value_base> content;
     Expression size;
     std::optional<resolved_type> container_size = std::nullopt;
-
+    bool packing = false;
 };
 
 

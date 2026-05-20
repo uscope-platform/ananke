@@ -90,7 +90,7 @@ bool Expression_component::propagate_constant(const qualified_identifier &consta
     std::vector<int64_t> indices;
     for (auto &component:array_index) {
         retval &= component.propagate_constant(constant_id, const_value);
-        auto idx_val = component.evaluate(false);
+        auto idx_val = component.evaluate();
         if (idx_val.has_value()) {
             index_need_rewrite = true;
             if (!std::holds_alternative<int64_t>(idx_val.value())) return false;
@@ -256,7 +256,7 @@ int64_t Expression_component::get_operator_precedence() {
 
 std::optional<resolved_parameter> Expression_component::get_value() const {
     if (type == function) {
-        if (call) return call->evaluate(false);
+        if (call) return call->evaluate();
         else return std::nullopt;
     } else {
         return value;

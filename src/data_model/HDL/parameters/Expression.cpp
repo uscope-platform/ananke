@@ -106,7 +106,7 @@ Expression Expression::to_rpm() const {
     return rpn_exp;
 }
 
-std::optional<resolved_parameter> Expression::evaluate(bool pack_result) {
+std::optional<resolved_parameter> Expression::evaluate() {
     if(components.empty()) return std::nullopt;
     if (components.size() == 1) {
         return components[0].get_value();
@@ -151,7 +151,7 @@ int64_t Expression::get_size() {
         return components[0].get_binary_size();
     }
 
-    auto expression_value = evaluate(false);
+    auto expression_value = evaluate();
     if(expression_value.has_value()) {
         if(std::holds_alternative<int64_t>(expression_value.value()))
             return Expression_component::calculate_binary_size(std::get<int64_t>(expression_value.value()));

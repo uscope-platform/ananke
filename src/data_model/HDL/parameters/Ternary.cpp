@@ -54,14 +54,14 @@ void Ternary::propagate_expression(const qualified_identifier &constant_id,
     false_value->propagate_expression(constant_id, value);
 }
 
-std::optional<resolved_parameter> Ternary::evaluate(bool pack_result) {
-    auto condition_value = condition.evaluate(true);
+std::optional<resolved_parameter> Ternary::evaluate() {
+    auto condition_value = condition.evaluate();
     if (!condition_value.has_value()) return std::nullopt;
     auto int_val = std::get<int64_t>(condition_value.value());
     if (int_val == 0) {
-        return false_value->evaluate(true);
+        return false_value->evaluate();
     } else {
-        return true_value->evaluate(true);
+        return true_value->evaluate();
     }
 }
 

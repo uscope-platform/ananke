@@ -80,7 +80,7 @@ void HDL_function_call::propagate_function(const HDL_function_def &def) {
     }
 }
 
-std::optional<resolved_parameter> HDL_function_call::evaluate(bool pack_result) {
+std::optional<resolved_parameter> HDL_function_call::evaluate() {
     if (function_name.starts_with("$")) {
         return evaluate_system_task();
     }
@@ -92,7 +92,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate(bool pack_result) 
 }
 
 std::optional<resolved_parameter> HDL_function_call::evaluate_scalar() {
-    return assignments[0].get_value()->evaluate(true);
+    return assignments[0].get_value()->evaluate();
 }
 
 std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
@@ -106,11 +106,11 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
     }
     std::vector<int64_t> values(assignments.size() + loop_indexes.size());
     for(auto &a:assignments) {
-        auto idx = a.get_index().value()->evaluate(false);
+        auto idx = a.get_index().value()->evaluate();
         if(!idx.has_value()) return std::nullopt;
         if(!std::holds_alternative<int64_t>(idx.value())) return std::nullopt;
         auto idx_val = std::get<int64_t>(idx.value());
-        auto value = a.get_value()->evaluate(false);
+        auto value = a.get_value()->evaluate();
         if(!value.has_value()) return std::nullopt;
         values[idx_val] = std::get<int64_t>(value.value());
     }
@@ -122,9 +122,9 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
             for(auto &l:loop_indexes) {
                 auto la = loop_assignments[i].clone();
                 la.get_index().value()->propagate_constant(loop_var, l);
-                auto idx = la.get_index().value()->evaluate(false);
+                auto idx = la.get_index().value()->evaluate();
                 la.get_value()->propagate_constant(loop_var, l);
-                auto var = la.get_value()->evaluate(false);
+                auto var = la.get_value()->evaluate();
                 values[std::get<int64_t>(idx.value())] = std::get<int64_t>(var.value());
             }
         }
@@ -139,7 +139,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_system_task() {
     std::string task_name = function_name.substr(1, function_name.size()-1);
     std::vector<resolved_parameter> resolved_arguments;
     for (auto &arg:arguments) {
-        auto resolved_val = arg->evaluate(true);
+        auto resolved_val = arg->evaluate();
         if (!resolved_val.has_value()) return std::nullopt;
         resolved_arguments.push_back(resolved_val.value());
     }

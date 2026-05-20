@@ -32,7 +32,7 @@ bool loop_solver::is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression en
     end_cond.propagate_constant(lv->get_identifier(), val.value());
 
 
-    auto ec = end_cond.evaluate(false);
+    auto ec = end_cond.evaluate();
     if (!ec.has_value()) throw std::runtime_error("Could not evaluate loop end condition");
     if (!std::holds_alternative<int64_t>(ec.value())) throw std::runtime_error("loop end condition expression must ret");
     return std::get<int64_t>(ec.value()) == 0;
@@ -52,7 +52,7 @@ std::shared_ptr<HDL_parameter> loop_solver::update_loop( Expression e, std::shar
     auto val = loop_var->get_numeric_value();
     if(!val.has_value()) throw std::runtime_error("Could not get the numeric value of a loop variable, something is seriously wrong");
     e.propagate_constant(loop_var->get_identifier(), val.value());
-    auto res = e.evaluate(false);
+    auto res = e.evaluate();
     if (!res.has_value()) throw std::runtime_error("Could not evaluate loop end condition");
     if (!std::holds_alternative<int64_t>(res.value())) throw std::runtime_error("loop end condition expression must ret");
 

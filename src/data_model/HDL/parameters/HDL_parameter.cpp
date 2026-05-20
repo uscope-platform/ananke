@@ -75,9 +75,9 @@ std::optional<resolved_parameter> HDL_parameter::evaluate() {
 
     std::optional<resolved_parameter> result;
     if(raw_value->is_expression() || raw_value->is_function()) {
-        result = raw_value->evaluate(false);
+        result = raw_value->evaluate();
     } else if(raw_value->is_concatenation() || raw_value->is_replication()) {
-        result = raw_value->evaluate(type.get_unpacked_dimensions().empty());
+        result = raw_value->evaluate();
     }
     if(default_initialization){
         return process_default_initialization();
@@ -151,9 +151,8 @@ std::string HDL_parameter::to_string() const {
     else if (std::holds_alternative<std::string>(solved_value.value())) result += "string_parameter";
     else if (std::holds_alternative<int64_t>(solved_value.value())) {
         result += "numeric_parameter";
-        auto val = std::get<mdarray<int64_t>>(solved_value.value()).get_scalar();
-        if(val.has_value()) result += "\n  VALUE: " + std::to_string(val.value());
-        else result += "\n  VALUE: xxx";
+        auto val = std::get<int64_t>(solved_value.value());
+        result += "\n  VALUE: " + std::to_string(val);
     }
     else if (std::holds_alternative<mdarray<int64_t>>(solved_value.value())) result += "array_parameter";
 
@@ -205,8 +204,8 @@ inline resolved_parameter HDL_parameter::process_default_initialization() {
     }
 
     for(auto &item : type.get_unpacked_dimensions()){
-        auto first_dim = item.first_bound.evaluate(false);
-        auto second_dim = item.second_bound.evaluate(false);
+        auto first_dim = item.first_bound.evaluate();
+        auto second_dim = item.second_bound.evaluate();
         if (!first_dim.has_value() || !second_dim.has_value())   throw std::runtime_error("Error: dimensions of default initialized parameters should be fully defined");
         if (!std::holds_alternative<int64_t>(first_dim.value()) || !std::holds_alternative<int64_t>(second_dim.value()))   throw std::runtime_error("Error: dimensions of default initialized parameters should be integers");
         auto first_i = std::get<int64_t>(first_dim.value());
@@ -218,7 +217,7 @@ inline resolved_parameter HDL_parameter::process_default_initialization() {
         dimensions.insert(dimensions.begin(), 1);
     }
 
-    auto init_value = raw_value->evaluate(false);
+    auto init_value = raw_value->evaluate();
 
     if (!init_value.has_value()) throw std::runtime_error("Error: initializer of default array should be defined");
 
@@ -272,9 +271,7 @@ inline std::optional<resolved_parameter> HDL_parameter::evaluate_vector() {
         return process_default_initialization();
     }
     bool ret_string = true;
-    auto expr_depth = raw_value->get_depth();
-    bool pack = type.get_unpacked_dimensions().size() < expr_depth;
-    auto expr_value = raw_value->evaluate(pack);
+    auto expr_value = raw_value->evaluate();
     if (expr_value.has_value()) {
         if (std::holds_alternative<std::string>(expr_value.value())) {
             auto stacked_arr = mdarray<std::string>::stack(ret_s, std::get<std::string>(expr_value.value()));

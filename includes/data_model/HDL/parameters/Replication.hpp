@@ -49,7 +49,7 @@ public:
     bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value)override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
     void propagate_function(const HDL_function_def &def) override;
-    std::optional<resolved_parameter> evaluate(bool pack_result) override;
+    std::optional<resolved_parameter> evaluate() override;
 
     int64_t pack_repetition(int64_t value, int64_t width, int64_t count);
 
@@ -69,7 +69,7 @@ public:
         return std::make_shared<Replication>(*this);  // Copy constructor
     }
 
-    void set_container_sizes(const resolved_type &s) override {}
+    void set_container_sizes(const resolved_type &s) override;
 
     template<class Archive>
     void serialize( Archive & ar ) {
@@ -87,6 +87,7 @@ public:
         return res;
     }
 private:
+    bool packing = false;
     Expression repetition_size;
     std::shared_ptr<Parameter_value_base> repeated_item;
 };

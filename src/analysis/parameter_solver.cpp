@@ -202,6 +202,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         if (node_parameters.contains(param->get_name())) {
             param->set_packed_dimensions(node_parameters.get(param->get_name())->get_packed_dimensions());
             param->set_unpacked_dimensions(node_parameters.get(param->get_name())->get_unpacked_dimensions());
+            param->set_type(node_parameters.get(param->get_name())->get_type());
         }
     }
 

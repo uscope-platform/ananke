@@ -101,26 +101,26 @@ void Replication::propagate_function(const HDL_function_def &def) {
     repeated_item->propagate_function(def);
 }
 
-std::optional<resolved_parameter> Replication::evaluate(bool pack_result) {
+std::optional<resolved_parameter> Replication::evaluate() {
     mdarray<int64_t> result;
-    auto raw_size = repetition_size.evaluate(false);
+    auto raw_size = repetition_size.evaluate();
     if (!raw_size.has_value()) return false;
     if (!std::holds_alternative<int64_t>(raw_size.value())) return false;
     auto size = std::get<int64_t>(raw_size.value());
     mdarray<int64_t>::md_1d_array repeated_value;
     if (repeated_item->is_expression()) {
-        auto item = repeated_item->as<Expression>().evaluate(false);
+        auto item = repeated_item->as<Expression>().evaluate();
         int64_t repeated_size = repeated_item->as<Expression>().get_size();
         if (!item.has_value()) return false;
         if (!std::holds_alternative<int64_t>(item.value())) throw std::runtime_error("Tried to replicate non integer");
-        if (!pack_result) {
+        if (!packing) {
             repeated_value = std::vector(size, std::get<int64_t>(item.value()));
         } else {
             return pack_repetition(std::get<int64_t>(item.value()), repeated_size, size);
         }
     } else if (repeated_item->is_concatenation()) {
 
-        auto raw_item = repeated_item->as<Concatenation>().evaluate(pack_result);
+        auto raw_item = repeated_item->as<Concatenation>().evaluate();
         if (!raw_item.has_value()) return std::nullopt;
         auto item = raw_item.value();
         if (std::holds_alternative<int64_t>(item))
@@ -162,4 +162,8 @@ std::string Replication::print() const {
     oss << repeated_item->print();
     oss << "}}";
     return oss.str();
+}
+
+void Replication::set_container_sizes(const resolved_type &s) {
+    packing = s.unpacked_sizes.empty();
 }
