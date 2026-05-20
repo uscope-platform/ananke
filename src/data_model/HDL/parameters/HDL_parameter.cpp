@@ -74,14 +74,13 @@ std::optional<resolved_parameter> HDL_parameter::evaluate() {
     raw_value->set_container_sizes(container_size.value());
 
     std::optional<resolved_parameter> result;
-    if (type.is_scalar()) {
-        if(raw_value->is_expression() || raw_value->is_function()) {
-            result = raw_value->evaluate(false);
-        } else if(raw_value->is_concatenation() || raw_value->is_replication()) {
-            result = raw_value->evaluate(type.get_unpacked_dimensions().empty());
-        }
-    } else {
-        result  = evaluate_vector();
+    if(raw_value->is_expression() || raw_value->is_function()) {
+        result = raw_value->evaluate(false);
+    } else if(raw_value->is_concatenation() || raw_value->is_replication()) {
+        result = raw_value->evaluate(type.get_unpacked_dimensions().empty());
+    }
+    if(default_initialization){
+        return process_default_initialization();
     }
     return result;
 }

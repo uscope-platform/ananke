@@ -17,12 +17,13 @@
 
 
 void HDL_parameters_factory::new_parameter(const std::string &name) {
-      new_basic_resource(name);
+      current_resource.set_name(name);
       current_resource.set_packed_dimensions(index_factory.get_dimensions());
 }
 
 std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
     auto resource = get_resource();
+    new_basic_resource("");
     return std::make_shared<HDL_parameter>(resource);
 }
 

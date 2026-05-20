@@ -30,7 +30,8 @@ public:
 
     HDL_type(HDL_type &&other) noexcept
         : scalar(other.scalar),
-          declared_type(std::move(other.declared_type)),
+          is_signed(other.is_signed),
+          is_real(other.is_real),
           unpacked_dimensions(std::move(other.unpacked_dimensions)),
           packed_dimensions(std::move(other.packed_dimensions)) {
     }
@@ -39,7 +40,8 @@ public:
         if (this == &other)
             return *this;
         scalar = other.scalar;
-        declared_type = other.declared_type;
+        is_signed = other.is_signed;
+        is_real = other.is_real;
         unpacked_dimensions = other.unpacked_dimensions;
         packed_dimensions = other.packed_dimensions;
         return *this;
@@ -49,8 +51,9 @@ public:
         if (this == &other)
             return *this;
         scalar = other.scalar;
+        is_signed = other.is_signed;
+        is_real = other.is_real;
         unpacked_dimensions = std::move(other.unpacked_dimensions);
-        declared_type = std::move(other.declared_type);
         packed_dimensions = std::move(other.packed_dimensions);
         return *this;
     }
@@ -59,7 +62,8 @@ public:
         bool ret = true;
 
         ret &= lhs.scalar == rhs.scalar;
-        ret &= lhs.declared_type == rhs.declared_type;
+        ret &= lhs.is_signed == rhs.is_signed;
+        ret &= lhs.is_real == rhs.is_real;
         if(lhs.unpacked_dimensions.size() != rhs.unpacked_dimensions.size()) return false;
         for(int i = 0; i<lhs.unpacked_dimensions.size(); i++){
             ret &= lhs.unpacked_dimensions[i].packed == rhs.unpacked_dimensions[i].packed;
@@ -83,12 +87,12 @@ public:
     [[nodiscard]] bool is_scalar()const {return scalar;}
     [[nodiscard]] bool is_packed_array()const {return unpacked_dimensions.empty() && !packed_dimensions.empty();}
 
-    void set_packed_dimensions(const std::vector<dimension_t>  &d) {packed_dimensions = d;};
+    void set_packed_dimensions(const std::vector<dimension_t>  &d);
     void set_unpacked_dimensions(const std::vector<dimension_t>  &d) {unpacked_dimensions = d;};
     [[nodiscard]] std::vector<dimension_t> get_packed_dimensions() const {return  packed_dimensions;};
     [[nodiscard]] std::vector<dimension_t> get_unpacked_dimensions() const {return  unpacked_dimensions;};
 
-    void set_declared_type(const std::string &type) {declared_type = type;}
+    void set_declared_type(const std::string &type);
     bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value);
     std::set<qualified_identifier> get_dependencies();
 
@@ -97,11 +101,12 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(scalar, declared_type, unpacked_dimensions, packed_dimensions);
+        ar(scalar, unpacked_dimensions, packed_dimensions);
     }
 private:
     bool scalar = true;
-    std::string declared_type;
+    bool is_signed = false;
+    bool is_real = false;
     std::vector<dimension_t> unpacked_dimensions;
     std::vector<dimension_t> packed_dimensions;
 

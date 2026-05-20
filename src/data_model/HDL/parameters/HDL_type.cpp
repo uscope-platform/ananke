@@ -25,6 +25,63 @@ void HDL_type::add_dimension(const dimension_t &d) {
     }
 }
 
+void HDL_type::set_packed_dimensions(const std::vector<dimension_t> &d) {
+    packed_dimensions.insert(packed_dimensions.end(), d.begin(), d.end());
+}
+
+void HDL_type::set_declared_type(const std::string &type) {
+    if (type == "shortint") {
+        is_signed = true;
+        packed_dimensions.push_back({
+            Expression({Expression_component("15", Expression_component::number)}),
+            Expression({Expression_component("0", Expression_component::number)}),
+            true
+        });
+    }
+    if (type == "int" || type == "integer") {
+        is_signed = true;
+        packed_dimensions.push_back({
+            Expression({Expression_component("31", Expression_component::number)}),
+            Expression({Expression_component("0", Expression_component::number)}),
+            true
+        });
+    }
+    if (type == "longint") {
+        is_signed = true;
+        packed_dimensions.push_back({
+            Expression({Expression_component("63", Expression_component::number)}),
+            Expression({Expression_component("0", Expression_component::number)}),
+            true
+        });
+    }
+    if (type == "time") {
+        is_signed = false;
+        packed_dimensions.push_back({
+            Expression({Expression_component("63", Expression_component::number)}),
+            Expression({Expression_component("0", Expression_component::number)}),
+            true
+        });
+    }
+
+    if (type == "real" || type == "realtime") {
+        is_real = true;
+        packed_dimensions.push_back({
+            Expression({Expression_component("63", Expression_component::number)}),
+            Expression({Expression_component("0", Expression_component::number)}),
+            true
+        });
+    }
+    if (type == "shortreal") {
+        is_real = true;
+        packed_dimensions.push_back({
+            Expression({Expression_component("31", Expression_component::number)}),
+            Expression({Expression_component("0", Expression_component::number)}),
+            true
+        });
+    }
+
+}
+
 bool HDL_type::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value) {
     bool retval = true;
     for (auto &dim: packed_dimensions) {

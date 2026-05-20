@@ -96,6 +96,7 @@ TEST(parameter_extraction, size_cast) {
     c.set_size(Expression({Expression_component("4", Expression_component::number)}));
     c.set_content(std::make_shared<Expression>(Expression({Expression_component("31'h100003", Expression_component::number)})));
     p->set_scalar(std::make_shared<Cast>(c));
+    p->set_declared_type("integer");
     check_params.insert(p);
 
 
@@ -131,6 +132,7 @@ TEST(parameter_extraction, paretesized_cast) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("SIZE");
     p->add_component(Expression_component(4, 2));
+    p->set_declared_type("integer");
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -144,6 +146,7 @@ TEST(parameter_extraction, paretesized_cast) {
     }));
     c.set_content(std::make_shared<Expression>(Expression({Expression_component("31'h100003", Expression_component::number)})));
     p->set_scalar(std::make_shared<Cast>(c));
+    p->set_declared_type("integer");
     check_params.insert(p);
 
 
@@ -356,6 +359,7 @@ TEST(parameter_extraction,time_literal) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     p->add_component(Expression_component("10ns", Expression_component::string));
+    p->set_declared_type("integer");
     check_params.insert(p);
 
 
@@ -401,7 +405,7 @@ TEST(parameter_extraction, cast_in_concat) {
     c.set_content(std::make_shared<Expression>(Expression({Expression_component("31'h100003", Expression_component::number)})));
     concat.add_component(std::make_shared<Cast>(c));
     p->add_item(std::make_shared<Concatenation>(concat));
-    //p->set_declared_type("integer");
+    p->set_declared_type("integer");
 
 
     
@@ -1729,6 +1733,57 @@ TEST(parameter_extraction, multidimensional_array_expression) {
 }
 */
 
+
+TEST(parameter_extraction, int_concat_initialization) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter int test_parameter  = '{1'b1, 1'b1, 1'b1}
+        )();
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+
+    auto p = std::make_shared<HDL_parameter>();
+
+    p->set_name("test_parameter");
+
+    Concatenation c;
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    p->add_item(std::make_shared<Concatenation>(c));
+    p->set_declared_type("int");
+
+    check_params.insert(p);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& item:check_params){
+        ASSERT_TRUE(parameters.contains(item->get_name()));
+        EXPECT_EQ(*item, *parameters.get(item->get_name()));
+    }
+
+    auto defaults = resource.get_default_parameters();
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {{"","", "test_parameter"}, 7}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+
+}
+
+
 TEST(parameter_extraction, simple_repetition_initialization) {
     auto test_pattern = R"(
         module test_mod #(
@@ -1764,6 +1819,7 @@ TEST(parameter_extraction, simple_repetition_initialization) {
     rep.set_size({Expression_component("repetition_size", Expression_component::identifier)});
     rep.set_item(std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)})));
     p->add_item(std::make_shared<Replication>(rep));
+    p->set_declared_type("int");
 
 
     
@@ -1821,7 +1877,7 @@ TEST(parameter_extraction, packed_repetition_initialization) {
     p = std::make_shared<HDL_parameter>();
    
     p->set_name("repetition_parameter_1");
-
+    p->set_declared_type("int");
     
     Replication rep;
     rep.set_size({Expression_component("repetition_size", Expression_component::identifier)});
@@ -2984,7 +3040,7 @@ TEST(parameter_extraction, concat_in_function) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    
+    p.set_declared_type("integer");
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("get_axis_metadata");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("11", Expression_component::number)})));
@@ -3041,7 +3097,7 @@ TEST(parameter_extraction, replication_in_function) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    
+    p.set_declared_type("integer");
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("get_axis_metadata");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("11", Expression_component::number)})));
@@ -3100,7 +3156,7 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    
+    p.set_declared_type("integer");
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("get_axis_metadata");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("11", Expression_component::number)})));
