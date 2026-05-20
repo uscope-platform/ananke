@@ -127,7 +127,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
         if(!std::holds_alternative<int64_t>(idx.value())) return std::nullopt;
         auto idx_val = std::get<int64_t>(idx.value());
         auto value = a.get_value()->evaluate();
-        value_sizes = a.get_value()->get_size();
+        value_sizes[idx_val] = a.get_value()->get_size();
         if(!value.has_value()) return std::nullopt;
         values[idx_val] = std::get<int64_t>(value.value());
     }
@@ -139,11 +139,11 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
             for(auto &l:loop_indexes) {
                 auto la = loop_assignments[i].clone();
                 la.get_index().value()->propagate_constant(loop_var, l);
-                auto idx = la.get_index().value()->evaluate();
+                auto idx_val = std::get<int64_t>(*la.get_index().value()->evaluate());
                 la.get_value()->propagate_constant(loop_var, l);
-                value_sizes = la.get_value()->get_size();
+                value_sizes[idx_val] = la.get_value()->get_size();
                 auto var = la.get_value()->evaluate();
-                values[std::get<int64_t>(idx.value())] = std::get<int64_t>(var.value());
+                values[idx_val] = std::get<int64_t>(var.value());
             }
         }
     }
