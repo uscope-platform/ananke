@@ -3425,13 +3425,15 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
             parameter OFFSET = 100
         )();
 
-            function logic [31:0] CTRL_ADDR_CALC();
+
+            typedef logic [31:0] ctrl_addr_init_t [2:0];
+            function ctrl_addr_init_t CTRL_ADDR_CALC();
                 for(int i = 0; i<N_CHAINS; i++)begin
                     CTRL_ADDR_CALC[i] = OFFSET*i;
                 end
             endfunction
 
-            parameter [31:0] TEST_PARAM = CTRL_ADDR_CALC();
+        parameter logic [31:0] TEST_PARAM [2:0] = CTRL_ADDR_CALC();
         endmodule
     )";
 
@@ -3480,6 +3482,13 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
         {Expression_component("0", Expression_component::number)},
         true
     });
+    p.add_dimension({
+        {
+            Expression_component("2", Expression_component::number)
+        },
+       {Expression_component("0", Expression_component::number)},
+       false
+   });
     p.set_scalar(std::make_shared<HDL_function_call>(call));
 
     EXPECT_EQ(p, *param);
