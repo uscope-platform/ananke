@@ -3333,14 +3333,14 @@ TEST(parameter_extraction, loop_function_parameter) {
 
         module test_mod #(
         )();
+            typedef logic [31:0] ctrl_addr_init_t [2:0];
+                function ctrl_addr_init_t CTRL_ADDR_CALC();
+                    for(int i = 0; i<3; i++)begin
+                        CTRL_ADDR_CALC[i] = 100*i;
+                    end
+                endfunction
 
-            function logic [31:0] CTRL_ADDR_CALC();
-                for(int i = 0; i<3; i++)begin
-                    CTRL_ADDR_CALC[i] = 100*i;
-                end
-            endfunction
-
-            parameter [31:0] TEST_PARAM = CTRL_ADDR_CALC();
+            parameter logic [31:0] TEST_PARAM [2:0] = CTRL_ADDR_CALC();
         endmodule
     )";
 
@@ -3359,6 +3359,14 @@ TEST(parameter_extraction, loop_function_parameter) {
          },
         {Expression_component("0", Expression_component::number)},
         true
+    });
+
+    p.add_dimension({
+         {
+             Expression_component("2", Expression_component::number)
+         },
+        {Expression_component("0", Expression_component::number)},
+        false
     });
     p.set_scalar(std::make_shared<Expression>(Expression({Expression_component("CTRL_ADDR_CALC", Expression_component::identifier)})));
     HDL_function_call call("CTRL_ADDR_CALC");

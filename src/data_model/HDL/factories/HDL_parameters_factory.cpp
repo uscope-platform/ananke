@@ -158,6 +158,7 @@ void HDL_parameters_factory::stop_expression_new() {
             } else if(calls_factory.in_function_call()) {
                 calls_factory.add_argument(std::make_shared<Expression>(expr.value()));
             } else {
+                current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
                 current_resource.set_scalar(std::make_shared<Expression>(expr.value()));
             }
         }
@@ -329,6 +330,7 @@ void HDL_parameters_factory::stop_function_assignment() {
         if (concat_factory.in_concatenation()) {
             concat_factory.add_component(calls_factory.get_function());
         } else {
+            current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
             current_resource.set_scalar(calls_factory.get_function());
         }
     }
