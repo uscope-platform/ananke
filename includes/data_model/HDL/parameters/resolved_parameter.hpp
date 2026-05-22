@@ -1,0 +1,62 @@
+//  Copyright 2026 Filippo Savi
+//  Author: Filippo Savi <filssavi@gmail.com>
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
+#ifndef ANANKE_RESOLVED_PARAMETER_HPP
+#define ANANKE_RESOLVED_PARAMETER_HPP
+
+#include <variant>
+#include <cstdint>
+#include <string>
+#include "data_model/mdarray.hpp"
+
+
+#include <cereal/types/variant.hpp>
+
+class resolved_parameter {
+public:
+    resolved_parameter() = default;
+    resolved_parameter(int init_val) { content = static_cast<int64_t>(init_val); }
+    resolved_parameter(int64_t init_val){content = init_val;}
+    resolved_parameter(const std::string &init_val){content = init_val;}
+    resolved_parameter(double init_val){content = init_val;}
+    resolved_parameter(const mdarray<int64_t> &init_val){content = init_val;}
+    resolved_parameter(const mdarray<std::string> &init_val){content = init_val;}
+    [[nodiscard]] int64_t get_integer() const;
+    [[nodiscard]] std::string get_string() const;
+    [[nodiscard]] mdarray<int64_t> get_int_array() const;
+    [[nodiscard]] mdarray<std::string> get_string_array() const;
+    [[nodiscard]] double get_real() const;
+    [[nodiscard]] bool is_integer() const {return std::holds_alternative<int64_t>(content);}
+    [[nodiscard]] bool is_string() const {return std::holds_alternative<std::string>(content);}
+    [[nodiscard]] bool is_int_array() const {return std::holds_alternative<mdarray<int64_t>>(content);}
+    [[nodiscard]] bool is_string_array() const {return std::holds_alternative<mdarray<std::string>>(content);}
+    [[nodiscard]] bool is_real() const {return std::holds_alternative<double>(content);}
+
+    bool operator==(const resolved_parameter&) const = default;
+
+    template<class Archive>
+    void serialize( Archive & ar ) {
+        ar(content);
+    }
+
+private:
+
+    std::variant<int64_t, std::string, mdarray<int64_t>,  double, mdarray<std::string>> content;
+
+};
+
+
+
+#endif //ANANKE_RESOLVED_PARAMETER_HPP

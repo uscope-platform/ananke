@@ -18,6 +18,8 @@
 
 #include "data_model/HDL/parameters/HDL_function_call.hpp"
 
+using namespace std::string_literals;
+
 const std::regex Expression_component::sv_constant_regex(R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))");
 const std::regex Expression_component::number_regex(R"(^\d+$)");
 const std::regex Expression_component::float_regex(R"(^[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?$|^[+-]?\d+[eE][+-]?\d+$)");
@@ -70,7 +72,7 @@ Expression_component::Expression_component(const std::shared_ptr<Parameter_value
 std::set<qualified_identifier> Expression_component::get_dependencies()const {
     std::set<qualified_identifier> result;
     if (is_identifier()){
-        result.insert({package_prefix, instance_prefix, std::get<std::string>(value)});
+        result.insert({package_prefix, instance_prefix, value.get_string()});
     }
     for (const auto &idx:array_index) {
         auto idx_deps = idx.get_dependencies();
@@ -93,8 +95,8 @@ bool Expression_component::propagate_constant(const qualified_identifier &consta
         auto idx_val = component.evaluate();
         if (idx_val.has_value()) {
             index_need_rewrite = true;
-            if (!std::holds_alternative<int64_t>(idx_val.value())) return false;
-            indices.push_back(std::get<int64_t>(idx_val.value()));
+            if (!idx_val.value().is_integer()) return false;
+            indices.push_back(idx_val.value().get_integer());
         }
     }
     if(array_index.size() != indices.size()) return false;
@@ -103,11 +105,11 @@ bool Expression_component::propagate_constant(const qualified_identifier &consta
             array_index[i] = {Expression_component(indices[i], 0)};
         }
     }
-    if (std::holds_alternative<std::string>(value)) {
-        if (std::get<std::string>(value) == constant_id.name && package_prefix == constant_id.prefix) {
+    if (value.is_string()) {
+        if (value.get_string() == constant_id.name && package_prefix == constant_id.prefix) {
             if (!array_index.empty()) {
-                if(std::holds_alternative<mdarray<int64_t>>(const_value)) {
-                    auto values = std::get<mdarray<int64_t>>(const_value);
+                if(const_value.is_int_array()) {
+                    auto values = const_value.get_int_array();
                     auto array_val = values.get_value(indices);
                     if (array_val.has_value()) {
                         type = number;
@@ -117,8 +119,8 @@ bool Expression_component::propagate_constant(const qualified_identifier &consta
                         type = number;
                         value = 0; // if the array value is not found (because of some dimensional issue) substitute with a 0 rather than crashing
                     }
-                }else if(std::holds_alternative<mdarray<std::string>>(const_value)) {
-                    auto values = std::get<mdarray<std::string>>(const_value);
+                }else if(const_value.is_string_array()) {
+                    auto values = const_value.get_string_array();
                     auto array_val = values.get_value(indices);
                     if (array_val.has_value()) {
                         type = string;
@@ -126,10 +128,10 @@ bool Expression_component::propagate_constant(const qualified_identifier &consta
                     }
                     else {
                         type = string;
-                        value = ""; // if the array value is not found (because of some dimensional issue) substitute with a 0 rather than crashing
+                        value = ""s; // if the array value is not found (because of some dimensional issue) substitute with a 0 rather than crashing
                     }
                 } else {
-                    std::bitset<64> bits(std::get<int64_t>(const_value));
+                    std::bitset<64> bits(const_value.get_integer());
                     type = number;
                     value = static_cast<int64_t>(bits[indices[0]]);
                 }
@@ -166,12 +168,12 @@ bool operator==(const Expression_component &lhs, const Expression_component &rhs
 std::string Expression_component::print_value() const {
     std::string ret_val;
      if(is_numeric()){
-        ret_val = std::to_string(std::get<int64_t>(value));
+        ret_val = std::to_string(value.get_integer());
     } else {
         if(!array_index.empty()){
-            ret_val = std::get<std::string>(value) + print_index(array_index);
+            ret_val = value.get_string() + print_index(array_index);
         } else {
-            ret_val = std::get<std::string>(value);
+            ret_val = value.get_string();
         }
     }
 
@@ -188,7 +190,7 @@ std::pair<resolved_parameter, int64_t>  Expression_component::process_number(con
         ret_value = std::stod(s);
     } else if(test_parameter_type(number_regex, s)) {
         ret_value = static_cast<int64_t>(std::stoul(s));
-        ret_size = calculate_binary_size(std::get<int64_t>(ret_value));
+        ret_size = calculate_binary_size(ret_value.get_integer());
     } else if(test_parameter_type(sv_constant_regex, s)){
         std::smatch base_match;
         if(std::regex_search(s, base_match, sv_constant_regex)){
@@ -220,7 +222,7 @@ std::pair<resolved_parameter, int64_t>  Expression_component::process_number(con
                 if(!base_match[1].str().empty()) {
                     ret_size = std::stoll(base_match[1].str());
                 } else {
-                    ret_size = calculate_binary_size(std::get<int64_t>(ret_value));
+                    ret_size = calculate_binary_size(ret_value.get_integer());
                 }
             }
         }
@@ -239,15 +241,15 @@ bool Expression_component::test_parameter_type(const std::regex &r, const std::s
 }
 
 Expression_component::operator_type_t Expression_component::get_operator_type() {
-    if(!operators_types.contains(std::get<std::string>(value))){
+    if(!operators_types.contains(value.get_string())){
         throw std::runtime_error("Error: attempted to get the type of a non operator/function expression component");
     }
-    return operators_types[std::get<std::string>(value)];
+    return operators_types[value.get_string()];
 }
 
 int64_t Expression_component::get_operator_precedence() {
-    if (std::holds_alternative<int64_t>(value))  throw std::runtime_error("Error: attempted to get the precedence of a number");
-    auto string_value = std::get<std::string>(value);
+    if (value.is_integer())  throw std::runtime_error("Error: attempted to get the precedence of a number");
+    auto string_value = value.get_string();
     if(!operators_precedence.contains(string_value)){
         throw std::runtime_error("Error: attempted to get the precedence of a non operator/function expression component");
     }
@@ -264,12 +266,12 @@ std::optional<resolved_parameter> Expression_component::get_value() const {
 }
 
 bool Expression_component::is_right_associative() {
-    if (std::holds_alternative<int64_t>(value))  throw std::runtime_error("Error: attempted to get the associativity of a number");
-    auto string_value = std::get<std::string>(value);
+    if (value.is_integer())  throw std::runtime_error("Error: attempted to get the associativity of a number");
+    auto string_value = value.get_string();
     if((type != operation) && (type != function)){
         throw std::runtime_error("Error: attempted to get the right associativity of a non operator/function expression component");
     }
-    return right_associative_set.contains(std::get<std::string>(value));
+    return right_associative_set.contains(value.get_string());
 }
 
 std::string Expression_component::print_index(const std::vector<Expression> &index) const {

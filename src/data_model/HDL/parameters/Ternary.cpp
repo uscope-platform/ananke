@@ -57,7 +57,7 @@ void Ternary::propagate_expression(const qualified_identifier &constant_id,
 std::optional<resolved_parameter> Ternary::evaluate() {
     auto condition_value = condition.evaluate();
     if (!condition_value.has_value()) return std::nullopt;
-    auto int_val = std::get<int64_t>(condition_value.value());
+    auto int_val = condition_value.value().get_integer();
     if (int_val == 0) {
         return false_value->evaluate();
     } else {

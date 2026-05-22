@@ -16,6 +16,8 @@
 #include "analysis/parameter_solver.hpp"
 #include "data_model/data_store.hpp"
 
+using namespace std::string_literals;
+
 std::map<qualified_identifier, resolved_parameter> parameter_solver::process_parameters(
     const Parameters_map &map_in,
     const std::string_view &parent_module,
@@ -42,7 +44,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
                 for(const auto&[prefix, identifier, name]:dependencies) {
                      if(!prefix.empty()) {
                         // At parse time, package parameters are not yet known. Insert a sentinel so downstream code knows to defer evaluation.
-                        solved_parameters.insert({param_id, "__RUNTIME_ONLY_PARAMETER__"});
+                        solved_parameters.insert({param_id, "__RUNTIME_ONLY_PARAMETER__"s});
                     }
                 }
             }

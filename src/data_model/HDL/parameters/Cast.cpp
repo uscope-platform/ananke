@@ -70,37 +70,37 @@ std::optional<resolved_parameter> Cast::evaluate() {
         if (!container_size) return std::nullopt;
         auto content_val = content->evaluate();
         if (!content_val.has_value()) return std::nullopt;
-        if (!std::holds_alternative<int64_t>(*content_val)) {
+        if (!content_val.value().is_integer()) {
             spdlog::warn("Casting of non scalar integer values is not supported");
         }
         uint64_t container = 64;
         if (!container_size->packed_sizes.empty()) container = container_size->packed_sizes[0];
         if (target_type == "signed") {
-            return type_cast_engine::to_signed(std::get<int64_t>(content_val.value()), container);
+            return type_cast_engine::to_signed(content_val.value().get_integer(), container);
         }
         if (target_type == "unsigned") {
-            return type_cast_engine::to_unsigned(std::get<int64_t>(content_val.value()), container);
+            return type_cast_engine::to_unsigned(content_val.value().get_integer(), container);
         }
         if (target_type == "int"){
-            if (std::holds_alternative<double>(content_val.value())) {
-                return type_cast_engine::to_int(std::get<double>(content_val.value()), container);
+            if (content_val.value().is_real()) {
+                return type_cast_engine::to_int(content_val.value().get_real(), container);
             } else {
-                return type_cast_engine::to_int(std::get<int64_t>(content_val.value()), container);
+                return type_cast_engine::to_int(content_val.value().get_integer(), container);
             }
 
         }
     } else {
         auto content_val = content->evaluate();
         if (!content_val.has_value()) return std::nullopt;
-        if (!std::holds_alternative<int64_t>(content_val.value())) return content_val.value();
+        if (!content_val.value().is_integer()) return content_val.value();
         auto raw_cast_size = size.evaluate();
         if (!raw_cast_size.has_value()) return std::nullopt;
-        if (!std::holds_alternative<int64_t>(raw_cast_size.value())) {
+        if (!raw_cast_size.value().is_integer()) {
             spdlog::warn("Cast size evaluates to a non integer");
             return content_val.value();
         }
-        auto raw_value = std::get<int64_t>(content_val.value());
-        auto cast_size = std::get<int64_t>(raw_cast_size.value());
+        auto raw_value = content_val.value().get_integer();
+        auto cast_size = raw_cast_size.value().get_integer();
         int64_t mask = (1ULL << cast_size) - 1;
         return raw_value &  mask;
     }
@@ -115,7 +115,7 @@ std::string Cast::print() const {
 }
 
 int64_t Cast::get_size() {
-    return std::get<int64_t>(size.evaluate().value());
+    return size.evaluate().value().get_integer();
 }
 
 
@@ -135,7 +135,7 @@ void Cast::set_container_sizes(const resolved_type &s) {
     else {
         auto cast_size = size.evaluate();
         resolved_type t;
-        t.packed_sizes.push_back(std::get<int64_t>(cast_size.value()));
+        t.packed_sizes.push_back(cast_size.value().get_integer());
         if (cast_size) content->set_container_sizes(t);
     }
 }

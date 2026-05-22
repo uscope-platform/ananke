@@ -102,28 +102,28 @@ std::optional<resolved_parameter> Replication::evaluate() {
     mdarray<int64_t> result;
     auto raw_size = repetition_size.evaluate();
     if (!raw_size.has_value()) return false;
-    if (!std::holds_alternative<int64_t>(raw_size.value())) return false;
-    auto size = std::get<int64_t>(raw_size.value());
+    if (!raw_size.value().is_integer()) return false;
+    auto size = raw_size.value().get_integer();
     mdarray<int64_t>::md_1d_array repeated_value;
     if (repeated_item->is_expression()) {
         auto item = repeated_item->as<Expression>().evaluate();
         int64_t repeated_size = repeated_item->as<Expression>().get_size();
         if (!item.has_value()) return false;
-        if (!std::holds_alternative<int64_t>(item.value())) throw std::runtime_error("Tried to replicate non integer");
+        if (!item.value().is_integer()) throw std::runtime_error("Tried to replicate non integer");
         if (!packing) {
-            repeated_value = std::vector(size, std::get<int64_t>(item.value()));
+            repeated_value = std::vector(size, item.value().get_integer());
         } else {
-            return pack_repetition(std::get<int64_t>(item.value()), repeated_size, size);
+            return pack_repetition(item.value().get_integer(), repeated_size, size);
         }
     } else if (repeated_item->is_concatenation()) {
 
         auto raw_item = repeated_item->as<Concatenation>().evaluate();
         if (!raw_item.has_value()) return std::nullopt;
         auto item = raw_item.value();
-        if (std::holds_alternative<int64_t>(item))
-            repeated_value = std::vector(size, std::get<int64_t>(item));
+        if (item.is_integer())
+            repeated_value = std::vector(size, item.get_integer());
         else {
-            auto  item_vect = std::get<mdarray<int64_t>>(item).get_1d_slice({0,0});
+            auto  item_vect = item.get_int_array().get_1d_slice({0,0});
             for (int i = 0; i< size; i++) {
                 repeated_value.insert(repeated_value.end(), item_vect.begin(), item_vect.end());
             }

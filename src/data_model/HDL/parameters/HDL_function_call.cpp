@@ -98,8 +98,8 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_scalar() {
     auto raw_value = assignments[0].get_value()->evaluate();
     if (!raw_value) return std::nullopt;
     if (packing) {
-        if (!std::holds_alternative<mdarray<int64_t>>(*raw_value)) return raw_value;
-        auto components = std::get<mdarray<int64_t>>(raw_value.value()).get_1d_slice({0, 0});
+        if (!raw_value.value().is_int_array()) return raw_value;
+        auto components = raw_value.value().get_int_array().get_1d_slice({0, 0});
         auto size = 0;
         if (assignments[0].get_value()->is_replication()) size = assignments[0].get_value()->as<Replication>().get_item()->get_size();
         else size = assignments[0].get_value()->get_size();
@@ -124,12 +124,12 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
     for(auto &a:assignments) {
         auto idx = a.get_index().value()->evaluate();
         if(!idx.has_value()) return std::nullopt;
-        if(!std::holds_alternative<int64_t>(idx.value())) return std::nullopt;
-        auto idx_val = std::get<int64_t>(idx.value());
+        if(!idx.value().is_integer()) return std::nullopt;
+        auto idx_val = idx.value().get_integer();
         auto value = a.get_value()->evaluate();
         value_sizes[idx_val] = a.get_value()->get_size();
         if(!value.has_value()) return std::nullopt;
-        values[idx_val] = std::get<int64_t>(value.value());
+        values[idx_val] = value.value().get_integer();
     }
 
     if(loop_metadata.has_value()) {
@@ -139,11 +139,11 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
             for(auto &l:loop_indexes) {
                 auto la = loop_assignments[i].clone();
                 la.get_index().value()->propagate_constant(loop_var, l);
-                auto idx_val = std::get<int64_t>(*la.get_index().value()->evaluate());
+                auto idx_val = la.get_index().value()->evaluate().value().get_integer();
                 la.get_value()->propagate_constant(loop_var, l);
                 value_sizes[idx_val] = la.get_value()->get_size();
                 auto var = la.get_value()->evaluate();
-                values[idx_val] = std::get<int64_t>(var.value());
+                values[idx_val] = var.value().get_integer();
             }
         }
     }
@@ -165,46 +165,46 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_system_task() {
         resolved_arguments.push_back(resolved_val.value());
     }
     if (task_name == "rtoi") {
-        if (std::holds_alternative<double>(resolved_arguments[0])) {
-            return static_cast<int64_t>(std::round(std::get<double>(resolved_arguments[0])));
+        if (resolved_arguments[0].is_real()) {
+            return static_cast<int64_t>(std::round(resolved_arguments[0].get_real()));
         }
-        if (std::holds_alternative<int64_t>(resolved_arguments[0])) {
-            return std::get<int64_t>(resolved_arguments[0]);
+        if (resolved_arguments[0].is_integer()) {
+            return resolved_arguments[0].get_integer();
         }
         spdlog::warn("Encountered an invalid argument for a $rtoi call");
         return  0;
     }
     if (task_name == "itor") {
-        if (std::holds_alternative<double>(resolved_arguments[0])) {
-            return std::get<double>(resolved_arguments[0]);
-        } else if (std::holds_alternative<int64_t>(resolved_arguments[0])) {
-            return static_cast<double>(std::get<int64_t>(resolved_arguments[0]));
+        if (resolved_arguments[0].is_real()) {
+            return resolved_arguments[0].get_real();
+        } else if (resolved_arguments[0].is_integer()) {
+            return static_cast<double>(resolved_arguments[0].get_integer());
         }
         spdlog::warn("Encountered an invalid argument for a $itor call");
         return  0;
     }
     if (task_name == "ceil") {
-        if (std::holds_alternative<double>(resolved_arguments[0])) {
-            return std::ceil(std::get<double>(resolved_arguments[0]));
-        } else if (std::holds_alternative<int64_t>(resolved_arguments[0])) {
-            return std::get<int64_t>(resolved_arguments[0]);
+        if (resolved_arguments[0].is_real()) {
+            return std::ceil(resolved_arguments[0].get_real());
+        } else if (resolved_arguments[0].is_integer()) {
+            return resolved_arguments[0].get_integer();
         }
         spdlog::warn("Encountered an invalid argument for a $ceil call");
     }
     if (task_name == "floor") {
-        if (std::holds_alternative<double>(resolved_arguments[0])) {
-            return std::floor(std::get<double>(resolved_arguments[0]));
-        } else if (std::holds_alternative<int64_t>(resolved_arguments[0])) {
-            return std::get<int64_t>(resolved_arguments[0]);
+        if (resolved_arguments[0].is_real()) {
+            return std::floor(resolved_arguments[0].get_real());
+        } else if (resolved_arguments[0].is_integer()) {
+            return resolved_arguments[0].get_integer();
         }
         spdlog::warn("Encountered an invalid argument for a $floor call");
 
     }
     if (task_name == "clog2") {
-        if (std::holds_alternative<double>(resolved_arguments[0])) {
-            return static_cast<int64_t>(std::ceil(std::log2(std::get<double>(resolved_arguments[0]))));
-        } else if (std::holds_alternative<int64_t>(resolved_arguments[0])) {
-            return static_cast<int64_t>(std::ceil(std::log2(std::get<int64_t>(resolved_arguments[0]))));
+        if (resolved_arguments[0].is_real()) {
+            return static_cast<int64_t>(std::ceil(std::log2(resolved_arguments[0].get_real())));
+        } else if (resolved_arguments[0].is_integer()) {
+            return static_cast<int64_t>(std::ceil(std::log2(resolved_arguments[0].get_integer())));
         }
         spdlog::warn("Encountered an invalid argument for a $floor call");
     }

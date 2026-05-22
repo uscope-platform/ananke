@@ -38,6 +38,7 @@ target_sources(ananke_lib
     data_model/HDL/factories/HDL_parameters_factory.cpp
     data_model/HDL/factories/resource_factory_base.cpp
     data_model/HDL/parameters/HDL_parameter.cpp
+    data_model/HDL/parameters/resolved_parameter.cpp
     data_model/HDL/parameters/HDL_type.cpp
     data_model/HDL/parameters/Expression.cpp
     data_model/HDL/parameters/Concatenation.cpp

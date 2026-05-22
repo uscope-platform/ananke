@@ -70,17 +70,17 @@ public:
 
     std::string get_string_value() const {
         if (!solved_value.has_value()) return "";
-        return std::get<std::string>(solved_value.value());
+        return solved_value.value().get_string();
     }
 
     [[nodiscard]] std::optional<int64_t>  get_numeric_value() const {
         if (!solved_value.has_value()) return 0;
-        return std::get<int64_t>(solved_value.value());
+        return solved_value.value().get_integer();
     }
 
     [[nodiscard]] std::optional<mdarray<int64_t>> get_int_array_value() const{
         if (!solved_value.has_value()) return {};
-        return std::get<mdarray<int64_t>>(solved_value.value());
+        return solved_value.value().get_int_array();
     }
 
     void set_declared_type(const std::string & type);

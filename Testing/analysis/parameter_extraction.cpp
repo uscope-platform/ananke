@@ -19,6 +19,7 @@
 #include "frontend/analysis/sv_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
+using namespace std::string_literals;
 
 TEST(parameter_extraction, init_list_after_reg) {
     auto test_pattern = R"(
@@ -111,7 +112,7 @@ TEST(parameter_extraction, size_cast) {
 
     auto defaults = resource.get_default_parameters();
 
-    ASSERT_EQ(3, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
+    ASSERT_EQ(3, defaults.at({"","", "TEST_PARAM"}).get_integer());
 }
 
 TEST(parameter_extraction, paretesized_cast) {
@@ -161,7 +162,7 @@ TEST(parameter_extraction, paretesized_cast) {
 
     auto defaults = resource.get_default_parameters();
 
-    ASSERT_EQ(3, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
+    ASSERT_EQ(3, defaults.at({"","", "TEST_PARAM"}).get_integer());
 }
 
 
@@ -210,7 +211,7 @@ TEST(parameter_extraction, type_cast) {
     }
     auto defaults = resource.get_default_parameters();
 
-    ASSERT_EQ(251, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
+    ASSERT_EQ(251, defaults.at({"","", "TEST_PARAM"}).get_integer());
 }
 
 
@@ -274,7 +275,7 @@ TEST(parameter_extraction, nested_type_cast) {
     }
     auto defaults = resource.get_default_parameters();
 
-    ASSERT_EQ(11, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
+    ASSERT_EQ(11, defaults.at({"","", "TEST_PARAM"}).get_integer());
 }
 
 
@@ -338,8 +339,8 @@ TEST(parameter_extraction, multiple_type_cast) {
     }
     auto defaults = resource.get_default_parameters();
 
-    ASSERT_EQ(251, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
-    ASSERT_EQ(3, std::get<int64_t>(defaults.at({"","", "TEST_PARAM_2"})));
+    ASSERT_EQ(251, defaults.at({"","", "TEST_PARAM"}).get_integer());
+    ASSERT_EQ(3, defaults.at({"","", "TEST_PARAM_2"}).get_integer());
 }
 
 TEST(parameter_extraction,time_literal) {
@@ -375,7 +376,7 @@ TEST(parameter_extraction,time_literal) {
 
     auto defaults = resource.get_default_parameters();
 
-    ASSERT_EQ("10ns", std::get<std::string>(defaults.at({"","", "TEST_PARAM"})));
+    ASSERT_EQ("10ns", defaults.at({"","", "TEST_PARAM"}).get_string());
 }
 
 TEST(parameter_extraction, cast_in_concat) {
@@ -424,7 +425,7 @@ TEST(parameter_extraction, cast_in_concat) {
 
     auto defaults = resource.get_default_parameters();
 
-    ASSERT_EQ(35, std::get<int64_t>(defaults.at({"","", "TEST_PARAM"})));
+    ASSERT_EQ(35, defaults.at({"","", "TEST_PARAM"}).get_integer());
 }
 
 
@@ -475,8 +476,8 @@ TEST(parameter_extraction, strings_dafault_init) {
     mdarray<std::string> tti_val;
     tti_val.set_1d_slice({0, 0}, {"\"FILE\"", "\"FILE\"", "\"FILE\"", "\"FILE\""});
 
-    ASSERT_EQ(3, std::get<int64_t>(defaults.at({"","", "N_CORES"})));
-    ASSERT_EQ(tti_val, std::get<mdarray<std::string>>(defaults.at({"","", "TRANSLATION_TABLE_INIT"})));
+    ASSERT_EQ(3, defaults.at({"","", "N_CORES"}).get_integer());
+    ASSERT_EQ(tti_val, defaults.at({"","", "TRANSLATION_TABLE_INIT"}).get_string_array());
 }
 
 
@@ -537,8 +538,8 @@ TEST(parameter_extraction, string_array_selection) {
     mdarray<std::string> tti_val;
     tti_val.set_1d_slice({0, 0}, {"\"FILE\"", "\"FILE\"", "\"FILE\"", "\"FILE\""});
 
-    ASSERT_EQ(3, std::get<int64_t>(defaults.at({"","", "N_CORES"})));
-    ASSERT_EQ(tti_val, std::get<mdarray<std::string>>(defaults.at({"","", "TRANSLATION_TABLE_INIT"})));
+    ASSERT_EQ(3, defaults.at({"","", "N_CORES"}).get_integer());
+    ASSERT_EQ(tti_val, defaults.at({"","", "TRANSLATION_TABLE_INIT"}).get_string_array());
 }
 
 TEST(parameter_extraction, strings_array) {
@@ -598,8 +599,8 @@ TEST(parameter_extraction, strings_array) {
     mdarray<std::string> tti_val;
     tti_val.set_1d_slice({0, 0}, {"\"FILE\"", "\"FILE\"", "\"FILE\""});
 
-    ASSERT_EQ(3, std::get<int64_t>(defaults.at({"","", "N_CORES"})));
-    ASSERT_EQ(tti_val, std::get<mdarray<std::string>>(defaults.at({"","", "TRANSLATION_TABLE_INIT"})));
+    ASSERT_EQ(3,defaults.at({"","", "N_CORES"}).get_integer());
+    ASSERT_EQ(tti_val, defaults.at({"","", "TRANSLATION_TABLE_INIT"}).get_string_array());
 }
 
 
@@ -654,8 +655,8 @@ TEST(parameter_extraction, float_parameter) {
         {{"","", "STEP"}, 0.17453292519943295f}
     };
 
-    ASSERT_EQ(9, std::get<int64_t>(defaults.at({"","", "LUT_DEPTH"})));
-    ASSERT_FLOAT_EQ(0.17453292519943295, std::get<double>(defaults.at({"","", "STEP"})));
+    ASSERT_EQ(9, defaults.at({"","", "LUT_DEPTH"}).get_integer());
+    ASSERT_FLOAT_EQ(0.17453292519943295,defaults.at({"","", "STEP"}).get_real());
 }
 
 TEST(parameter_extraction, simple_system_task) {
@@ -1038,8 +1039,8 @@ TEST(parameter_extraction, simple_parameters) {
         {{"","", "local_p"}, 74},
         {{"","", "sv_numeric_p"}, 8},
         {{"","", "dimensionless_sv_numeric_p"}, 63},
-        {{"","", "string_p"}, R"("423")"},
-        {{"","", "nested_p"}, R"("423")"}
+        {{"","", "string_p"}, R"("423")"s},
+        {{"","", "nested_p"}, R"("423")"s}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2306,7 +2307,7 @@ TEST(parameter_extraction, package_parameters_use) {
 
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "package_param"}, "__RUNTIME_ONLY_PARAMETER__"}
+        {{"","", "package_param"}, "__RUNTIME_ONLY_PARAMETER__"s}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));

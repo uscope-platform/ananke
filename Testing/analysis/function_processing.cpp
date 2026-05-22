@@ -51,8 +51,8 @@ TEST(function_processing, simple_function_scalar) {
 
     auto values = call.evaluate();
     ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(std::holds_alternative<int64_t>(values.value()));
-    auto result_value = std::get<int64_t>(values.value());
+    EXPECT_TRUE(values.value().is_integer());
+    auto result_value = values.value().get_integer();
     EXPECT_EQ(result_value, 67);
 }
 
@@ -108,8 +108,8 @@ TEST(function_processing, simple_function_array) {
     check_val.set_1d_slice({0,0}, {100,200,300});
     auto values = call.evaluate();
     ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(std::holds_alternative<mdarray<int64_t>>(values.value()));
-    auto result_value = std::get<mdarray<int64_t>>(values.value());
+    EXPECT_TRUE(values.value().is_int_array());
+    auto result_value = values.value().get_int_array();
     EXPECT_EQ(result_value, check_val);
 }
 
@@ -175,8 +175,8 @@ TEST(function_processing, simple_loop_function) {
     check_val.set_1d_slice({0,0}, {0, 100,200});
     auto values = call.evaluate();
     ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(std::holds_alternative<mdarray<int64_t>>(values.value()));
-    auto result_value = std::get<mdarray<int64_t>>(values.value());
+    EXPECT_TRUE(values.value().is_int_array());
+    auto result_value = values.value().get_int_array();
     EXPECT_EQ(result_value, check_val);
 }
 
@@ -244,8 +244,8 @@ TEST(function_processing, parametric_loop_function) {
     auto res= call.propagate_constant({"","", "N_CORES"}, 3);
     auto values = call.evaluate();
     ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(std::holds_alternative<mdarray<int64_t>>(values.value()));
-    auto result_value = std::get<mdarray<int64_t>>(values.value());
+    EXPECT_TRUE(values.value().is_int_array());
+    auto result_value = values.value().get_int_array();
     EXPECT_EQ(result_value, check_val);
 }
 
@@ -328,8 +328,8 @@ TEST(function_processing, complex_loop_function) {
     call.propagate_constant({"","", "N_CORES"}, 3);
     auto values = call.evaluate();
     ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(std::holds_alternative<mdarray<int64_t>>(values.value()));
-    auto result_value = std::get<mdarray<int64_t>>(values.value());
+    EXPECT_TRUE(values.value().is_int_array());
+    auto result_value = values.value().get_int_array();
     EXPECT_EQ(result_value, check_val);
 }
 
@@ -384,8 +384,8 @@ TEST(function_processing, parametrized_function) {
     call.propagate_constant({"","", "N_CORES"}, 1);
     auto values = call.evaluate();
     ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(std::holds_alternative<mdarray<int64_t>>(values.value()));
-    auto result_value = std::get<mdarray<int64_t>>(values.value());
+    EXPECT_TRUE(values.value().is_int_array());
+    auto result_value =values.value().get_int_array();
     EXPECT_EQ(result_value, check_val);
 }
 
@@ -432,8 +432,8 @@ TEST(function_processing, package_assignment) {
     call.propagate_constant({"hil_address_space","", "bus_base"}, 21);
     auto values = call.evaluate();
     ASSERT_TRUE(values.has_value());
-    ASSERT_TRUE(std::holds_alternative<int64_t>(values.value()));
-    auto result_value = std::get<int64_t>(values.value());
+    ASSERT_TRUE(values.value().is_integer());
+    auto result_value = values.value().get_integer();
     EXPECT_EQ(result_value, 21);
 }
 

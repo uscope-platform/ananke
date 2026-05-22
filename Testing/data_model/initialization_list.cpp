@@ -40,7 +40,9 @@ TEST(Initialization_list, get_values_1d_unpacked)  {
 
     auto res = p.evaluate();
     ASSERT_TRUE(res.has_value());
-    auto values = std::get<mdarray<int64_t>>(res.value());
+    auto values = res.value().get_int_array();
+    ASSERT_EQ(values, check_array);
+
 
 
 }
@@ -70,7 +72,8 @@ TEST(Initialization_list, get_values_2d_unpacked) {
 
     auto res = p.evaluate();
     ASSERT_TRUE(res.has_value());
-    auto values = std::get<mdarray<int64_t>>(res.value());
+    auto values = res.value().get_int_array();
+    ASSERT_EQ(values, check_array);
 
 }
 
@@ -114,7 +117,8 @@ TEST(Initialization_list, get_values_3d_unpacked) {
 
     auto res = p.evaluate();
     ASSERT_TRUE(res.has_value());
-    auto values = std::get<mdarray<int64_t>>(res.value());
+    auto values = res.value().get_int_array();
+    EXPECT_EQ(values, check_array);
 
 }
 
@@ -138,8 +142,7 @@ TEST(Initialization_list, packed_concatenation) {
 
 
     ASSERT_TRUE(res.has_value());
-    auto values = std::get<int64_t>(res.value());
-    ASSERT_EQ(169, values);
+    ASSERT_EQ(169, res.value().get_integer());
 
 }
 
@@ -189,7 +192,8 @@ TEST(Initialization_list, get_values_1d_packed) {
 
     auto res = p.evaluate();
     ASSERT_TRUE(res.has_value());
-    auto values = std::get<mdarray<int64_t>>(res.value());
+    auto values = res.value().get_int_array();
+    ASSERT_EQ(check_array, values);
 
 
 }
@@ -243,7 +247,9 @@ TEST(Initialization_list, get_values_2d_packed) {
 
     auto res = p.evaluate();
     ASSERT_TRUE(res.has_value());
-    auto values = std::get<mdarray<int64_t>>(res.value());
+    auto values = res.value().get_int_array();
+
+    ASSERT_EQ(check_array, values);
 
 }
 
@@ -331,7 +337,9 @@ TEST(Initialization_list, get_values_3d_packed) {
 
     auto res = p.evaluate();
     ASSERT_TRUE(res.has_value());
-    auto values = std::get<mdarray<int64_t>>(res.value());
+    auto values = res.value().get_int_array();
+    ASSERT_EQ(check_array, values);
+
 
 
 }
@@ -353,7 +361,7 @@ TEST(Initialization_list, get_values_concatenation_initialization) {
 
     auto res = p.evaluate();
     ASSERT_TRUE(res.has_value());
-    auto values = std::get<mdarray<int64_t>>(res.value());
+    auto values = res.value().get_int_array();
 
     ASSERT_EQ(check_array, values);
 
@@ -390,7 +398,7 @@ TEST(Initialization_list, get_values_1d_mixed_packed_unpacked) {
 
     auto res = p.evaluate();
     ASSERT_TRUE(res.has_value());
-    auto values = std::get<mdarray<int64_t>>(res.value());
+    auto values = res.value().get_int_array();
 
     ASSERT_EQ(check_array, values);
 
@@ -460,7 +468,7 @@ TEST(Initialization_list, concatenation_of_packed_arrays) {
     auto p = resource.get_default_parameters();
     auto param = p[{"","", "INITIAL_REGISTER_VALUES"}];
     mdarray<int64_t>::md_1d_array check_array = {224,1,0,0,2,2,2};
-    auto result = std::get<mdarray<int64_t>>(param).get_1d_slice({0,0});
+    auto result = param.get_int_array().get_1d_slice({0,0});
 
     ASSERT_EQ(check_array, result);
 

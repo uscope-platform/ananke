@@ -100,14 +100,14 @@ void HDL_parameter::propagate_function(const HDL_function_def &def) {
 HDL_parameter::operator std::string() {
     if (!solved_value.has_value()) return "";
     std::string ret_val;
-    if(std::holds_alternative<std::string>(solved_value.value())) {
-        ret_val = std::get<std::string>(solved_value.value());
+    if(solved_value.value().is_string()) {
+        ret_val = solved_value.value().get_string();
     }
-    if(std::holds_alternative<int64_t>(solved_value.value())) {
-        auto val = std::get<mdarray<int64_t>>(solved_value.value()).get_scalar();
-        if(val.has_value()) ret_val =  std::to_string(val.value());
+    if(solved_value.value().is_integer()) {
+        auto val = solved_value.value().get_integer();
+        ret_val =  std::to_string(val);
     }
-    if(std::holds_alternative<mdarray<int64_t>>(solved_value.value())) {
+    if(solved_value.value().is_int_array()) {
         ret_val = "array value";
     }
 
@@ -144,13 +144,13 @@ std::string HDL_parameter::to_string() const {
                          "\n  TYPE: ";
 
     if (!solved_value.has_value()) result += "unknown parameter type";
-    else if (std::holds_alternative<std::string>(solved_value.value())) result += "string_parameter";
-    else if (std::holds_alternative<int64_t>(solved_value.value())) {
+    else if (solved_value.value().is_string()) result += "string_parameter";
+    else if (solved_value.value().is_integer()) {
         result += "numeric_parameter";
-        auto val = std::get<int64_t>(solved_value.value());
+        auto val = solved_value.value().get_integer();
         result += "\n  VALUE: " + std::to_string(val);
     }
-    else if (std::holds_alternative<mdarray<int64_t>>(solved_value.value())) result += "array_parameter";
+    else if (solved_value.value().is_int_array()) result += "array_parameter";
 
     result += "\n  INITIALIZATION LIST:\n    ";
 
@@ -203,9 +203,9 @@ inline resolved_parameter HDL_parameter::process_default_initialization() {
         auto first_dim = item.first_bound.evaluate();
         auto second_dim = item.second_bound.evaluate();
         if (!first_dim.has_value() || !second_dim.has_value())   throw std::runtime_error("Error: dimensions of default initialized parameters should be fully defined");
-        if (!std::holds_alternative<int64_t>(first_dim.value()) || !std::holds_alternative<int64_t>(second_dim.value()))   throw std::runtime_error("Error: dimensions of default initialized parameters should be integers");
-        auto first_i = std::get<int64_t>(first_dim.value());
-        auto second_i = std::get<int64_t>(second_dim.value());
+        if (!first_dim.value().is_integer() || !second_dim.value().is_integer())   throw std::runtime_error("Error: dimensions of default initialized parameters should be integers");
+        auto first_i =first_dim.value().get_integer();
+        auto second_i = second_dim.value().get_integer();
         dimensions.push_back(std::max(first_i, second_i)+1);
     }
 
@@ -217,14 +217,14 @@ inline resolved_parameter HDL_parameter::process_default_initialization() {
 
     if (!init_value.has_value()) throw std::runtime_error("Error: initializer of default array should be defined");
 
-    if(std::holds_alternative<mdarray<int64_t>>(init_value.value())) {
-        auto val = std::get<mdarray<int64_t>>(init_value.value()).get_scalar();
+    if(init_value.value().is_int_array()) {
+        auto val = init_value.value().get_int_array().get_scalar();
         if (!val) throw std::runtime_error("Error: initializer of default array should be defined");
         mdarray ret_i = {dimensions,val.value()};
         return ret_i;
     }
-    if(std::holds_alternative<mdarray<std::string>>(init_value.value())) {
-        auto val = std::get<mdarray<std::string>>(init_value.value()).get_scalar();
+    if(init_value.value().is_string_array()) {
+        auto val = init_value.value().get_string_array().get_scalar();
         if (!val) throw std::runtime_error("Error: initializer of default array should be defined");
         mdarray ret_s = {dimensions,val.value()};
         return ret_s;
@@ -240,21 +240,21 @@ nlohmann::json HDL_parameter::dump() {
     ret["name"] = name;
 
     if (!solved_value.has_value())  ret["type"] = "unknown parameter type";
-    else if (std::holds_alternative<std::string>(solved_value.value())) {
+    else if (solved_value.value().is_string()) {
         ret["type"] = "string_parameter";
         std::vector<std::string> values_s;
         auto value = solved_value.value();
-        values_s.push_back(std::regex_replace(std::get<std::string>(value), std::regex(R"ctrl(^"(.*)"$)ctrl"), "$1"));
+        values_s.push_back(std::regex_replace(solved_value.value().get_string(), std::regex(R"ctrl(^"(.*)"$)ctrl"), "$1"));
         ret["value"] = values_s;
     }
-    else if (std::holds_alternative<int64_t>(solved_value.value())) {
+    else if (solved_value.value().is_integer()) {
         ret["type"] = "numeric_parameter";
         ret["value"]= std::vector<int64_t>();
-        if(solved_value.has_value()) ret["value"].push_back(std::get<int64_t>(solved_value.value()));
+        if(solved_value.has_value()) ret["value"].push_back(solved_value.value().get_integer());
     }
-    else if (std::holds_alternative<mdarray<int64_t>>(solved_value.value())) {
+    else if (solved_value.value().is_int_array()) {
         ret["type"] = "array_parameter";
-        ret["value"] = std::get<mdarray<int64_t>>(solved_value.value()).dump();
+        ret["value"] = solved_value.value().get_int_array().dump();
     }
 
     return ret;
@@ -269,26 +269,26 @@ inline std::optional<resolved_parameter> HDL_parameter::evaluate_vector() {
     bool ret_string = true;
     auto expr_value = raw_value->evaluate();
     if (expr_value.has_value()) {
-        if (std::holds_alternative<std::string>(expr_value.value())) {
-            auto stacked_arr = mdarray<std::string>::stack(ret_s, std::get<std::string>(expr_value.value()));
+        if (expr_value.value().is_string()) {
+            auto stacked_arr = mdarray<std::string>::stack(ret_s,expr_value.value().get_string());
             if (stacked_arr.has_value()) {
                 ret_s = stacked_arr.value();
             }
-        } else if (std::holds_alternative<int64_t>(expr_value.value())) {
+        } else if (expr_value.value().is_integer()) {
             ret_string = false;
-            auto stacked_arr = mdarray<int64_t>::stack(ret, std::get<int64_t>(expr_value.value()));
+            auto stacked_arr = mdarray<int64_t>::stack(ret, expr_value.value().get_integer());
             if (stacked_arr.has_value()) {
                 ret = stacked_arr.value();
             }
-        } else if (std::holds_alternative<mdarray<int64_t>>(expr_value.value())) {
+        } else if (expr_value.value().is_int_array()) {
             ret_string = false;
-            auto stacked_arr = mdarray<int64_t>::stack(ret, std::get<mdarray<int64_t>>(expr_value.value()));
+            auto stacked_arr = mdarray<int64_t>::stack(ret, expr_value.value().get_int_array());
             if (stacked_arr.has_value()) {
                 ret = stacked_arr.value();
             }
-        } else if (std::holds_alternative<mdarray<std::string>>(expr_value.value())) {
+        } else if (expr_value.value().is_string_array()) {
             ret_string = true;
-            auto stacked_arr = mdarray<std::string>::stack(ret_s, std::get<mdarray<std::string>>(expr_value.value()));
+            auto stacked_arr = mdarray<std::string>::stack(ret_s, expr_value.value().get_string_array());
             if (stacked_arr.has_value()) {
                 ret_s = stacked_arr.value();
             }

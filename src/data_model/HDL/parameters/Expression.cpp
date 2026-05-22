@@ -28,21 +28,21 @@ std::string Expression::print() const {
         auto val = item.get_value();
         if (val.has_value()) {
             if(item.is_array()) {
-                auto arr = std::get<mdarray<int64_t>>(val.value());
+                auto arr = val.value().get_int_array();;
                 ret_val += "{xxxxxxx}";
             } else if(item.is_numeric()){
-                if(std::holds_alternative<int64_t>(val.value()))
-                    ret_val += std::to_string(std::get<int64_t>(val.value()));
-                else if(std::holds_alternative<double>(val.value())) {
-                    ret_val += std::to_string(std::get<double>(val.value()));
+                if( val.value().is_integer())
+                    ret_val += std::to_string(val.value().get_integer());
+                else if(val.value().is_real()) {
+                    ret_val += std::to_string(val.value().get_real());
                 }
             } else if(item.is_identifier()){
                 if(!item.get_package_prefix().empty()){
                     ret_val += item.get_package_prefix() + "::";
                 }
-                ret_val += std::get<std::string>(val.value());
+                ret_val += val->get_string();
             } else if(item.is_operator()) {
-                ret_val += std::get<std::string>(val.value());
+                ret_val += val->get_string();
             }
         }
     }
@@ -69,7 +69,7 @@ Expression Expression::to_rpm() const {
         } else if(item.is_operator()){
             while (
                     !shunting_stack.empty() &&
-                    std::get<std::string>(shunting_stack.top().get_value().value())!="(" &&
+                    shunting_stack.top().get_value().value().get_string()!="(" &&
                     (
                         shunting_stack.top().is_function() ||
                         shunting_stack.top().get_operator_precedence()<item.get_operator_precedence() ||
@@ -81,10 +81,10 @@ Expression Expression::to_rpm() const {
                 shunting_stack.pop();
             }
             shunting_stack.push(item);
-        } else if(std::get<std::string>(item.get_value().value()) == "(" || item.is_function()){
+        } else if(item.get_value().value().get_string() == "(" || item.is_function()){
             shunting_stack.push(item);
-        } else if(std::get<std::string>(item.get_value().value())  == ")"){
-            while (std::get<std::string>(shunting_stack.top().get_value().value()) != "(") {
+        } else if(item.get_value().value().get_string()  == ")"){
+            while (shunting_stack.top().get_value().value().get_string() != "(") {
                 rpn_exp.push_back(shunting_stack.top());
                 shunting_stack.pop();
                 if(shunting_stack.top().is_function()){
@@ -123,7 +123,7 @@ std::optional<resolved_parameter> Expression::evaluate() {
             if (!i.is_operator() && !i.is_function()) return std::nullopt;
             if(i.get_operator_type() == Expression_component::unary_operator){
                 auto op = evaluator_stack.top().get_value();
-                result = evaluate_unary_expression(op.value(), std::get<std::string>(i.get_value().value()));
+                result = evaluate_unary_expression(op.value(), i.get_value().value().get_string());
                 evaluator_stack.pop();
             } else if(i.get_operator_type() == Expression_component::binary_operator){
                 resolved_parameter op_a;
@@ -135,7 +135,7 @@ std::optional<resolved_parameter> Expression::evaluate() {
                     op_a = evaluator_stack.top().get_value().value();
                     evaluator_stack.pop();
                 }
-                result = evaluate_binary_expression(op_a, op_b.value(), std::get<std::string>(i.get_value().value()));
+                result = evaluate_binary_expression(op_a, op_b.value(), i.get_value().value().get_string());
             }
             evaluator_stack.emplace(result, Expression_component::number);
         }
@@ -153,30 +153,30 @@ int64_t Expression::get_size() {
 
     auto expression_value = evaluate();
     if(expression_value.has_value()) {
-        if(std::holds_alternative<int64_t>(expression_value.value()))
-            return Expression_component::calculate_binary_size(std::get<int64_t>(expression_value.value()));
+        if(expression_value.value().is_integer())
+            return Expression_component::calculate_binary_size(expression_value.value().get_integer());
     }
     return 0;
 }
 
 std::variant<int64_t, double> Expression::evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, const std::string &operation) {
-    bool supported_a = (std::holds_alternative<int64_t>(op_a) || std::holds_alternative<double>(op_a) );
-    bool supported_b = (std::holds_alternative<int64_t>(op_b) || std::holds_alternative<double>(op_b) );
+    bool supported_a = (op_a.is_integer() || op_a.is_real() );
+    bool supported_b = (op_b.is_integer() || op_b.is_real() );
     if(  !supported_a || !supported_b) {
         spdlog::warn("Attempted evaluation of operand of unsupported type");
         return  0;
     }
-    bool int_exec = std::holds_alternative<int64_t>(op_a) && std::holds_alternative<int64_t>(op_b);
+    bool int_exec = op_a.is_integer() && op_b.is_integer();
     double d_a, d_b;
     int64_t i_a = 0;
     int64_t i_b = 0;
 
-    if(std::holds_alternative<double>(op_a))  d_a = std::get<double>(op_a);
-    else d_a = static_cast<double>(std::get<int64_t>(op_a));
-    if(std::holds_alternative<double>(op_b))  d_b = std::get<double>(op_b);
-    else d_b = static_cast<double>(std::get<int64_t>(op_b));
-    if(std::holds_alternative<int64_t>(op_a)) i_a =  std::get<int64_t>(op_a);
-    if(std::holds_alternative<int64_t>(op_b)) i_b =  std::get<int64_t>(op_b);
+    if(op_a.is_real())  d_a = op_a.get_real();
+    else d_a = static_cast<double>(op_a.get_integer());
+    if(op_b.is_real())  d_b = op_b.get_real();
+    else d_b = static_cast<double>(op_b.get_integer());
+    if(op_a.is_integer()) i_a =  op_a.get_integer();
+    if(op_b.is_integer()) i_b =  op_b.get_integer();
     if(operation == "+"){
         if(int_exec) return i_a + i_b;
         return d_a + d_b;
@@ -236,16 +236,16 @@ std::variant<int64_t, double> Expression::evaluate_binary_expression(resolved_pa
 
 std::variant<int64_t, double> Expression::evaluate_unary_expression(resolved_parameter operand, const std::string &operation) {
     if(operation == "$rtoi" || operation == "$itor") return evaluate_cast(operand, operation);
-    if( !std::holds_alternative<int64_t>(operand) || std::holds_alternative<double>(operand)) {
+    if( !operand.is_integer() || operand.is_real()) {
         spdlog::warn("Attempted evaluation of operand of unsupported type");
         return  0;
     }
-    const bool int_exec = std::holds_alternative<int64_t>(operand);
+    const bool int_exec = operand.is_integer();
 
     int64_t int_op = 0;
-    if(int_exec) int_op = std::get<int64_t>(operand);
+    if(int_exec) int_op = operand.get_integer();
     double double_op = 0;
-    if(std::holds_alternative<double>(operand)) double_op = std::get<double>(operand);
+    if(operand.is_real()) double_op = operand.get_real();
     if(operation == "!"){
         if(int_exec) return !int_op;
         return double_op != 0 ? 1 : 0;
@@ -263,7 +263,7 @@ std::variant<int64_t, double> Expression::evaluate_unary_expression(resolved_par
     if(operation ==  "$floor"){
         if(int_exec) {
             return static_cast<int64_t>(
-                floor(static_cast<double>(std::get<int64_t>(operand)))
+                floor(static_cast<double>(operand.get_integer()))
             );
         }
         return static_cast<int64_t>(
@@ -275,11 +275,11 @@ std::variant<int64_t, double> Expression::evaluate_unary_expression(resolved_par
         return 0;
     }
     if(operation ==  "~"){
-        return ~std::get<int64_t>(operand);
+        return ~operand.get_integer();
     }
     if(operation ==  "$clog2"){
         return static_cast<int64_t>(
-            ceil(log2(static_cast<double>(std::get<int64_t>(operand))))
+            ceil(log2(static_cast<double>(operand.get_integer())))
         );
     }
 
@@ -288,11 +288,11 @@ std::variant<int64_t, double> Expression::evaluate_unary_expression(resolved_par
 
 std::variant<int64_t, double> Expression::evaluate_cast(resolved_parameter operand, const std::string &operation) {
     if(operation == "$itor") {
-        if(std::holds_alternative<int64_t>(operand)) return static_cast<double>(std::get<int64_t>(operand));
+        if(operand.is_integer()) return static_cast<double>(operand.get_integer());
         spdlog::warn("Attempted cast of an unsupported type");
         return 0;
     } else if(operation == "$rtoi") {
-        if(std::holds_alternative<double>(operand)) return static_cast<int64_t>(round(std::get<double>(operand)));
+        if(operand.is_real()) return static_cast<int64_t>(round(operand.get_real()));
         spdlog::warn("Attempted cast of an unsupported type");
         return 0;
     }
@@ -336,7 +336,7 @@ void Expression::propagate_expression(const qualified_identifier &constant_id,
 
     for (auto & component : components) {
         if (component.is_identifier()) {
-            if (std::get<std::string>(component.get_value().value()) == constant_id.name) {
+            if (component.get_value().value().get_string() == constant_id.name) {
                 if (value->is_expression()) {
                     auto expr = value->as<Expression>();
                     if (expr.components.size() == 1) {

@@ -18,10 +18,7 @@
 #define ANANKE_QUALIFIED_IDENTIFIER_HPP
 
 #include <string>
-#include <variant>
 #include "data_model/mdarray.hpp"
-
-using resolved_parameter = std::variant<int64_t, std::string, mdarray<int64_t>,  double, mdarray<std::string>>;
 
 struct qualified_identifier {
     qualified_identifier() = default;

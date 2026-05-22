@@ -184,8 +184,8 @@ void HDL_ast_builder_v2::process_quantifier(const std::shared_ptr<HDL_parameter>
 std::map<qualified_identifier, resolved_parameter> HDL_ast_builder_v2::process_runtime_parameters(const std::map<qualified_identifier, resolved_parameter> &parameters, const HDL_Resource &res) {
     std::map<qualified_identifier, resolved_parameter> runtime_parameters;
     for ( auto &[name, value]: parameters) {
-        if (std::holds_alternative<std::string>(value)) {
-            if (std::get<std::string>(value) == "__RUNTIME_ONLY_PARAMETER__") {
+        if (value.is_string()) {
+            if (value.get_string() == "__RUNTIME_ONLY_PARAMETER__") {
                 auto raw_param = res.get_parameters().get(name.name);
                 for (const auto dep: raw_param->get_dependencies()) {
                     if (!dep.prefix.empty()) {

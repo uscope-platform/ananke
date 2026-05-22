@@ -92,20 +92,20 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
             sizes[i] = components[concat_size-i-1]->get_size();
             if (!value_opt.has_value()) return std::nullopt;
             auto raw_value = value_opt.value();
-            if (!std::holds_alternative<int64_t>(raw_value)) throw std::runtime_error("packing concatenations of arrays is unsupported");
-            values[i] = std::get<int64_t>(raw_value);
+            if (!raw_value.is_integer()) throw std::runtime_error("packing concatenations of arrays is unsupported");
+            values[i] = raw_value.get_integer();
         }
         return pack_values(values, sizes);
     } else {
         if (components.empty())return std::nullopt;
         auto v = components[0]->evaluate();
-        if (std::holds_alternative<std::string>(v.value())) {
+        if (v.value().is_string()) {
             mdarray<std::string> result;
             for (int64_t i = 0;i<concat_size; i++) {
                 auto value_opt = components[concat_size-i-1]->evaluate();
                 if (!value_opt.has_value()) return std::nullopt;
                 mdarray<std::string> to_concat;
-                to_concat.set_value(0,std::get<std::string>(value_opt.value()));
+                to_concat.set_value(0,value_opt.value().get_string());
                 result = mdarray<std::string>::concatenate(result, to_concat).value();
             }
             return result;
@@ -114,12 +114,12 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
             for (int64_t i = 0;i<concat_size; i++) {
                 auto value_opt = components[concat_size-i-1]->evaluate();
                 if (!value_opt.has_value()) return std::nullopt;
-                if (std::holds_alternative<int64_t>(value_opt.value())) {
+                if (value_opt.value().is_integer()) {
                     mdarray<int64_t> to_concat;
-                    to_concat.set_value(0,std::get<int64_t>(value_opt.value()));
+                    to_concat.set_value(0,value_opt.value().get_integer());
                     result = mdarray<int64_t>::concatenate(result, to_concat).value();
                 } else {
-                    auto array_res = std::get<mdarray<int64_t>>(value_opt.value());
+                    auto array_res = value_opt.value().get_int_array();
                     if( unpacked_dimension ==1)
                         result= mdarray<int64_t>::concatenate(result, array_res).value();
                     else

@@ -61,7 +61,7 @@ public:
     bool is_subscripted() const {return !array_index.empty();}
     bool is_string() const {return type == string;}
     bool is_identifier() const {return type == identifier;}
-    bool is_array() const {return std::holds_alternative<mdarray<int64_t>>(value);}
+    bool is_array() const {return value.is_int_array();}
 
     bool is_function() const {
         return type == function;
