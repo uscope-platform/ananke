@@ -20,8 +20,8 @@
 #include <string>
 #include <vector>
 #include <bitset>
-#include "common/qualified_identifier.hpp"
-#include "common/resolved_parameter.hpp"
+#include "data_model/HDL/parameters/common/qualified_identifier.hpp"
+#include "data_model/HDL/parameters/common/resolved_parameter.hpp"
 #include "data_model/mdarray.hpp"
 #include "data_model/HDL/parameters/common/resolved_type.hpp"
 

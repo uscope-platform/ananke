@@ -16,7 +16,7 @@
 #ifndef ANANKE_TERNARY_FACTORY_HPP
 #define ANANKE_TERNARY_FACTORY_HPP
 
-#include "data_model/HDL/parameters/Parameter_value_base.hpp"
+#include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
 #include "data_model/HDL/parameters/components/Ternary.hpp"
 
 class ternary_factory {

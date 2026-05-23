@@ -21,7 +21,7 @@
 
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/components/Cast.hpp"
-#include "data_model/HDL/parameters/Parameter_value_base.hpp"
+#include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
 
 class cast_factory {
 public:

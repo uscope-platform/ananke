@@ -20,7 +20,7 @@
 #include <vector>
 #include <tuple>
 #include "Expression_component.hpp"
-#include "data_model/HDL/parameters/Parameter_value_base.hpp"
+#include "Parameter_value_base.hpp"
 
 class Expression : public Parameter_value_base{
 public:
