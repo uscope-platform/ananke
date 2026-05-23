@@ -14,7 +14,7 @@
 //  limitations under the License.
 
 
-#include "data_model/HDL/parameters/Concatenation.hpp"
+#include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
 

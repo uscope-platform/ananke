@@ -16,7 +16,7 @@
 #ifndef ANANKE_EXPRESSION_EVALUATOR_HPP
 #define ANANKE_EXPRESSION_EVALUATOR_HPP
 
-#include "data_model/HDL/parameters/Expression.hpp"
+#include "components/Expression.hpp"
 
 class Expression_evaluator {
 public:

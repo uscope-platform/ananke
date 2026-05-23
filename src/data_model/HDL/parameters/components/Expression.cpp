@@ -1,4 +1,4 @@
-//  Copyright 2025 Filippo Savi
+//  Copyright 2026 Filippo Savi
 //  Author: Filippo Savi <filssavi@gmail.com>
 //
 //  Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,7 @@
 //  limitations under the License.
 
 
-#include "data_model/HDL/parameters/Expression.hpp"
+#include "data_model/HDL/parameters/components/Expression.hpp"
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
 

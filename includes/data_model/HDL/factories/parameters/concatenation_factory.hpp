@@ -19,7 +19,7 @@
 
 #include <stack>
 #include <vector>
-#include "data_model/HDL/parameters/Concatenation.hpp"
+#include "../../parameters/components/Concatenation.hpp"
 
 class concatenation_factory {
 public:

@@ -30,8 +30,8 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/variant.hpp>
 
-#include "HDL_function_def.hpp"
-#include "Parameter_value_base.hpp"
+#include "../HDL_function_def.hpp"
+#include "../Parameter_value_base.hpp"
 
 class Expression;
 class HDL_function_call;

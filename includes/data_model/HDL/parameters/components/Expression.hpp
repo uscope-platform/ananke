@@ -1,4 +1,4 @@
-//  Copyright 2025 Filippo Savi
+//  Copyright 2026 Filippo Savi
 //  Author: Filippo Savi <filssavi@gmail.com>
 //
 //  Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@
 
 #include <vector>
 #include <tuple>
-#include "data_model/HDL/parameters/Expression_component.hpp"
+#include "Expression_component.hpp"
 #include "data_model/HDL/parameters/Parameter_value_base.hpp"
 
 class Expression : public Parameter_value_base{

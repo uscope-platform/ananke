@@ -17,7 +17,7 @@
 #ifndef ANANKE_DIMENSION_HPP
 #define ANANKE_DIMENSION_HPP
 
-#include "Expression.hpp"
+#include "components/Expression.hpp"
 
 typedef struct dims_struct{
     Expression first_bound;

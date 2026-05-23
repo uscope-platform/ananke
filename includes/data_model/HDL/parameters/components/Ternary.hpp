@@ -19,7 +19,7 @@
 
 #include <memory>
 #include "data_model/HDL/parameters/Parameter_value_base.hpp"
-#include "data_model/HDL/parameters/Expression.hpp"
+#include "Expression.hpp"
 
 
 class Ternary : public Parameter_value_base{

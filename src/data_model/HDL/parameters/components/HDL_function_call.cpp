@@ -13,15 +13,15 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "data_model/HDL/parameters/HDL_function_call.hpp"
+#include "data_model/HDL/parameters/components/HDL_function_call.hpp"
+#include "data_model/HDL/parameters/components/Replication.hpp"
+#include "data_model/HDL/parameters/components/Expression.hpp"
 
 #include "analysis/loop_solver.hpp"
-#include "data_model/HDL/parameters/Expression.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
 
-#include "data_model/HDL/parameters/Replication.hpp"
 
 CEREAL_REGISTER_TYPE(HDL_function_call)
 

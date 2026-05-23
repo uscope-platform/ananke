@@ -17,7 +17,7 @@
 #ifndef ANANKE_CONCATENATION_HPP
 #define ANANKE_CONCATENATION_HPP
 
-#include "data_model/HDL/parameters/Expression.hpp"
+#include "Expression.hpp"
 #include "data_model/HDL/parameters/Parameter_value_base.hpp"
 
 #include <cereal/types/vector.hpp>

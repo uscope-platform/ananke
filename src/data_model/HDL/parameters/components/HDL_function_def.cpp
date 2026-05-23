@@ -1,4 +1,4 @@
-//  Copyright 2025 Filippo Savi
+//  Copyright 2026 Filippo Savi
 //  Author: Filippo Savi <filssavi@gmail.com>
 //
 //  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
 
 #include "analysis/loop_solver.hpp"
-#include "data_model/HDL/parameters/Expression.hpp"
+#include "data_model/HDL/parameters/components/Expression.hpp"
 
 HDL_function_def HDL_function_def::clone() {
     HDL_function_def def;

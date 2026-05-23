@@ -14,7 +14,7 @@
 //  limitations under the License.
 
 
-#include "data_model/HDL/parameters/Ternary.hpp"
+#include "data_model/HDL/parameters/components/Ternary.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>

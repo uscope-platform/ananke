@@ -19,7 +19,7 @@
 
 #include <stack>
 
-#include "data_model/HDL/parameters/HDL_function_call.hpp"
+#include "../../parameters/components/HDL_function_call.hpp"
 
 class function_calls_factory {
 public:

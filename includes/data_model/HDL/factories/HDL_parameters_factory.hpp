@@ -17,7 +17,7 @@
 #define ANANKE_HDL_PARAMETERS_FACTORY_HPP
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
-#include "data_model/HDL/parameters/HDL_function_call.hpp"
+#include "../parameters/components/HDL_function_call.hpp"
 #include "data_model/HDL/factories/HDL_functions_factory.hpp"
 #include "resource_factory_base.hpp"
 #include "data_model/HDL/factories/parameters/replication_factory.hpp"

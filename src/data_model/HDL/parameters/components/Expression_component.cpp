@@ -1,4 +1,4 @@
-//  Copyright 2023 Filippo Savi
+//  Copyright 2026 Filippo Savi
 //  Author: Filippo Savi <filssavi@gmail.com>
 //
 //  Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "data_model/HDL/parameters/Expression.hpp"
-#include "data_model/HDL/parameters/Expression_component.hpp"
-
-#include "data_model/HDL/parameters/HDL_function_call.hpp"
+#include "data_model/HDL/parameters/components/Expression.hpp"
+#include "data_model/HDL/parameters/components/Expression_component.hpp"
+#include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 
 using namespace std::string_literals;
 

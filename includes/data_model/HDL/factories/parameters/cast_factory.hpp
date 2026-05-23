@@ -19,8 +19,8 @@
 
 #include <memory>
 
-#include "data_model/HDL/parameters/Expression.hpp"
-#include "data_model/HDL/parameters/Cast.hpp"
+#include "../../parameters/components/Expression.hpp"
+#include "../../parameters/components/Cast.hpp"
 #include "data_model/HDL/parameters/Parameter_value_base.hpp"
 
 class cast_factory {

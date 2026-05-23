@@ -13,9 +13,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "data_model/HDL/parameters/Replication.hpp"
-#include "data_model/HDL/parameters/Expression.hpp"
-#include "data_model/HDL/parameters/Concatenation.hpp"
+#include "data_model/HDL/parameters/components/Replication.hpp"
+#include "data_model/HDL/parameters/components/Expression.hpp"
+#include "data_model/HDL/parameters/components/Concatenation.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>

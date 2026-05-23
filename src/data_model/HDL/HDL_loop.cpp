@@ -15,7 +15,7 @@
 
 #include "data_model/HDL/HDL_loop.hpp"
 
-#include "data_model/HDL/parameters/Expression.hpp"
+#include "../../../includes/data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 assignment::assignment(const std::string &n, const std::optional<std::shared_ptr<Expression>> &idx,

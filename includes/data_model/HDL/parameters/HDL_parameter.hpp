@@ -21,7 +21,7 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "data_model/HDL/parameters/Expression.hpp"
+#include "components/Expression.hpp"
 #include "data_model/HDL/parameters/HDL_type.hpp"
 #include "data_model/HDL/parameters/dimension.hpp"
 

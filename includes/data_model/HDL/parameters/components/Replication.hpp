@@ -17,8 +17,8 @@
 #ifndef ANANKE_REPLICATION_HPP
 #define ANANKE_REPLICATION_HPP
 
-#include "data_model/HDL/parameters/Expression.hpp"
-#include "data_model/HDL/parameters/Concatenation.hpp"
+#include "Expression.hpp"
+#include "Concatenation.hpp"
 #include "data_model/HDL/parameters/Parameter_value_base.hpp"
 
 
