@@ -17,6 +17,7 @@
 #define ANANKE_RESOLVED_PARAMETER_HPP
 
 #include <variant>
+#include <iomanip>
 #include <cstdint>
 #include <string>
 #include "data_model/mdarray.hpp"
@@ -45,6 +46,26 @@ public:
     [[nodiscard]] bool is_real() const {return std::holds_alternative<double>(content);}
 
     bool operator==(const resolved_parameter&) const = default;
+
+    friend std::ostream& operator<<(std::ostream& os, const resolved_parameter& rp) {
+        std::visit([&os](const auto& v) {
+            using T = std::decay_t<decltype(v)>;
+            if constexpr (std::is_same_v<T, int64_t>) {
+                os << v;
+            } else if constexpr (std::is_same_v<T, double>) {
+                os << std::setprecision(17) << v;
+            } else if constexpr (std::is_same_v<T, std::string>) {
+                os << '"' << v << '"';
+            } else {
+                os << v.to_string();
+            }
+        }, rp.content);
+        return os;
+    }
+
+    friend void PrintTo(const resolved_parameter& rp, std::ostream* os) {
+        *os << rp;
+    }
 
     template<class Archive>
     void serialize( Archive & ar ) {

@@ -125,7 +125,7 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
                     result_array = mdarray<int64_t>::concatenate(result_array, to_concat).value();
                 } else {
                     auto array_res = value_opt.value().get_int_array();
-                    if( unpacked_dimension ==1)
+                    if( unpacked_dimension.size() ==1)
                         result_array= mdarray<int64_t>::concatenate(result_array, array_res).value();
                     else
                         result_array= mdarray<int64_t>::stack(result_array, array_res).value();
@@ -136,23 +136,18 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
     }
     if (default_initialization) {
         if (!result.has_value()) return result;
-
+        auto dims = unpacked_dimension;
+        while (dims.size()<3) dims.insert(dims.begin(), 1);
         if(result.value().is_int_array()) {
-            mdarray<int64_t> result_array;
             auto val = result.value().get_int_array().get_scalar();
             if (!val) throw std::runtime_error("Error: initializer of default array should be defined");
-            for (int i =0; i< container_size; i++) {
-                result_array= mdarray<int64_t>::concatenate(result_array, val.value()).value();
-            }
+            mdarray result_array = {dims, val.value()};
             return result_array;
         }
         if(result.value().is_string_array()) {
-            mdarray<std::string> result_array;
             auto val = result.value().get_string_array().get_scalar();
             if (!val) throw std::runtime_error("Error: initializer of default array should be defined");
-            for (int i =0; i< container_size; i++) {
-                result_array= mdarray<std::string>::concatenate(result_array, val.value()).value();
-            }
+            mdarray result_array = {dims, val.value()};
             return result_array;
         }
     }
@@ -175,7 +170,7 @@ std::string Concatenation::print()  const{
 
 void Concatenation::set_container_sizes(const resolved_type &s) {
     resolved_type content_sizes;
-    unpacked_dimension = s.unpacked_sizes.size();
+    unpacked_dimension = s.unpacked_sizes;
     if (!s.unpacked_sizes.empty()) {
         if (s.unpacked_sizes.size()>1) content_sizes.unpacked_sizes.insert(content_sizes.unpacked_sizes.end(), s.unpacked_sizes.begin(), s.unpacked_sizes.end()-1);
         content_sizes.packed_sizes = s.packed_sizes;

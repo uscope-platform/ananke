@@ -110,7 +110,7 @@ private:
 
     bool packing = false;
     bool default_initialization = false;
-    uint64_t unpacked_dimension  = 0;
+    std::vector<uint64_t> unpacked_dimension  = {};
     int64_t container_size = 0;
 
     std::vector<std::shared_ptr<Parameter_value_base>> components;

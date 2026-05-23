@@ -222,7 +222,7 @@ public:
             for(auto &item_1d: item_2d) {
                 result += "{";
                 for(auto &item: item_1d) {
-                    result += std::to_string(item);
+                    result += stringify(item);
                     if(&item != &item_1d.back()) result += ", ";
                 }
                 result += "}";
