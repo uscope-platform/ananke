@@ -214,6 +214,36 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_system_task() {
 
 void HDL_function_call::set_container_sizes(const resolved_type &s) {
     packing = s.unpacked_sizes.empty();
+    if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) return;
+    if (s.unpacked_sizes.empty()) {
+        if (assignments.size()==1) assignments[0].set_container_size(s);
+        else {
+            resolved_type lower_container_size;
+            lower_container_size.packed_sizes.insert(
+                lower_container_size.packed_sizes.begin(),
+                s.packed_sizes.begin(),
+                s.packed_sizes.end()-1
+            );
+            for (auto &a:assignments) {
+                a.set_container_size(lower_container_size);
+            }
+        }
+    } else {
+        if (assignments.size()==1) assignments[0].set_container_size(s);
+        else {
+            resolved_type lower_container_size;
+            lower_container_size.packed_sizes = s.unpacked_sizes;
+            lower_container_size.unpacked_sizes.insert(
+                lower_container_size.unpacked_sizes.begin(),
+                s.unpacked_sizes.begin(),
+                s.unpacked_sizes.end()-1
+            );
+            for (auto &a:assignments) {
+                a.set_container_size(lower_container_size);
+            }
+        }
+    }
+    //TODO: deal with loop
 }
 
 
