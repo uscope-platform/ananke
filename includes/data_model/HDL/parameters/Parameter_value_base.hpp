@@ -20,10 +20,10 @@
 #include <string>
 #include <vector>
 #include <bitset>
-#include "data_model/HDL/parameters/qualified_identifier.hpp"
-#include "data_model/HDL/parameters/resolved_parameter.hpp"
+#include "common/qualified_identifier.hpp"
+#include "common/resolved_parameter.hpp"
 #include "data_model/mdarray.hpp"
-#include "data_model/HDL/parameters/resolved_type.hpp"
+#include "data_model/HDL/parameters/common/resolved_type.hpp"
 
 class HDL_function_def;
 

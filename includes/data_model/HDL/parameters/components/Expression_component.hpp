@@ -25,7 +25,7 @@
 #include <variant>
 #include <cmath>
 
-#include "data_model/HDL/parameters/qualified_identifier.hpp"
+#include "../common/qualified_identifier.hpp"
 
 #include <cereal/types/vector.hpp>
 #include <cereal/types/variant.hpp>

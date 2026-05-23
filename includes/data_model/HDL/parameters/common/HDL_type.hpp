@@ -19,8 +19,8 @@
 
 #include <vector>
 
-#include "data_model/HDL/parameters/dimension.hpp"
-#include "data_model/HDL/parameters/resolved_type.hpp"
+#include "data_model/HDL/parameters/common/dimension.hpp"
+#include "data_model/HDL/parameters/common/resolved_type.hpp"
 
 
 class HDL_type {

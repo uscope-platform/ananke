@@ -17,7 +17,7 @@
 #ifndef ANANKE_DIMENSION_HPP
 #define ANANKE_DIMENSION_HPP
 
-#include "components/Expression.hpp"
+#include "data_model/HDL/parameters/components/Expression.hpp"
 
 typedef struct dims_struct{
     Expression first_bound;

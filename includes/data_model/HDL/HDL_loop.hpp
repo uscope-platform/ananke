@@ -22,7 +22,7 @@
 #include <cereal/types/optional.hpp>
 #include <spdlog/spdlog.h>
 
-#include "data_model/HDL/parameters/qualified_identifier.hpp"
+#include "parameters/common/qualified_identifier.hpp"
 #include "data_model/HDL/parameters/Parameter_value_base.hpp"
 
 class HDL_parameter;
