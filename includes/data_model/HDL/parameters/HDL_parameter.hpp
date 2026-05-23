@@ -142,7 +142,6 @@ public:
 
 private:
 
-    std::optional<resolved_parameter> evaluate_vector();
     resolved_parameter process_default_initialization();
 
     std::string name;
