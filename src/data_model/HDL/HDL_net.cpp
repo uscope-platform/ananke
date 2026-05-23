@@ -35,7 +35,7 @@ std::string HDL_net::get_full_name() const {
 void HDL_net::evaluate() {
     auto val = range.accessor.evaluate();
     if(val.has_value()) {
-        if(val.value().get_integer()) {
+        if(val.value().get_integer().get_value()) {
             range.accessor = {Expression_component(val.value().get_integer(), 0)};
         }
     }

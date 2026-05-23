@@ -25,8 +25,8 @@
 class loop_solver {
 public:
     loop_solver() = default;
-    static std::vector<int64_t> solve_loop(std::shared_ptr<HDL_instance_AST> &node, HDL_Resource &spec);
-    static std::vector<int64_t> solve_loop(const HDL_loop_metadata &loop);
+    static std::vector<hdl_integer> solve_loop(std::shared_ptr<HDL_instance_AST> &node, HDL_Resource &spec);
+    static std::vector<hdl_integer> solve_loop(const HDL_loop_metadata &loop);
 private:
     static std::shared_ptr<HDL_parameter> get_init_variable(const HDL_loop_metadata &l);
     static std::shared_ptr<HDL_parameter> update_loop(const Expression e, std::shared_ptr<HDL_parameter> loop_var);

@@ -50,11 +50,11 @@ Expression_component::Expression_component(const std::string &s, const component
     }
 }
 
-Expression_component::Expression_component(std::variant<int64_t, double> n, int64_t b_s) {
+Expression_component::Expression_component(std::variant<hdl_integer, double> n, int64_t b_s) {
     if(std::holds_alternative<double>(n)) {
         value = std::get<double>(n);
     } else {
-        value = std::get<int64_t>(n);
+        value = std::get<hdl_integer>(n);
     }
     binary_size = b_s;
     type = number;
@@ -95,7 +95,7 @@ bool Expression_component::propagate_constant(const qualified_identifier &consta
         if (idx_val.has_value()) {
             index_need_rewrite = true;
             if (!idx_val.value().is_integer()) return false;
-            indices.push_back(idx_val.value().get_integer());
+            indices.push_back(idx_val.value().get_integer().get_value());
         }
     }
     if(array_index.size() != indices.size()) return false;
@@ -130,9 +130,9 @@ bool Expression_component::propagate_constant(const qualified_identifier &consta
                         value = ""s; // if the array value is not found (because of some dimensional issue) substitute with a 0 rather than crashing
                     }
                 } else {
-                    std::bitset<64> bits(const_value.get_integer());
+                    std::bitset<64> bits(const_value.get_integer().get_value());
                     type = number;
-                    value = static_cast<int64_t>(bits[indices[0]]);
+                    value = static_cast<hdl_integer>(bits[indices[0]]);
                 }
 
             } else {
@@ -188,8 +188,8 @@ std::pair<resolved_parameter, int64_t>  Expression_component::process_number(con
         ret_size = 64;
         ret_value = std::stod(s);
     } else if(test_parameter_type(number_regex, s)) {
-        ret_value = static_cast<int64_t>(std::stoul(s));
-        ret_size = calculate_binary_size(ret_value.get_integer());
+        ret_value = static_cast<hdl_integer>(std::stoul(s));
+        ret_size = ret_value.get_integer().get_size();
     } else if(test_parameter_type(sv_constant_regex, s)){
         std::smatch base_match;
         if(std::regex_search(s, base_match, sv_constant_regex)){
@@ -207,13 +207,13 @@ std::pair<resolved_parameter, int64_t>  Expression_component::process_number(con
                     break;
             }
             if(base =="h"){
-                ret_value = static_cast<int64_t>(std::stoul(str_value, nullptr, 16));
+                ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 16));
             } else if(base =="d") {
-                ret_value = static_cast<int64_t>(std::stoul(str_value, nullptr, 10));
+                ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 10));
             } else if(base =="o") {
-                ret_value = static_cast<int64_t>(std::stoul(str_value, nullptr, 8));
+                ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 8));
             } else if(base =="b") {
-                ret_value = static_cast<int64_t>(std::stoul(str_value, nullptr, 2));
+                ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 2));
             }
             // Process size
 
@@ -221,7 +221,7 @@ std::pair<resolved_parameter, int64_t>  Expression_component::process_number(con
                 if(!base_match[1].str().empty()) {
                     ret_size = std::stoll(base_match[1].str());
                 } else {
-                    ret_size = calculate_binary_size(ret_value.get_integer());
+                    ret_size = ret_value.get_integer().get_size();
                 }
             }
         }
@@ -287,14 +287,6 @@ nlohmann::json Expression_component::dump() {
     return ret;
 }
 
-int64_t Expression_component::calculate_binary_size(int64_t in) {
-    auto n_bits = std::log2(in);
-    if(std::isinf(n_bits) || n_bits == 0) {
-        return 1;
-    }else{
-        return  std::ceil(n_bits);
-    }
-}
 
 void Expression_component::set_array_index(const std::vector<Expression> &v) {
     array_index = v;

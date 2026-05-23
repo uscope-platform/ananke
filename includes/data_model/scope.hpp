@@ -18,10 +18,10 @@
 #include <cstdint>
 
 struct scope_data {
-    uint64_t buffer_address = 0;
-    uint64_t enable_address = 0;
-    uint64_t data_length_address = 0;
-    uint64_t mux_address = 0;
+    hdl_integer buffer_address = 0;
+    hdl_integer enable_address = 0;
+    hdl_integer data_length_address = 0;
+    hdl_integer mux_address = 0;
 };
 
 #endif //ANANKE_SCOPE_HPP

@@ -1271,7 +1271,7 @@ TEST(parameter_extraction, assay_assignment) {
 
     auto defaults = resource.get_default_parameters();
 
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8, 32});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -1330,7 +1330,7 @@ TEST(parameter_extraction, default_assign) {
 
     auto defaults = resource.get_default_parameters();
 
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {5, 5});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -1400,7 +1400,7 @@ TEST(parameter_extraction, array_concatenation) {
 
     auto defaults = resource.get_default_parameters();
 
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8,32});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -1462,7 +1462,7 @@ TEST(parameter_extraction, array_parameter) {
     }
 
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> array_value;
+    mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "array_parameter"}, array_value}
@@ -1593,7 +1593,7 @@ TEST(parameter_extraction, simple_array_propagation) {
     }
 
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> array_value;
+    mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "array_parameter"}, array_value},
@@ -1678,7 +1678,7 @@ TEST(parameter_extraction, array_expression) {
     }
 
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> array_value;
+    mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "array_parameter"}, array_value},
@@ -1764,7 +1764,7 @@ TEST(parameter_extraction, multidimensional_array_expression) {
 
     auto defaults = resource.get_default_parameters();
 
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_2d_slice({0}, {{6,5}, {32,32}});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -1934,7 +1934,7 @@ TEST(parameter_extraction, simple_repetition_initialization) {
 
     auto defaults = resource.get_default_parameters();
 
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_2d_slice({0}, {{1,1}});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -2113,7 +2113,7 @@ TEST(parameter_extraction, repetition_initialization) {
 
     auto defaults = resource.get_default_parameters();
 
-    mdarray<int64_t> av, av2, av3, av4;
+    mdarray<hdl_integer> av, av2, av3, av4;
     av.set_2d_slice({0}, {{1,1}});
     av2.set_2d_slice({0}, {{4,4}});
     av3.set_2d_slice({0}, {{4, 4, 1, 1}});
@@ -2255,7 +2255,7 @@ TEST(parameter_extraction, multpidim_packed_array) {
 
     auto defaults = resource.get_default_parameters();
 
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {201, 169});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "packed_param"}, av }
@@ -2385,7 +2385,7 @@ TEST(parameter_extraction, negative_number_parameters) {
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8, 32});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -2451,7 +2451,7 @@ TEST(parameter_extraction, packed_bit_access) {
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8, 32});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -2506,7 +2506,7 @@ TEST(parameter_extraction, negative_number_array_init) {
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {32767, -32767});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -2567,7 +2567,7 @@ TEST(parameter_extraction, expression_array_init) {
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {42, 9});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -2667,7 +2667,7 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> av, av2;
+    mdarray<hdl_integer> av, av2;
     av.set_1d_slice({0, 0}, {29, 226});
     av2.set_1d_slice({0, 0}, {0, 255});
 
@@ -2832,7 +2832,7 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {0x27e0, 0xe0, 3 , 3, 3});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -2939,7 +2939,7 @@ TEST(parameter_extraction, multidimensional_packed_array) {
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {226, 29});
     av.set_1d_slice({0, 1}, {29, 226});
 
@@ -3051,7 +3051,7 @@ TEST(parameter_extraction, array_initialization_default) {
         ASSERT_EQ(*item, *parameters.get(item->get_name()));
     }
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {3, 3});
     av.set_1d_slice({0, 1}, {3, 3});
     av.set_1d_slice({0, 2}, {3, 3});
@@ -3404,7 +3404,7 @@ TEST(parameter_extraction, loop_function_parameter) {
 
     auto defaults = resource.get_default_parameters();
 
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {0, 100, 200});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -3497,7 +3497,7 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
 
     auto defaults = resource.get_default_parameters();
 
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {0, 100, 200});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -3628,7 +3628,7 @@ TEST(parameter_extraction, interface_parameters) {
 
     ASSERT_EQ(check_params, parameters);
     auto defaults = resource.get_default_parameters();
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8, 32});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {

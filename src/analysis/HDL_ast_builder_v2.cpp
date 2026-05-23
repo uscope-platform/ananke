@@ -135,7 +135,7 @@ void HDL_ast_builder_v2::update_loop_constants(std::shared_ptr<HDL_instance_AST>
 }
 
 
-std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::specialize_instance(const HDL_instance_AST &i, int64_t idx, std::string idx_name) {
+std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::specialize_instance(const HDL_instance_AST &i, hdl_integer idx, std::string idx_name) {
     HDL_instance_AST specialized_d = i;
     auto specialized_parameters = specialized_d.get_parameters().clone();
     specialized_d.set_parameters(specialized_parameters);

@@ -53,7 +53,7 @@ public:
 
 
     explicit Expression_component(const std::string &s,const component_type &t);
-    explicit Expression_component(std::variant<int64_t, double> n, int64_t b_s);
+    explicit Expression_component(std::variant<hdl_integer, double> n, int64_t b_s);
     explicit Expression_component(const std::shared_ptr<Parameter_value_base> &param);
     std::set<qualified_identifier> get_dependencies()const;
     bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value);
@@ -90,7 +90,6 @@ public:
     int64_t get_operator_precedence();
     std::string print_value() const;
 
-    static int64_t calculate_binary_size(int64_t in);
     typedef enum{
         unary_operator = 0,
         binary_operator = 1

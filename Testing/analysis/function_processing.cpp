@@ -104,7 +104,7 @@ TEST(function_processing, simple_function_array) {
     auto call = HDL_function_call("CTRL_ADDR_CALC");
     call.add_body(functions["CTRL_ADDR_CALC"].get_assignments(), functions["CTRL_ADDR_CALC"].get_loop());
 
-    mdarray<int64_t> check_val;
+    mdarray<hdl_integer> check_val;
     check_val.set_1d_slice({0,0}, {100,200,300});
     auto values = call.evaluate();
     ASSERT_TRUE(values.has_value());
@@ -171,7 +171,7 @@ TEST(function_processing, simple_loop_function) {
     auto call = HDL_function_call("CTRL_ADDR_CALC");
     call.add_body(functions["CTRL_ADDR_CALC"].get_assignments(), functions["CTRL_ADDR_CALC"].get_loop());
 
-    mdarray<int64_t> check_val;
+    mdarray<hdl_integer> check_val;
     check_val.set_1d_slice({0,0}, {0, 100,200});
     auto values = call.evaluate();
     ASSERT_TRUE(values.has_value());
@@ -234,7 +234,7 @@ TEST(function_processing, parametric_loop_function) {
     check_f.add_loop_metadata(metadata);
     EXPECT_EQ(check_f,result);
 
-    mdarray<int64_t> check_val;
+    mdarray<hdl_integer> check_val;
     check_val.set_1d_slice({0,0}, {0,100,200});
 
     auto call = HDL_function_call("CTRL_ADDR_CALC");
@@ -323,7 +323,7 @@ TEST(function_processing, complex_loop_function) {
     call.add_body(functions["CTRL_ADDR_CALC"].get_assignments(), functions["CTRL_ADDR_CALC"].get_loop());
 
 
-    mdarray<int64_t> check_val;
+    mdarray<hdl_integer> check_val;
     check_val.set_1d_slice({0,0}, {44, 100,200,300, 667});
     call.propagate_constant({"","", "N_CORES"}, 3);
     auto values = call.evaluate();
@@ -374,7 +374,7 @@ TEST(function_processing, parametrized_function) {
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);
 
-    mdarray<int64_t> check_val;
+    mdarray<hdl_integer> check_val;
     check_val.set_1d_slice({0,0}, {44, 33});
 
     auto call = HDL_function_call("CTRL_ADDR_CALC");

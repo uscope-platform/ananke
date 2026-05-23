@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <string>
 #include "data_model/mdarray.hpp"
+#include "data_model/HDL/parameters/common/hdl_integer.hpp"
 
 
 #include <cereal/types/variant.hpp>
@@ -28,20 +29,20 @@
 class resolved_parameter {
 public:
     resolved_parameter() = default;
-    resolved_parameter(int init_val) { content = static_cast<int64_t>(init_val); }
-    resolved_parameter(int64_t init_val){content = init_val;}
+    resolved_parameter(int init_val) { content = static_cast<hdl_integer>(init_val); }
+    resolved_parameter(hdl_integer init_val){content = init_val;}
     resolved_parameter(const std::string &init_val){content = init_val;}
     resolved_parameter(double init_val){content = init_val;}
-    resolved_parameter(const mdarray<int64_t> &init_val){content = init_val;}
+    resolved_parameter(const mdarray<hdl_integer> &init_val){content = init_val;}
     resolved_parameter(const mdarray<std::string> &init_val){content = init_val;}
-    [[nodiscard]] int64_t get_integer() const;
+    [[nodiscard]] hdl_integer get_integer() const;
     [[nodiscard]] std::string get_string() const;
-    [[nodiscard]] mdarray<int64_t> get_int_array() const;
+    [[nodiscard]] mdarray<hdl_integer> get_int_array() const;
     [[nodiscard]] mdarray<std::string> get_string_array() const;
     [[nodiscard]] double get_real() const;
-    [[nodiscard]] bool is_integer() const {return std::holds_alternative<int64_t>(content);}
+    [[nodiscard]] bool is_integer() const {return std::holds_alternative<hdl_integer>(content);}
     [[nodiscard]] bool is_string() const {return std::holds_alternative<std::string>(content);}
-    [[nodiscard]] bool is_int_array() const {return std::holds_alternative<mdarray<int64_t>>(content);}
+    [[nodiscard]] bool is_int_array() const {return std::holds_alternative<mdarray<hdl_integer>>(content);}
     [[nodiscard]] bool is_string_array() const {return std::holds_alternative<mdarray<std::string>>(content);}
     [[nodiscard]] bool is_real() const {return std::holds_alternative<double>(content);}
 
@@ -74,7 +75,7 @@ public:
 
 private:
 
-    std::variant<int64_t, std::string, mdarray<int64_t>,  double, mdarray<std::string>> content;
+    std::variant<hdl_integer, std::string, mdarray<hdl_integer>,  double, mdarray<std::string>> content;
 
 };
 

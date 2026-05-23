@@ -26,7 +26,7 @@
 
 typedef struct {
     std::string if_name;
-    int64_t address_offset;
+    hdl_integer address_offset;
     bool static_remap;
 } data_stream;
 
@@ -48,7 +48,7 @@ private:
     void process_source(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream);
     std::set<std::pair<std::string, std::string>> explored_nodes;
     std::vector<std::shared_ptr<HDL_instance_AST>> find_sinks(std::shared_ptr<HDL_instance_AST> &ast);
-    uint64_t find_datapoint_width(const std::shared_ptr<HDL_instance_AST> &node,std::string name);
+    hdl_integer find_datapoint_width(const std::shared_ptr<HDL_instance_AST> &node,std::string name);
 
     std::vector<std::string> parse_datapoint_names(std::string &s){
         std::stringstream ss(s);

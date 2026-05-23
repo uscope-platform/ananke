@@ -51,7 +51,7 @@ public:
     void propagate_function(const HDL_function_def &def) override;
     std::optional<resolved_parameter> evaluate() override;
 
-    int64_t pack_repetition(int64_t value, int64_t width, int64_t count);
+    hdl_integer pack_repetition(hdl_integer value, int64_t width, int64_t count);
 
     std::string print() const override;
     friend bool operator==(const Replication &lhs, const Replication &rhs) {

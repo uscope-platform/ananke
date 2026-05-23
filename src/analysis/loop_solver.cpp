@@ -17,7 +17,7 @@
 #include "analysis/loop_solver.hpp"
 
 
-std::vector<int64_t> loop_solver::solve_loop(std::shared_ptr<HDL_instance_AST> &node, HDL_Resource &spec) {
+std::vector<hdl_integer> loop_solver::solve_loop(std::shared_ptr<HDL_instance_AST> &node, HDL_Resource &spec) {
     if (node->get_n_loops() == 0) return {};
     if (node->get_n_loops()>1) {
         spdlog::warn("Nested loops are not supported by parameter analysis\n In HDL instance: " + node->get_name() + " of type: " + node->get_type() + " is in a nested loop");
@@ -60,9 +60,9 @@ std::shared_ptr<HDL_parameter> loop_solver::update_loop( Expression e, std::shar
     return loop_var;
 }
 
-std::vector<int64_t> loop_solver::solve_loop(const HDL_loop_metadata &loop) {
+std::vector<hdl_integer> loop_solver::solve_loop(const HDL_loop_metadata &loop) {
 
-    std::vector<int64_t> ret;
+    std::vector<hdl_integer> ret;
 
     auto loop_variable = get_init_variable(loop);
 

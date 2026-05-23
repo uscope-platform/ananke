@@ -19,6 +19,8 @@
 #include <string>
 #include <cstdint>
 
+#include "data_model/HDL/parameters/common/hdl_integer.hpp"
+
 class channel {
 public:
     channel() = default;
@@ -31,11 +33,11 @@ public:
     void set_enabled(const bool &d){enabled = d;};
     bool get_enabled() const {return enabled;};
 
-    void set_phys_width(unsigned int pw){phys_width = pw;};
-    unsigned int get_phys_width() const {return phys_width;};
+    void set_phys_width(hdl_integer pw){phys_width = pw;};
+    hdl_integer get_phys_width() const {return phys_width;};
 
-    void set_mux_setting(unsigned int m){mux_setting = m;};
-    unsigned int get_mux_setting() const {return mux_setting;};
+    void set_mux_setting(hdl_integer m){mux_setting = m;};
+    hdl_integer get_mux_setting() const {return mux_setting;};
 
     void set_channel_number(unsigned int cn){channel_number = cn;};
     unsigned int get_channel_number() const {return channel_number;};
@@ -52,8 +54,8 @@ public:
 private:
     std::string name;
     bool enabled = false;
-    unsigned int phys_width = 32;
-    uint64_t mux_setting = 0;
+    hdl_integer phys_width = 32;
+    hdl_integer mux_setting = 0;
     unsigned int channel_number = 0;
     bool signed_data = true;
 

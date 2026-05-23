@@ -42,7 +42,7 @@ public:
     void push_back(const Expression_component &ec) {components.emplace_back(ec);}
     void push_front(const Expression_component &ec) {components.insert(components.begin(), ec);}
     void emplace_back(const std::string &ec, Expression_component::component_type t) {components.emplace_back(ec, t);}
-    void emplace_back(const int64_t &ec) {components.emplace_back(ec, Expression_component::number);}
+    void emplace_back(const hdl_integer &ec) {components.emplace_back(ec, Expression_component::number);}
     std::set<qualified_identifier> get_dependencies()const override;
     bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
@@ -52,10 +52,10 @@ public:
     void set_rpn(bool s) {rpn = s;}
     std::optional<resolved_parameter> evaluate() override;
     int64_t get_size() override;
-    std::variant<int64_t, double> evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, const std::string &operation);
-    std::variant<int64_t, double> evaluate_unary_expression(resolved_parameter operand, const std::string &operation);
+    std::variant<hdl_integer, double> evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, const std::string &operation);
+    std::variant<hdl_integer, double> evaluate_unary_expression(resolved_parameter operand, const std::string &operation);
 
-    std::variant<int64_t, double> evaluate_cast(resolved_parameter operand, const std::string &operation);
+    std::variant<hdl_integer, double> evaluate_cast(resolved_parameter operand, const std::string &operation);
 
     void add_index(const Expression &idx);
 

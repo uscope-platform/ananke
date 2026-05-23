@@ -192,7 +192,7 @@ nlohmann::json HDL_parameter::dump() {
     else if (solved_value.value().is_integer()) {
         ret["type"] = "numeric_parameter";
         ret["value"]= std::vector<int64_t>();
-        if(solved_value.has_value()) ret["value"].push_back(solved_value.value().get_integer());
+        if(solved_value.has_value()) ret["value"].push_back(solved_value.value().get_integer().get_value());
     }
     else if (solved_value.value().is_int_array()) {
         ret["type"] = "array_parameter";

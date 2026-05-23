@@ -99,12 +99,12 @@ void Replication::propagate_function(const HDL_function_def &def) {
 }
 
 std::optional<resolved_parameter> Replication::evaluate() {
-    mdarray<int64_t> result;
+    mdarray<hdl_integer> result;
     auto raw_size = repetition_size.evaluate();
     if (!raw_size.has_value()) return false;
     if (!raw_size.value().is_integer()) return false;
-    auto size = raw_size.value().get_integer();
-    mdarray<int64_t>::md_1d_array repeated_value;
+    auto size = raw_size.value().get_integer().get_value();
+    mdarray<hdl_integer>::md_1d_array repeated_value;
     if (repeated_item->is_expression()) {
         auto item = repeated_item->as<Expression>().evaluate();
         int64_t repeated_size = repeated_item->as<Expression>().get_size();
@@ -113,7 +113,7 @@ std::optional<resolved_parameter> Replication::evaluate() {
         if (!packing) {
             repeated_value = std::vector(size, item.value().get_integer());
         } else {
-            return pack_repetition(item.value().get_integer(), repeated_size, size);
+            return pack_repetition(item.value().get_integer() , repeated_size, size);
         }
     } else if (repeated_item->is_concatenation()) {
 
@@ -139,11 +139,11 @@ std::optional<resolved_parameter> Replication::evaluate() {
     return result;
 }
 
-int64_t Replication::pack_repetition(int64_t value, int64_t width, int64_t count) {
-    int64_t packed_result = 0;
+hdl_integer Replication::pack_repetition(hdl_integer value, int64_t width, int64_t count) {
+    hdl_integer packed_result = 0;
 
     int64_t mask = (static_cast<int64_t>(1) << width) - 1;
-    int64_t clean_value = value & mask;
+    hdl_integer clean_value = value & mask;
 
     for (int i = 0; i < count; i++) {
         int64_t shift_amount = static_cast<int64_t>(i) * width;

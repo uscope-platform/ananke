@@ -15,3 +15,60 @@
 
 
 #include "data_model/HDL/parameters/common/hdl_integer.hpp"
+
+uint64_t hdl_integer::get_size() {
+    auto n_bits = std::log2(value);
+    if(std::isinf(n_bits) || n_bits == 0) {
+        return 1;
+    }else{
+        return  std::ceil(n_bits);
+    }
+}
+
+hdl_integer hdl_integer::operator+(const hdl_integer &o) const {
+    return o.value + value;
+}
+
+hdl_integer hdl_integer::operator-(const hdl_integer &o) const {
+    return value - o.value;
+}
+
+hdl_integer hdl_integer::operator*(const hdl_integer &o) const {
+    return value * o.value;
+}
+
+hdl_integer hdl_integer::operator/(const hdl_integer &o) const {
+    return value / o.value;
+}
+
+hdl_integer hdl_integer::operator%(const hdl_integer &o) const {
+    return value % o.value;
+}
+
+hdl_integer hdl_integer::operator&(const hdl_integer &o) const {
+    return value & o.value;
+}
+
+hdl_integer hdl_integer::operator|(const hdl_integer &o) const {
+    return value | o.value;
+}
+
+hdl_integer hdl_integer::operator^(const hdl_integer &o) const {
+    return value ^ o.value;
+}
+
+hdl_integer hdl_integer::operator~() const {
+    return ~value;
+}
+
+hdl_integer hdl_integer::operator!() const {
+    return !value;
+}
+
+hdl_integer hdl_integer::operator<<(const hdl_integer &o) const {
+    return  value<<o.value;
+}
+
+hdl_integer hdl_integer::operator>>(const hdl_integer &o) const {
+    return value>> o.value;
+}

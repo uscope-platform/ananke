@@ -70,12 +70,12 @@ public:
         return solved_value.value().get_string();
     }
 
-    [[nodiscard]] std::optional<int64_t>  get_numeric_value() const {
+    [[nodiscard]] std::optional<hdl_integer>  get_numeric_value() const {
         if (!solved_value.has_value()) return 0;
         return solved_value.value().get_integer();
     }
 
-    [[nodiscard]] std::optional<mdarray<int64_t>> get_int_array_value() const{
+    [[nodiscard]] std::optional<mdarray<hdl_integer>> get_int_array_value() const{
         if (!solved_value.has_value()) return {};
         return solved_value.value().get_int_array();
     }

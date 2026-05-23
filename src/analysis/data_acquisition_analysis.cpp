@@ -169,7 +169,7 @@ void data_acquisition_analysis::process_source(const std::shared_ptr<HDL_instanc
     std::string port_suffix = specs_manager.get_component_spec(node->get_type(), in_stream.if_name);
     auto names = parse_datapoint_names(node_names);
 
-    std::vector<int64_t> addresses;
+    std::vector<hdl_integer> addresses;
     if(specs_manager.has_component_spec(node->get_type(), "initial_addresses")){
         auto addr_param_name = specs_manager.get_component_spec(node->get_type(), "initial_addresses");
         if(!node->has_parameter(addr_param_name)){
@@ -196,7 +196,7 @@ void data_acquisition_analysis::process_source(const std::shared_ptr<HDL_instanc
         auto val = node->get_parameter_value("OUTPUT_SIGNED")->get_numeric_value();
         if(!val.has_value()) {
             spdlog::warn("The OUTPUT_SIGNED parameter for data source {}, does not have a valid value, assuming unsigned data",node->get_name());
-            output_signs = std::bitset<1024>(val.value());
+            output_signs = std::bitset<1024>(val.value().get_value());
         } else {
             output_signs =  std::bitset<1024>(0);
         }
@@ -225,7 +225,7 @@ void data_acquisition_analysis::process_source(const std::shared_ptr<HDL_instanc
         c.set_phys_width(width);
         c.set_channel_number(0);
 
-       uint32_t addr_base = 0;
+       hdl_integer addr_base = 0;
        if(node->has_parameter("OUTPUT_DESTINATION_BASE")){
            auto val = node->get_parameter_value("OUTPUT_DESTINATION_BASE")->get_numeric_value();
            if(val.has_value()) {
@@ -292,7 +292,7 @@ data_acquisition_analysis::process_1_to_1_node(const std::shared_ptr<HDL_instanc
     data_stream ret;
 
     auto in_port = specs_manager.get_input_port(node->get_type());
-    int64_t remapping_addr = 0;
+    hdl_integer remapping_addr = 0;
     std::string remapping_type;
     if(specs_manager.get_component_spec(node->get_type(), "remapping") == "true"){
         remapping_type = node->get_parameter_value("REMAP_TYPE")->get_string_value();
@@ -324,7 +324,7 @@ data_acquisition_analysis::process_1_to_1_node(const std::shared_ptr<HDL_instanc
     return {ret};
 }
 
-uint64_t
+hdl_integer
 data_acquisition_analysis::find_datapoint_width(const std::shared_ptr<HDL_instance_AST> &node, std::string name) {
     for(auto &item:node->get_dependencies()){
         if(item->get_name() == name){

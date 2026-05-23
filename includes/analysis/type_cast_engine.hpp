@@ -19,13 +19,14 @@
 
 #include <cstdint>
 #include <cmath>
+#include "data_model/HDL/parameters/common/hdl_integer.hpp"
 
 class type_cast_engine {
 public:
-    static int64_t to_unsigned(int64_t in, uint64_t container_size);
-    static int64_t to_signed(int64_t in, uint64_t container_size);
-    static int64_t to_int(int64_t in, uint64_t container_size);
-    static int64_t to_int(double in, uint64_t container_size);
+    static hdl_integer to_unsigned(hdl_integer in, uint64_t container_size);
+    static hdl_integer to_signed(hdl_integer in, uint64_t container_size);
+    static hdl_integer to_int(hdl_integer in, uint64_t container_size);
+    static hdl_integer to_int(double in, uint64_t container_size);
 private:
 
 };

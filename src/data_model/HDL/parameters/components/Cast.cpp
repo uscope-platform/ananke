@@ -100,7 +100,7 @@ std::optional<resolved_parameter> Cast::evaluate() {
             return content_val.value();
         }
         auto raw_value = content_val.value().get_integer();
-        auto cast_size = raw_cast_size.value().get_integer();
+        auto cast_size = raw_cast_size.value().get_integer().get_value();
         int64_t mask = (1ULL << cast_size) - 1;
         return raw_value &  mask;
     }
@@ -115,7 +115,7 @@ std::string Cast::print() const {
 }
 
 int64_t Cast::get_size() {
-    return size.evaluate().value().get_integer();
+    return size.evaluate().value().get_integer().get_value();
 }
 
 
@@ -135,7 +135,7 @@ void Cast::set_container_sizes(const resolved_type &s) {
     else {
         auto cast_size = size.evaluate();
         resolved_type t;
-        t.packed_sizes.push_back(cast_size.value().get_integer());
+        t.packed_sizes.push_back(cast_size.value().get_integer().get_value());
         if (cast_size) content->set_container_sizes(t);
     }
 }

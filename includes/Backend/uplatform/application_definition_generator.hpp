@@ -47,7 +47,7 @@ public:
     std::vector<nlohmann::json> get_peripherals(){return peripherals;};
 
 private:
-    std::map<std::string, uint32_t> get_parameters(const nlohmann::json &spec, std::shared_ptr<HDL_instance_AST> &node);
+    std::map<std::string, hdl_integer> get_parameters(const nlohmann::json &spec, std::shared_ptr<HDL_instance_AST> &node);
     void process_ast(const std::shared_ptr<HDL_instance_AST> &l);
     void detect_scope(const std::string &s, std::vector<int64_t> addr);
     void deduplicate_peripheral_names();

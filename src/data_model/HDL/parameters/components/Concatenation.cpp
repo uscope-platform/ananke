@@ -90,7 +90,7 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
     auto concat_size = components.size();
     if (packing) {
         std::vector<int64_t> sizes(concat_size);
-        std::vector<int64_t> values(concat_size);
+        std::vector<hdl_integer> values(concat_size);
         for (int i = 0;i<concat_size; i++) {
 
             auto value_opt = components[concat_size-i-1]->evaluate();
@@ -115,20 +115,20 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
             }
             result = result_string;
         } else {
-            mdarray<int64_t> result_array;
+            mdarray<hdl_integer> result_array;
             for (int64_t i = 0;i<concat_size; i++) {
                 auto value_opt = components[concat_size-i-1]->evaluate();
                 if (!value_opt.has_value()) return std::nullopt;
                 if (value_opt.value().is_integer()) {
-                    mdarray<int64_t> to_concat;
+                    mdarray<hdl_integer> to_concat;
                     to_concat.set_value(0,value_opt.value().get_integer());
-                    result_array = mdarray<int64_t>::concatenate(result_array, to_concat).value();
+                    result_array = mdarray<hdl_integer>::concatenate(result_array, to_concat).value();
                 } else {
                     auto array_res = value_opt.value().get_int_array();
                     if( unpacked_dimension.size() ==1)
-                        result_array= mdarray<int64_t>::concatenate(result_array, array_res).value();
+                        result_array= mdarray<hdl_integer>::concatenate(result_array, array_res).value();
                     else
-                        result_array= mdarray<int64_t>::stack(result_array, array_res).value();
+                        result_array= mdarray<hdl_integer>::stack(result_array, array_res).value();
                 }
             }
             result = result_array;

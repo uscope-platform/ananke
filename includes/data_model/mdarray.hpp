@@ -278,6 +278,8 @@ md_2d_array get_2d_slice(std::vector<int64_t> idx) {
     static std::string stringify(const T& item) {
         if constexpr (std::is_same_v<T, std::string>) {
             return item;
+        }else if constexpr (requires { item.to_string(); }) {
+            return item.to_string(); // Handles hdl_integer once you add the member function
         } else {
             return std::to_string(item);
         }

@@ -23,7 +23,7 @@
 #include <vector>
 
 #include <cereal/types/vector.hpp>
-
+#include "data_model/HDL/parameters/common/hdl_integer.hpp"
 typedef enum {
   input=1,
   output=2,
@@ -64,8 +64,8 @@ public:
     void set_address_idx(int i) {address_index = i;};
     int get_address_idx() const {return address_index;};
 
-    void set_address_value(int64_t i) {address_value = i;};
-    int64_t get_address_value() const {return address_value;};
+    void set_address_value(hdl_integer i) {address_value = i;};
+    hdl_integer get_address_value() const {return address_value;};
 
     nlohmann::json dump();
 
@@ -84,7 +84,7 @@ private:
     std::string target;
     std::string address_param;
     int address_index = 0;
-    int64_t address_value = 0;
+    hdl_integer address_value = 0;
 
     std::string name;
 };

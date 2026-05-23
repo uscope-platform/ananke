@@ -111,7 +111,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_scalar() {
 }
 
 std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
-    std::vector<int64_t> loop_indexes;
+    std::vector<hdl_integer> loop_indexes;
     if(loop_metadata.has_value()) {
         loop_indexes = loop_solver::solve_loop(loop_metadata.value());
 
@@ -119,7 +119,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
     } else {
         loop_indexes = {};
     }
-    std::vector<int64_t> values(assignments.size() + loop_indexes.size());
+    std::vector<hdl_integer> values(assignments.size() + loop_indexes.size());
     std::vector<int64_t> value_sizes(assignments.size() + loop_indexes.size());
     for(auto &a:assignments) {
         auto idx = a.get_index().value()->evaluate();
@@ -127,9 +127,9 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
         if(!idx.value().is_integer()) return std::nullopt;
         auto idx_val = idx.value().get_integer();
         auto value = a.get_value()->evaluate();
-        value_sizes[idx_val] = a.get_value()->get_size();
+        value_sizes[idx_val.get_value()] = a.get_value()->get_size();
         if(!value.has_value()) return std::nullopt;
-        values[idx_val] = value.value().get_integer();
+        values[idx_val.get_value()] = value.value().get_integer();
     }
 
     if(loop_metadata.has_value()) {
@@ -141,14 +141,14 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
                 la.get_index().value()->propagate_constant(loop_var, l);
                 auto idx_val = la.get_index().value()->evaluate().value().get_integer();
                 la.get_value()->propagate_constant(loop_var, l);
-                value_sizes[idx_val] = la.get_value()->get_size();
+                value_sizes[idx_val.get_value()] = la.get_value()->get_size();
                 auto var = la.get_value()->evaluate();
-                values[idx_val] = var.value().get_integer();
+                values[idx_val.get_value()] = var.value().get_integer();
             }
         }
     }
 
-    mdarray<int64_t> result;
+    mdarray<hdl_integer> result;
     result.set_1d_slice({0, 0}, values);
     if (packing) {
         result.set_1d_slice({0,0}, {pack_values(values, value_sizes)});
@@ -166,7 +166,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_system_task() {
     }
     if (task_name == "rtoi") {
         if (resolved_arguments[0].is_real()) {
-            return static_cast<int64_t>(std::round(resolved_arguments[0].get_real()));
+            return static_cast<hdl_integer>(std::round(resolved_arguments[0].get_real()));
         }
         if (resolved_arguments[0].is_integer()) {
             return resolved_arguments[0].get_integer();
@@ -178,7 +178,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_system_task() {
         if (resolved_arguments[0].is_real()) {
             return resolved_arguments[0].get_real();
         } else if (resolved_arguments[0].is_integer()) {
-            return static_cast<double>(resolved_arguments[0].get_integer());
+            return static_cast<double>(resolved_arguments[0].get_integer().get_value());
         }
         spdlog::warn("Encountered an invalid argument for a $itor call");
         return  0;
@@ -202,9 +202,9 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_system_task() {
     }
     if (task_name == "clog2") {
         if (resolved_arguments[0].is_real()) {
-            return static_cast<int64_t>(std::ceil(std::log2(resolved_arguments[0].get_real())));
+            return static_cast<hdl_integer>(std::ceil(std::log2(resolved_arguments[0].get_real())));
         } else if (resolved_arguments[0].is_integer()) {
-            return static_cast<int64_t>(std::ceil(std::log2(resolved_arguments[0].get_integer())));
+            return static_cast<hdl_integer>(std::ceil(std::log2(resolved_arguments[0].get_integer().get_value())));
         }
         spdlog::warn("Encountered an invalid argument for a $floor call");
     }

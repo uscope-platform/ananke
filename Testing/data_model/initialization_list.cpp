@@ -35,7 +35,7 @@ TEST(Initialization_list, get_values_1d_unpacked)  {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("69", Expression_component::number)})));
     p.add_item(std::make_shared<Concatenation>(c));
 
-    mdarray<int64_t> check_array;
+    mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {69, 6, 4 , 3, 5});
 
     auto res = p.evaluate();
@@ -66,7 +66,7 @@ TEST(Initialization_list, get_values_2d_unpacked) {
     p.add_item(std::make_shared<Concatenation>(outer_c));
 
 
-    mdarray<int64_t> check_array;
+    mdarray<hdl_integer> check_array;
     check_array.set_2d_slice({0, 0}, {{54,69,6},{4,3,5}});
 
     auto res = p.evaluate();
@@ -112,7 +112,7 @@ TEST(Initialization_list, get_values_3d_unpacked) {
 
 
 
-    mdarray<int64_t> check_array;
+    mdarray<hdl_integer> check_array;
     check_array.set_data({{{11,82,43},{24,13,57}},{{54,69,6},{4,3,5}}});
 
     auto res = p.evaluate();
@@ -188,7 +188,7 @@ TEST(Initialization_list, get_values_1d_packed) {
     p.add_item(std::make_shared<Concatenation>(outer_c));
 
 
-    mdarray<int64_t> check_array;
+    mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {1, 6, 5, 2, 5});
 
     auto res = p.evaluate();
@@ -244,7 +244,7 @@ TEST(Initialization_list, get_values_2d_packed) {
     p.add_item(std::make_shared<Concatenation>(c_top));
 
 
-    mdarray<int64_t> check_array;
+    mdarray<hdl_integer> check_array;
     check_array.set_2d_slice({0}, {{6, 5}, {2, 5}});
 
     auto res = p.evaluate();
@@ -324,7 +324,7 @@ TEST(Initialization_list, get_values_3d_packed) {
 
 
 
-    mdarray<int64_t> check_array;
+    mdarray<hdl_integer> check_array;
     check_array.set_data(
     {
             {
@@ -359,7 +359,7 @@ TEST(Initialization_list, get_values_concatenation_initialization) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("43", Expression_component::number)})));
     p.set_scalar(std::make_shared<Concatenation>(c));
 
-    mdarray<int64_t> check_array;
+    mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {43, 31});
 
     auto res = p.evaluate();
@@ -396,7 +396,7 @@ TEST(Initialization_list, get_values_1d_mixed_packed_unpacked) {
     outer_c.add_component(std::make_shared<Concatenation>(c));
     p.add_item(std::make_shared<Concatenation>(outer_c));
 
-    mdarray<int64_t> check_array;
+    mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {0x27e0, 0x220e0, 3 , 3, 3});
 
     auto res = p.evaluate();
@@ -470,7 +470,7 @@ TEST(Initialization_list, concatenation_of_packed_arrays) {
 
     auto p = resource.get_default_parameters();
     auto param = p[{"","", "INITIAL_REGISTER_VALUES"}];
-    mdarray<int64_t>::md_1d_array check_array = {224,1,0,0,2,2,2};
+    mdarray<hdl_integer>::md_1d_array check_array = {224,1,0,0,2,2,2};
     auto result = param.get_int_array().get_1d_slice({0,0});
 
     ASSERT_EQ(check_array, result);

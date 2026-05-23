@@ -119,7 +119,7 @@ std::optional<resolved_parameter> Expression::evaluate() {
         if(i.is_numeric()) {
             evaluator_stack.push(i);
         } else {
-            std::variant<int64_t, double> result;
+            std::variant<hdl_integer, double> result;
             if (!i.is_operator() && !i.is_function()) return std::nullopt;
             if(i.get_operator_type() == Expression_component::unary_operator){
                 auto op = evaluator_stack.top().get_value();
@@ -154,12 +154,12 @@ int64_t Expression::get_size() {
     auto expression_value = evaluate();
     if(expression_value.has_value()) {
         if(expression_value.value().is_integer())
-            return Expression_component::calculate_binary_size(expression_value.value().get_integer());
+            return expression_value.value().get_integer().get_size();
     }
     return 0;
 }
 
-std::variant<int64_t, double> Expression::evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, const std::string &operation) {
+std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, const std::string &operation) {
     bool supported_a = (op_a.is_integer() || op_a.is_real() );
     bool supported_b = (op_b.is_integer() || op_b.is_real() );
     if(  !supported_a || !supported_b) {
@@ -168,13 +168,13 @@ std::variant<int64_t, double> Expression::evaluate_binary_expression(resolved_pa
     }
     bool int_exec = op_a.is_integer() && op_b.is_integer();
     double d_a, d_b;
-    int64_t i_a = 0;
-    int64_t i_b = 0;
+    hdl_integer i_a = 0;
+    hdl_integer i_b = 0;
 
     if(op_a.is_real())  d_a = op_a.get_real();
-    else d_a = static_cast<double>(op_a.get_integer());
+    else d_a = static_cast<double>(op_a.get_integer().get_value());
     if(op_b.is_real())  d_b = op_b.get_real();
-    else d_b = static_cast<double>(op_b.get_integer());
+    else d_b = static_cast<double>(op_b.get_integer().get_value());
     if(op_a.is_integer()) i_a =  op_a.get_integer();
     if(op_b.is_integer()) i_b =  op_b.get_integer();
     if(operation == "+"){
@@ -234,7 +234,7 @@ std::variant<int64_t, double> Expression::evaluate_binary_expression(resolved_pa
     throw std::runtime_error("Error: Attempted evaluation of an unsupported binary expression expression " + operation);
 }
 
-std::variant<int64_t, double> Expression::evaluate_unary_expression(resolved_parameter operand, const std::string &operation) {
+std::variant<hdl_integer, double> Expression::evaluate_unary_expression(resolved_parameter operand, const std::string &operation) {
     if(operation == "$rtoi" || operation == "$itor") return evaluate_cast(operand, operation);
     if( !operand.is_integer() || operand.is_real()) {
         spdlog::warn("Attempted evaluation of operand of unsupported type");
@@ -242,7 +242,7 @@ std::variant<int64_t, double> Expression::evaluate_unary_expression(resolved_par
     }
     const bool int_exec = operand.is_integer();
 
-    int64_t int_op = 0;
+    hdl_integer int_op = 0;
     if(int_exec) int_op = operand.get_integer();
     double double_op = 0;
     if(operand.is_real()) double_op = operand.get_real();
@@ -253,7 +253,7 @@ std::variant<int64_t, double> Expression::evaluate_unary_expression(resolved_par
     if(operation ==  "$ceil"){
         if(int_exec) {
             return static_cast<int64_t>(
-                ceil(static_cast<double>(int_op))
+                ceil(static_cast<double>(int_op.get_value()))
             );
         }
         return static_cast<int64_t>(
@@ -263,7 +263,7 @@ std::variant<int64_t, double> Expression::evaluate_unary_expression(resolved_par
     if(operation ==  "$floor"){
         if(int_exec) {
             return static_cast<int64_t>(
-                floor(static_cast<double>(operand.get_integer()))
+                floor(static_cast<double>(operand.get_integer().get_value()))
             );
         }
         return static_cast<int64_t>(
@@ -279,16 +279,16 @@ std::variant<int64_t, double> Expression::evaluate_unary_expression(resolved_par
     }
     if(operation ==  "$clog2"){
         return static_cast<int64_t>(
-            ceil(log2(static_cast<double>(operand.get_integer())))
+            ceil(log2(static_cast<double>(operand.get_integer().get_value())))
         );
     }
 
     throw std::runtime_error("Error: Attempted evaluation of an unsupported unary expression " + operation);
 }
 
-std::variant<int64_t, double> Expression::evaluate_cast(resolved_parameter operand, const std::string &operation) {
+std::variant<hdl_integer, double> Expression::evaluate_cast(resolved_parameter operand, const std::string &operation) {
     if(operation == "$itor") {
-        if(operand.is_integer()) return static_cast<double>(operand.get_integer());
+        if(operand.is_integer()) return static_cast<double>(operand.get_integer().get_value());
         spdlog::warn("Attempted cast of an unsupported type");
         return 0;
     } else if(operation == "$rtoi") {

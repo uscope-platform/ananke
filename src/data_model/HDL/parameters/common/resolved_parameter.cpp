@@ -16,16 +16,16 @@
 
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"
 
-int64_t resolved_parameter::get_integer() const {
-    return std::get<int64_t>(content);
+hdl_integer resolved_parameter::get_integer() const {
+    return std::get<hdl_integer>(content);
 }
 
 std::string resolved_parameter::get_string() const {
     return std::get<std::string>(content);
 }
 
-mdarray<int64_t> resolved_parameter::get_int_array() const {
-    return std::get<mdarray<int64_t>>(content);
+mdarray<hdl_integer> resolved_parameter::get_int_array() const {
+    return std::get<mdarray<hdl_integer>>(content);
 }
 
 mdarray<std::string> resolved_parameter::get_string_array() const {

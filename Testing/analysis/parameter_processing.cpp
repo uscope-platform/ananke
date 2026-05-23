@@ -170,7 +170,7 @@ TEST(parameter_processing, package_parameters_in_array_init) {
     auto param_val = ast_v2->get_parameters().get("AXI_ADDRESSES")->get_int_array_value();
     ASSERT_TRUE(param_val.has_value());
 
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0,0}, {3,2,1});
     ASSERT_EQ(param_val.value(), av);
 }
@@ -290,7 +290,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
         {Expression_component("0", Expression_component::number)},
         false
     });
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0,0}, {9,8});
     auto ec = Expression_component(0, 0);
     ec.set_value(av);
@@ -532,7 +532,7 @@ TEST(parameter_processing, complex_vector_function_parameter) {
     auto param = ast_v2->get_parameters().get("AXI_ADDRESSES");
     ASSERT_TRUE(param->get_int_array_value().has_value());
     auto param_value = param->get_int_array_value().value().get_1d_slice({0, 0});
-    mdarray<int64_t>::md_1d_array reference = {44, 100, 200, 300, 667};
+    mdarray<hdl_integer>::md_1d_array reference = {44, 100, 200, 300, 667};
     ASSERT_EQ(param_value, reference);
 
 }
@@ -579,7 +579,7 @@ TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch)
 
     auto param = ast_v2->get_parameters().get("AXI_ADDRESSES");
     auto param_value = param->get_array_value().get_1d_slice({0, 0});
-    mdarray<int64_t>::md_1d_array reference = {667, 300, 200, 100, 44};
+    mdarray<hd>::md_1d_array reference = {667, 300, 200, 100, 44};
     ASSERT_EQ(param_value, reference);
 
 }
@@ -636,7 +636,7 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
     auto param = ast_v2->get_parameters().get("AXI_ADDRESSES");
     ASSERT_TRUE(param->get_int_array_value().has_value());
     auto param_value = param->get_int_array_value().value().get_1d_slice({0, 0});
-    mdarray<int64_t>::md_1d_array reference = {0x43c00000,0x43c30004};
+    mdarray<hdl_integer>::md_1d_array reference = {0x43c00000,0x43c30004};
     ASSERT_EQ(param_value, reference);
 }
 
@@ -686,7 +686,7 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
     auto param = ast_v2->get_parameters().get("AXI_ADDRESSES");
     ASSERT_TRUE(param->get_int_array_value().has_value());
     auto param_value = param->get_int_array_value().value().get_1d_slice({0, 0});
-    mdarray<int64_t>::md_1d_array reference = {0x43c00000,0x43c30004};
+    mdarray<hdl_integer>::md_1d_array reference = {0x43c00000,0x43c30004};
     ASSERT_EQ(param_value, reference);
 }
 
@@ -929,7 +929,7 @@ TEST(parameter_processing, override_with_function_parameter) {
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
     auto fcn_param = ast_v2->get_parameters().get("FUNCTION_PARAM");
-    mdarray<int64_t>::md_1d_array reference = {100, 130, 356};
+    mdarray<hdl_integer>::md_1d_array reference = {100, 130, 356};
     ASSERT_TRUE(fcn_param->get_int_array_value().has_value());
     EXPECT_EQ(fcn_param->get_int_array_value().value().get_1d_slice({0, 0}), reference);
 
@@ -998,7 +998,7 @@ TEST(parameter_processing, override_package_function) {
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
     auto p = ast_v2->get_dependencies()[0]->get_parameters().get("p1_t");
-    mdarray<int64_t>av;
+    mdarray<hdl_integer>av;
     av.set_1d_slice({0,0}, {0, 100, 200});
     EXPECT_EQ(p->get_int_array_value(), av);
 }
@@ -1054,8 +1054,8 @@ TEST(parameter_processing, parameter_with_for_loop) {
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
     auto deps = ast_v2->get_dependencies();
 
-    std::vector<uint32_t> param_1;
-    std::vector<uint32_t> p1_t;
+    std::vector<hdl_integer> param_1;
+    std::vector<hdl_integer> p1_t;
 
     for(auto dep : deps) {
         auto val_1 = dep->get_parameters().get("DMA_BASE_ADDRESS")->get_numeric_value();
@@ -1066,9 +1066,9 @@ TEST(parameter_processing, parameter_with_for_loop) {
         p1_t.push_back(val_2.value());
     }
 
-    std::vector<uint32_t> expected_param_1 = {62, 356};
+    std::vector<hdl_integer> expected_param_1 = {62, 356};
     EXPECT_EQ(param_1, expected_param_1);
-    std::vector<uint32_t> expected_p1_t = {64, 358};
+    std::vector<hdl_integer> expected_p1_t = {64, 358};
     EXPECT_EQ(p1_t, expected_p1_t);
 
 }
@@ -1244,7 +1244,7 @@ TEST(parameter_processing, init_list_override) {
       })));
     p.add_item(std::make_shared<Concatenation>(c));
 
-    mdarray<int64_t> av;
+    mdarray<hdl_integer> av;
     av.set_1d_slice({0,0}, {1136656448,1136656384});
     p.set_value(av);
 

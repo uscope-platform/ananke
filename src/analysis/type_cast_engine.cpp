@@ -16,22 +16,24 @@
 
 #include "analysis/type_cast_engine.hpp"
 
-int64_t type_cast_engine::to_unsigned(int64_t in, uint64_t container_size) {
+#include "data_model/HDL/parameters/common/hdl_integer.hpp"
+
+hdl_integer type_cast_engine::to_unsigned(hdl_integer in, uint64_t container_size) {
     uint64_t mask = (1ULL << container_size) - 1;
-    return static_cast<int64_t>(static_cast<uint64_t>(in) & mask);
+    return static_cast<hdl_integer>(static_cast<hdl_integer>(in) & mask);
 }
 
-int64_t type_cast_engine::to_signed(int64_t in, uint64_t container_size) {
+hdl_integer type_cast_engine::to_signed(hdl_integer in, uint64_t container_size) {
 
     uint64_t shift_amount = 64 - container_size;
     return (in << shift_amount) >> shift_amount;
 }
 
-int64_t type_cast_engine::to_int(int64_t in, uint64_t container_size) {
+hdl_integer type_cast_engine::to_int(hdl_integer in, uint64_t container_size) {
     return 0;
 }
 
-int64_t type_cast_engine::to_int(double in, uint64_t container_size) {
+hdl_integer type_cast_engine::to_int(double in, uint64_t container_size) {
     if (std::isnan(in) || std::isinf(in)) return 0;
 
     double rounded = std::round(in);

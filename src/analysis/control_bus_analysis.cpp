@@ -197,15 +197,15 @@ void control_bus_analysis::process_leaf_node(const analysis_context &leaf) {
 
     if(leaf.array_index >=0) {
             spdlog::info("Found module: {0}[{3}] Type: {1} Address: 0x{2:08x}",
-                get_current_path() + leaf.node->get_name(), leaf.node->get_type(), leaf.address, leaf.array_index);
+                get_current_path() + leaf.node->get_name(), leaf.node->get_type(), leaf.address.get_value(), leaf.array_index);
     } else {
-        spdlog::info("Found module: {0} Type: {1} Address: 0x{2:08x}",get_current_path() + leaf.node->get_name(), leaf.node->get_type(), leaf.address);
+        spdlog::info("Found module: {0} Type: {1} Address: 0x{2:08x}",get_current_path() + leaf.node->get_name(), leaf.node->get_type(), leaf.address.get_value());
     }
 
 }
 
 std::vector<bus_context>
-control_bus_analysis::expand_bus_array( const std::vector<HDL_net> &masters, const std::vector<int64_t> &addresses ) {
+control_bus_analysis::expand_bus_array( const std::vector<HDL_net> &masters, const std::vector<hdl_integer> &addresses ) {
     std::vector<bus_context> ret;
     uint16_t current_bus = 0;
     for(auto &m:masters) {

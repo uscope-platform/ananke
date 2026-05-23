@@ -76,22 +76,22 @@ public:
     }
 
 
-    int64_t pack_values(const std::vector<int64_t> &components, const std::vector<int64_t> &sizes) {
-        uint64_t packed_result = 0;
-        int current_shift = 0;
+    hdl_integer pack_values(const std::vector<hdl_integer> &components, const std::vector<int64_t> &sizes) {
+        hdl_integer packed_result = 0;
+        hdl_integer current_shift = 0;
 
         for (size_t i = 0; i < components.size(); ++i) {
             int64_t size = sizes[i];
 
-            uint64_t mask = (size >= 64) ? ~0ULL : (1ULL << size) - 1;
-            uint64_t masked_component = components[i] & mask;
+            hdl_integer mask = (size >= 64) ? ~0ULL : (1ULL << size) - 1;
+            auto masked_component = components[i] & mask;
 
-            packed_result |= (masked_component << current_shift);
+            packed_result |= masked_component << current_shift;
 
             current_shift += size;
         }
 
-        return static_cast<int64_t>(packed_result);
+        return static_cast<hdl_integer>(packed_result);
     }
 
 protected:

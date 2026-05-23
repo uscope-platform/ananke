@@ -88,7 +88,7 @@ void application_definition_generator::process_ast(const std::shared_ptr<HDL_ins
 
             periph["base_address"] = std::vector<std::string>();
             for(auto a: current_node->get_address()){
-                periph["base_address"].push_back("0x" + uint_to_hex(a));
+                periph["base_address"].push_back("0x" + uint_to_hex(a.get_value()));
             }
 
             periph["proxied"] = false;
@@ -123,7 +123,7 @@ void application_definition_generator::process_ast(const std::shared_ptr<HDL_ins
             auto proxy_periphs = proxy_gen.get_peripherals();
             for(auto &item:proxy_periphs){
                 item["proxied"] = true;
-                item["proxy_address"] = "0x" + uint_to_hex(current_node->get_parent()->get_address()[0]);
+                item["proxy_address"] = "0x" + uint_to_hex(current_node->get_parent()->get_address()[0].get_value());
                 item["proxy_type"] = current_node->get_parent()->get_type();
                 item["base_address"] = {item["base_address"]};
                 peripherals.push_back(item);
@@ -166,10 +166,10 @@ void application_definition_generator::construct_application(const std::string &
     application["miscellaneous"]["n_enables"] = 0;
     application["miscellaneous"]["timebase_address"] = "";
     if(scope.mux_address != 0){
-        application["miscellaneous"]["scope_mux_address"] = "0x" + uint_to_hex(scope.mux_address);
-        application["miscellaneous"]["scope_buffer_address"] = "0x" + uint_to_hex(scope.buffer_address);
-        application["miscellaneous"]["scope_enable_address"] = "0x" + uint_to_hex(scope.enable_address);
-        application["miscellaneous"]["scope_data_length_address"] = "0x" + uint_to_hex(scope.data_length_address);
+        application["miscellaneous"]["scope_mux_address"] = "0x" + uint_to_hex(scope.mux_address.get_value());
+        application["miscellaneous"]["scope_buffer_address"] = "0x" + uint_to_hex(scope.buffer_address.get_value());
+        application["miscellaneous"]["scope_enable_address"] = "0x" + uint_to_hex(scope.enable_address.get_value());
+        application["miscellaneous"]["scope_data_length_address"] = "0x" + uint_to_hex(scope.data_length_address.get_value());
     }
 
 }
@@ -230,9 +230,9 @@ void application_definition_generator::denormalize_addresses() {
 
 }
 
-std::map<std::string, uint32_t>
+std::map<std::string, hdl_integer>
 application_definition_generator::get_parameters(const json &spec, std::shared_ptr<HDL_instance_AST> &node) {
-    std::map<std::string, uint32_t> ret_map;
+    std::map<std::string, hdl_integer> ret_map;
 
     for(auto &item:spec["registers"]){
         if(item.contains("n_registers")){

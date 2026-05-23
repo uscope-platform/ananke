@@ -27,7 +27,7 @@
 struct analysis_context{
     std::shared_ptr<HDL_instance_AST> node;
     std::string interface;
-    int64_t address;
+    hdl_integer address;
     std::string current_module_top;
     std::string current_module_prefix;
     proxy_target proxy;
@@ -36,7 +36,7 @@ struct analysis_context{
 
 struct bus_context{
     std::string name;
-    int64_t address;
+    hdl_integer address;
     int idx;
     bool in_array;
 };
@@ -55,7 +55,7 @@ private:
     void analize_node(const std::vector<analysis_context> &c);
     std::vector<bus_context> expand_bus_array(
             const std::vector<HDL_net> &s,
-            const std::vector<int64_t> &a
+            const std::vector<hdl_integer> &a
             );
 
 
@@ -64,8 +64,8 @@ private:
     bus_specs_manager specs_manager;
     std::vector<std::string> current_path;
 
-    std::unordered_map<std::string, uint32_t> modules_array_size;
-    std::vector<std::unordered_map<std::string, uint32_t>> modules_array_stack;
+    std::unordered_map<std::string, hdl_integer> modules_array_size;
+    std::vector<std::unordered_map<std::string, hdl_integer>> modules_array_stack;
 
     std::string get_current_path() {
         if(current_path.empty()) return "";
