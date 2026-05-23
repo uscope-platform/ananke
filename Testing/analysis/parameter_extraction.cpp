@@ -458,9 +458,9 @@ TEST(parameter_extraction, strings_dafault_init) {
     
     p->add_dimension({{Expression_component("3", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
+    c.set_default_init();
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("\"FILE\"", Expression_component::string)})));
     p->add_item(std::make_shared<Concatenation>(c));
-    p->set_default();
 
     
     check_params.insert(p);
@@ -511,9 +511,9 @@ TEST(parameter_extraction, string_array_selection) {
 
     p->add_dimension({{Expression_component("3", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
+    c.set_default_init();
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("\"FILE\"", Expression_component::string)})));
     p->add_item(std::make_shared<Concatenation>(c));
-    p->set_default();
     
     check_params.insert(p);
 
@@ -1310,9 +1310,9 @@ TEST(parameter_extraction, default_assign) {
     p->add_dimension({{Expression_component("31", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
+    c.set_default_init();
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
     p->add_item(std::make_shared<Concatenation>(c));
-    p->set_default();
 
     
 
@@ -3038,8 +3038,9 @@ TEST(parameter_extraction, array_initialization_default) {
     d.second_bound = {Expression_component("0", Expression_component::number)};
     d.packed = false;
     p->add_dimension(d);
+    c.set_default_init();
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("3", Expression_component::number)})));
-    p->set_default();
+
     p->add_item(std::make_shared<Concatenation>(c));
     check_params.insert(p);
 

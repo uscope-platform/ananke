@@ -64,7 +64,7 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
             stop_replication();
         }
         if (default_assignment){
-            current_resource.set_default();
+           concat_factory.set_default_init();
         }
         current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
         current_resource.add_item(concat_factory.get_concatenation());

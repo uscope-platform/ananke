@@ -26,6 +26,7 @@ Concatenation::Concatenation(const Concatenation &other) {
         components.push_back(item->clone_ptr());
     }
     container_size = other.container_size;
+    default_initialization = other.default_initialization;
     packing = other.packing;
     unpacked_dimension = other.unpacked_dimension;
     type = concatenation;
@@ -36,6 +37,7 @@ Concatenation::Concatenation(Concatenation &&other) noexcept {
         components.push_back(item->clone_ptr());
     }
     container_size = other.container_size;
+    default_initialization = other.default_initialization;
     packing = other.packing;
     unpacked_dimension = other.unpacked_dimension;
     type = concatenation;
@@ -47,6 +49,8 @@ Concatenation Concatenation::clone()  const{
         ret.components.push_back(c->clone_ptr());
     }
     ret.packing = packing;
+    ret.default_initialization = default_initialization;
+    ret.unpacked_dimension = unpacked_dimension;
     ret.container_size = container_size;
     return ret;
 }
@@ -82,6 +86,7 @@ void Concatenation::propagate_function(const HDL_function_def &def) {
 }
 
 std::optional<resolved_parameter> Concatenation::evaluate(){
+    std::optional<resolved_parameter> result;
     auto concat_size = components.size();
     if (packing) {
         std::vector<int64_t> sizes(concat_size);
@@ -95,41 +100,63 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
             if (!raw_value.is_integer()) throw std::runtime_error("packing concatenations of arrays is unsupported");
             values[i] = raw_value.get_integer();
         }
-        return pack_values(values, sizes);
+        result = pack_values(values, sizes);
     } else {
         if (components.empty())return std::nullopt;
         auto v = components[0]->evaluate();
         if (v.value().is_string()) {
-            mdarray<std::string> result;
+            mdarray<std::string> result_string;
             for (int64_t i = 0;i<concat_size; i++) {
                 auto value_opt = components[concat_size-i-1]->evaluate();
                 if (!value_opt.has_value()) return std::nullopt;
                 mdarray<std::string> to_concat;
                 to_concat.set_value(0,value_opt.value().get_string());
-                result = mdarray<std::string>::concatenate(result, to_concat).value();
+                result_string = mdarray<std::string>::concatenate(result_string, to_concat).value();
             }
-            return result;
+            result = result_string;
         } else {
-            mdarray<int64_t> result;
+            mdarray<int64_t> result_array;
             for (int64_t i = 0;i<concat_size; i++) {
                 auto value_opt = components[concat_size-i-1]->evaluate();
                 if (!value_opt.has_value()) return std::nullopt;
                 if (value_opt.value().is_integer()) {
                     mdarray<int64_t> to_concat;
                     to_concat.set_value(0,value_opt.value().get_integer());
-                    result = mdarray<int64_t>::concatenate(result, to_concat).value();
+                    result_array = mdarray<int64_t>::concatenate(result_array, to_concat).value();
                 } else {
                     auto array_res = value_opt.value().get_int_array();
                     if( unpacked_dimension ==1)
-                        result= mdarray<int64_t>::concatenate(result, array_res).value();
+                        result_array= mdarray<int64_t>::concatenate(result_array, array_res).value();
                     else
-                        result= mdarray<int64_t>::stack(result, array_res).value();
+                        result_array= mdarray<int64_t>::stack(result_array, array_res).value();
                 }
             }
-            return result;
+            result = result_array;
         }
-
     }
+    if (default_initialization) {
+        if (!result.has_value()) return result;
+
+        if(result.value().is_int_array()) {
+            mdarray<int64_t> result_array;
+            auto val = result.value().get_int_array().get_scalar();
+            if (!val) throw std::runtime_error("Error: initializer of default array should be defined");
+            for (int i =0; i< container_size; i++) {
+                result_array= mdarray<int64_t>::concatenate(result_array, val.value()).value();
+            }
+            return result_array;
+        }
+        if(result.value().is_string_array()) {
+            mdarray<std::string> result_array;
+            auto val = result.value().get_string_array().get_scalar();
+            if (!val) throw std::runtime_error("Error: initializer of default array should be defined");
+            for (int i =0; i< container_size; i++) {
+                result_array= mdarray<std::string>::concatenate(result_array, val.value()).value();
+            }
+            return result_array;
+        }
+    }
+    return result;
 }
 
 std::string Concatenation::print()  const{

@@ -37,8 +37,7 @@ public:
         : name(std::move(other.name)),
           type(other.type),
           raw_value(std::move(other.raw_value)),
-          solved_value(std::move(other.solved_value)),
-          default_initialization(other.default_initialization) {
+          solved_value(std::move(other.solved_value)){
     }
 
     HDL_parameter & operator=(const HDL_parameter &other) {
@@ -48,7 +47,6 @@ public:
         type = other.type;
         raw_value = other.raw_value;
         solved_value = other.solved_value;
-        default_initialization = other.default_initialization;
         return *this;
     }
 
@@ -59,7 +57,6 @@ public:
         type = std::move(other.type);
         raw_value = std::move(other.raw_value);
         solved_value = std::move(other.solved_value);
-        default_initialization = other.default_initialization;
         return *this;
     }
 
@@ -119,7 +116,6 @@ public:
         if (type.is_scalar()) raw_value = std::make_shared<Expression>();
     }
 
-    void set_default() { default_initialization = true;};
     void add_item(const std::shared_ptr<Parameter_value_base> &e);
 
     std::string to_string() const;
@@ -133,7 +129,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name, raw_value, default_initialization, type);
+        ar(name, raw_value, type);
     }
 
     nlohmann::json dump();
@@ -142,8 +138,6 @@ public:
 
 private:
 
-    resolved_parameter process_default_initialization();
-
     std::string name;
 
     HDL_type type;
@@ -151,7 +145,6 @@ private:
     std::shared_ptr<Parameter_value_base> raw_value;
     std::optional<resolved_parameter> solved_value;
 
-    bool default_initialization = false;
 };
 
 

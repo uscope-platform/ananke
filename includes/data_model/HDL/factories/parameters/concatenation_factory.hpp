@@ -25,6 +25,7 @@ class concatenation_factory {
 public:
     void start_concatenation();
     void stop_concatenation();
+    void set_default_init();
     void add_component(const std::shared_ptr<Parameter_value_base> &expr);
     std::shared_ptr<Concatenation> get_concatenation() {return  std::make_shared<Concatenation>(new_concatenation);}
     [[nodiscard]] bool in_concatenation() const { return active;}

@@ -23,7 +23,6 @@ HDL_parameter::HDL_parameter(const HDL_parameter &c) {
     solved_value = c.solved_value;
 
     raw_value = c.raw_value;
-    default_initialization = c.default_initialization;
 }
 
 
@@ -31,12 +30,9 @@ bool operator==(const HDL_parameter &lhs, const HDL_parameter &rhs) {
     bool ret = true;
 
     ret &= lhs.name == rhs.name;
-
-    // last dimension is an internal variable only needed during construction, as such it does not need comparison
     ret &= *lhs.raw_value == *rhs.raw_value;
 
 
-    ret &= lhs.default_initialization == rhs.default_initialization;
     ret &= lhs.type == rhs.type;
 
     ret &= lhs.solved_value == rhs.solved_value;
@@ -54,7 +50,6 @@ std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
     par.name = name;
     par.type = type;
     par.solved_value = solved_value;
-    par.default_initialization = default_initialization;
     par.raw_value = raw_value->clone_ptr();
     return std::make_shared<HDL_parameter>(par);
 }
@@ -73,16 +68,7 @@ std::optional<resolved_parameter> HDL_parameter::evaluate() {
     if (!container_size) return std::nullopt;
     raw_value->set_container_sizes(container_size.value());
 
-    std::optional<resolved_parameter> result;
-    if(raw_value->is_expression() || raw_value->is_function()) {
-        result = raw_value->evaluate();
-    } else if(raw_value->is_concatenation() || raw_value->is_replication()) {
-        result = raw_value->evaluate();
-    }
-    if(default_initialization){
-        return process_default_initialization();
-    }
-    return result;
+    return raw_value->evaluate();
 }
 
 bool HDL_parameter::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value) {
@@ -188,50 +174,6 @@ std::set<qualified_identifier> HDL_parameter::get_dependencies() {
     return result;
 }
 
-
-
-inline resolved_parameter HDL_parameter::process_default_initialization() {
-
-    std::vector<uint64_t> dimensions;
-    mdarray<int64_t> result;
-
-    if(type.get_unpacked_dimensions().size()>3){
-        throw std::runtime_error("Error: unpacked arrays with more than 3 dimensions are not supported");
-    }
-
-    for(auto &item : type.get_unpacked_dimensions()){
-        auto first_dim = item.first_bound.evaluate();
-        auto second_dim = item.second_bound.evaluate();
-        if (!first_dim.has_value() || !second_dim.has_value())   throw std::runtime_error("Error: dimensions of default initialized parameters should be fully defined");
-        if (!first_dim.value().is_integer() || !second_dim.value().is_integer())   throw std::runtime_error("Error: dimensions of default initialized parameters should be integers");
-        auto first_i =first_dim.value().get_integer();
-        auto second_i = second_dim.value().get_integer();
-        dimensions.push_back(std::max(first_i, second_i)+1);
-    }
-
-    while(dimensions.size()<3){
-        dimensions.insert(dimensions.begin(), 1);
-    }
-
-    auto init_value = raw_value->evaluate();
-
-    if (!init_value.has_value()) throw std::runtime_error("Error: initializer of default array should be defined");
-
-    if(init_value.value().is_int_array()) {
-        auto val = init_value.value().get_int_array().get_scalar();
-        if (!val) throw std::runtime_error("Error: initializer of default array should be defined");
-        mdarray ret_i = {dimensions,val.value()};
-        return ret_i;
-    }
-    if(init_value.value().is_string_array()) {
-        auto val = init_value.value().get_string_array().get_scalar();
-        if (!val) throw std::runtime_error("Error: initializer of default array should be defined");
-        mdarray ret_s = {dimensions,val.value()};
-        return ret_s;
-    }
-    throw std::runtime_error("Error: initializer of default array should be a string or a number");
-
-}
 
 nlohmann::json HDL_parameter::dump() {
     nlohmann::json ret;

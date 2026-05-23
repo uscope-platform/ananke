@@ -40,11 +40,14 @@ public:
 
     Concatenation clone() const;
 
+    void set_default_init() {default_initialization = true;}
+
     Concatenation &operator=(const Concatenation &other) {
         if (this != &other) {
             container_size = other.container_size;
             unpacked_dimension = other.unpacked_dimension;
             packing = other.packing;
+            default_initialization = other.default_initialization;
             components.clear();
             components.reserve(other.components.size());
             for(auto &item: other.components) components.push_back(item->clone_ptr());
@@ -58,6 +61,7 @@ public:
             container_size = other.container_size;
             unpacked_dimension = other.unpacked_dimension;
             packing = other.packing;
+            default_initialization = other.default_initialization;
             components.clear();
             components.reserve(other.components.size());
             for(auto &item: other.components) components.push_back(item->clone_ptr());
@@ -80,6 +84,7 @@ public:
         if(lhs.components.size() != rhs.components.size()) return false;
         ret &= lhs.container_size == rhs.container_size;
         ret &= lhs.packing == rhs.packing;
+        ret &= lhs.default_initialization == rhs.default_initialization;
         ret &= lhs.unpacked_dimension == rhs.unpacked_dimension;
         for(int i = 0; i < lhs.components.size(); i++) {
             ret &= *lhs.components[i] == *rhs.components[i];
@@ -98,12 +103,13 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(components);
+        ar(components, default_initialization);
     }
 
 private:
 
     bool packing = false;
+    bool default_initialization = false;
     uint64_t unpacked_dimension  = 0;
     int64_t container_size = 0;
 
