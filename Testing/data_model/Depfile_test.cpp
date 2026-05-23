@@ -18,7 +18,7 @@
 
 #include "data_model/Constraints.hpp"
 #include "data_model/Script.hpp"
-#include "../../includes/data_model/Depfile/Depfile.hpp"
+#include "data_model/Depfile/Depfile.hpp"
 
 
 class DepfileTest : public ::testing::Test {

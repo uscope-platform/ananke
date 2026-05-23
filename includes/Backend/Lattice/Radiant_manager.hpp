@@ -19,8 +19,8 @@
 #include <vector>
 #include <string>
 
-#include "../../data_model/settings_store.hpp"
-#include "../Toolchain_manager.hpp"
+#include "data_model/settings_store.hpp"
+#include "Backend/Toolchain_manager.hpp"
 #include <utility>
 
 

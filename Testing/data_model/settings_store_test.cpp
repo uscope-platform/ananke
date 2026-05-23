@@ -15,7 +15,7 @@
 
 #include <gtest/gtest.h>
 
-#include "../includes/data_model/settings_store.hpp"
+#include "data_model/settings_store.hpp"
 
 TEST( settings_store_test , get_set_setting) {
     settings_store store(true, "/tmp/test_settings_store");

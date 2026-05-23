@@ -30,7 +30,7 @@
 #include <utility>
 #include <gtest/gtest.h>
 
-#include "../data_model/settings_store.hpp"
+#include "data_model/settings_store.hpp"
 
 class Toolchain_manager {
 public:

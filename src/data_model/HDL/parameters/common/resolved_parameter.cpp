@@ -14,7 +14,7 @@
 //  limitations under the License.
 
 
-#include "../../../../../includes/data_model/HDL/parameters/common/resolved_parameter.hpp"
+#include "data_model/HDL/parameters/common/resolved_parameter.hpp"
 
 int64_t resolved_parameter::get_integer() const {
     return std::get<int64_t>(content);

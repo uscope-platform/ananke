@@ -15,7 +15,7 @@
 
 #include <gtest/gtest.h>
 
-#include "../includes/data_model/data_store.hpp"
+#include "data_model/data_store.hpp"
 
 
 TEST( data_store_test , evict_constr) {

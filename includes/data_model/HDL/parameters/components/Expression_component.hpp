@@ -25,13 +25,13 @@
 #include <variant>
 #include <cmath>
 
-#include "../common/qualified_identifier.hpp"
+#include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 
 #include <cereal/types/vector.hpp>
 #include <cereal/types/variant.hpp>
 
-#include "../HDL_function_def.hpp"
-#include "../Parameter_value_base.hpp"
+#include "data_model/HDL/parameters/HDL_function_def.hpp"
+#include "data_model/HDL/parameters/Parameter_value_base.hpp"
 
 class Expression;
 class HDL_function_call;

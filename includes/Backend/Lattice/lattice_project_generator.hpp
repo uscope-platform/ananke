@@ -17,7 +17,7 @@
 #define ANANKE_LATTICE_PROJECT_GENERATOR_HPP
 
 
-#include "../project_generator_base.hpp"
+#include "Backend/project_generator_base.hpp"
 
 class lattice_project_generator : public project_generator_base{
 public:

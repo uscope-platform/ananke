@@ -16,7 +16,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 
-#include "../../includes/data_model/Depfile/Depfile.hpp"
+#include "data_model/Depfile/Depfile.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/settings_store.hpp"
 #include "frontend/analysis/sv_analyzer.hpp"

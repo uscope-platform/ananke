@@ -17,7 +17,7 @@
 
 #include <gtest/gtest.h>
 
-#include "../../includes/data_model/HDL/parameters/components/Expression.hpp"
+#include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/Expression_evaluator.hpp"
 
 

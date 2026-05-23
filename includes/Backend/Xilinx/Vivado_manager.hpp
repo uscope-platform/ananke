@@ -31,7 +31,7 @@
 #include <gtest/gtest.h>
 
 #include "data_model/settings_store.hpp"
-#include "../Toolchain_manager.hpp"
+#include "Backend/Toolchain_manager.hpp"
 
 class Vivado_manager :public Toolchain_manager {
 public:

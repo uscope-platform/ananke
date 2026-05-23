@@ -20,7 +20,7 @@
 #include "data_model/bus_mapping/bus_specs_manager.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/settings_store.hpp"
-#include "../data_model/Depfile/Depfile.hpp"
+#include "data_model/Depfile/Depfile.hpp"
 
 #include <spdlog/spdlog.h>
 

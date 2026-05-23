@@ -27,7 +27,7 @@
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/documentation/module_documentation.hpp"
 
-#include "../../analysis/parameter_solver.hpp"
+#include "analysis/parameter_solver.hpp"
 
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/unordered_map.hpp>

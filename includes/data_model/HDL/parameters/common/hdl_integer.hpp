@@ -20,7 +20,14 @@
 #include <cstdint>
 
 class hdl_integer {
+
 public:
+    hdl_integer() = default;
+    hdl_integer(int64_t val){value = val;}
+    void set_size(const int64_t v) {value = v;}
+    void set_value(const uint64_t s) {size = s;}
+    void set_signed(const bool s) {signedness = s;}
+
 private:
     int64_t value = 0;
     uint64_t size = 0;

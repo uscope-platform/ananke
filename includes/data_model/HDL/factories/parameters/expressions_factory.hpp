@@ -17,7 +17,7 @@
 #ifndef ANANKE_EXPRESSIONS_FACTORY_HPP
 #define ANANKE_EXPRESSIONS_FACTORY_HPP
 
-#include "../../parameters/components/Expression.hpp"
+#include "data_model/HDL/parameters/components/Expression.hpp"
 
 class expressions_factory {
 public:

@@ -13,7 +13,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "../../../../../includes/data_model/HDL/factories/nets/HDL_net_factory.hpp"
+#include "data_model/HDL/factories/nets/HDL_net_factory.hpp"
 
 void HDL_net_factory::new_net(const std::string &name) {
     if(!current_net.get_name().empty() && !is_in_concatenation()|| current_net.is_array() || current_net.is_replication()) {

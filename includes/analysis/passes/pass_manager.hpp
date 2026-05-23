@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "analysis/passes/pass_base.hpp"
-#include "../parameter_solver.hpp"
+#include "analysis/parameter_solver.hpp"
 #include "analysis/passes/port_solution.hpp"
 #include "analysis/passes/processor_detection.hpp"
 

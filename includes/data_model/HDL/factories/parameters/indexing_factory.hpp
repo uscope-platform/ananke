@@ -16,8 +16,8 @@
 #ifndef ANANKE_INDEXING_FACTORY_HPP
 #define ANANKE_INDEXING_FACTORY_HPP
 
-#include "../../parameters/components/Expression.hpp"
-#include "../../parameters/common/dimension.hpp"
+#include "data_model/HDL/parameters/components/Expression.hpp"
+#include "data_model/HDL/parameters/common/dimension.hpp"
 
 class indexing_factory {
 public:

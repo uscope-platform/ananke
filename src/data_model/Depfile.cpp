@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../../includes/data_model/Depfile/Depfile.hpp"
+#include "data_model/Depfile/Depfile.hpp"
 
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>

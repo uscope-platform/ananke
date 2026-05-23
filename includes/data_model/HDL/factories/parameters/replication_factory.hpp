@@ -16,7 +16,7 @@
 #ifndef ANANKE_REPLICATION_FACTORY_HPP
 #define ANANKE_REPLICATION_FACTORY_HPP
 
-#include "../../parameters/components/Replication.hpp"
+#include "data_model/HDL/parameters/components/Replication.hpp"
 #include <stack>
 
 class replication_factory {
