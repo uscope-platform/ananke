@@ -38,17 +38,18 @@ target_sources(ananke_lib
     data_model/HDL/factories/HDL_parameters_factory.cpp
     data_model/HDL/factories/resource_factory_base.cpp
     data_model/HDL/parameters/HDL_parameter.cpp
-        data_model/HDL/parameters/common/resolved_parameter.cpp
-        data_model/HDL/parameters/common/HDL_type.cpp
-        data_model/HDL/parameters/components/Expression.cpp
-        data_model/HDL/parameters/components/Concatenation.cpp
-        data_model/HDL/parameters/components/Ternary.cpp
-        data_model/HDL/parameters/components/Replication.cpp
-        data_model/HDL/parameters/components/Cast.cpp
+    data_model/HDL/parameters/common/resolved_parameter.cpp
+    data_model/HDL/parameters/common/hdl_integer.cpp
+    data_model/HDL/parameters/common/HDL_type.cpp
+    data_model/HDL/parameters/components/Expression.cpp
+    data_model/HDL/parameters/components/Concatenation.cpp
+    data_model/HDL/parameters/components/Ternary.cpp
+    data_model/HDL/parameters/components/Replication.cpp
+    data_model/HDL/parameters/components/Cast.cpp
     data_model/HDL/parameters/Expression_evaluator.cpp
-        data_model/HDL/parameters/components/Expression_component.cpp
-        data_model/HDL/parameters/components/HDL_function_def.cpp
-        data_model/HDL/parameters/components/HDL_function_call.cpp
+    data_model/HDL/parameters/components/Expression_component.cpp
+    data_model/HDL/parameters/components/HDL_function_def.cpp
+    data_model/HDL/parameters/components/HDL_function_call.cpp
     data_model/HDL/factories/HDL_functions_factory.cpp
     data_model/HDL/factories/nets/HDL_range_factory.cpp
     data_model/HDL/factories/nets/HDL_concat_factory.cpp
