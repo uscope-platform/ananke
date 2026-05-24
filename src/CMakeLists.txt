@@ -56,6 +56,7 @@ target_sources(ananke_lib
     data_model/HDL/factories/nets/HDL_net_factory.cpp
     data_model/HDL/factories/nets/HDL_repetition_factory.cpp
     data_model/HDL/factories/parameters/cast_factory.cpp
+    data_model/HDL/factories/parameters/ranges_factory.cpp
     data_model/HDL/factories/parameters/concatenation_factory.cpp
     data_model/HDL/factories/parameters/replication_factory.cpp
     data_model/HDL/factories/parameters/expressions_factory.cpp

@@ -78,7 +78,6 @@ void sv_visitor::exitName_of_instance(sv2017::Name_of_instanceContext *ctx) {
 }
 
 void sv_visitor::enterTf_port_item(sv2017::Tf_port_itemContext *ctx) {
-    auto dbg = ctx->getText();
     auto identifier = ctx->identifier();
     if (identifier) {
         params_factory.add_decl_argument(identifier->getText());
@@ -93,6 +92,26 @@ void sv_visitor::enterTf_port_item(sv2017::Tf_port_itemContext *ctx) {
 
 void sv_visitor::exitTf_port_list(sv2017::Tf_port_listContext *ctx) {
     params_factory.start_function_body();
+}
+
+void sv_visitor::enterVariable_dimension(sv2017::Variable_dimensionContext *ctx) {
+
+}
+
+void sv_visitor::exitVariable_dimension(sv2017::Variable_dimensionContext *ctx) {
+    params_factory.close_dimension();
+}
+
+void sv_visitor::enterType_declaration(sv2017::Type_declarationContext *ctx) {
+    params_factory.start_type_declaration();
+}
+
+void sv_visitor::exitType_declaration(sv2017::Type_declarationContext *ctx) {
+    params_factory.stop_type_declaration(ctx->identifier(0)->getText());
+}
+
+void sv_visitor::exitData_type(sv2017::Data_typeContext *ctx) {
+    params_factory.close_packed_dimensions();
 }
 
 void sv_visitor::exitInterface_header(sv2017::Interface_headerContext *ctx) {
@@ -215,6 +234,7 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
     if (!ctx->data_type_or_implicit()) {
         params_factory.set_type("implicit");
     }
+    params_factory.start_range();
     current_parameter = ctx->list_of_param_assignments()[0].param_assignment()[0]->identifier()->getText();
 }
 
@@ -555,15 +575,11 @@ void sv_visitor::exitAssignment_pattern(sv2017::Assignment_patternContext *ctx) 
     if (!ctx->replication_assignment()) params_factory.stop_initialization_list(default_assignment);
 }
 
-void sv_visitor::enterPrimaryBitSelect(sv2017::PrimaryBitSelectContext *ctx) {
-}
 
 void sv_visitor::exitPrimaryBitSelect(sv2017::PrimaryBitSelectContext *ctx) {
     params_factory.close_array_index();
 }
 
-void sv_visitor::enterPrimaryIndex(sv2017::PrimaryIndexContext *ctx) {
-}
 
 void sv_visitor::exitPrimaryIndex(sv2017::PrimaryIndexContext *ctx) {
     if(deps_factory.is_valid_dependency()){
@@ -600,15 +616,6 @@ void sv_visitor::enterReplication_value(sv2017::Replication_valueContext *ctx) {
     }
 }
 
-void sv_visitor::enterPrimaryRepl(sv2017::PrimaryReplContext *ctx) {
-}
-
-void sv_visitor::exitPrimaryRepl(sv2017::PrimaryReplContext *ctx) {
-    if(deps_factory.is_valid_dependency()){
-        //deps_factory.add_port_connection_element(ctx->getText());
-    }
-}
-
 void sv_visitor::enterPrimaryCall(sv2017::PrimaryCallContext *ctx) {
     if(params_factory.is_component_relevant()) {
         params_factory.start_function_assignment(ctx->primary()->getText());
@@ -623,6 +630,7 @@ void sv_visitor::exitPrimaryCall(sv2017::PrimaryCallContext *ctx) {
 }
 
 void sv_visitor::enterConstant_param_expression(sv2017::Constant_param_expressionContext *ctx) {
+    params_factory.stop_range();
     if(ctx->concatenation()){
         params_factory.start_packed_assignment();
     }
@@ -638,6 +646,11 @@ void sv_visitor::exitBit_select(sv2017::Bit_selectContext *ctx) {
     deps_factory.stop_bit_selection();
 }
 
+void sv_visitor::exitFirst_range_identifier(sv2017::First_range_identifierContext *ctx) {
+    if (params_factory.is_component_relevant()) {
+        params_factory.advance_range();
+    }
+}
 
 
 void sv_visitor::exitRange_separator(sv2017::Range_separatorContext *ctx) {
@@ -650,9 +663,17 @@ void sv_visitor::exitRange_separator(sv2017::Range_separatorContext *ctx) {
             deps_factory.advance_array_range_phase("");
         }
     }
+    if (params_factory.is_component_relevant()) {
+        params_factory.advance_range();
+    }
+}
+
+void sv_visitor::enterRange_expression(sv2017::Range_expressionContext *ctx) {
+    params_factory.open_range();
 }
 
 void sv_visitor::exitRange_expression(sv2017::Range_expressionContext *ctx) {
+   params_factory.close_range();
 }
 
 void sv_visitor::enterArray_range_expression(sv2017::Array_range_expressionContext *ctx) {
@@ -662,12 +683,14 @@ void sv_visitor::enterArray_range_expression(sv2017::Array_range_expressionConte
 }
 
 void sv_visitor::exitArray_range_expression(sv2017::Array_range_expressionContext *ctx) {
+    params_factory.close_range();
     if(deps_factory.is_valid_dependency()) {
         deps_factory.stop_array_range();
     }
 }
 
 void sv_visitor::enterUnpacked_dimension(sv2017::Unpacked_dimensionContext *ctx) {
+    params_factory.close_packed_dimensions();
     params_factory.start_unpacked_dimension_declaration();
 }
 
@@ -747,6 +770,8 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
         auto type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
         params_factory.set_type(type);
     }
+
+    params_factory.start_range();
     if (!ctx->data_type_or_implicit()) {
         params_factory.set_type("implicit");
     }

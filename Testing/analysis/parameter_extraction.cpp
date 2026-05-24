@@ -3918,3 +3918,63 @@ TEST(parameter_extraction, complex_ternary_conditional) {
         ASSERT_EQ(value, defaults.at(name));
     }
 }
+
+
+
+TEST(parameter_extraction, typedef_parameter) {
+    auto test_pattern = R"(
+        module test_mod #()();
+            typedef logic [31:0] ctrl_addr_init_t [1:0];
+            //parameter ctrl_addr_init_t array_parameter = '{32, 5};
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+
+    p->set_name("array_parameter");
+
+
+
+    dimension_t d;
+    d.first_bound = {Expression_component("31", Expression_component::number)};
+    d.second_bound = {Expression_component("0", Expression_component::number)};
+    d.packed = true;
+    p->add_dimension(d);
+
+    d.first_bound = {Expression_component("1", Expression_component::number)};
+    d.second_bound = {Expression_component("0", Expression_component::number)};
+    d.packed = false;
+    p->add_dimension(d);
+    Concatenation c;
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component("32", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
+    p->add_item(std::make_shared<Concatenation>(c));
+
+
+    check_params.insert(p);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& item:check_params){
+        ASSERT_TRUE(parameters.contains(item->get_name()));
+        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    }
+
+    auto defaults = resource.get_default_parameters();
+    mdarray<hdl_integer> array_value;
+    array_value.set_1d_slice({0, 0}, {5, 32});
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {{"","", "array_parameter"}, array_value}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}

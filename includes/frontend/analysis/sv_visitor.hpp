@@ -100,10 +100,8 @@ public:
     void enterAssignment_pattern(sv2017::Assignment_patternContext *ctx) override;
     void exitAssignment_pattern(sv2017::Assignment_patternContext *ctx) override;
 
-    void enterPrimaryBitSelect(sv2017::PrimaryBitSelectContext *ctx) override;
     void exitPrimaryBitSelect(sv2017::PrimaryBitSelectContext *ctx) override;
 
-    void enterPrimaryIndex(sv2017::PrimaryIndexContext *ctx) override;
     void exitPrimaryIndex(sv2017::PrimaryIndexContext *ctx) override;
 
     void enterPrimaryDot(sv2017::PrimaryDotContext *ctx) override;
@@ -111,8 +109,6 @@ public:
 
     void enterReplication_value(sv2017::Replication_valueContext *ctx) override;
 
-    void enterPrimaryRepl(sv2017::PrimaryReplContext *ctx) override;
-    void exitPrimaryRepl(sv2017::PrimaryReplContext *ctx) override;
 
     void enterPrimaryCall(sv2017::PrimaryCallContext *ctx) override;
     void exitPrimaryCall(sv2017::PrimaryCallContext *ctx) override;
@@ -120,7 +116,10 @@ public:
     void enterBit_select(sv2017::Bit_selectContext *ctx) override;
     void exitBit_select(sv2017::Bit_selectContext *ctx) override;
 
+    void exitFirst_range_identifier(sv2017::First_range_identifierContext *ctx) override;
+
     void exitRange_separator(sv2017::Range_separatorContext *ctx) override;
+    void enterRange_expression(sv2017::Range_expressionContext *ctx) override;
     void exitRange_expression(sv2017::Range_expressionContext *ctx) override;
 
     void enterArray_range_expression(sv2017::Array_range_expressionContext *ctx) override;
@@ -150,6 +149,7 @@ public:
     void enterData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) override;
     void exitData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) override;
 
+    void exitData_type(sv2017::Data_typeContext *ctx) override;
 
     void enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) override;
     void exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) override;
@@ -197,6 +197,13 @@ public:
 
     void enterTf_port_item(sv2017::Tf_port_itemContext *ctx) override;
     void exitTf_port_list(sv2017::Tf_port_listContext *ctx) override;
+
+    void enterVariable_dimension(sv2017::Variable_dimensionContext *ctx) override;
+    void exitVariable_dimension(sv2017::Variable_dimensionContext *ctx) override;
+
+    void enterType_declaration(sv2017::Type_declarationContext *ctx) override;
+    void exitType_declaration(sv2017::Type_declarationContext *ctx) override;
+
 private:
 
     bool in_param_declaration = false;

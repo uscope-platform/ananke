@@ -25,6 +25,7 @@
 #include "data_model/HDL/factories/parameters/function_calls_factory.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/indexing_factory.hpp"
+#include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 #include "data_model/HDL/factories/parameters/ternary_factory.hpp"
 #include "parameters/cast_factory.hpp"
 
@@ -97,8 +98,10 @@ public:
         if (paused) return false;
         return expr_factory.is_active() || index_factory.is_range() && index_factory.is_active() ||
             c_factory.in_cast() || in_packed_assignment || calls_factory.in_function_call() || concat_factory.in_concatenation() ||
-            t_factory.in_ternary() || f_factory.is_active();
-    };
+            t_factory.in_ternary() || f_factory.is_active() || r_factory.active();
+    }
+
+    void advance_range();
 
     void start_instance_parameter_assignment(const std::string& parameter_name);
 
@@ -109,6 +112,17 @@ public:
 
     void start_param_override();
     void stop_param_override();
+
+    void start_range();
+    void stop_range();
+
+    void open_range();
+    void close_range();
+
+    void start_type_declaration();
+    void stop_type_declaration(const std::string &name);
+    void close_packed_dimensions();
+    void close_dimension();
 
     void start_function_decl(const std::string &name);
     void start_function_decl_assignment(const std::string &name){f_factory.start_assignment(name);}
@@ -128,16 +142,20 @@ private:
     concatenation_factory concat_factory;
     function_calls_factory calls_factory;
     indexing_factory index_factory;
+    ranges_factory r_factory;
+
     expressions_factory expr_factory;
     ternary_factory t_factory;
 
     bool in_param_override = false;
     bool in_param_assignment = false;
+    bool in_typedef = false;
     bool in_packed_assignment = false;
     bool paused = false;
     bool skip_expression = false;
 
     std::string current_type;
+
 
 };
 

@@ -19,12 +19,14 @@
 void HDL_parameters_factory::new_parameter(const std::string &name) {
     current_resource.set_name(name);
     current_resource.set_declared_type(current_type);
-    current_resource.set_packed_dimensions(index_factory.get_dimensions());
 }
 
 std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
     auto resource = get_resource();
-    new_basic_resource("");
+    auto [packed, unpacked] = r_factory.get_dimensions();
+    resource.set_packed_dimensions(packed);
+    resource.set_unpacked_dimensions(unpacked);
+    r_factory.clear();
     return std::make_shared<HDL_parameter>(resource);
 }
 
@@ -119,6 +121,7 @@ void HDL_parameters_factory::stop_replication() {
 }
 
 void HDL_parameters_factory::start_replication_assignment() {
+    r_factory.stop();
     repl_factory.start_replication(false);
     expr_factory.push_level();
 }
@@ -151,6 +154,8 @@ void HDL_parameters_factory::stop_expression_new() {
                 t_factory.add_component(std::make_shared<Expression>(expr.value()));
             } else if(repl_factory.in_replication()) {
                 repl_factory.add_expression(expr.value());
+            } else if (r_factory.active()) {
+                r_factory.add_expression(expr.value());
             } else if (index_factory.is_range()){
                 index_factory.add_expression(expr.value());
             } else if(concat_factory.in_concatenation()) {
@@ -167,6 +172,7 @@ void HDL_parameters_factory::stop_expression_new() {
 }
 
 void HDL_parameters_factory::start_packed_assignment() {
+    r_factory.stop();
     in_packed_assignment = true;
 }
 
@@ -201,6 +207,7 @@ void HDL_parameters_factory::start_replication() {
 }
 
 void HDL_parameters_factory::start_unpacked_dimension_declaration() {
+    r_factory.advance_stage();
     if(in_param_assignment){
         index_factory.start_index(true);
     }
@@ -208,6 +215,7 @@ void HDL_parameters_factory::start_unpacked_dimension_declaration() {
 
 void HDL_parameters_factory::start_packed_dimension() {
     index_factory.start_index(true);
+
 }
 
 void HDL_parameters_factory::stop_packed_dimension() {
@@ -217,6 +225,10 @@ void HDL_parameters_factory::stop_packed_dimension() {
     }
 }
 
+
+void HDL_parameters_factory::advance_range() {
+    r_factory.advance_range();
+}
 
 void HDL_parameters_factory::start_instance_parameter_assignment(const std::string& parameter_name) {
     new_basic_resource(parameter_name);
@@ -251,6 +263,44 @@ void HDL_parameters_factory::start_param_override()  {
 
 void HDL_parameters_factory::stop_param_override() {
     in_param_override = false;
+}
+
+void HDL_parameters_factory::start_range() {
+    r_factory.start();
+}
+
+void HDL_parameters_factory::stop_range() {
+    r_factory.stop();
+}
+
+void HDL_parameters_factory::open_range() {
+    r_factory.open_range();
+}
+
+void HDL_parameters_factory::close_range() {
+    r_factory.close_range();
+}
+
+
+void HDL_parameters_factory::start_type_declaration() {
+    in_typedef = true;
+    r_factory.start();
+}
+
+void HDL_parameters_factory::stop_type_declaration(const std::string &name) {
+    in_typedef = false;
+    r_factory.stop();
+    r_factory.clear();
+}
+
+
+
+void HDL_parameters_factory::close_packed_dimensions() {
+    r_factory.advance_stage();
+}
+
+void HDL_parameters_factory::close_dimension() {
+
 }
 
 void HDL_parameters_factory::start_function_decl(const std::string &name) {
