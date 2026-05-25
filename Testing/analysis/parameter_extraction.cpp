@@ -3925,7 +3925,7 @@ TEST(parameter_extraction, typedef_parameter) {
     auto test_pattern = R"(
         module test_mod #()();
             typedef logic [31:0] ctrl_addr_init_t [1:0];
-            //parameter ctrl_addr_init_t array_parameter = '{32, 5};
+            parameter ctrl_addr_init_t array_parameter = '{32, 5};
         endmodule
     )";
 

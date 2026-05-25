@@ -171,6 +171,11 @@ std::string Concatenation::print()  const{
 void Concatenation::set_container_sizes(const resolved_type &s) {
     resolved_type content_sizes;
     unpacked_dimension = s.unpacked_sizes;
+    if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) {
+        container_size = 32;
+        packing = true;
+        return;
+    };
     if (!s.unpacked_sizes.empty()) {
         if (s.unpacked_sizes.size()>1) content_sizes.unpacked_sizes.insert(content_sizes.unpacked_sizes.end(), s.unpacked_sizes.begin(), s.unpacked_sizes.end()-1);
         content_sizes.packed_sizes = s.packed_sizes;
