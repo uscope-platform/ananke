@@ -143,7 +143,10 @@ bool HDL_loop_metadata::propagate_constant(const qualified_identifier &constant_
     retval &= init->propagate_constant(constant_id, value);
     retval &= end_c->propagate_constant(constant_id, value);
     retval &= iter->propagate_constant(constant_id, value);
-    for(auto &a:assignments) retval &= a.get_value()->propagate_constant(constant_id, value);
+    for(auto &a:assignments) {
+        retval &= a.get_value()->propagate_constant(constant_id, value);
+        if (a.get_index().has_value()) a.get_index().value()->propagate_constant(constant_id, value);
+    }
     return retval;
 }
 

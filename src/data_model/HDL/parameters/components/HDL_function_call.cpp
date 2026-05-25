@@ -216,8 +216,9 @@ void HDL_function_call::set_container_sizes(const resolved_type &s) {
     packing = s.unpacked_sizes.empty();
     if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) return;
     if (s.unpacked_sizes.empty()) {
-        if (assignments.size()==1) assignments[0].set_container_size(s);
-        else {
+        if (assignments.size()==1 && !loop_metadata.has_value()){
+            assignments[0].set_container_size(s);
+        } else {
             resolved_type lower_container_size;
             lower_container_size.packed_sizes.insert(
                 lower_container_size.packed_sizes.begin(),
@@ -227,10 +228,19 @@ void HDL_function_call::set_container_sizes(const resolved_type &s) {
             for (auto &a:assignments) {
                 a.set_container_size(lower_container_size);
             }
+            if (loop_metadata) {
+                std::vector<assignment> new_assignments;
+                for (auto &a:loop_metadata->get_assignments()) {
+                    a.set_container_size(lower_container_size);
+                    new_assignments.push_back(a);
+                }
+                loop_metadata->set_assignments(new_assignments);
+            }
         }
     } else {
-        if (assignments.size()==1) assignments[0].set_container_size(s);
-        else {
+        if (assignments.size()==1 && !loop_metadata.has_value() {
+            assignments[0].set_container_size(s);
+        } else {
             resolved_type lower_container_size;
             lower_container_size.packed_sizes = s.unpacked_sizes;
             lower_container_size.unpacked_sizes.insert(
@@ -241,9 +251,17 @@ void HDL_function_call::set_container_sizes(const resolved_type &s) {
             for (auto &a:assignments) {
                 a.set_container_size(lower_container_size);
             }
+            if (loop_metadata) {
+                std::vector<assignment> new_assignments;
+                for (auto &a:loop_metadata->get_assignments()) {
+                    a.set_container_size(lower_container_size);
+                    new_assignments.push_back(a);
+                }
+                loop_metadata->set_assignments(new_assignments);
+            }
         }
+
     }
-    //TODO: deal with loop
 }
 
 
