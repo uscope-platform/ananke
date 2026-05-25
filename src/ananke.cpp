@@ -264,35 +264,35 @@ std::optional<int> ananke::build_flow() {
             LOG_TIMEPOINT("Build script generated");
             if (!opts.makefile_only) manager.create_project("makefile.tcl",  !opts.no_open);
         }
+        if (opts.generate_periph_definition || opts.generate_app_definition) {
+            peripheral_definition_generator periph_def_gen(d_store, synth_ast);
+            if(opts.generate_periph_definition){
+                periph_def_gen.write_definition_file(dep.general.project_name + "_periph_def.json");
+            }
+            LOG_TIMEPOINT("peripheral definition generation");
 
-        peripheral_definition_generator periph_def_gen(d_store, synth_ast);
-
-        LOG_TIMEPOINT("peripheral definition generation");
-        application_definition_generator app_def_gen(
+            if(opts.generate_app_definition){
+                application_definition_generator app_def_gen(
                 synth_ast,
                 periph_def_gen.get_peripheral_definitions(),
                 periph_def_gen.get_alias_map(),
                 periph_def_gen.get_variant_peripherals()
                 );
 
-        LOG_TIMEPOINT("Application definition generation");
-        data_acquisition_analysis daq_analyzer(true);
-        daq_analyzer.analyze(synth_ast);
-        app_def_gen.add_datapoints(daq_analyzer.get_datapoints());
-        app_def_gen.add_channel_groups(daq_analyzer.get_channel_groups());
-        app_def_gen.add_scope(daq_analyzer.get_scope_data());
+                LOG_TIMEPOINT("Application definition generation");
+                data_acquisition_analysis daq_analyzer(true);
+                daq_analyzer.analyze(synth_ast);
+                app_def_gen.add_datapoints(daq_analyzer.get_datapoints());
+                app_def_gen.add_channel_groups(daq_analyzer.get_channel_groups());
+                app_def_gen.add_scope(daq_analyzer.get_scope_data());
 
-        LOG_TIMEPOINT("Data aquisition analysis");
-        app_def_gen.construct_application(dep.general.project_name);
+                LOG_TIMEPOINT("Data acquisition analysis");
+                app_def_gen.construct_application(dep.general.project_name);
 
-
-        if(opts.generate_periph_definition){
-            periph_def_gen.write_definition_file(dep.general.project_name + "_periph_def.json");
+                app_def_gen.write_definition_file(dep.general.project_name + "_app_def.json");
+            }
         }
 
-        if(opts.generate_app_definition){
-            app_def_gen.write_definition_file(dep.general.project_name + "_app_def.json");
-        }
         if (opts.dump_ast) {
             auto ast_dump = synth_ast->dump().dump(4);
             std::ofstream ast_file("/tmp/ast.json");
