@@ -1393,3 +1393,73 @@ endmodule
     EXPECT_TRUE(dep_6->get_parameters().contains("addr2"));
     EXPECT_EQ(dep_6->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 1200);
 }
+
+
+TEST(parameter_processing, override_parameter_in_loop_index_with_package) {
+    auto test_pattern = R"(
+package test_package;
+    parameter test_parameter = 1200;
+endpackage;
+
+
+module top_module();
+
+    hil_base_logic #(
+        .ADDR_WIDTH(36),
+        .N_CORES(7)
+    ) sim_core();
+
+endmodule
+
+
+module hil_base_logic#(
+    parameter ADDR_WIDTH = 32,
+    parameter N_CORES = 3
+)(
+);
+
+    typedef logic [ADDR_WIDTH-1:0] core_addr_init_t [N_CORES-1:0];
+    function core_addr_init_t CORE_ADDR_CALC();
+        for(int i = 0; i<N_CORES; i++)begin
+            CORE_ADDR_CALC[N_CORES-1-i] = test_package::test_parameter+'h10000*i;
+        end
+    endfunction
+
+    localparam [ADDR_WIDTH-1:0] CORES_AXI_ADDRESSES [N_CORES-1:0] = CORE_ADDR_CALC();
+
+
+    for(n = 0; n<N_CORES; n=n+1)begin
+        fcore_complex #(
+            .DMA_BASE_ADDRESS(CORES_AXI_ADDRESSES[n])
+        )core_c(
+        );
+    end
+
+endmodule
+
+
+module fcore_complex #(
+    parameter DMA_BASE_ADDRESS = 32'h43c00000
+)(
+);
+    parameter addr2 = DMA_BASE_ADDRESS*1;
+endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+
+    auto resources = analyzer.analyze("", test_pattern);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    for (auto &res: resources) d_store->store_hdl_entity(res);
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top_module"}))[0];
+    auto dep_0 = ast_v2->get_dependencies()[0]->get_dependencies()[0];
+    EXPECT_TRUE(dep_0->get_parameters().contains("addr2"));
+    EXPECT_EQ(dep_0->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 394416);
+    auto dep_6 = ast_v2->get_dependencies()[0]->get_dependencies()[6];
+    EXPECT_TRUE(dep_6->get_parameters().contains("addr2"));
+    EXPECT_EQ(dep_6->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 1200);
+}
