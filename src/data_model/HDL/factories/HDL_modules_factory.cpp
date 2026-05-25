@@ -27,16 +27,9 @@ void HDL_modules_factory::add_instance(const HDL_instance &i) {
     current_resource.add_dependency(i);
 }
 
-void HDL_modules_factory::add_interface_dep(const HDL_instance &i) {
-    current_resource.add_dependency(i);
-}
 
-void HDL_modules_factory::add_mem_file_dep(const HDL_instance &i) {
-    current_resource.add_dependency(i);
-}
-
-void HDL_modules_factory::add_package_dep(const HDL_instance &i) {
-    current_resource.add_dependency(i);
+void HDL_modules_factory::add_typedef(const std::string &name, const HDL_type &type) {
+    current_resource.add_typedef(name, type);
 }
 
 void HDL_modules_factory::add_port(const std::string &p_n, port_direction_t dir) {

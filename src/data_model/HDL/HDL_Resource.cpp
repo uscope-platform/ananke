@@ -34,6 +34,7 @@ HDL_Resource::HDL_Resource(const HDL_Resource &c) {
     doc = c.doc;
     processor_docs = c.processor_docs;
     ports = c.ports;
+    typedefs = c.typedefs;
     if_specs = c.if_specs;
 }
 
@@ -66,6 +67,7 @@ bool HDL_Resource::is_empty() {
     ret &= if_specs.empty();
     ret &= parameters_spec.empty();
     ret &= functions.empty();
+    ret &= typedefs.empty();
     ret &= default_values.empty();
 
     return ret;
@@ -87,6 +89,7 @@ std::unordered_map<std::string, HDL_Resource>::mapped_type HDL_Resource::clone()
     ret.default_values = default_values;
     ret.processor_docs = processor_docs;
     ret.doc = doc;
+    ret.typedefs = typedefs;
     ret.parameters_spec  = parameters_spec.clone();
 
     for(auto &[function_name,  function_def]:functions) {
@@ -121,6 +124,7 @@ bool operator==(const HDL_Resource &lhs, const HDL_Resource &rhs) {
     ret &= lhs.default_values == rhs.default_values;
     ret &= lhs.parameters_spec == rhs.parameters_spec;
     ret &= lhs.functions == rhs.functions;
+    ret &= lhs.typedefs == rhs.typedefs;
 
     return ret;
 }

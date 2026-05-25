@@ -3932,40 +3932,25 @@ TEST(parameter_extraction, typedef_parameter) {
     sv_analyzer analyzer;
 
     auto resource = analyzer.analyze("", test_pattern)[0];
-    auto parameters = resource.get_parameters();
+    auto typedefs = resource.get_typedefs();
+    EXPECT_TRUE(typedefs.contains("ctrl_addr_init_t"));
 
-    Parameters_map check_params;
+    EXPECT_EQ(typedefs["ctrl_addr_init_t"].get_packed_dimensions().size(), 1);
+    EXPECT_EQ(typedefs["ctrl_addr_init_t"].get_unpacked_dimensions().size(), 1);
 
-    auto p = std::make_shared<HDL_parameter>();
+    dimension_t check_d;
+    check_d.first_bound = {Expression_component("31", Expression_component::number)};
+    check_d.second_bound = {Expression_component("0", Expression_component::number)};
+    check_d.packed = true;
+    auto packed_dim = typedefs["ctrl_addr_init_t"].get_packed_dimensions()[0];
+    EXPECT_EQ(packed_dim, check_d);
 
-    p->set_name("array_parameter");
+    check_d.first_bound = {Expression_component("1", Expression_component::number)};
+    check_d.second_bound = {Expression_component("0", Expression_component::number)};
+    check_d.packed = false;
+    auto unpacked_dim = typedefs["ctrl_addr_init_t"].get_unpacked_dimensions()[0];
+    EXPECT_EQ(unpacked_dim, check_d);
 
-
-
-    dimension_t d;
-    d.first_bound = {Expression_component("31", Expression_component::number)};
-    d.second_bound = {Expression_component("0", Expression_component::number)};
-    d.packed = true;
-    p->add_dimension(d);
-
-    d.first_bound = {Expression_component("1", Expression_component::number)};
-    d.second_bound = {Expression_component("0", Expression_component::number)};
-    d.packed = false;
-    p->add_dimension(d);
-    Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("32", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
-    p->add_item(std::make_shared<Concatenation>(c));
-
-
-    check_params.insert(p);
-
-    ASSERT_EQ(check_params.size(), parameters.size());
-
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
-    }
 
     auto defaults = resource.get_default_parameters();
     mdarray<hdl_integer> array_value;

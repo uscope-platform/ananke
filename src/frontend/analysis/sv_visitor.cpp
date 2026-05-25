@@ -107,7 +107,8 @@ void sv_visitor::enterType_declaration(sv2017::Type_declarationContext *ctx) {
 }
 
 void sv_visitor::exitType_declaration(sv2017::Type_declarationContext *ctx) {
-    params_factory.stop_type_declaration(ctx->identifier(0)->getText());
+
+    modules_factory.add_typedef(ctx->identifier(0)->getText(),  params_factory.stop_type_declaration());
 }
 
 void sv_visitor::exitData_type(sv2017::Data_typeContext *ctx) {
@@ -118,7 +119,7 @@ void sv_visitor::exitInterface_header(sv2017::Interface_headerContext *ctx) {
     std::string interface_name = ctx->identifier()->getText();
     if(modules_factory.is_current_valid()){
         HDL_instance dep("__scoped_declaration__", interface_name, interface);
-        modules_factory.add_interface_dep(dep);
+        modules_factory.add_instance(dep);
     }
 
 }
@@ -193,7 +194,7 @@ void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
         auto ext = p.extension().string();
         if(ext == ".dat"|| ext == ".mem"){
             HDL_instance dep("__init_file__", p.stem(), memory_init);
-            modules_factory.add_mem_file_dep(dep);
+            modules_factory.add_instance(dep);
         }
     }
     if(params_factory.is_component_relevant()) {
@@ -217,7 +218,7 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
         package_prefix = ctx->package_or_class_scoped_path_item()[0]->identifier()->getText();
         package_item = ctx->package_or_class_scoped_path_item()[1]->identifier()->getText();
         HDL_instance dep(package_item, package_prefix, package);
-        modules_factory.add_package_dep(dep);
+        modules_factory.add_instance(dep);
     }
 }
 
@@ -677,6 +678,7 @@ void sv_visitor::exitRange_expression(sv2017::Range_expressionContext *ctx) {
 }
 
 void sv_visitor::enterArray_range_expression(sv2017::Array_range_expressionContext *ctx) {
+    params_factory.open_range();
     if(deps_factory.is_valid_dependency()) {
         deps_factory.start_array_range();
     }

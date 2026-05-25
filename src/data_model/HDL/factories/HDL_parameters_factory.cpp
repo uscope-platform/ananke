@@ -287,10 +287,15 @@ void HDL_parameters_factory::start_type_declaration() {
     r_factory.start();
 }
 
-void HDL_parameters_factory::stop_type_declaration(const std::string &name) {
+HDL_type HDL_parameters_factory::stop_type_declaration() {
     in_typedef = false;
     r_factory.stop();
+    HDL_type t;
+    auto [packed, unpacked] = r_factory.get_dimensions();
+    t.set_packed_dimensions(packed);
+    t.set_unpacked_dimensions(unpacked);
     r_factory.clear();
+    return t;
 }
 
 

@@ -51,6 +51,8 @@
             dependencies = d;
         }
 
+        void add_typedef(const std::string &name, const HDL_type &type){typedefs.insert({name, type});}
+        std::map<std::string, HDL_type> get_typedefs(){return typedefs;}
         std::unordered_map<std::string, HDL_Resource>::mapped_type clone();
 
         void add_dependencies(std::vector<HDL_instance> deps);
@@ -118,7 +120,7 @@
 
         template<class Archive>
         void serialize( Archive & ar ) {
-            ar(name, path, hdl_type, dependencies, if_specs, parameters_spec, ports, doc, processor_docs, functions, default_values, line_n);
+            ar(name, path, hdl_type, dependencies, if_specs, parameters_spec, ports, doc, processor_docs, functions, default_values, line_n, typedefs);
         }
 
         bool is_empty();
@@ -142,6 +144,7 @@ private:
         std::unordered_map<std::string, HDL_function_def> functions;
 
         std::vector<processor_instance> processor_docs;
+        std::map<std::string, HDL_type> typedefs;
 
         // DOCUMENTATION``
         module_documentation doc;

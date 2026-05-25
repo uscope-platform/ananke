@@ -30,6 +30,14 @@ typedef struct dims_struct{
     }
     bool operator==(const dims_struct&) const = default;
 
+    friend ::std::ostream& operator<<(::std::ostream& os, const dims_struct& dim) {
+        return os << "dimension_t { "
+                  << "first_bound: " << dim.first_bound.print() << ", "
+                  << "second_bound: " << dim.second_bound.print() << ", "
+                  << "packed: " << (dim.packed ? "true" : "false")
+                  << " }";
+    }
+
 } dimension_t;
 
 #endif //ANANKE_DIMENSION_HPP

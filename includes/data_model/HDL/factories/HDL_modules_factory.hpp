@@ -29,9 +29,7 @@ public:
     HDL_Resource get_module();
 
     void add_instance(const HDL_instance &i);
-    void add_interface_dep(const HDL_instance &i);
-    void add_mem_file_dep(const HDL_instance &i);
-    void add_package_dep(const HDL_instance &i);
+    void add_typedef(const std::string &name, const HDL_type &type);
 
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);
     void add_function(const HDL_function_def &f);
