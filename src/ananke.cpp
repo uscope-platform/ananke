@@ -146,6 +146,7 @@ std::optional<int> ananke::build_flow() {
         std::unordered_set<std::string> constr_deps = aux_resolver.get_constraints(dep.constraints);
         constr_deps.insert(additional_constr_deps.begin(), additional_constr_deps.end());
 
+        LOG_TIMEPOINT("Scripts & constraints resolved");
 
         // BUILD ASTs FOR TOP LEVEL AND ADDITIONAL MODULES
         HDL_ast_builder_v2 b(s_store, d_store, dep);
@@ -153,10 +154,13 @@ std::optional<int> ananke::build_flow() {
         auto additional_synth_modules = b.build_ast(dep.general.synth_modules);
         additional_synth_modules.insert(additional_synth_modules.end(), synth_ast);
 
+        LOG_TIMEPOINT("Build synth AST");
+
         auto sim_ast = b.build_ast(std::vector({dep.general.sim_tl}))[0];
         auto additional_sim_modules = b.build_ast(dep.general.sim_modules);
         additional_sim_modules.insert(additional_sim_modules.end(), sim_ast);
 
+        LOG_TIMEPOINT("Build sim AST");
 
         // RESOLVE DEPENDENCIES
         Dependency_resolver_v2 synth_r(additional_synth_modules, d_store);
@@ -164,18 +168,25 @@ std::optional<int> ananke::build_flow() {
         auto synth_packages = synth_r.get_packages();
         auto synth_data = synth_r.get_data();
 
+        LOG_TIMEPOINT("Solved synth dependencies");
+
         Dependency_resolver_v2 sim_r(additional_sim_modules, d_store);
         auto sim_sources = sim_r.get_dependencies();
         auto sim_packages = sim_r.get_packages();
         auto sim_data = sim_r.get_data();
 
+        LOG_TIMEPOINT("Solved sim dependencies");
+
         // BUS MAPPING
 
         control_bus_analysis bus_analyzer(dep);
         bus_analyzer.analyze_bus(synth_ast);
+        LOG_TIMEPOINT("control bus analysis");
 
         proxy_bus_analysis proxy_analyzer(s_store, d_store, dep);
         proxy_analyzer.analyze(synth_ast);
+
+        LOG_TIMEPOINT("proxy bus analysis");
         //Generate makefile
         if(opts.generate_xilinx){
 
@@ -224,6 +235,8 @@ std::optional<int> ananke::build_flow() {
 
 
                 Vivado_manager manager(s_store, !opts.keep_makefile, dep.general.project_name);
+
+                LOG_TIMEPOINT("Build script generated");
                 if (!opts.makefile_only) manager.create_project("makefile.tcl",  !opts.no_open);
             }
         }
@@ -248,10 +261,13 @@ std::optional<int> ananke::build_flow() {
             generator.write_makefile(makefile);
 
             Radiant_manager manager(s_store, !opts.keep_makefile, dep.general.project_name);
+            LOG_TIMEPOINT("Build script generated");
             if (!opts.makefile_only) manager.create_project("makefile.tcl",  !opts.no_open);
         }
 
         peripheral_definition_generator periph_def_gen(d_store, synth_ast);
+
+        LOG_TIMEPOINT("peripheral definition generation");
         application_definition_generator app_def_gen(
                 synth_ast,
                 periph_def_gen.get_peripheral_definitions(),
@@ -259,12 +275,14 @@ std::optional<int> ananke::build_flow() {
                 periph_def_gen.get_variant_peripherals()
                 );
 
+        LOG_TIMEPOINT("Application definition generation");
         data_acquisition_analysis daq_analyzer(true);
         daq_analyzer.analyze(synth_ast);
         app_def_gen.add_datapoints(daq_analyzer.get_datapoints());
         app_def_gen.add_channel_groups(daq_analyzer.get_channel_groups());
         app_def_gen.add_scope(daq_analyzer.get_scope_data());
 
+        LOG_TIMEPOINT("Data aquisition analysis");
         app_def_gen.construct_application(dep.general.project_name);
 
 
@@ -282,5 +300,5 @@ std::optional<int> ananke::build_flow() {
             ast_file.close();
         }
     }
-    return std::nullopt;
+    return 0;
 }

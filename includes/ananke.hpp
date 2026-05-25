@@ -43,6 +43,7 @@
 #include "Backend/uplatform/application_definition_generator.hpp"
 #include "Backend/uplatform/peripheral_definition_generator.hpp"
 #include "analysis/data_acquisition_analysis.hpp"
+#include "profiler.hpp"
 
 class ananke {
     public:

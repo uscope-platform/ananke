@@ -15,6 +15,11 @@
 
 #include "main.hpp"
 
+struct MainProfiler {
+    MainProfiler() { LOG_TIMEPOINT("Application Start"); }
+    ~MainProfiler() { LOG_TIMEPOINT("Application end"); }
+};
+
 int main(int argc, char *argv[]){
 
     // Command line interface
@@ -50,6 +55,8 @@ int main(int argc, char *argv[]){
 
     CLI11_PARSE(app, argc, argv);
 
+    MainProfiler profiler;
+
     ananke engine(opts);
     std::optional<int> return_code = engine.clear_cache();
     if (return_code.has_value()) return return_code.value();
@@ -59,7 +66,9 @@ int main(int argc, char *argv[]){
     if (return_code.has_value()) return return_code.value();
     auto parsing_result = engine.directed_parsing();
     if (!parsing_result) return parsing_result.error();
+
     engine.load_data_cache();
+    LOG_TIMEPOINT("Cache loaded");
     return_code = engine.build_flow();
     if (return_code.has_value()) return return_code.value();
 

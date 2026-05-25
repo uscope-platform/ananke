@@ -20,4 +20,6 @@
 #include <CLI/CLI.hpp>
 
 #include "ananke.hpp"
+#include "profiler.hpp"
+
 #endif //ANANKE_MAIN_HPP

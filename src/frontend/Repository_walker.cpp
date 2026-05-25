@@ -32,6 +32,7 @@ Repository_walker::Repository_walker(const std::shared_ptr<settings_store>& s, c
 
 void Repository_walker::construct_walker(std::shared_ptr<settings_store> s, std::shared_ptr<data_store> d,
                                          std::set<std::string> ex) {
+
     s_store = std::move(s);
     d_store = std::move(d);
     excluded_directories = std::move(ex);
@@ -40,6 +41,10 @@ void Repository_walker::construct_walker(std::shared_ptr<settings_store> s, std:
         spdlog::info("Please enter the absolute path of the HDL repository");
         std::cin >> target_repository;
         s_store->set_setting("hdl_store", target_repository);
+    }
+    for (auto &i : s_store->get_setting_list("default_includes")) {
+        auto full_path =std::filesystem::path(target_repository).append(i);
+        default_includes.insert(full_path);
     }
     analyze_dir();
 }
@@ -167,19 +172,22 @@ void Repository_walker::analyze_file(std::filesystem::path &file) {
         spdlog::trace("Analizing file: {}", file.string());
         cache_mgr.add_file(file);
         if(file_is_verilog(file)){
-            hdl_futures.push_back(pool.submit(analyze_verilog, file));
+            hdl_futures.push_back(pool.submit(analyze_verilog, file, default_includes));
             working_threads++;
         } else if(file_is_script(file)){
-            scripts_futures.push_back(pool.submit(analyze_script, file));
+            std::set<std::string> includes;
+            scripts_futures.push_back(pool.submit(analyze_script, file, includes));
             working_threads++;
         } else if(file_is_vhdl(file)){
-            hdl_futures.push_back(pool.submit(analyze_vhdl, file));
+            hdl_futures.push_back(pool.submit(analyze_vhdl, file, default_includes));
             working_threads++;
         } else if(file_is_constraint(file)){
-            constraints_futures.push_back(pool.submit(analyze_constraint, file));
+            std::set<std::string> includes;
+            constraints_futures.push_back(pool.submit(analyze_constraint, file, includes));
             working_threads++;
         } else if(file_is_data(file)){
-            data_futures.push_back(pool.submit(analyze_data, file));
+            std::set<std::string> includes;
+            data_futures.push_back(pool.submit(analyze_data, file, includes));
             working_threads++;
         }
     }
@@ -226,10 +234,11 @@ bool Repository_walker::file_is_data(const std::filesystem::path &file) {
 
 /// Analyze the target verilog-type file to extract declared and used instantiated design elements
 /// \param file Target file
-std::vector<HDL_Resource> analyze_verilog(const std::filesystem::path &file) {
+std::vector<HDL_Resource> analyze_verilog(const std::filesystem::path &file, std::set<std::string> i_d) {
     spdlog::trace("PARSING: {}", file.c_str());
     try {
         sv_analyzer file_processor;
+        file_processor.set_include_directories(i_d);
         mm_file f(file);
         return file_processor.analyze(file, f.view());
     } catch (std::runtime_error &err) {
@@ -240,7 +249,7 @@ std::vector<HDL_Resource> analyze_verilog(const std::filesystem::path &file) {
 
 /// Analyze the target vhdl-type file to extract declared and used instantiated design elements
 /// \param file Target file
-std::vector<HDL_Resource> analyze_vhdl(const std::filesystem::path &file) {
+std::vector<HDL_Resource> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d) {
     vhdl_analyzer file_processor(file);
     file_processor.cleanup_content("");
     return file_processor.analyze();
@@ -249,14 +258,14 @@ std::vector<HDL_Resource> analyze_vhdl(const std::filesystem::path &file) {
 
 /// Analyze the target Script extracting the necessary metadata
 /// \param file Target file
-std::vector<DataFile> analyze_data(const std::filesystem::path &file) {
+std::vector<DataFile> analyze_data(const std::filesystem::path &file, std::set<std::string> i_d) {
     DataFile data(file.stem(), file.string());
     return {data};
 }
 
 /// Analyze the target Script extracting the necessary metadata
 /// \param file Target file
-std::vector<Script> analyze_script(const std::filesystem::path &file) {
+std::vector<Script> analyze_script(const std::filesystem::path &file, std::set<std::string> i_d) {
     std::string ext = file.extension();
     ext = std::regex_replace(ext, std::regex("\\."), "");
     script_specs s;
@@ -269,7 +278,7 @@ std::vector<Script> analyze_script(const std::filesystem::path &file) {
 
 /// Analyze the target constraint file extracting the necessary metadata
 /// \param file Target file
-std::vector<Constraints> analyze_constraint(const std::filesystem::path &file) {
+std::vector<Constraints> analyze_constraint(const std::filesystem::path &file, std::set<std::string> i_d) {
     Constraints constr(file.stem());
     constr.set_path(file);
     return {constr};

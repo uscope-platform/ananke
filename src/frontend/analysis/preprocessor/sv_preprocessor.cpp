@@ -123,10 +123,13 @@ namespace preprocessor {
             if (name.starts_with('/')) return std::string(name);
             std::string full_path;
             auto rel_path = std::string(std::filesystem::path(path).parent_path()/name);
-            if (std::filesystem::exists(rel_path)) full_path = rel_path;
-            for (std::filesystem::path dir: include_directories) {
-                auto tmp_path = std::string(dir/name);
-                if (std::filesystem::exists(tmp_path)) full_path = tmp_path;
+            if (std::filesystem::exists(rel_path)) {
+                full_path = rel_path;
+            } else {
+                for (std::filesystem::path dir: include_directories) {
+                    auto tmp_path = std::string(dir/name);
+                    if (std::filesystem::exists(tmp_path)) full_path = tmp_path;
+                }
             }
             if (full_path.empty()) {
                 spdlog::warn("include file not found: {}", std::string(name));

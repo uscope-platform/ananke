@@ -37,11 +37,11 @@
 #include "third_party/thread_pool.hpp"
 
 
-static std::vector<HDL_Resource> analyze_verilog(const std::filesystem::path &file);
-static std::vector<HDL_Resource> analyze_vhdl(const std::filesystem::path &file);
-static std::vector<Script> analyze_script(const std::filesystem::path &file);
-static std::vector<DataFile> analyze_data(const std::filesystem::path &file);
-static std::vector<Constraints> analyze_constraint(const std::filesystem::path &file);
+static std::vector<HDL_Resource> analyze_verilog(const std::filesystem::path &file, std::set<std::string> i_d);
+static std::vector<HDL_Resource> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d);
+static std::vector<Script> analyze_script(const std::filesystem::path &file, std::set<std::string> i_d);
+static std::vector<DataFile> analyze_data(const std::filesystem::path &file, std::set<std::string> i_d);
+static std::vector<Constraints> analyze_constraint(const std::filesystem::path &file, std::set<std::string> i_d);
 
 const unsigned int max_threads = std::thread::hardware_concurrency()-1;
 
@@ -86,7 +86,7 @@ private:
     thread_pool pool;
     int working_threads = 0;
     cache_manager cache_mgr;
-
+    std::set<std::string> default_includes;
 };
 
 

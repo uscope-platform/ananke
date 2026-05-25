@@ -39,7 +39,7 @@ namespace preprocessor {
         std::string preprocess(const std::string_view &file_content) {return  preprocess(file_content, 1);}
         std::string preprocess(const std::string_view &file_content, unsigned int initial_output_line);
         std::string flatten_source(const std::string_view &file_content);
-        void set_include_directories(const std::vector<std::string> &i_d){include_directories = i_d;}
+        void set_include_directories(const std::set<std::string> &i_d){include_directories = i_d;}
         void set_path(const std::string &s){path = s;}
         std::vector<std::string> get_documentation_comments() {return documentation_comments;}
         source_map_t get_source_map() const {return  source_map.get_map();}
@@ -54,7 +54,7 @@ namespace preprocessor {
         std::vector<std::string> documentation_comments;
         std::string path;
         conditional_solver c_solver;
-        std::vector<std::string> include_directories;
+        std::set<std::string> include_directories;
         source_mapper source_map;
         unsigned int output_line_n = 0;
         bool disable_preprocessor = false;
