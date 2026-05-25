@@ -238,7 +238,7 @@ void HDL_function_call::set_container_sizes(const resolved_type &s) {
             }
         }
     } else {
-        if (assignments.size()==1 && !loop_metadata.has_value() {
+        if (assignments.size()==1 && !loop_metadata.has_value()) {
             assignments[0].set_container_size(s);
         } else {
             resolved_type lower_container_size;
