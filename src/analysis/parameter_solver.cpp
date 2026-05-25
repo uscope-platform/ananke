@@ -67,11 +67,14 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
             for (auto &dep: dependencies) {
                 if (!dependencies_map.contains(dep) && !parent_module.starts_with("module::")) {
                     auto target = map.get(param_id.name);
-                    if (!default_parameters.contains(dep)) {
+                    if (!default_parameters.contains(dep) && !solved_parameters.contains(dep)) {
                         spdlog::error("The parameter {} does not exist in module {}", dep.name, parent_module);
                         exit(-1);
                     }
-                    target->propagate_constant(dep, default_parameters.at(dep));
+                    if (solved_parameters.contains(dep))
+                        target->propagate_constant(dep, solved_parameters.at(dep));
+                    else
+                        target->propagate_constant(dep, default_parameters.at(dep));
                     to_erase[param_id].insert(dep);
                 }
             }

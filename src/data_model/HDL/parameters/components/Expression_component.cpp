@@ -129,6 +129,9 @@ bool Expression_component::propagate_constant(const qualified_identifier &consta
                         type = string;
                         value = ""s; // if the array value is not found (because of some dimensional issue) substitute with a 0 rather than crashing
                     }
+                }else if(const_value.is_string()) {
+                    if (const_value.get_string() == "__RUNTIME_ONLY_PARAMETER__")
+                        spdlog::warn("attempted propagation of runtime only parameter");
                 } else {
                     std::bitset<64> bits(const_value.get_integer().get_value());
                     type = number;

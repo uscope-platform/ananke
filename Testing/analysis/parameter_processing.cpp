@@ -1279,4 +1279,49 @@ TEST(parameter_processing, init_list_override) {
 }
 
 
+TEST(parameter_processing, override_as_dependency) {
+    auto test_pattern = R"(
 
+    module filter #(
+        parameter MAIN_DECIMATION_RATIO = 128
+    ) (
+    );
+
+    localparam main_clock_selector = $clog2(MAIN_DECIMATION_RATIO)-2;
+    localparam [7:0] filter_width_map [7:0] = '{  27, 25, 22, 20, 16, 13, 10, 7};
+    localparam [7:0] main_filter_resolution = filter_width_map[main_clock_selector];
+
+    endmodule
+
+    module top_module #(
+    )();
+
+
+        filter #(
+            .MAIN_DECIMATION_RATIO(256)
+        ) flt_instance (
+        );
+
+    endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+
+    auto resources = analyzer.analyze("", test_pattern);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+
+    d_store->store_hdl_entity(resources[0]);
+    d_store->store_hdl_entity(resources[1]);
+
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top_module"}))[0];
+
+    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
+    EXPECT_TRUE(dependency_parameters.contains("main_filter_resolution"));
+
+    auto value = dependency_parameters.get("main_filter_resolution")->get_numeric_value();
+    EXPECT_EQ(value.value(), 13);
+}
