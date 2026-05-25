@@ -42,7 +42,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
 
             } else {
                 for(const auto&[prefix, identifier, name]:dependencies) {
-                     if(!prefix.empty()) {
+                     if(!prefix.empty() && parent_module.starts_with("module::")) {
                         // At parse time, package parameters are not yet known. Insert a sentinel so downstream code knows to defer evaluation.
                         solved_parameters.insert({param_id, "__RUNTIME_ONLY_PARAMETER__"s});
                     }
@@ -142,6 +142,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     //retrieve default package parameters
 
     std::map<qualified_identifier, resolved_parameter> solved_parameters = retrieve_package_parameters(node_parameters, d_store);
+
+    for (const auto &[parameter_id, value] : solved_parameters) {
+        node_defaults[parameter_id] = value;
+    }
 
     auto overrides_solution = solve_complex_overrides(work, d_store, node_defaults);
     solved_parameters.insert(overrides_solution.begin(), overrides_solution.end());
