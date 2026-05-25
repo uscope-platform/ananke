@@ -120,7 +120,7 @@ public:
     void close_range();
 
     void start_type_declaration();
-    HDL_type stop_type_declaration();
+    HDL_type stop_type_declaration(const std::string &name);
     void close_packed_dimensions();
     void close_dimension();
 
@@ -156,7 +156,7 @@ private:
 
     std::string current_type;
 
-
+    std::map<std::string, HDL_type> typedefs;
 };
 
 

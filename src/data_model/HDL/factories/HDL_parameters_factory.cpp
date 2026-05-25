@@ -23,10 +23,17 @@ void HDL_parameters_factory::new_parameter(const std::string &name) {
 
 std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
     auto resource = get_resource();
-    auto [packed, unpacked] = r_factory.get_dimensions();
-    resource.set_packed_dimensions(packed);
-    resource.set_unpacked_dimensions(unpacked);
-    r_factory.clear();
+    if (typedefs.contains(current_type)) {
+        auto dims = typedefs.at(current_type).get_packed_dimensions();
+        resource.set_packed_dimensions(dims);
+        dims = typedefs.at(current_type).get_unpacked_dimensions();
+        resource.set_unpacked_dimensions(dims);
+    } else {
+        auto [packed, unpacked] = r_factory.get_dimensions();
+        resource.set_packed_dimensions(packed);
+        resource.set_unpacked_dimensions(unpacked);
+        r_factory.clear();
+    }
     return std::make_shared<HDL_parameter>(resource);
 }
 
@@ -235,7 +242,6 @@ void HDL_parameters_factory::start_instance_parameter_assignment(const std::stri
 }
 
 void HDL_parameters_factory::clear_expression() {
-
     expr_factory.clear_level();
 }
 
@@ -287,7 +293,7 @@ void HDL_parameters_factory::start_type_declaration() {
     r_factory.start();
 }
 
-HDL_type HDL_parameters_factory::stop_type_declaration() {
+HDL_type HDL_parameters_factory::stop_type_declaration(const std::string &name) {
     in_typedef = false;
     r_factory.stop();
     HDL_type t;
@@ -295,6 +301,7 @@ HDL_type HDL_parameters_factory::stop_type_declaration() {
     t.set_packed_dimensions(packed);
     t.set_unpacked_dimensions(unpacked);
     r_factory.clear();
+    typedefs[name] = t;
     return t;
 }
 

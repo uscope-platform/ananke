@@ -107,8 +107,8 @@ void sv_visitor::enterType_declaration(sv2017::Type_declarationContext *ctx) {
 }
 
 void sv_visitor::exitType_declaration(sv2017::Type_declarationContext *ctx) {
-
-    modules_factory.add_typedef(ctx->identifier(0)->getText(),  params_factory.stop_type_declaration());
+    auto name = ctx->identifier(0)->getText();
+    modules_factory.add_typedef(name,  params_factory.stop_type_declaration(name));
 }
 
 void sv_visitor::exitData_type(sv2017::Data_typeContext *ctx) {
@@ -228,8 +228,12 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
     if (!ctx->list_of_param_assignments()) {
         throw std::runtime_error("Encountered non existent list of parameter declarations");
     }
-    if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type() && ctx->data_type_or_implicit()->data_type()->data_type_primitive()) {
-        auto type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
+    if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type()) {
+        std::string type;
+        if (ctx->data_type_or_implicit()->data_type()->data_type_primitive())
+            type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
+        if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path())
+            type = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->getText();
         params_factory.set_type(type);
     }
     if (!ctx->data_type_or_implicit()) {
@@ -768,10 +772,15 @@ void sv_visitor::exitData_type_or_implicit(sv2017::Data_type_or_implicitContext 
 
 void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
     in_param_declaration = true;
-    if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type() && ctx->data_type_or_implicit()->data_type()->data_type_primitive()) {
-        auto type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
+    if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type()) {
+        std::string type;
+        if (ctx->data_type_or_implicit()->data_type()->data_type_primitive())
+            type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
+        if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path())
+            type = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->getText();
         params_factory.set_type(type);
     }
+
 
     params_factory.start_range();
     if (!ctx->data_type_or_implicit()) {
