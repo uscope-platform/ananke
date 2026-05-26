@@ -35,7 +35,6 @@ struct cache_t{
     std::unordered_map<std::string, DataFile> data;
 
     std::unordered_map<std::string, std::string> hdl_hash;
-    std::unordered_map<std::string, std::string> interface_hash;
     std::unordered_map<std::string, std::string> scripts_hash;
     std::unordered_map<std::string, std::string> constraints_hash;
     std::unordered_map<std::string, std::string> data_hash;
@@ -43,7 +42,7 @@ struct cache_t{
     template <class Archive>
     void serialize( Archive & ar )
     {
-        ar( hdl, scripts, constraints, interfaces, data, hdl_hash, interface_hash, scripts_hash, constraints_hash, data_hash);
+        ar( hdl, scripts, constraints, interfaces, data, hdl_hash, scripts_hash, constraints_hash, data_hash);
     }
 };
 
@@ -51,26 +50,25 @@ class data_store {
 public:
     data_store(bool e, std::string cache_dir_path);
     HDL_Resource get_HDL_resource(const std::string& name);
-    void store_hdl_entity(HDL_Resource& entity, const std::string &hash);
-    void store_hdl_entity(std::vector<HDL_Resource> & vect, const std::string &hash);
+    void store_hdl_entity(std::vector<HDL_Resource> & vect, const std::string &hash,const std::string &path);
     void evict_hdl_entity(const std::string& name);
     bool contains_hdl_entity(const std::string& name) const;
-
+    [[nodiscard]] std::optional<std::string> get_hdl_entity_hash(const std::string &name)const;
 
     Script get_script(std::string& name);
-    void store_script(Script entity, const std::string &hash);
-    void store_script(const std::vector<Script> & vect, const std::string &hash);
+    void store_script(const std::vector<Script> & vect, const std::string &hash,const std::string &path);
     void evict_script(const std::string& name);
+    [[nodiscard]] std::optional<std::string> get_script_hash(const std::string &name)const;
 
     DataFile get_data_file(const std::string& name);
-    void store_data_file(DataFile entity, const std::string &hash);
-    void store_data_file(const std::vector<DataFile> & vect, const std::string &hash);
+    void store_data_file(const std::vector<DataFile> & vect, const std::string &hash,const std::string &path);
     void evict_data_file(const std::string& name);
+    [[nodiscard]] std::optional<std::string> get_data_file_hash(const std::string &name)const;
 
     Constraints get_constraint(std::string& name);
-    void store_constraint(Constraints entity, const std::string &hash);
-    void store_constraint(const std::vector<Constraints> & vect, const std::string &hash);
+    void store_constraint(const std::vector<Constraints> & vect, const std::string &hash,const std::string &path);
     void evict_constraint(const std::string& name);
+    [[nodiscard]] std::optional<std::string> get_constraint_hash(const std::string &name)const;
 
     void remove_stale_info(const std::filesystem::path& p);
     bool is_primitive(const std::string &name);

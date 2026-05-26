@@ -44,7 +44,7 @@ Script::Script(const script_specs &specs) {
     product_type = specs.products_type;
 }
 
-std::string Script::get_name() {
+std::string Script::get_name() const {
     return name;
 }
 

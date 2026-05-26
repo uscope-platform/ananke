@@ -29,7 +29,7 @@ Constraints::Constraints(std::string n) {
 }
 
 
-std::string Constraints::get_name() {
+std::string Constraints::get_name() const {
     return name;
 }
 

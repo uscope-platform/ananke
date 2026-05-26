@@ -56,7 +56,7 @@ public:
     Script() = default;
     Script(const Script &S);
     Script(const script_specs &specs);
-    std::string get_name();
+    std::string get_name() const;
     script_type_t get_type();
     bool get_function_mode() const {return function_mode;}
     void set_product(const bool gen,const std::string &t) {product_include = gen, product_type = t;}

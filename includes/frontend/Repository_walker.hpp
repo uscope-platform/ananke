@@ -36,12 +36,19 @@
 #include "analysis/vhdl_analyzer.hpp"
 #include "third_party/thread_pool.hpp"
 
+template<typename  T>
+struct file_analysis_context {
+    std::string path;
+    std::string hash;
+    std::optional<std::vector<T>> resource;
+};
 
-static std::pair<std::string, std::vector<HDL_Resource>> analyze_verilog(const std::filesystem::path &file, std::set<std::string> i_d);
-static std::pair<std::string, std::vector<HDL_Resource>> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d);
-static std::pair<std::string, std::vector<Script>> analyze_script(const std::filesystem::path &file, std::set<std::string> i_d);
-static std::pair<std::string, std::vector<DataFile>> analyze_data(const std::filesystem::path &file, std::set<std::string> i_d);
-static std::pair<std::string, std::vector<Constraints>> analyze_constraint(const std::filesystem::path &file, std::set<std::string> i_d);
+static file_analysis_context<HDL_Resource> analyze_verilog(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
+static file_analysis_context<HDL_Resource> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
+static file_analysis_context<Script>  analyze_script(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
+static file_analysis_context<DataFile>  analyze_data(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
+static file_analysis_context<Constraints>  analyze_constraint(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
+static std::string hash_file(const std::string_view &file_content);
 
 const unsigned int max_threads = std::thread::hardware_concurrency()-1;
 
@@ -78,14 +85,13 @@ private:
     std::shared_ptr<settings_store> s_store;
     std::shared_ptr<data_store> d_store;
 
-    std::vector<std::future<std::pair<std::string, std::vector<HDL_Resource>>>> hdl_futures;
-    std::vector<std::future<std::pair<std::string, std::vector<Script>>>> scripts_futures;
-    std::vector<std::future<std::pair<std::string, std::vector<Constraints>>>> constraints_futures;
-    std::vector<std::future<std::pair<std::string, std::vector<DataFile>>>> data_futures;
+    std::vector<std::future<file_analysis_context<HDL_Resource>>> hdl_futures;
+    std::vector<std::future<file_analysis_context<Script>>> scripts_futures;
+    std::vector<std::future<file_analysis_context<Constraints>>> constraints_futures;
+    std::vector<std::future<file_analysis_context<DataFile>>> data_futures;
 
     thread_pool pool;
     int working_threads = 0;
-    cache_manager cache_mgr;
     std::set<std::string> default_includes;
 };
 

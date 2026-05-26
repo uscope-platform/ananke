@@ -30,7 +30,7 @@ std::string DataFile::get_path() {
     return path;
 }
 
-std::string DataFile::get_name() {
+std::string DataFile::get_name()const {
     return name;
 }
 

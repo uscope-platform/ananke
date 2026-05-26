@@ -20,13 +20,11 @@
 #include <spdlog/spdlog.h>
 
 
-Repository_walker::Repository_walker(const std::shared_ptr<settings_store>& s, const std::shared_ptr<data_store>& d, bool ephimeral) : pool(max_threads),
-                                                                                                                                       cache_mgr(s, d, ephimeral){
+Repository_walker::Repository_walker(const std::shared_ptr<settings_store>& s, const std::shared_ptr<data_store>& d, bool ephimeral) : pool(max_threads){
     construct_walker(s, d, {".git"});
 }
 
-Repository_walker::Repository_walker(const std::shared_ptr<settings_store>& s, const std::shared_ptr<data_store>& d, bool ephimeral,
-                                     std::set<std::string> ex) : pool(max_threads), cache_mgr(s, d, ephimeral) {
+Repository_walker::Repository_walker(const std::shared_ptr<settings_store>& s, const std::shared_ptr<data_store>& d, bool ephimeral,std::set<std::string> ex) : pool(max_threads){
     construct_walker(s, d, std::move(ex));
 }
 
@@ -87,20 +85,20 @@ void Repository_walker::analyze_dir() {
 void Repository_walker::collect_analysis_results() {
     pool.wait_for_tasks();
     for(auto &f : hdl_futures){
-        auto [file_hash, result] = f.get();
-        d_store->store_hdl_entity(result, file_hash);
+        auto [path, file_hash, resource] = f.get();
+        if (resource) d_store->store_hdl_entity(resource.value(), file_hash, path);
     }
     for(auto &f : scripts_futures){
-        auto [file_hash, result] = f.get();
-        d_store->store_script(result, file_hash);
+        auto [path, file_hash, resource] = f.get();
+        if (resource) d_store->store_script(resource.value(), file_hash, path);
     }
     for(auto &f : constraints_futures){
-        auto [file_hash, result] = f.get();
-        d_store->store_constraint(result, file_hash);
+        auto [path, file_hash, resource] = f.get();
+        if (resource) d_store->store_constraint(resource.value(), file_hash, path);
     }
     for(auto  &f: data_futures){
-        auto [file_hash, result] = f.get();
-        d_store->store_data_file(result, file_hash);
+        auto [path, file_hash, resource] = f.get();
+        if (resource) d_store->store_data_file(resource.value(), file_hash, path);
     }
     hdl_futures.erase(hdl_futures.begin(), hdl_futures.end());
     scripts_futures.erase(scripts_futures.begin(), scripts_futures.end());
@@ -158,6 +156,8 @@ void Repository_walker::read_ignore_file(const std::filesystem::path &file) {
 
 }
 
+
+
 /// File analysis Dispatcher
 /// \param file File to analyze
 ///
@@ -165,31 +165,30 @@ void Repository_walker::read_ignore_file(const std::filesystem::path &file) {
 void Repository_walker::analyze_file(std::filesystem::path &file) {
     if(!(file_is_verilog(file) || file_is_vhdl(file) || file_is_constraint(file)|| file_is_script(file) || file_is_data(file))) return;
 
-    bool updated_file = true;
-
-    if(cache_mgr.is_cached(file)) updated_file = cache_mgr.is_changed(file);
-    if(updated_file) {
-        spdlog::trace("Analizing file: {}", file.string());
-        cache_mgr.add_file(file);
-        if(file_is_verilog(file)){
-            hdl_futures.push_back(pool.submit(analyze_verilog, file, default_includes));
-            working_threads++;
-        } else if(file_is_script(file)){
-            std::set<std::string> includes;
-            scripts_futures.push_back(pool.submit(analyze_script, file, includes));
-            working_threads++;
-        } else if(file_is_vhdl(file)){
-            hdl_futures.push_back(pool.submit(analyze_vhdl, file, default_includes));
-            working_threads++;
-        } else if(file_is_constraint(file)){
-            std::set<std::string> includes;
-            constraints_futures.push_back(pool.submit(analyze_constraint, file, includes));
-            working_threads++;
-        } else if(file_is_data(file)){
-            std::set<std::string> includes;
-            data_futures.push_back(pool.submit(analyze_data, file, includes));
-            working_threads++;
-        }
+    spdlog::trace("Analizing file: {}", file.string());
+    if(file_is_verilog(file)){
+        auto old_hash = d_store->get_hdl_entity_hash(file).value_or("");
+        hdl_futures.push_back(pool.submit(analyze_verilog, file, default_includes, old_hash));
+        working_threads++;
+    } else if(file_is_script(file)){
+        std::set<std::string> includes;
+        auto old_hash = d_store->get_script_hash(file).value_or("");
+        scripts_futures.push_back(pool.submit(analyze_script, file, includes, old_hash));
+        working_threads++;
+    } else if(file_is_vhdl(file)){
+        auto old_hash = d_store->get_hdl_entity_hash(file).value_or("");
+        hdl_futures.push_back(pool.submit(analyze_vhdl, file, default_includes, old_hash));
+        working_threads++;
+    } else if(file_is_constraint(file)){
+        std::set<std::string> includes;
+        auto old_hash = d_store->get_constraint_hash(file).value_or("");
+        constraints_futures.push_back(pool.submit(analyze_constraint, file, includes, old_hash));
+        working_threads++;
+    } else if(file_is_data(file)){
+        std::set<std::string> includes;
+        auto old_hash = d_store->get_data_file_hash(file).value_or("");
+        data_futures.push_back(pool.submit(analyze_data, file, includes, old_hash));
+        working_threads++;
     }
 
 }
@@ -234,38 +233,107 @@ bool Repository_walker::file_is_data(const std::filesystem::path &file) {
 
 /// Analyze the target verilog-type file to extract declared and used instantiated design elements
 /// \param file Target file
-std::pair<std::string, std::vector<HDL_Resource>> analyze_verilog(const std::filesystem::path &file, std::set<std::string> i_d) {
+file_analysis_context<HDL_Resource> analyze_verilog(
+    const std::filesystem::path &file,
+    std::set<std::string> i_d, const std::string &old_hash
+) {
     spdlog::trace("PARSING: {}", file.c_str());
     try {
+
+        mm_file f(file);
+        std::string hash = hash_file(f.view());
+        if (old_hash == hash) {
+            return {file.string(), hash, std::nullopt};
+        }
         sv_analyzer file_processor;
         file_processor.set_include_directories(i_d);
-        mm_file f(file);
-        return {"",file_processor.analyze(file, f.view())};
+        return {file.string(), hash,file_processor.analyze(file, f.view())};
     } catch (std::runtime_error &err) {
         spdlog::error(err.what());
         return {};
     }
 }
+std::string hash_file(const std::string_view &file_content) {
+
+    EVP_MD_CTX* context = EVP_MD_CTX_new();
+
+    if(context != nullptr){
+        if(EVP_DigestInit_ex(context, EVP_sha256(), nullptr)) {
+            if(EVP_DigestUpdate(context, file_content.begin(), file_content.length())) {
+                unsigned char hash[EVP_MAX_MD_SIZE];
+                unsigned int lengthOfHash = 0;
+
+                if(EVP_DigestFinal_ex(context, hash, &lengthOfHash)) {
+                    std::stringstream ss;
+                    for(unsigned int i = 0; i < lengthOfHash; ++i) {
+                        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+                        if(i<lengthOfHash-1){
+                            ss<<":";
+                        }
+                    }
+                    EVP_MD_CTX_free(context);
+                    return ss.str();
+                }
+            }
+        }
+    }
+
+
+    // If I get here there must have been some error with the hash calculation, throw an exception
+    throw std::runtime_error("ERROR: could not calculate file hash");
+};
 
 /// Analyze the target vhdl-type file to extract declared and used instantiated design elements
 /// \param file Target file
-std::pair<std::string, std::vector<HDL_Resource>> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d) {
+file_analysis_context<HDL_Resource> analyze_vhdl(
+    const std::filesystem::path &file,
+    std::set<std::string> i_d,
+    const std::string &old_hash
+) {
+
+    mm_file f(file);
+    auto hash = hash_file(f.view());
+    if (old_hash == hash) {
+        return {file.string(), hash, std::nullopt};
+    }
     vhdl_analyzer file_processor(file);
     file_processor.cleanup_content("");
-    return {"", file_processor.analyze()};
+    return {file.string(), hash, file_processor.analyze()};
 }
 
 
 /// Analyze the target Script extracting the necessary metadata
 /// \param file Target file
-std::pair<std::string, std::vector<DataFile>> analyze_data(const std::filesystem::path &file, std::set<std::string> i_d) {
+file_analysis_context<DataFile> analyze_data(
+    const std::filesystem::path &file,
+    std::set<std::string> i_d,
+    const std::string &old_hash
+) {
+
+    mm_file f(file);
+    auto hash = hash_file(f.view());
+    if (old_hash == hash) {
+        return {file.string(), hash, std::nullopt};
+    }
+
     DataFile data(file.stem(), file.string());
-    return {"", {data}};
+    std::vector res = {data};
+    return {file.string(), hash, res};
 }
 
 /// Analyze the target Script extracting the necessary metadata
 /// \param file Target file
-std::pair<std::string, std::vector<Script>> analyze_script(const std::filesystem::path &file, std::set<std::string> i_d) {
+file_analysis_context<Script> analyze_script(
+    const std::filesystem::path &file,
+    std::set<std::string> i_d,
+    const std::string &old_hash
+) {
+    mm_file f(file);
+    auto hash = hash_file(f.view());
+    if (old_hash == hash) {
+        return {file.string(), hash, std::nullopt};
+    }
+
     std::string ext = file.extension();
     ext = std::regex_replace(ext, std::regex("\\."), "");
     script_specs s;
@@ -273,15 +341,26 @@ std::pair<std::string, std::vector<Script>> analyze_script(const std::filesystem
     s.type = ext;
     Script scr(s);
     scr.set_path(file);
-    return {"", {scr}};
+    std::vector ret = {scr};
+    return {file.string(), hash, ret};
 }
 
 /// Analyze the target constraint file extracting the necessary metadata
 /// \param file Target file
-std::pair<std::string, std::vector<Constraints>> analyze_constraint(const std::filesystem::path &file, std::set<std::string> i_d) {
+file_analysis_context<Constraints> analyze_constraint(
+    const std::filesystem::path &file,
+    std::set<std::string> i_d,
+    const std::string &old_hash
+) {
+    mm_file f(file);
+    auto hash = hash_file(f.view());
+    if (old_hash == hash) {
+        return {file.string(), hash, std::nullopt};
+    }
     Constraints constr(file.stem());
     constr.set_path(file);
-    return {"", {constr}};
+    std::vector ret = {constr};
+    return {file.string(), hash, ret};
 }
 
 

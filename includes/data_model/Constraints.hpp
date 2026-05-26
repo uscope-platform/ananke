@@ -29,7 +29,7 @@ public:
     Constraints(const Constraints &C);
     explicit Constraints(std::string n);
 
-    std::string get_name();
+    std::string get_name() const;
     void set_path(std::string p);
     std::string get_path();
 
