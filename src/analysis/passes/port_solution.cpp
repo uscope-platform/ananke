@@ -21,7 +21,7 @@ void port_solution::process_node(const std::shared_ptr<HDL_instance_AST> &node) 
     if(node->get_parent() != nullptr) {
         auto parameters = node->get_parent()->get_parameters();
         std::map<qualified_identifier, resolved_parameter> ctx;
-        for(const auto param:parameters) {
+        for(const auto &[p_name, param]:parameters) {
             auto val = param->get_value();
             if(val.has_value()) ctx[param->get_identifier()] = val.value();
         }

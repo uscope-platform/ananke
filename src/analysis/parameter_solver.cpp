@@ -109,10 +109,10 @@ void parameter_solver::update_parameters_map(
     auto node_parameters = node->get_parameters();
     auto resource = d_store->get_HDL_resource(node->get_type());
 
-    for(auto &param:resource.get_parameters()) {
+    for(auto &[p_name, param]:resource.get_parameters()) {
         std::shared_ptr<HDL_parameter> ast_param;
-        if(node_parameters.contains(param->get_name()))
-            ast_param = node_parameters.get(param->get_name());
+        if(node_parameters.contains(p_name))
+            ast_param = std::make_shared<HDL_parameter>(*node_parameters.get(p_name));
         else
             ast_param = std::make_shared<HDL_parameter>(*param);
         resolved_parameter param_val;
@@ -121,7 +121,6 @@ void parameter_solver::update_parameters_map(
         } else {
             param_val = resource.get_default_parameters()[param->get_identifier()];
         }
-        ast_param = std::make_shared<HDL_parameter>(*ast_param);
         ast_param->set_value(param_val);
         node_parameters.insert(ast_param);
     }
@@ -192,20 +191,20 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     auto node_overrides = work.node->get_parameters();
 
     Parameters_map to_solve;
-    for(const auto& override:node_overrides) {
-        for(const auto &param: node_parameters) {
+    for(const auto& [override_name, override]:node_overrides) {
+        for(const auto &[p_name, param]: node_parameters) {
             auto deps = param->get_dependencies();
-            if(deps.contains(override->get_identifier()) && !node_overrides.contains(param->get_name())) {
+            if(deps.contains(override->get_identifier()) && !node_overrides.contains(p_name)) {
                 to_solve.insert(param);
             }
         }
     }
 
-    for(auto &param:node_overrides) {
-        if (node_parameters.contains(param->get_name())) {
-            param->set_packed_dimensions(node_parameters.get(param->get_name())->get_packed_dimensions());
-            param->set_unpacked_dimensions(node_parameters.get(param->get_name())->get_unpacked_dimensions());
-            param->set_type(node_parameters.get(param->get_name())->get_type());
+    for(auto &[override_name, param]:node_overrides) {
+        if (node_parameters.contains(override_name)) {
+            param->set_packed_dimensions(node_parameters.get(override_name)->get_packed_dimensions());
+            param->set_unpacked_dimensions(node_parameters.get(override_name)->get_unpacked_dimensions());
+            param->set_type(node_parameters.get(override_name)->get_type());
         }
     }
 
@@ -217,12 +216,12 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     std::set<std::string> completed_parameters;
     while(completed_parameters.size() != node_overrides.size()) {
         if(solution_rounds > 100) throw std::runtime_error("Exceded maximum number of iterations when solving a parameter override");
-        for(auto &param:node_overrides) {
-            if(completed_parameters.contains(param->get_name())) continue;
+        for(auto &[override_name, param]:node_overrides) {
+            if(completed_parameters.contains(override_name)) continue;
             auto deps = param->get_dependencies();
             if(deps.empty()) {
-                if(!to_solve.contains(param->get_name())) {
-                    completed_parameters.insert(param->get_name());
+                if(!to_solve.contains(override_name)) {
+                    completed_parameters.insert(override_name);
                     to_solve.insert(param);
                 }
                 continue;
@@ -297,7 +296,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
 std::map<qualified_identifier, std::set<qualified_identifier>> parameter_solver::get_dependency_map(const Parameters_map &map) {
 
     std::map<qualified_identifier, std::set<qualified_identifier>> dependencies_map;
-    for (auto &param: map) {
+    for (auto &[p_name, param]: map) {
         auto param_id = param->get_identifier();
         dependencies_map[param_id] = {};
         auto deps = param->get_dependencies();
@@ -313,7 +312,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::specialize_
 
     Parameters_map runtime_to_eval;
 
-    for(auto &param:node_parameters) {
+    for(auto &[p_name, param]:node_parameters) {
         if(!solved_parameters.contains(param->get_identifier())) {
             runtime_to_eval.insert(param);
         }

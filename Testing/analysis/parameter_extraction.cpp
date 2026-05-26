@@ -60,9 +60,9 @@ TEST(parameter_extraction, init_list_after_reg) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -87,7 +87,7 @@ TEST(parameter_extraction, size_cast) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -105,9 +105,9 @@ TEST(parameter_extraction, size_cast) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -140,7 +140,7 @@ TEST(parameter_extraction, paretesized_cast) {
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
-    
+
     Cast c;
     c.set_size(Expression({
         Expression_component("(",Expression_component::parenthesis),
@@ -155,9 +155,9 @@ TEST(parameter_extraction, paretesized_cast) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -185,7 +185,7 @@ TEST(parameter_extraction, type_cast) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
-    
+
     Cast c;
     c.set_type_cast();
     c.set_target_type("unsigned");
@@ -205,9 +205,9 @@ TEST(parameter_extraction, type_cast) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
 
@@ -243,7 +243,7 @@ TEST(parameter_extraction, nested_type_cast) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
-    
+
     Cast outer_c;
     outer_c.set_size(Expression({
         Expression_component("(",Expression_component::parenthesis),
@@ -257,7 +257,7 @@ TEST(parameter_extraction, nested_type_cast) {
     d.packed = true;
     p->add_dimension(d);
     p->set_scalar(std::make_shared<Cast>(outer_c));
-    
+
     check_params.insert(p);
 
 
@@ -269,9 +269,9 @@ TEST(parameter_extraction, nested_type_cast) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
 
@@ -312,14 +312,14 @@ TEST(parameter_extraction, multiple_type_cast) {
     d.packed = true;
     p->add_dimension(d);
     p->set_scalar(std::make_shared<Cast>(c));
-    
+
     check_params.insert(p);
 
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM_2");
     p->set_declared_type("implicit");
-    
+
     c = Cast();
     c.set_type_cast();
     c.set_target_type("int");
@@ -327,15 +327,15 @@ TEST(parameter_extraction, multiple_type_cast) {
         Expression_component("2.5", Expression_component::number)
     })));
     p->set_scalar(std::make_shared<Cast>(c));
-    
+
     check_params.insert(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
 
@@ -354,7 +354,7 @@ TEST(parameter_extraction,time_literal) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -369,9 +369,9 @@ TEST(parameter_extraction,time_literal) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -391,7 +391,7 @@ TEST(parameter_extraction, cast_in_concat) {
 
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -399,7 +399,7 @@ TEST(parameter_extraction, cast_in_concat) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
-    
+
     Concatenation concat;
     concat.add_component(std::make_shared<Expression>(Expression({Expression_component("10'h0", Expression_component::number)})));
     concat.add_component(std::make_shared<Expression>(Expression({Expression_component("1'h1", Expression_component::number)})));
@@ -412,14 +412,14 @@ TEST(parameter_extraction, cast_in_concat) {
     p->set_declared_type("integer");
 
 
-    
+
     check_params.insert(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
@@ -441,7 +441,7 @@ TEST(parameter_extraction, strings_dafault_init) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -455,21 +455,21 @@ TEST(parameter_extraction, strings_dafault_init) {
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("TRANSLATION_TABLE_INIT");
-    
+
     p->add_dimension({{Expression_component("3", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
     c.set_default_init();
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("\"FILE\"", Expression_component::string)})));
     p->add_item(std::make_shared<Concatenation>(c));
 
-    
+
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -494,7 +494,7 @@ TEST(parameter_extraction, string_array_selection) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -514,11 +514,11 @@ TEST(parameter_extraction, string_array_selection) {
     c.set_default_init();
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("\"FILE\"", Expression_component::string)})));
     p->add_item(std::make_shared<Concatenation>(c));
-    
+
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("SEL");
     Expression_component e = Expression_component("TRANSLATION_TABLE_INIT", Expression_component::identifier);
     std::vector<Expression> ai;
@@ -529,8 +529,8 @@ TEST(parameter_extraction, string_array_selection) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
@@ -558,7 +558,7 @@ TEST(parameter_extraction, strings_array) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -572,7 +572,7 @@ TEST(parameter_extraction, strings_array) {
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("TRANSLATION_TABLE_INIT");
-    
+
     p->add_dimension({
     {Expression({
         Expression_component("N_CORES", Expression_component::identifier),
@@ -590,9 +590,9 @@ TEST(parameter_extraction, strings_array) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -616,7 +616,7 @@ TEST(parameter_extraction, float_parameter) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -644,9 +644,9 @@ TEST(parameter_extraction, float_parameter) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -671,7 +671,7 @@ TEST(parameter_extraction, simple_system_task) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -682,16 +682,16 @@ TEST(parameter_extraction, simple_system_task) {
     p->set_declared_type("implicit");
     HDL_function_call call("$rtoi");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("16.8", Expression_component::number)})));
-    
+
     p->set_scalar(std::make_shared<HDL_function_call>(call));
-    
+
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -718,7 +718,7 @@ TEST(parameter_extraction, multiple_system_task) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -733,9 +733,9 @@ TEST(parameter_extraction, multiple_system_task) {
         Expression_component("+", Expression_component::operation),
         Expression_component("2", Expression_component::number)
     })));
-    
+
     p->set_scalar(std::make_shared<HDL_function_call>(call));
-    
+
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -744,13 +744,13 @@ TEST(parameter_extraction, multiple_system_task) {
     call = HDL_function_call("$rtoi");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("12.2", Expression_component::number)})));
     p->set_scalar(std::make_shared<HDL_function_call>(call));
-    
+
     check_params.insert(p);
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -778,7 +778,7 @@ TEST(parameter_extraction, system_task_propagation) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -793,9 +793,9 @@ TEST(parameter_extraction, system_task_propagation) {
         Expression_component("+", Expression_component::operation),
         Expression_component("PARAMETER_1", Expression_component::identifier)
     })));
-    
+
     p->set_scalar(std::make_shared<HDL_function_call>(call));
-    
+
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
     p->set_name("PARAMETER_1");
@@ -806,9 +806,9 @@ TEST(parameter_extraction, system_task_propagation) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -835,7 +835,7 @@ TEST(parameter_extraction, nested_system_task) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -857,16 +857,16 @@ TEST(parameter_extraction, nested_system_task) {
     inner_call->add_argument(std::make_shared<Expression>(e));
     auto outer_call = std::make_shared<HDL_function_call>("$rtoi");
     outer_call->add_argument(inner_call);
-    
+
     p->set_scalar(outer_call);
-    
+
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -898,7 +898,7 @@ TEST(parameter_extraction, package_parameters) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -949,9 +949,9 @@ TEST(parameter_extraction, package_parameters) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
 
@@ -984,7 +984,7 @@ TEST(parameter_extraction, simple_parameters) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -1028,9 +1028,9 @@ TEST(parameter_extraction, simple_parameters) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -1069,7 +1069,7 @@ TEST(parameter_extraction, simple_expressions) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -1154,9 +1154,9 @@ TEST(parameter_extraction, simple_expressions) {
         Expression_component("+", Expression_component::operation),
         Expression_component("2", Expression_component::number)
     })));
-    
+
     p->set_scalar(std::make_shared<HDL_function_call>(call));
-    
+
     check_params.insert(p);
 
 
@@ -1168,7 +1168,7 @@ TEST(parameter_extraction, simple_expressions) {
         Expression_component("add_expr_p", Expression_component::identifier),
     })));
     p->set_scalar(std::make_shared<HDL_function_call>(call));
-    
+
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1186,9 +1186,9 @@ TEST(parameter_extraction, simple_expressions) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
+    for(const auto& [name, item]:check_params){
         EXPECT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -1225,29 +1225,29 @@ TEST(parameter_extraction, assay_assignment) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("simple_numeric_p");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("32", Expression_component::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("sv_numeric_p");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("5'o10", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("concatenation");
-    
+
     p->add_dimension({{Expression_component("31", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
@@ -1255,7 +1255,7 @@ TEST(parameter_extraction, assay_assignment) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("sv_numeric_p", Expression_component::identifier)})));
     p->add_item(std::make_shared<Concatenation>(c));
 
-    
+
 
 
 
@@ -1264,7 +1264,7 @@ TEST(parameter_extraction, assay_assignment) {
 
    ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
+    for(const auto& [name, item]:check_params){
         EXPECT_TRUE(parameters.contains(item->get_name()));
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
@@ -1296,17 +1296,17 @@ TEST(parameter_extraction, default_assign) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("test_array");
 
-    
+
     p->add_dimension({{Expression_component("31", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
@@ -1314,7 +1314,7 @@ TEST(parameter_extraction, default_assign) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
     p->add_item(std::make_shared<Concatenation>(c));
 
-    
+
 
 
 
@@ -1323,7 +1323,7 @@ TEST(parameter_extraction, default_assign) {
 
    ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
+    for(const auto& [name, item]:check_params){
         EXPECT_TRUE(parameters.contains(item->get_name()));
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
@@ -1354,30 +1354,30 @@ TEST(parameter_extraction, array_concatenation) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("simple_numeric_p");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("32", Expression_component::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("sv_numeric_p");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("5'o10", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("concatenation");
 
-    
+
     p->add_dimension({{Expression_component("31", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
 
@@ -1386,16 +1386,16 @@ TEST(parameter_extraction, array_concatenation) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("sv_numeric_p", Expression_component::identifier)})));
     p->add_item(std::make_shared<Concatenation>(c));
 
-    
+
 
     check_params.insert(p);
 
 
    ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -1424,18 +1424,18 @@ TEST(parameter_extraction, array_parameter) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("array_parameter");
 
 
-    
+
     dimension_t d;
     d.first_bound = {Expression_component("31", Expression_component::number)};
     d.second_bound = {Expression_component("0", Expression_component::number)};
@@ -1450,15 +1450,15 @@ TEST(parameter_extraction, array_parameter) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("32", Expression_component::number)})));
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
     p->add_item(std::make_shared<Concatenation>(c));
-    
+
 
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -1482,14 +1482,14 @@ TEST(parameter_extraction, integer_localparams) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("serial_msb_out_first");
     p->set_declared_type("implicit");
     Expression e = {Expression_component("0", Expression_component::number)};
@@ -1499,7 +1499,7 @@ TEST(parameter_extraction, integer_localparams) {
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("serial_lsb_out_first");
     p->set_declared_type("implicit");
     e = {Expression_component("1", Expression_component::number)};
@@ -1510,9 +1510,9 @@ TEST(parameter_extraction, integer_localparams) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -1536,18 +1536,18 @@ TEST(parameter_extraction, simple_array_propagation) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("array_parameter");
 
 
-    
+
     dimension_t d;
     d.first_bound = {Expression_component("31", Expression_component::number)};
     d.second_bound = {Expression_component("0", Expression_component::number)};
@@ -1562,13 +1562,13 @@ TEST(parameter_extraction, simple_array_propagation) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("32", Expression_component::number)})));
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
     p->add_item(std::make_shared<Concatenation>(c));
-    
+
 
     check_params.insert(p);
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("array_parameter_expr_p");
     p->set_declared_type("implicit");
     Expression_component e = Expression_component("array_parameter", Expression_component::identifier);
@@ -1587,9 +1587,9 @@ TEST(parameter_extraction, simple_array_propagation) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -1616,18 +1616,18 @@ TEST(parameter_extraction, array_expression) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("array_parameter");
 
 
-    
+
     dimension_t d;
     d.first_bound = {Expression_component("31", Expression_component::number)};
     d.second_bound = {Expression_component("0", Expression_component::number)};
@@ -1642,13 +1642,13 @@ TEST(parameter_extraction, array_expression) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("32", Expression_component::number)})));
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
     p->add_item(std::make_shared<Concatenation>(c));
-    
+
 
     check_params.insert(p);
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("array_parameter_expr_p");
     p->set_declared_type("implicit");
     Expression_component e = Expression_component("array_parameter", Expression_component::identifier);
@@ -1664,7 +1664,7 @@ TEST(parameter_extraction, array_expression) {
     p->add_component(e);
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("sv_numeric_p");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("1", Expression_component::number));
@@ -1672,8 +1672,8 @@ TEST(parameter_extraction, array_expression) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
@@ -1703,7 +1703,7 @@ TEST(parameter_extraction, multidimensional_array_expression) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -1711,17 +1711,17 @@ TEST(parameter_extraction, multidimensional_array_expression) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("repetition_size");
     p->add_component(Expression_component("2", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("multidim_array_parameter");
 
 
-    
+
     p->add_dimension({{Expression_component("31", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("repetition_size", Expression_component::identifier),Expression_component("-", Expression_component::operation), Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
@@ -1734,7 +1734,7 @@ TEST(parameter_extraction, multidimensional_array_expression) {
     c.add_component(std::make_shared<Expression>(Expression({{Expression_component("6", Expression_component::number)}})));
     p->add_item(std::make_shared<Concatenation>(c));
 
-    
+
 
 
     check_params.insert(p);
@@ -1742,7 +1742,7 @@ TEST(parameter_extraction, multidimensional_array_expression) {
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("multidim_array_access");
     Expression_component ec = Expression_component("multidim_array_parameter", Expression_component::identifier);
     std::vector<Expression> ai;
@@ -1756,9 +1756,9 @@ TEST(parameter_extraction, multidimensional_array_expression) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
 
@@ -1813,8 +1813,8 @@ TEST(parameter_extraction, int_concat_initialization) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
@@ -1863,8 +1863,8 @@ TEST(parameter_extraction, implicit_type_concatenation) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
@@ -1893,7 +1893,7 @@ TEST(parameter_extraction, simple_repetition_initialization) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -1901,7 +1901,7 @@ TEST(parameter_extraction, simple_repetition_initialization) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("repetition_size");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("2", Expression_component::number));
@@ -1909,10 +1909,10 @@ TEST(parameter_extraction, simple_repetition_initialization) {
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("repetition_parameter_1");
 
-    
+
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Replication rep;
     rep.set_size({Expression_component("repetition_size", Expression_component::identifier)});
@@ -1921,14 +1921,14 @@ TEST(parameter_extraction, simple_repetition_initialization) {
     p->set_declared_type("int");
 
 
-    
+
 
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
@@ -1959,7 +1959,7 @@ TEST(parameter_extraction, packed_repetition_initialization) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -1967,7 +1967,7 @@ TEST(parameter_extraction, packed_repetition_initialization) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("repetition_size");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("2", Expression_component::number));
@@ -1975,25 +1975,25 @@ TEST(parameter_extraction, packed_repetition_initialization) {
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("repetition_parameter_1");
     p->set_declared_type("int");
-    
+
     Replication rep;
     rep.set_size({Expression_component("repetition_size", Expression_component::identifier)});
     rep.set_item(std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)})));
     p->add_item(std::make_shared<Replication>(rep));
 
 
-    
+
 
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -2023,7 +2023,7 @@ TEST(parameter_extraction, repetition_initialization) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -2031,7 +2031,7 @@ TEST(parameter_extraction, repetition_initialization) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("repetition_size");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("2", Expression_component::number));
@@ -2039,38 +2039,38 @@ TEST(parameter_extraction, repetition_initialization) {
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("repetition_parameter_1");
 
-    
+
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Replication r;
     r.set_size({Expression_component("repetition_size", Expression_component::identifier)});
     r.set_item(std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)})));
     p->add_item(std::make_shared<Replication>(r));
-    
+
 
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("repetition_parameter_2");
 
-    
+
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     r.set_size({Expression_component("repetition_size", Expression_component::identifier)});
     r.set_item(std::make_shared<Expression>(Expression({Expression_component("4", Expression_component::number)})));
     p->add_item(std::make_shared<Replication>(r));
-    
+
 
     check_params.insert(p);
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("multi_repetition_parameter");
 
-    
+
     p->add_dimension({
     {Expression_component("3", Expression_component::number)},
     {Expression_component("0", Expression_component::number)},
@@ -2080,15 +2080,15 @@ TEST(parameter_extraction, repetition_initialization) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("repetition_parameter_1", Expression_component::identifier)})));
     c.add_component( std::make_shared<Expression>(Expression({Expression_component("repetition_parameter_2", Expression_component::identifier)})));
     p->add_item(std::make_shared<Concatenation>(c));
-    
+
 
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("mixed_repetition_parameter");
 
-    
+
     p->add_dimension({
     {Expression_component("3", Expression_component::number)},
     {Expression_component("0", Expression_component::number)},
@@ -2099,16 +2099,16 @@ TEST(parameter_extraction, repetition_initialization) {
     c.add_component( std::make_shared<Expression>(Expression({Expression_component("2", Expression_component::number)})));
     c.add_component( std::make_shared<Expression>(Expression({Expression_component("repetition_parameter_2", Expression_component::identifier)})));
     p->add_item(std::make_shared<Concatenation>(c));
-    
+
 
     check_params.insert(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -2142,21 +2142,21 @@ TEST(parameter_extraction, packed_array) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("packed_param");
 
     dimension_t d;
     d.first_bound = {Expression_component("7", Expression_component::number)};
     d.second_bound = {Expression_component("0", Expression_component::number)};
     d.packed = true;
-    
+
     p->add_dimension(d);
     Concatenation c;
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
@@ -2169,15 +2169,15 @@ TEST(parameter_extraction, packed_array) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
     p->add_item(std::make_shared<Concatenation>(c));
 
-    
+
 
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& check_item:check_params){
-        ASSERT_TRUE(parameters.contains(check_item->get_name()));
-        ASSERT_EQ(*check_item, *parameters.get(check_item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -2203,18 +2203,18 @@ TEST(parameter_extraction, multpidim_packed_array) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("packed_param");
 
 
-    
+
     p->add_dimension({{Expression_component("7", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
 
@@ -2241,16 +2241,16 @@ TEST(parameter_extraction, multpidim_packed_array) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
     c2.add_component(std::make_shared<Concatenation>(c));
     p->add_item(std::make_shared<Concatenation>(c2));
-    
+
 
     check_params.insert(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& check_item:check_params){
-        ASSERT_TRUE(parameters.contains(check_item->get_name()));
-        ASSERT_EQ(*check_item, *parameters.get(check_item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -2281,14 +2281,14 @@ TEST(parameter_extraction, package_parameters_use) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[1];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("package_param");
     p->set_declared_type("implicit");
     Expression_component ec("bus_base", Expression_component::identifier);
@@ -2299,9 +2299,9 @@ TEST(parameter_extraction, package_parameters_use) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
 
@@ -2334,7 +2334,7 @@ TEST(parameter_extraction, interface_parameter_use) {
 
 
     sv_analyzer analyzer;
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     auto res = resources[1].get_dependencies()[2];
     auto parameters = res.get_parameters();
@@ -2342,7 +2342,7 @@ TEST(parameter_extraction, interface_parameter_use) {
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("TEST_PARAM");
     Expression_component ec("DATA_WIDTH", Expression_component::identifier);
     ec.set_package_prefix("test_interface");
@@ -2363,7 +2363,7 @@ TEST(parameter_extraction, negative_number_parameters) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -2371,7 +2371,7 @@ TEST(parameter_extraction, negative_number_parameters) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("negative_param");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("-", Expression_component::operation));
@@ -2380,9 +2380,9 @@ TEST(parameter_extraction, negative_number_parameters) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
     mdarray<hdl_integer> av;
@@ -2408,7 +2408,7 @@ TEST(parameter_extraction, packed_bit_access) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -2416,7 +2416,7 @@ TEST(parameter_extraction, packed_bit_access) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("param_a");
     p->add_dimension({
           {Expression_component("31", Expression_component::number)},
@@ -2431,7 +2431,7 @@ TEST(parameter_extraction, packed_bit_access) {
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("param_b");
     p->add_dimension({
     {Expression_component("5", Expression_component::number)},
@@ -2446,9 +2446,9 @@ TEST(parameter_extraction, packed_bit_access) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
     mdarray<hdl_integer> av;
@@ -2474,7 +2474,7 @@ TEST(parameter_extraction, negative_number_array_init) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -2482,7 +2482,7 @@ TEST(parameter_extraction, negative_number_array_init) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("negative_array_param");
     p->set_declared_type("implicit");
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}});
@@ -2494,16 +2494,16 @@ TEST(parameter_extraction, negative_number_array_init) {
     p->add_item(std::make_shared<Concatenation>(c));
 
 
-    
+
 
 
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
     mdarray<hdl_integer> av;
@@ -2527,7 +2527,7 @@ TEST(parameter_extraction, expression_array_init) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -2535,7 +2535,7 @@ TEST(parameter_extraction, expression_array_init) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("expression_array_param");
     p->set_declared_type("implicit");
     p->add_dimension({ {Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
@@ -2562,9 +2562,9 @@ TEST(parameter_extraction, expression_array_init) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
     mdarray<hdl_integer> av;
@@ -2589,7 +2589,7 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -2597,11 +2597,11 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("param_a");
 
 
-    
+
     p->add_dimension({{Expression_component("7", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
 
@@ -2628,13 +2628,13 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
     c2.add_component(std::make_shared<Concatenation>(c));
     p->add_item(std::make_shared<Concatenation>(c2));
-    
+
 
     check_params.insert(p);
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("param_b");
 
 
@@ -2653,7 +2653,7 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
     r.set_item(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
     c2.add_component(std::make_shared<Replication>(r));
     p->add_item(std::make_shared<Concatenation>(c2));
-    
+
 
 
 
@@ -2662,9 +2662,9 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
     mdarray<hdl_integer> av, av2;
@@ -2697,7 +2697,7 @@ TEST(parameter_extraction, instance_parameter) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto def_parameters = resource.get_parameters();
 
@@ -2709,7 +2709,7 @@ TEST(parameter_extraction, instance_parameter) {
 
     Parameters_map check_params;
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("test_param");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("4", Expression_component::number));
@@ -2717,7 +2717,7 @@ TEST(parameter_extraction, instance_parameter) {
 
     ASSERT_EQ(check_params.size(), def_parameters.size());
 
-    for(const auto& item:check_params){
+    for(const auto& [name, item]:check_params){
         ASSERT_TRUE(def_parameters.contains(item->get_name()));
         ASSERT_EQ(*item, *def_parameters.get(item->get_name()));
     }
@@ -2725,19 +2725,19 @@ TEST(parameter_extraction, instance_parameter) {
     check_params.clear();
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("param_1");
     p->add_component(Expression_component("test_param", Expression_component::identifier));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("param_2");
     p->add_component(Expression_component("test_param", Expression_component::identifier));
     p->add_component(Expression_component("+", Expression_component::operation));
     p->add_component(Expression_component("5", Expression_component::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("param_3");
     p->add_component(Expression_component("(", Expression_component::parenthesis));
     p->add_component(Expression_component("test_param", Expression_component::identifier));
@@ -2750,7 +2750,7 @@ TEST(parameter_extraction, instance_parameter) {
 
     ASSERT_EQ(check_params.size(), inst_parameters.size());
 
-    for(const auto& item:check_params){
+    for(const auto& [name, item]:check_params){
         ASSERT_TRUE(inst_parameters.contains(item->get_name()));
         ASSERT_EQ(*item, *inst_parameters.get(item->get_name()));
     }
@@ -2776,7 +2776,7 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -2789,18 +2789,18 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
     check_params.clear();
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("SS_POLARITY_DEFAULT");
     p->add_component(Expression_component("0", Expression_component::number));
     check_params.insert(p);
 
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("FIXED_REGISTER_VALUES");
 
 
-    
+
     p->add_dimension({{Expression_component("31", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("4", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation outer_c;
@@ -2827,9 +2827,9 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
     mdarray<hdl_integer> av;
@@ -2864,7 +2864,7 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -2896,10 +2896,10 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     };
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("param_a");
 
-    
+
     p->add_dimension({{Expression_component("7", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)},false});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)},false});
@@ -2928,15 +2928,15 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     top_c.add_component(std::make_shared<Concatenation>(outer_c));
     p->add_item(std::make_shared<Concatenation>(top_c));
-    
+
 
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
     mdarray<hdl_integer> av;
@@ -2962,7 +2962,7 @@ TEST(parameter_extraction, packed_replication_init) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -2970,26 +2970,26 @@ TEST(parameter_extraction, packed_replication_init) {
 
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("test_parameter");
 
-    
+
     p->add_dimension({{Expression_component("4", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     Replication r;
     r.set_size({Expression_component("5", Expression_component::number)});
     r.set_item(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
     p->add_item(std::make_shared<Replication>(r));
 
-    
+
 
 
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -3014,7 +3014,7 @@ TEST(parameter_extraction, array_initialization_default) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -3046,9 +3046,9 @@ TEST(parameter_extraction, array_initialization_default) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
     auto defaults = resource.get_default_parameters();
     mdarray<hdl_integer> av;
@@ -3084,7 +3084,7 @@ TEST(parameter_extraction, simple_function_parameter) {
 
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto param =  resource.get_parameters().get("TEST_PARAM");
@@ -3135,7 +3135,7 @@ TEST(parameter_extraction, concat_in_function) {
 
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto param =  resource.get_parameters().get("TEST_PARAM");
@@ -3192,7 +3192,7 @@ TEST(parameter_extraction, replication_in_function) {
 
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto param =  resource.get_parameters().get("TEST_PARAM");
@@ -3251,7 +3251,7 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
 
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto param =  resource.get_parameters().get("TEST_PARAM");
@@ -3311,7 +3311,7 @@ TEST(parameter_extraction, function_with_parameters) {
 
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto func = resource.get_functions()["CTRL_ADDR_CALC"];
@@ -3348,7 +3348,7 @@ TEST(parameter_extraction, loop_function_parameter) {
 
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto param = resource.get_parameters().get("TEST_PARAM");
@@ -3441,14 +3441,14 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
 
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto param = resource.get_parameters().get("TEST_PARAM");
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    
+
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("CTRL_ADDR_CALC");
     HDL_loop_metadata loop;
@@ -3527,14 +3527,14 @@ TEST(parameter_extraction, function_with_arguments) {
 
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto param = resource.get_parameters().get("TEST_PARAM");
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-    
+
     HDL_function_call call("add");
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::component_type::number)})));
     call.add_argument(std::make_shared<Expression>(Expression({Expression_component("7", Expression_component::component_type::number)})));
@@ -3580,7 +3580,7 @@ TEST(parameter_extraction, unrelated_wire_dependency_conflict) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     HDL_instance i = resource.get_dependencies()[0];
@@ -3602,7 +3602,7 @@ TEST(parameter_extraction, interface_parameters) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -3610,19 +3610,19 @@ TEST(parameter_extraction, interface_parameters) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("DATA_WIDTH");
-   
+
     p->add_component(Expression_component("32", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("USER_WIDTH");
-   
+
     p->add_component(Expression_component("24", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("DEST_WIDTH");
-   
+
     p->add_component(Expression_component("8", Expression_component::number));
     check_params.insert(p);
 
@@ -3665,7 +3665,7 @@ TEST(parameter_extraction, generate_for) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto dep = resource.get_dependencies()[0];
@@ -3678,7 +3678,7 @@ TEST(parameter_extraction, generate_for) {
 
     HDL_parameter p;
     p.set_name("n");
-    
+
     p.add_component(Expression_component("0", Expression_component::number));
 
     check_loop.set_init(p);
@@ -3704,21 +3704,21 @@ TEST(parameter_extraction, param_ternary_conditional) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("condition");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("2", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("test_positive");
     p->set_declared_type("implicit");
     Ternary t;
@@ -3738,7 +3738,7 @@ TEST(parameter_extraction, param_ternary_conditional) {
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("test_negative");
     p->set_declared_type("implicit");
     t = Ternary();
@@ -3760,9 +3760,9 @@ TEST(parameter_extraction, param_ternary_conditional) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -3789,21 +3789,21 @@ TEST(parameter_extraction, nested_ternary_conditional) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("condition");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("2", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("test_positive");
     p->set_declared_type("implicit");
     Ternary t;
@@ -3837,9 +3837,9 @@ TEST(parameter_extraction, nested_ternary_conditional) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();
@@ -3865,21 +3865,21 @@ TEST(parameter_extraction, complex_ternary_conditional) {
     )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
 
     auto p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("NM");
     p->set_declared_type("implicit");
     p->add_component(Expression_component("4", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-   
+
     p->set_name("LGNM");
     p->set_declared_type("implicit");
     Ternary t;
@@ -3902,9 +3902,9 @@ TEST(parameter_extraction, complex_ternary_conditional) {
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
     }
 
     auto defaults = resource.get_default_parameters();

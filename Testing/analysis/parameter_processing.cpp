@@ -216,9 +216,9 @@ TEST(parameter_processing, package_parameters_use) {
 
     ASSERT_EQ(check_params.size(), dependency_parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(dependency_parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *dependency_parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(dependency_parameters.contains(name));
+        ASSERT_EQ(*item, *dependency_parameters.get(name));
     }
 
 }
@@ -255,7 +255,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -335,9 +335,9 @@ TEST(parameter_processing, array_instance_parameter_override) {
 
     ASSERT_EQ(check_params.size(), dependency_parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(dependency_parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *dependency_parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(dependency_parameters.contains(name));
+        ASSERT_EQ(*item, *dependency_parameters.get(name));
     }
 
 }
@@ -366,7 +366,7 @@ TEST(parameter_processing, packed_array_initialization_expression_override) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
@@ -410,7 +410,7 @@ TEST(parameter_processing, simple_for_array_parameter) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -461,7 +461,7 @@ TEST(parameter_processing, complex_for_array_parameter) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -510,7 +510,7 @@ TEST(parameter_processing, complex_vector_function_parameter) {
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
     sv_analyzer analyzer;
-    
+
     std::vector<HDL_Resource> resource = analyzer.analyze("", test_pattern);
 
     d_store->store_hdl_entity(resource,"", "");
@@ -558,7 +558,7 @@ TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch)
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze()[0];
 
     d_store->store_hdl_entity(resource);
@@ -614,7 +614,7 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
 
 
     sv_analyzer analyzer;
-    
+
 
     auto resources = analyzer.analyze("", test_pattern);
     d_store->store_hdl_entity(resources, "", "");
@@ -663,7 +663,7 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
     sv_analyzer analyzer;
-    
+
 
     auto resources = analyzer.analyze("", test_pattern);
     d_store->store_hdl_entity(resources, "", "");
@@ -706,7 +706,7 @@ TEST(parameter_processing, override_with_system_task) {
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
     sv_analyzer analyzer;
-    
+
     auto resources = analyzer.analyze("", test_pattern);
 
     d_store->store_hdl_entity(resources, "", "");
@@ -742,7 +742,7 @@ TEST(parameter_processing, interface_default_parameters) {
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
     sv_analyzer analyzer;
-    
+
     auto resources = analyzer.analyze("", test_pattern);
 
     d_store->store_hdl_entity(resources, "", "");
@@ -793,7 +793,7 @@ TEST(parameter_processing, override_with_interface_param) {
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
     sv_analyzer analyzer;
-    
+
     auto resources = analyzer.analyze("", test_pattern);
 
     d_store->store_hdl_entity(resources, "", "");
@@ -841,7 +841,7 @@ TEST(parameter_processing, override_with_package_parameter) {
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
     sv_analyzer analyzer;
-    
+
     auto resources = analyzer.analyze("", test_pattern);
 
     d_store->store_hdl_entity(resources, "", "");
@@ -900,7 +900,7 @@ TEST(parameter_processing, override_with_function_parameter) {
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
     sv_analyzer analyzer;
-    
+
     auto resources = analyzer.analyze("", test_pattern);
 
     d_store->store_hdl_entity(resources, "", "");
@@ -967,7 +967,7 @@ TEST(parameter_processing, override_package_function) {
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
     sv_analyzer analyzer;
-    
+
     auto resources = analyzer.analyze("", test_pattern);
 
     d_store->store_hdl_entity(resources, "", "");
@@ -1023,7 +1023,7 @@ TEST(parameter_processing, parameter_with_for_loop) {
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
     sv_analyzer analyzer;
-    
+
     auto resources = analyzer.analyze("", test_pattern);
 
     d_store->store_hdl_entity(resources, "", "");
@@ -1082,7 +1082,7 @@ TEST(parameter_processing, parent_parameter_collision) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -1125,7 +1125,7 @@ TEST(parameter_processing, override_after_function_localparam) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -1177,7 +1177,7 @@ TEST(parameter_processing, init_list_override) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -1245,9 +1245,9 @@ TEST(parameter_processing, init_list_override) {
 
     ASSERT_EQ(check_params.size(), dependency_parameters.size());
 
-    for(const auto& item:check_params){
-        ASSERT_TRUE(dependency_parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *dependency_parameters.get(item->get_name()));
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(dependency_parameters.contains(name));
+        ASSERT_EQ(*item, *dependency_parameters.get(name));
     }
 }
 

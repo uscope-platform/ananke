@@ -48,7 +48,7 @@ void HDL_Resource::process_parameters() {
 
 void HDL_Resource::process_calls() {
     for(auto &function: functions | std::views::values) {
-        for(const auto &param:parameters_spec) {
+        for(const auto &[param_name, param]:parameters_spec) {
             param->propagate_function(function);
         }
     }
@@ -152,7 +152,7 @@ void PrintTo(const HDL_Resource &res, std::ostream *os) {
     result += "\nHDL Resource:\n  NAME: " + res.name;
     result += "\n  PATH: " + res.path + "[" + std::to_string(res.line_n) + "]";
     result += "\n  PARAMETERS: \n";
-    for(const auto& item:res.parameters_spec){
+    for(const auto& [item_name, item]:res.parameters_spec){
         result += item->to_string();
     }
     result += "\n----------------------------------------------------";

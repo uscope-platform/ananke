@@ -164,14 +164,14 @@ std::vector<analysis_context> control_bus_analysis::process_nested_module(const 
         breakNested:;
     }
 
-    for(auto &item:inst.node->get_parameters()){
-        if(item->get_name() == "PRAGMA_MKFG_MODULE_TOP"){
+    for(auto &[item_name, item]:inst.node->get_parameters()){
+        if(item_name == "PRAGMA_MKFG_MODULE_TOP"){
             auto top = inst.node->get_parameter_value("PRAGMA_MKFG_MODULE_TOP")->get_string_value();
             for(auto &node:ret_stack){
                 node.current_module_top = top;
             }
         }
-        if(item->get_name() == "PRAGMA_MKFG_CHILD_PREFIX"){
+        if(item_name == "PRAGMA_MKFG_CHILD_PREFIX"){
             auto prefix = inst.node->get_parameter_value("PRAGMA_MKFG_CHILD_PREFIX")->get_string_value();
             for(auto &node:ret_stack){
                 node.current_module_prefix = prefix;

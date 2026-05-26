@@ -105,8 +105,7 @@ nlohmann::json HDL_instance::dump() {
     ret["ports_map"] = port_map_dump;
 
     std::map<std::string, nlohmann::json> params_vect;
-    for(auto &param:parameters){
-        auto n = param->get_name();
+    for(auto &[n, param]:parameters){
         auto value = param->dump();
         params_vect.insert({n, value});
     }
