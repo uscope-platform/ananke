@@ -21,7 +21,8 @@ using namespace std::string_literals;
 std::map<qualified_identifier, resolved_parameter> parameter_solver::process_parameters(
     const Parameters_map &map_in,
     const std::string_view &parent_module,
-    const std::map<qualified_identifier, resolved_parameter> &default_parameters
+    const std::map<qualified_identifier, resolved_parameter> &default_parameters,
+    const std::map<qualified_identifier, resolved_parameter> &context
 ) {
     auto map = map_in.clone();
 
@@ -34,7 +35,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
         for (auto &[param_id, dependencies] : dependencies_map ) {
             if (dependencies.empty() && !solved_parameters.contains(param_id)) {
                 auto to_solve = map.const_get(param_id.name);
-                std::optional<resolved_parameter> value = to_solve->evaluate({});
+                std::optional<resolved_parameter> value = to_solve->evaluate(context);
 
                 if (value.has_value()) {
                     solved_parameters.insert({param_id, value.value()});
@@ -278,7 +279,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         ++solution_rounds;
     }
 
-    solved_parameters = process_parameters(to_solve, work.node->get_name(), node_defaults);
+    solved_parameters = process_parameters(to_solve, work.node->get_name(), node_defaults, {});
 
     return solved_parameters;
 }
@@ -313,7 +314,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::specialize_
     }
     if(runtime_to_eval.empty()) return {};
     // Substitute runtime only parameters
-    return process_parameters(runtime_to_eval, parent_module, {});
+    return process_parameters(runtime_to_eval, parent_module, {}, {});
 }
 
 std::string parameter_solver::get_full_path(const std::shared_ptr<HDL_instance_AST> &node) {

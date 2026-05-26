@@ -36,7 +36,8 @@ public:
     static std::map<qualified_identifier, resolved_parameter> process_parameters(
         const Parameters_map &map,
         const std::string_view &parent_module,
-        const std::map<qualified_identifier, resolved_parameter> &default_parameters
+        const std::map<qualified_identifier, resolved_parameter> &default_parameters,
+        const std::map<qualified_identifier, resolved_parameter> &context
     );
     static void update_parameters_map(
         const std::map<qualified_identifier, resolved_parameter> &parameters,
