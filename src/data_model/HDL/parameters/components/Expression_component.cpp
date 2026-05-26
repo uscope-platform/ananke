@@ -13,6 +13,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+#include <bitset>
+
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/components/Expression_component.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
@@ -259,6 +261,42 @@ int64_t Expression_component::get_operator_precedence() {
 }
 
 std::optional<resolved_parameter> Expression_component::get_value() const {
+    return value;
+}
+
+std::optional<resolved_parameter> Expression_component::get_value(const std::map<qualified_identifier, resolved_parameter> &context) const {
+    if (type == identifier) {
+        qualified_identifier id{package_prefix, instance_prefix, value.get_string()};
+        auto it = context.find(id);
+        if (it != context.end()) {
+            const auto &resolved = it->second;
+            if (array_index.empty()) return resolved;
+
+            std::vector<int64_t> indices;
+            for (const auto &idx_expr : array_index) {
+                auto idx_val = const_cast<Expression&>(idx_expr).evaluate(context);
+                if (!idx_val.has_value() || !idx_val.value().is_integer()) return std::nullopt;
+                indices.push_back(idx_val.value().get_integer().get_value());
+            }
+
+            if (resolved.is_int_array()) {
+                auto values = resolved.get_int_array();
+                auto array_val = values.get_value(indices);
+                if (array_val.has_value()) return array_val.value();
+                return static_cast<hdl_integer>(0);
+            } else if (resolved.is_string_array()) {
+                auto values = resolved.get_string_array();
+                auto array_val = values.get_value(indices);
+                if (array_val.has_value()) return resolved_parameter(array_val.value());
+                return resolved_parameter("");
+            } else if (resolved.is_integer() && !indices.empty()) {
+                std::bitset<64> bits(resolved.get_integer().get_value());
+                return static_cast<hdl_integer>(bits[indices[0]]);
+            }
+            return std::nullopt;
+        }
+        return std::nullopt;
+    }
     return value;
 }
 

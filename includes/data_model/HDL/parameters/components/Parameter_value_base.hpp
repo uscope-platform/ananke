@@ -56,7 +56,7 @@ public:
     [[nodiscard]] bool is_ternary() const {return type == ternary;}
     [[nodiscard]] bool is_cast() const {return type == cast;}
 
-    virtual void set_container_sizes(const resolved_type &s) = 0;
+    virtual void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) = 0;
     virtual std::shared_ptr<Parameter_value_base> clone_ptr() const = 0;
 
     template<typename T>

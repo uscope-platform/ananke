@@ -161,6 +161,6 @@ std::string Replication::print() const {
     return oss.str();
 }
 
-void Replication::set_container_sizes(const resolved_type &s) {
+void Replication::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
     packing = s.unpacked_sizes.empty();
 }

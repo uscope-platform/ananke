@@ -128,15 +128,16 @@ std::shared_ptr<Parameter_value_base> Cast::clone_ptr() const {
     return std::make_shared<Cast>(c);
 }
 
-void Cast::set_container_sizes(const resolved_type &s) {
+void Cast::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
     container_size = s;
     if (type_cast)
-        content->set_container_sizes(s);
+        content->set_container_sizes(s, context);
     else {
-        auto cast_size = size.evaluate({});
+        auto cast_size = size.evaluate(context);
+        if (!cast_size.has_value()) return;
         resolved_type t;
         t.packed_sizes.push_back(cast_size.value().get_integer().get_value());
-        if (cast_size) content->set_container_sizes(t);
+        content->set_container_sizes(t, context);
     }
 }
 

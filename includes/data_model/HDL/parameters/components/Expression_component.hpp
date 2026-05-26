@@ -21,6 +21,7 @@
 #include <regex>
 #include <set>
 #include <nlohmann/json.hpp>
+#include <map>
 #include <unordered_map>
 #include <variant>
 #include <cmath>
@@ -75,6 +76,7 @@ public:
     }
 
     std::optional<resolved_parameter> get_value()const;
+    std::optional<resolved_parameter> get_value(const std::map<qualified_identifier, resolved_parameter> &context) const;
 
     void set_value(const resolved_parameter &v) {
         value = v;

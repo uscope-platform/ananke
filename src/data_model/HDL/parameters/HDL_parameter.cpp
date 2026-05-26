@@ -30,8 +30,9 @@ bool operator==(const HDL_parameter &lhs, const HDL_parameter &rhs) {
     bool ret = true;
 
     ret &= lhs.name == rhs.name;
-    ret &= *lhs.raw_value == *rhs.raw_value;
-
+    if (!lhs.solved_value.has_value() || !rhs.solved_value.has_value()) {
+        ret &= *lhs.raw_value == *rhs.raw_value;
+    }
 
     ret &= lhs.type == rhs.type;
 
@@ -66,7 +67,7 @@ void HDL_parameter::add_dimension(const dimension_t &d) {
 std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     auto container_size = type.evaluate_type(context);
     if (!container_size) return std::nullopt;
-    raw_value->set_container_sizes(container_size.value());
+    raw_value->set_container_sizes(container_size.value(), context);
 
     return raw_value->evaluate(context);
 }

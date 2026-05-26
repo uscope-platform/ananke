@@ -25,6 +25,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
     const std::map<qualified_identifier, resolved_parameter> &context
 ) {
     auto map = map_in.clone();
+    std::map<qualified_identifier, resolved_parameter> ctx = context;
 
     std::map<qualified_identifier, resolved_parameter> solved_parameters;
     auto dependencies_map = get_dependency_map(map_in);
@@ -32,54 +33,48 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
 
     int rounds_counter = 0;
     while (!dependencies_map.empty() && rounds_counter < 100) {
+        // Phase 1: evaluate params with no remaining dependencies
         for (auto &[param_id, dependencies] : dependencies_map ) {
             if (dependencies.empty() && !solved_parameters.contains(param_id)) {
                 auto to_solve = map.const_get(param_id.name);
-                std::optional<resolved_parameter> value = to_solve->evaluate(context);
+                std::optional<resolved_parameter> value = to_solve->evaluate(ctx);
 
                 if (value.has_value()) {
                     solved_parameters.insert({param_id, value.value()});
+                    ctx[param_id] = value.value();
                 }
 
             } else {
                 for(const auto&[prefix, identifier, name]:dependencies) {
                      if(!prefix.empty() && parent_module.starts_with("module::")) {
-                        // At parse time, package parameters are not yet known. Insert a sentinel so downstream code knows to defer evaluation.
                         solved_parameters.insert({param_id, "__RUNTIME_ONLY_PARAMETER__"s});
                     }
                 }
             }
         }
 
+        // Phase 2: erase solved param IDs from remaining dependency sets
         for (auto &[param_id, param_value]: solved_parameters) {
-            bool propagation_complete = true;
             for (auto &dep: dependencies_map) {
-                if (dep.second.contains(param_id)) {
-                    auto target = map.get(dep.first.name);
-                    propagation_complete &= target->propagate_constant(param_id, param_value);
-                    if (propagation_complete) dep.second.erase(param_id);
-                }
+                dep.second.erase(param_id);
             }
-                dependencies_map.erase(param_id);
+            dependencies_map.erase(param_id);
         }
+
+        // Phase 3: resolve external deps (parent/package params not in this map)
         std::map<qualified_identifier, std::set<qualified_identifier>> to_erase;
         for (auto &[param_id, dependencies] : dependencies_map ) {
-
             for (auto &dep: dependencies) {
-                if (!dependencies_map.contains(dep) && !parent_module.starts_with("module::")) {
-                    auto target = map.get(param_id.name);
-                    if (!default_parameters.contains(dep) && !solved_parameters.contains(dep)) {
+                if (dep == param_id) {
+                    to_erase[param_id].insert(dep);
+                } else if (!dependencies_map.contains(dep) && !parent_module.starts_with("module::")) {
+                    if (!ctx.contains(dep)) {
                         spdlog::error("The parameter {} does not exist in module {}", dep.name, parent_module);
                         exit(-1);
                     }
-                    if (solved_parameters.contains(dep))
-                        target->propagate_constant(dep, solved_parameters.at(dep));
-                    else
-                        target->propagate_constant(dep, default_parameters.at(dep));
                     to_erase[param_id].insert(dep);
                 }
             }
-
         }
         for (auto&e: to_erase) {
             for (auto & dep: e.second) {
@@ -196,8 +191,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     auto node_parameters = node_spec.get_parameters();
     auto node_overrides = work.node->get_parameters();
 
-    auto deps_map = get_dependency_map(node_overrides);
-
     Parameters_map to_solve;
     for(const auto& override:node_overrides) {
         for(const auto &param: node_parameters) {
@@ -216,8 +209,11 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    ctx.insert(work.parent_parameters.begin(), work.parent_parameters.end());
+    ctx.insert(node_defaults.begin(), node_defaults.end());
+
     int solution_rounds = 0;
-    std::unordered_map<std::string, uint32_t> parameters_progress;
     std::set<std::string> completed_parameters;
     while(completed_parameters.size() != node_overrides.size()) {
         if(solution_rounds > 100) throw std::runtime_error("Exceded maximum number of iterations when solving a parameter override");
@@ -229,10 +225,12 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                     completed_parameters.insert(param->get_name());
                     to_solve.insert(param);
                 }
+                continue;
             }
             for(auto &dep:deps) {
                 resolved_parameter value;
                 bool internal_dependency = false;
+                if (ctx.contains(dep)) continue;
                 if (work.parent_parameters.contains(dep)) {
                     value = work.parent_parameters.at(dep);
                 }else if(!dep.prefix.empty()) {
@@ -265,21 +263,32 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                     spdlog::warn("Parameter {}::{} is not defined in the design", dep.prefix, dep.name);
                 }
 
-                bool propagation_done = false;
-                if(!internal_dependency) propagation_done = param->propagate_constant(dep, value);
-                if(internal_dependency || propagation_done) {
-                    parameters_progress[param->get_name()]++;
-                    if(parameters_progress[param->get_name()]>= deps_map[param->get_identifier()].size()) {
-                        to_solve.insert(param);
-                        completed_parameters.insert(param->get_name());
-                    }
+                if(!internal_dependency) {
+                    ctx[dep] = value;
                 }
+            }
+            // Check if all deps are satisfied
+            bool all_solved = true;
+            for(auto &dep:deps) {
+                if(dep.prefix.empty() && dep.instance.empty() && node_overrides.contains(dep.name) && dep.name != param->get_name()) {
+                    if(!completed_parameters.contains(dep.name)) {
+                        all_solved = false;
+                        break;
+                    }
+                } else if(!ctx.contains(dep)) {
+                    all_solved = false;
+                    break;
+                }
+            }
+            if(all_solved) {
+                to_solve.insert(param);
+                completed_parameters.insert(param->get_name());
             }
         }
         ++solution_rounds;
     }
 
-    solved_parameters = process_parameters(to_solve, work.node->get_name(), node_defaults, {});
+    solved_parameters = process_parameters(to_solve, work.node->get_name(), node_defaults, ctx);
 
     return solved_parameters;
 }
@@ -307,14 +316,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::specialize_
     for(auto &param:node_parameters) {
         if(!solved_parameters.contains(param->get_identifier())) {
             runtime_to_eval.insert(param);
-            for(auto &[solution_name, solution_value]:solved_parameters) {
-                runtime_to_eval.get(param->get_name())->propagate_constant(solution_name, solution_value);
-            }
         }
     }
     if(runtime_to_eval.empty()) return {};
-    // Substitute runtime only parameters
-    return process_parameters(runtime_to_eval, parent_module, {}, {});
+    return process_parameters(runtime_to_eval, parent_module, {}, solved_parameters);
 }
 
 std::string parameter_solver::get_full_path(const std::shared_ptr<HDL_instance_AST> &node) {

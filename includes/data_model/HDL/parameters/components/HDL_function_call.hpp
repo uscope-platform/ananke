@@ -44,7 +44,7 @@ public:
     std::optional<resolved_parameter> evaluate_vector(const std::map<qualified_identifier, resolved_parameter> &context);
     std::optional<resolved_parameter> evaluate_system_task(const std::map<qualified_identifier, resolved_parameter> &context);
 
-    void set_container_sizes(const resolved_type &s) override;
+    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
 
     std::string print() const  override;
     int64_t get_size()  override;

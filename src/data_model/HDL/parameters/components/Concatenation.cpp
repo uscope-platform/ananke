@@ -168,7 +168,7 @@ std::string Concatenation::print()  const{
 }
 
 
-void Concatenation::set_container_sizes(const resolved_type &s) {
+void Concatenation::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
     resolved_type content_sizes;
     unpacked_dimension = s.unpacked_sizes;
     if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) {
@@ -187,6 +187,6 @@ void Concatenation::set_container_sizes(const resolved_type &s) {
         content_sizes.packed_sizes.insert(content_sizes.packed_sizes.end(), s.packed_sizes.begin(), s.packed_sizes.end());
     }
     for (auto &item:components) {
-        item->set_container_sizes(content_sizes);
+        item->set_container_sizes(content_sizes, context);
     }
 }

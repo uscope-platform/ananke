@@ -39,7 +39,7 @@ struct assignment {
         ar(name, index, value);
     }
     assignment clone() const;
-    void set_container_size(const resolved_type &r) {value->set_container_sizes(r);}
+    void set_container_size(const resolved_type &r, const std::map<qualified_identifier, resolved_parameter> &context = {}) {value->set_container_sizes(r, context);}
     void set_index(const std::shared_ptr<Expression> &idx);
     void set_value(const std::shared_ptr<Parameter_value_base> &val);
     std::optional<std::shared_ptr<Expression>> get_index() const;

@@ -109,7 +109,7 @@ Expression Expression::to_rpm() const {
 std::optional<resolved_parameter> Expression::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     if(components.empty()) return std::nullopt;
     if (components.size() == 1) {
-        return components[0].get_value();
+        return components[0].get_value(context);
     }
 
     auto expr_stack = to_rpm();
@@ -118,6 +118,18 @@ std::optional<resolved_parameter> Expression::evaluate(const std::map<qualified_
     for(auto & i : expr_stack.components){
         if(i.is_numeric()) {
             evaluator_stack.push(i);
+        } else if (i.is_identifier()) {
+            auto resolved = i.get_value(context);
+            if (!resolved.has_value()) return std::nullopt;
+            if (resolved.value().is_integer()) {
+                evaluator_stack.emplace(resolved.value().get_integer(), 0);
+            } else if (resolved.value().is_real()) {
+                evaluator_stack.emplace(resolved.value().get_real(), 0);
+            } else if (resolved.value().is_string()) {
+                evaluator_stack.emplace(resolved.value().get_string(), Expression_component::string);
+            } else {
+                return std::nullopt;
+            }
         } else {
             std::variant<hdl_integer, double> result;
             if (!i.is_operator() && !i.is_function()) return std::nullopt;

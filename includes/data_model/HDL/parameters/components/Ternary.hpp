@@ -37,7 +37,7 @@ public:
 
     [[nodiscard]] std::shared_ptr<Parameter_value_base> clone_ptr() const override;
 
-    void set_container_sizes(const resolved_type &s) override {}
+    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override {}
 
 
     template<class Archive>
