@@ -57,7 +57,6 @@ public:
     explicit Expression_component(std::variant<hdl_integer, double> n, int64_t b_s);
     explicit Expression_component(const std::shared_ptr<Parameter_value_base> &param);
     std::set<qualified_identifier> get_dependencies()const;
-    bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value);
     void propagate_function(HDL_function_def def);
     bool is_subscripted() const {return !array_index.empty();}
     bool is_string() const {return type == string;}

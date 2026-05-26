@@ -21,13 +21,6 @@
 
 class Parameters_map{
 public:
-    Parameters_map clone() const {
-        Parameters_map ret;
-        for(auto &item:inner_map) {
-            ret.insert(item->clone());
-        }
-        return ret;
-    }
 
     size_t size(){return inner_map.size();}
     void clear() {inner_map.clear();}

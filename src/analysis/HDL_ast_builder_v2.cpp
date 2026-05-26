@@ -127,8 +127,6 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
 
 std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::specialize_instance(const HDL_instance_AST &i, hdl_integer idx, std::string idx_name) {
     HDL_instance_AST specialized_d = i;
-    auto specialized_parameters = specialized_d.get_parameters().clone();
-    specialized_d.set_parameters(specialized_parameters);
     specialized_d.set_repeated(true);
     specialized_d.set_repetition_idx(idx);
 

@@ -121,8 +121,9 @@ void parameter_solver::update_parameters_map(
         } else {
             param_val = resource.get_default_parameters()[param->get_identifier()];
         }
+        ast_param = std::make_shared<HDL_parameter>(*ast_param);
         ast_param->set_value(param_val);
-        if(!node_parameters.contains(param->get_name())) node_parameters.insert(ast_param);
+        node_parameters.insert(ast_param);
     }
 
     node->set_parameters(node_parameters);
