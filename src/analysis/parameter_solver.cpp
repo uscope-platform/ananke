@@ -24,7 +24,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
     const std::map<qualified_identifier, resolved_parameter> &default_parameters,
     const std::map<qualified_identifier, resolved_parameter> &context
 ) {
-    auto map = map_in.clone();
     std::map<qualified_identifier, resolved_parameter> ctx = context;
 
     std::map<qualified_identifier, resolved_parameter> solved_parameters;
@@ -36,7 +35,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
         // Phase 1: evaluate params with no remaining dependencies
         for (auto &[param_id, dependencies] : dependencies_map ) {
             if (dependencies.empty() && !solved_parameters.contains(param_id)) {
-                auto to_solve = map.const_get(param_id.name);
+                auto to_solve = map_in.const_get(param_id.name);
                 std::optional<resolved_parameter> value = to_solve->evaluate(ctx);
 
                 if (value.has_value()) {
