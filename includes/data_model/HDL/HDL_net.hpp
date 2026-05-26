@@ -104,7 +104,6 @@ public:
     HDL_range get_range() const {return range;}
     HDL_replication get_replication() const {return replication;}
     void evaluate(const std::map<qualified_identifier, resolved_parameter> &context);
-    void propagate_constant(const qualified_identifier &id, const resolved_parameter &param);
 
     void set_name(const std::string &s) {
         name = s;

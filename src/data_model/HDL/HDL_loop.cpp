@@ -137,19 +137,6 @@ std::set<qualified_identifier> HDL_loop_metadata::get_dependencies() const {
 
 }
 
-bool HDL_loop_metadata::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) {
-    bool retval = true;
-
-    retval &= init->propagate_constant(constant_id, value);
-    retval &= end_c->propagate_constant(constant_id, value);
-    retval &= iter->propagate_constant(constant_id, value);
-    for(auto &a:assignments) {
-        retval &= a.get_value()->propagate_constant(constant_id, value);
-        if (a.get_index().has_value()) a.get_index().value()->propagate_constant(constant_id, value);
-    }
-    return retval;
-}
-
 
 void HDL_loop_metadata::set_init(const HDL_parameter &p) {
     init = std::make_shared<HDL_parameter>(p);

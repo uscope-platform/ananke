@@ -88,7 +88,6 @@ public:
 
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context);
 
-    bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value);
     void propagate_function(const HDL_function_def &def);
     explicit operator std::string();
 

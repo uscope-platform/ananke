@@ -52,22 +52,6 @@ std::set<qualified_identifier> HDL_function_call::get_dependencies() const {
     return retval;
 }
 
-bool HDL_function_call::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) {
-    bool retval = true;
-    for (auto &arg:arguments) {
-        retval &= arg->propagate_constant(constant_id, value);
-    }
-    for(auto &a:assignments) {
-        if(a.get_index().has_value()) {
-            retval &= a.get_index().value()->propagate_constant(constant_id, value);
-        }
-        retval &= a.get_value()->propagate_constant(constant_id, value);
-    }
-    if(loop_metadata.has_value()) {
-        retval &= loop_metadata.value().propagate_constant(constant_id, value);
-    }
-    return  retval;
-}
 
 void HDL_function_call::propagate_function(const HDL_function_def &def) {
     if(def.name == function_name) {
@@ -137,11 +121,12 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector(const std::
         for(int i = 0; i<loop_assignments.size(); i++) {
             for(auto &l:loop_indexes) {
                 auto la = loop_assignments[i].clone();
-                la.get_index().value()->propagate_constant(loop_var, l);
-                auto idx_val = la.get_index().value()->evaluate(context).value().get_integer();
-                la.get_value()->propagate_constant(loop_var, l);
+                auto ctx = context;
+                ctx[loop_var] = resolved_parameter(l);
+                auto idx_val = la.get_index().value()->evaluate(ctx).value().get_integer();
+
                 value_sizes[idx_val.get_value()] = la.get_value()->get_size();
-                auto var = la.get_value()->evaluate(context);
+                auto var = la.get_value()->evaluate(ctx);
                 values[idx_val.get_value()] = var.value().get_integer();
             }
         }

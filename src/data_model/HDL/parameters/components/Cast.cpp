@@ -51,13 +51,6 @@ std::set<qualified_identifier> Cast::get_dependencies() const {
     return deps;
 }
 
-bool Cast::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) {
-    bool ret = true;
-    ret &= content->propagate_constant(constant_id, value);
-    ret &= size.propagate_constant(constant_id, value);
-    return ret;
-}
-
 void Cast::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {
 

@@ -90,20 +90,6 @@ void HDL_type::set_declared_type(const std::string &type) {
 
 }
 
-bool HDL_type::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value) {
-    bool retval = true;
-    for (auto &dim: packed_dimensions) {
-        retval &= dim.first_bound.propagate_constant(constant_id, constant_value);
-        retval &= dim.second_bound.propagate_constant(constant_id, constant_value);
-    }
-
-    for (auto &dim: unpacked_dimensions) {
-        retval &= dim.first_bound.propagate_constant(constant_id, constant_value);
-        retval &= dim.second_bound.propagate_constant(constant_id, constant_value);
-    }
-    return retval;
-}
-
 std::set<qualified_identifier> HDL_type::get_dependencies() {
     std::set<qualified_identifier> result;
     for (auto &dim:unpacked_dimensions) {

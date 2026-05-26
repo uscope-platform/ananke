@@ -66,15 +66,6 @@ void HDL_net::evaluate(const std::map<qualified_identifier, resolved_parameter> 
     }
 }
 
-void HDL_net::propagate_constant(const qualified_identifier &id, const resolved_parameter &param) {
-
-    range.accessor.propagate_constant(id, param);
-    range.range.propagate_constant(id, param);
-    index.propagate_constant(id, param);
-    replication.size.propagate_constant(id, param);
-    replication.target.propagate_constant(id, param);
-}
-
 nlohmann::json HDL_net::dump() {
     nlohmann::json ret;
     ret["name"] = name;

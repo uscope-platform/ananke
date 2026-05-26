@@ -39,13 +39,6 @@ std::set<qualified_identifier> Ternary::get_dependencies() const {
     return ret_val;
 }
 
-bool Ternary::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) {
-    bool ret = true;
-    ret &= condition.propagate_constant(constant_id, value);
-    ret &= true_value->propagate_constant(constant_id, value);
-    ret &= false_value->propagate_constant(constant_id, value);
-    return ret;
-}
 
 void Ternary::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {

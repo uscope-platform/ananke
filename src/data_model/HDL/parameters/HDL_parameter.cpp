@@ -72,13 +72,6 @@ std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualifi
     return raw_value->evaluate(context);
 }
 
-bool HDL_parameter::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value) {
-    bool retval = true;
-    retval &= type.propagate_constant(constant_id, constant_value);
-
-    retval &=  raw_value->propagate_constant(constant_id, constant_value);
-    return retval;
-}
 
 void HDL_parameter::propagate_function(const HDL_function_def &def) {
     raw_value->propagate_function(def);

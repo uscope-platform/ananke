@@ -97,7 +97,6 @@ public:
     [[nodiscard]] std::vector<dimension_t> get_unpacked_dimensions() const {return  unpacked_dimensions;};
 
     void set_declared_type(const std::string &type);
-    bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value);
     std::set<qualified_identifier> get_dependencies();
 
 

@@ -45,7 +45,6 @@ public:
     void emplace_back(const std::string &ec, Expression_component::component_type t) {components.emplace_back(ec, t);}
     void emplace_back(const hdl_integer &ec) {components.emplace_back(ec, Expression_component::number);}
     std::set<qualified_identifier> get_dependencies()const override;
-    bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
     void propagate_function(const HDL_function_def &def) override;
     std::string print() const override;

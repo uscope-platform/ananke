@@ -64,14 +64,6 @@ std::set<qualified_identifier> Concatenation::get_dependencies() const{
     return result;
 }
 
-bool Concatenation::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) {
-   bool retval = true;
-    for (auto &comp:components) {
-        retval &= comp->propagate_constant(constant_id, value);
-    }
-    return retval;
-}
-
 void Concatenation::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {
     for (auto &comp:components) {

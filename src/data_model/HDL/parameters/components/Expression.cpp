@@ -332,16 +332,6 @@ std::set<qualified_identifier> Expression::get_dependencies()const {
     return result;
 }
 
-bool Expression::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter& param_value) {
-    bool retval = true;
-    for (auto & component : components) {
-        if (component.is_identifier()) {
-            retval &= component.propagate_constant(constant_id, param_value);
-        }
-    }
-    return retval;
-}
-
 void Expression::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {
     std::vector<Expression_component> new_expr;

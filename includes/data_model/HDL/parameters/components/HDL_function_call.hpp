@@ -36,7 +36,6 @@ public:
     void add_assignment(const assignment &a) {assignments.push_back(a);}
     void set_loop(const HDL_loop_metadata &l){loop_metadata = l;}
     std::set<qualified_identifier> get_dependencies()const  override;
-    bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) override;
     void propagate_function(const HDL_function_def &def) override;
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context)  override;
 

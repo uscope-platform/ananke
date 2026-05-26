@@ -79,13 +79,6 @@ std::set<qualified_identifier> Replication::get_dependencies()const {
     return result;
 }
 
-bool Replication::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) {
-    bool result = true;
-
-    result &= repetition_size.propagate_constant(constant_id, value);
-    result &= repeated_item->propagate_constant(constant_id, value);
-    return result;
-}
 
 void Replication::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {

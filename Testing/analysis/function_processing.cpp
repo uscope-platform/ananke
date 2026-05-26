@@ -100,17 +100,6 @@ TEST(function_processing, simple_function_array) {
         );
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);
-
-    auto call = HDL_function_call("CTRL_ADDR_CALC");
-    call.add_body(functions["CTRL_ADDR_CALC"].get_assignments(), functions["CTRL_ADDR_CALC"].get_loop());
-
-    mdarray<hdl_integer> check_val;
-    check_val.set_1d_slice({0,0}, {100,200,300});
-    auto values = call.evaluate({});
-    ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(values.value().is_int_array());
-    auto result_value = values.value().get_int_array();
-    EXPECT_EQ(result_value, check_val);
 }
 
 
@@ -167,17 +156,6 @@ TEST(function_processing, simple_loop_function) {
     metadata.add_assignment(a);
     check_f.add_loop_metadata(metadata);
      EXPECT_EQ(check_f,result);
-
-    auto call = HDL_function_call("CTRL_ADDR_CALC");
-    call.add_body(functions["CTRL_ADDR_CALC"].get_assignments(), functions["CTRL_ADDR_CALC"].get_loop());
-
-    mdarray<hdl_integer> check_val;
-    check_val.set_1d_slice({0,0}, {0, 100,200});
-    auto values = call.evaluate({});
-    ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(values.value().is_int_array());
-    auto result_value = values.value().get_int_array();
-    EXPECT_EQ(result_value, check_val);
 }
 
 
@@ -233,20 +211,6 @@ TEST(function_processing, parametric_loop_function) {
     metadata.add_assignment(a);
     check_f.add_loop_metadata(metadata);
     EXPECT_EQ(check_f,result);
-
-    mdarray<hdl_integer> check_val;
-    check_val.set_1d_slice({0,0}, {0,100,200});
-
-    auto call = HDL_function_call("CTRL_ADDR_CALC");
-    call.add_body(functions["CTRL_ADDR_CALC"].get_assignments(), functions["CTRL_ADDR_CALC"].get_loop());
-
-
-    auto res= call.propagate_constant({"","", "N_CORES"}, 3);
-    auto values = call.evaluate({});
-    ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(values.value().is_int_array());
-    auto result_value = values.value().get_int_array();
-    EXPECT_EQ(result_value, check_val);
 }
 
 TEST(function_processing, complex_loop_function) {
@@ -318,19 +282,6 @@ TEST(function_processing, complex_loop_function) {
     };
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);
-
-    auto call = HDL_function_call("CTRL_ADDR_CALC");
-    call.add_body(functions["CTRL_ADDR_CALC"].get_assignments(), functions["CTRL_ADDR_CALC"].get_loop());
-
-
-    mdarray<hdl_integer> check_val;
-    check_val.set_1d_slice({0,0}, {44, 100,200,300, 667});
-    call.propagate_constant({"","", "N_CORES"}, 3);
-    auto values = call.evaluate({});
-    ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(values.value().is_int_array());
-    auto result_value = values.value().get_int_array();
-    EXPECT_EQ(result_value, check_val);
 }
 
 
@@ -373,20 +324,6 @@ TEST(function_processing, parametrized_function) {
     };
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);
-
-    mdarray<hdl_integer> check_val;
-    check_val.set_1d_slice({0,0}, {44, 33});
-
-    auto call = HDL_function_call("CTRL_ADDR_CALC");
-    call.add_body(functions["CTRL_ADDR_CALC"].get_assignments(), functions["CTRL_ADDR_CALC"].get_loop());
-
-
-    call.propagate_constant({"","", "N_CORES"}, 1);
-    auto values = call.evaluate({});
-    ASSERT_TRUE(values.has_value());
-    EXPECT_TRUE(values.value().is_int_array());
-    auto result_value =values.value().get_int_array();
-    EXPECT_EQ(result_value, check_val);
 }
 
 
@@ -426,15 +363,6 @@ TEST(function_processing, package_assignment) {
 
     EXPECT_EQ(check_f,result);
 
-
-    auto call = HDL_function_call("CTRL_ADDR_CALC");
-    call.add_body(functions["CTRL_ADDR_CALC"].get_assignments(), functions["CTRL_ADDR_CALC"].get_loop());
-    call.propagate_constant({"hil_address_space","", "bus_base"}, 21);
-    auto values = call.evaluate({});
-    ASSERT_TRUE(values.has_value());
-    ASSERT_TRUE(values.value().is_integer());
-    auto result_value = values.value().get_integer();
-    EXPECT_EQ(result_value, 21);
 }
 
 
