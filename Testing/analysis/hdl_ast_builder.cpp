@@ -44,9 +44,8 @@ TEST( hdl_ast_builder, pid_ast_build) {
                 sv_analyzer analyzer;
 
 
-                for(auto &entity:analyzer.analyze("", test_file.view())){
-                    d_store->store_hdl_entity(entity, "");
-                }
+                auto resources = analyzer.analyze("", test_file.view());
+                d_store->store_hdl_entity(resources, "", "");
             }
         }
     }
@@ -89,9 +88,9 @@ TEST( hdl_ast_builder, spi_ast_build) {
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
                 analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
-                for(auto &entity:analyzer.analyze("", test_file.view())){
-                    d_store->store_hdl_entity(entity, "");
-                }
+
+                auto resources = analyzer.analyze("", test_file.view());
+                d_store->store_hdl_entity(resources, "", "");
             }
         }
     }
@@ -134,11 +133,9 @@ TEST( hdl_ast_builder, pwm_ast_build) {
             if(f.path().extension() == ".v" || f.path().extension() == ".sv" || f.path().extension() == ".svh"){
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
-                
 
-                for(auto &entity:analyzer.analyze("", test_file.view())){
-                    d_store->store_hdl_entity(entity, "");
-                }
+                auto resources = analyzer.analyze("", test_file.view());
+                d_store->store_hdl_entity(resources, "", "");
             }
         }
     }
@@ -184,9 +181,8 @@ TEST( hdl_ast_builder, adc_ast_build) {
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
 
-                for(auto &entity:analyzer.analyze("", test_file.view())){
-                    d_store->store_hdl_entity(entity, "");
-                }
+                auto resources = analyzer.analyze("", test_file.view());
+                d_store->store_hdl_entity(resources, "", "");
             }
         }
     }
@@ -227,11 +223,9 @@ TEST( hdl_ast_builder, interface_parameter) {
             if(f.path().extension() == ".v" || f.path().extension() == ".sv" || f.path().extension() == ".svh"){
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
-                
 
-                for(auto &entity:analyzer.analyze("", test_file.view())){
-                    d_store->store_hdl_entity(entity, "");
-                }
+                auto resources = analyzer.analyze("", test_file.view());
+                d_store->store_hdl_entity(resources, "", "");
             }
         }
     }
@@ -247,8 +241,8 @@ TEST( hdl_ast_builder, interface_parameter) {
 
     sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze("",test_pattern)[0];
-    d_store->store_hdl_entity(resource, "");
+    auto resource = analyzer.analyze("",test_pattern);
+    d_store->store_hdl_entity(resource, "", "");
 
     HDL_ast_builder_v2 b(s_store, d_store, Depfile());
     auto synth_ast = b.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -297,9 +291,7 @@ TEST( hdl_ast_builder, package_dependency) {
     
     auto entities = analyzer.analyze("", test_pattern);
     entities[0].set_path("/tmp/dep.sv");
-    for(auto &entity: entities){
-        d_store->store_hdl_entity(entity, "");
-    }
+    d_store->store_hdl_entity(entities, "", "");
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto synth_ast = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -333,12 +325,10 @@ TEST( hdl_ast_builder, memory_dependency) {
     sv_analyzer analyzer;
     
     auto entities = analyzer.analyze("", test_pattern);
-    for(auto &entity: entities){
-        d_store->store_hdl_entity(entity, "");
-    }
+    d_store->store_hdl_entity(entities, "", "");
 
     DataFile d("mem", "/tmp/mem.dat");
-    d_store->store_data_file(d, "");
+    d_store->store_data_file({d}, "", "");
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto synth_ast = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];

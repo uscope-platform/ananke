@@ -45,10 +45,8 @@ TEST( app_def_generation , generate_app_def) {
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
 
-
-                for(auto &entity:analyzer.analyze("", test_file.view())){
-                    d_store->store_hdl_entity(entity, "");
-                }
+                auto resources = analyzer.analyze("", test_file.view());
+                d_store->store_hdl_entity(resources, "", "");
             }
         }
     }

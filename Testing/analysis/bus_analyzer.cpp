@@ -49,9 +49,8 @@ TEST( bus_analysis, simple_bus_analysis) {
                 sv_analyzer analyzer;
 
                 analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
-                for(auto &entity:analyzer.analyze(prefix, test_file.view())){
-                    d_store->store_hdl_entity(entity, "");
-                }
+                auto resources = analyzer.analyze(prefix, test_file.view());
+                d_store->store_hdl_entity(resources, "", "");
             }
         }
     }

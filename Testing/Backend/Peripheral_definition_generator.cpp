@@ -44,9 +44,8 @@ TEST( periph_def_generation , generate_periph_def) {
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
 
-                for(auto &entity:analyzer.analyze(f.path(), test_file.view())){
-                    d_store->store_hdl_entity(entity, "");
-                }
+                auto resources = analyzer.analyze(f.path(), test_file.view());
+                d_store->store_hdl_entity(resources, "", "");
             }
         }
     }
