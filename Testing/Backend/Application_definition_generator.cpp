@@ -47,7 +47,7 @@ TEST( app_def_generation , generate_app_def) {
 
 
                 for(auto &entity:analyzer.analyze("", test_file.view())){
-                    d_store->store_hdl_entity(entity);
+                    d_store->store_hdl_entity(entity, "");
                 }
             }
         }

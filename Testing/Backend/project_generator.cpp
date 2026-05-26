@@ -48,7 +48,7 @@ TEST(xilinx_project_gen, simple_gen){
                 sv_analyzer analyzer;
                 analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
                 for(auto &entity:analyzer.analyze(f.path(), test_file.view())){
-                    d_store->store_hdl_entity(entity);
+                    d_store->store_hdl_entity(entity, "");
                 }
             }
         }
@@ -149,7 +149,7 @@ TEST( xilinx_project_gen, sim_script) {
 
                 analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
                 for(auto &entity:analyzer.analyze(f.path(),test_file.view())){
-                    d_store->store_hdl_entity(entity);
+                    d_store->store_hdl_entity(entity, "");
                 }
             }
         }
@@ -219,7 +219,7 @@ TEST( xilinx_project_gen, fpga_synth_script) {
 
                 analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
                 for(auto &entity:analyzer.analyze(f.path(), test_file.view())){
-                    d_store->store_hdl_entity(entity);
+                    d_store->store_hdl_entity(entity, "");
                 }
             }
         }
@@ -298,7 +298,7 @@ TEST( xilinx_project_gen, soc_synth_script) {
 
                 analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
                 for(auto &entity:analyzer.analyze(f.path(),test_file.view())){
-                    d_store->store_hdl_entity(entity);
+                    d_store->store_hdl_entity(entity, "");
                 }
             }
         }

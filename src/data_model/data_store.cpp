@@ -36,18 +36,21 @@ HDL_Resource data_store::get_HDL_resource(const std::string& name) {
     return cache.hdl[name].clone();
 }
 
-void data_store::store_hdl_entity(HDL_Resource& entity) {
+void data_store::store_hdl_entity(HDL_Resource& entity,const std::string &hash) {
     if(entity.get_type()==interface){
         cache.interfaces[entity.getName()] = entity;
+        cache.interface_hash[entity.getName()] = hash;
     } else {
         cache.hdl[entity.getName()] = entity;
+        cache.hdl_hash[entity.getName()] = hash;
+
     }
 
 }
 
-void data_store::store_hdl_entity(std::vector<HDL_Resource>& vect) {
+void data_store::store_hdl_entity(std::vector<HDL_Resource>& vect,const std::string &hash) {
     for(auto &item: vect){
-        store_hdl_entity(item);
+        store_hdl_entity(item, hash);
     }
 }
 
@@ -55,13 +58,14 @@ Script data_store::get_script(std::string &name) {
     return cache.scripts[name];
 }
 
-void data_store::store_script(Script entity) {
+void data_store::store_script(Script entity, const std::string &hash) {
     cache.scripts[entity.get_name()] = entity;
+    cache.scripts_hash[entity.get_name()] = hash;
 }
 
-void data_store::store_script(const std::vector<Script> &vect) {
+void data_store::store_script(const std::vector<Script> &vect, const std::string &hash) {
     for(auto &item: vect){
-        store_script(item);
+        store_script(item, hash);
     }
 }
 
@@ -70,13 +74,14 @@ Constraints data_store::get_constraint(std::string &name) {
     return cache.constraints[name];
 }
 
-void data_store::store_constraint(Constraints entity) {
+void data_store::store_constraint(Constraints entity, const std::string &hash) {
     cache.constraints[entity.get_name()] = entity;
+    cache.constraints_hash[entity.get_name()]= hash;
 }
 
-void data_store::store_constraint(const std::vector<Constraints> &vect) {
+void data_store::store_constraint(const std::vector<Constraints> &vect, const std::string &hash) {
     for(auto &item: vect){
-        store_constraint(item);
+        store_constraint(item, hash);
     }
 }
 
@@ -84,13 +89,14 @@ DataFile data_store::get_data_file(const std::string &name) {
     return cache.data[name];
 }
 
-void data_store::store_data_file(DataFile entity) {
+void data_store::store_data_file(DataFile entity, const std::string &hash) {
     cache.data[entity.get_name()] = entity;
+    cache.data_hash[entity.get_name()] = hash;
 }
 
-void data_store::store_data_file(const std::vector<DataFile> &vect) {
+void data_store::store_data_file(const std::vector<DataFile> &vect, const std::string &hash) {
     for(auto &item: vect){
-        store_data_file(item);
+        store_data_file(item, hash);
     }
 }
 

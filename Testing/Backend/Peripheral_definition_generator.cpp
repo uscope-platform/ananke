@@ -45,7 +45,7 @@ TEST( periph_def_generation , generate_periph_def) {
                 sv_analyzer analyzer;
 
                 for(auto &entity:analyzer.analyze(f.path(), test_file.view())){
-                    d_store->store_hdl_entity(entity);
+                    d_store->store_hdl_entity(entity, "");
                 }
             }
         }

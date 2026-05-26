@@ -28,17 +28,17 @@ protected:
         s.type = "py";
         Script s1_spec(s);
         s1_spec.set_path("/tests/script.py");
-        d_store->store_script(s1_spec);
+        d_store->store_script(s1_spec, "");
 
         s.name = "tcl_test";
         s.type = "tcl";
         Script s2_spec(s);
         s2_spec.set_path("/tests/tcl_test.tcl");
-        d_store->store_script(s2_spec);
+        d_store->store_script(s2_spec, "");
 
         Constraints c("test_constr");
         c.set_path("/test/constraints.xdc");
-        d_store->store_constraint(c);
+        d_store->store_constraint(c, "");
     }
 
     virtual void TearDown() {

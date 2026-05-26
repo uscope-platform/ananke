@@ -33,25 +33,25 @@ protected:
         mod_entity.set_path("test/mod.sv");
         mod_entity.set_type(module);
         mod_entity.add_dependencies(deps);
-        d_store->store_hdl_entity(mod_entity);
+        d_store->store_hdl_entity(mod_entity, "");
 
         DataFile D("test_mem_init", "test/mem_init.mem");
-        d_store->store_data_file(D);
+        d_store->store_data_file(D, "");
         HDL_Resource expl_dep;
         expl_dep.set_name("expl_dep");
         expl_dep.set_path("test/explicit/dep.sv");
         expl_dep.set_type(module);
-        d_store->store_hdl_entity(expl_dep);
+        d_store->store_hdl_entity(expl_dep, "");
         HDL_Resource dep_entity;
         dep_entity.set_name("test_dep");
         dep_entity.set_path("test/dep.sv");
         dep_entity.set_type(module);
-        d_store->store_hdl_entity(dep_entity);
+        d_store->store_hdl_entity(dep_entity, "");
         HDL_Resource pkg_entity;
         pkg_entity.set_name("test_package");
         pkg_entity.set_path("test/pkg.sv");
         pkg_entity.set_type(package);
-        d_store->store_hdl_entity(pkg_entity);
+        d_store->store_hdl_entity(pkg_entity, "");
     }
 
     virtual void TearDown() {

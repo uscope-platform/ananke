@@ -87,20 +87,20 @@ void Repository_walker::analyze_dir() {
 void Repository_walker::collect_analysis_results() {
     pool.wait_for_tasks();
     for(auto &f : hdl_futures){
-        auto result = f.get();
-        d_store->store_hdl_entity(result);
+        auto [file_hash, result] = f.get();
+        d_store->store_hdl_entity(result, file_hash);
     }
     for(auto &f : scripts_futures){
-        auto result = f.get();
-        d_store->store_script(result);
+        auto [file_hash, result] = f.get();
+        d_store->store_script(result, file_hash);
     }
     for(auto &f : constraints_futures){
-        auto result = f.get();
-        d_store->store_constraint(result);
+        auto [file_hash, result] = f.get();
+        d_store->store_constraint(result, file_hash);
     }
     for(auto  &f: data_futures){
-        auto result = f.get();
-        d_store->store_data_file(result);
+        auto [file_hash, result] = f.get();
+        d_store->store_data_file(result, file_hash);
     }
     hdl_futures.erase(hdl_futures.begin(), hdl_futures.end());
     scripts_futures.erase(scripts_futures.begin(), scripts_futures.end());
@@ -234,13 +234,13 @@ bool Repository_walker::file_is_data(const std::filesystem::path &file) {
 
 /// Analyze the target verilog-type file to extract declared and used instantiated design elements
 /// \param file Target file
-std::vector<HDL_Resource> analyze_verilog(const std::filesystem::path &file, std::set<std::string> i_d) {
+std::pair<std::string, std::vector<HDL_Resource>> analyze_verilog(const std::filesystem::path &file, std::set<std::string> i_d) {
     spdlog::trace("PARSING: {}", file.c_str());
     try {
         sv_analyzer file_processor;
         file_processor.set_include_directories(i_d);
         mm_file f(file);
-        return file_processor.analyze(file, f.view());
+        return {"",file_processor.analyze(file, f.view())};
     } catch (std::runtime_error &err) {
         spdlog::error(err.what());
         return {};
@@ -249,23 +249,23 @@ std::vector<HDL_Resource> analyze_verilog(const std::filesystem::path &file, std
 
 /// Analyze the target vhdl-type file to extract declared and used instantiated design elements
 /// \param file Target file
-std::vector<HDL_Resource> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d) {
+std::pair<std::string, std::vector<HDL_Resource>> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d) {
     vhdl_analyzer file_processor(file);
     file_processor.cleanup_content("");
-    return file_processor.analyze();
+    return {"", file_processor.analyze()};
 }
 
 
 /// Analyze the target Script extracting the necessary metadata
 /// \param file Target file
-std::vector<DataFile> analyze_data(const std::filesystem::path &file, std::set<std::string> i_d) {
+std::pair<std::string, std::vector<DataFile>> analyze_data(const std::filesystem::path &file, std::set<std::string> i_d) {
     DataFile data(file.stem(), file.string());
-    return {data};
+    return {"", {data}};
 }
 
 /// Analyze the target Script extracting the necessary metadata
 /// \param file Target file
-std::vector<Script> analyze_script(const std::filesystem::path &file, std::set<std::string> i_d) {
+std::pair<std::string, std::vector<Script>> analyze_script(const std::filesystem::path &file, std::set<std::string> i_d) {
     std::string ext = file.extension();
     ext = std::regex_replace(ext, std::regex("\\."), "");
     script_specs s;
@@ -273,15 +273,15 @@ std::vector<Script> analyze_script(const std::filesystem::path &file, std::set<s
     s.type = ext;
     Script scr(s);
     scr.set_path(file);
-    return {scr};
+    return {"", {scr}};
 }
 
 /// Analyze the target constraint file extracting the necessary metadata
 /// \param file Target file
-std::vector<Constraints> analyze_constraint(const std::filesystem::path &file, std::set<std::string> i_d) {
+std::pair<std::string, std::vector<Constraints>> analyze_constraint(const std::filesystem::path &file, std::set<std::string> i_d) {
     Constraints constr(file.stem());
     constr.set_path(file);
-    return {constr};
+    return {"", {constr}};
 }
 
 

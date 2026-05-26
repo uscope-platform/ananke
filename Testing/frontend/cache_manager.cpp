@@ -61,7 +61,7 @@ protected:
         mod_entity.set_type(module);
         mod_entity.set_path("test/path.sv");
         mod_entity.set_documentation(doc);
-        d_store->store_hdl_entity(mod_entity);
+        d_store->store_hdl_entity(mod_entity, "");
 
         s_store = std::make_shared<settings_store>(true,"/tmp/test_settings_store");
         s_store->set_setting("cache_dump", "");
