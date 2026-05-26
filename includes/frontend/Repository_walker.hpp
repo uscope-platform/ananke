@@ -25,8 +25,10 @@
 #include <regex>
 #include <utility>
 #include <gtest/gtest.h>
+#include <openssl/evp.h>
+#include <utility>
+#include <spdlog/spdlog.h>
 
-#include "frontend/cache_manager.hpp"
 #include "data_model/settings_store.hpp"
 #include "data_model/Script.hpp"
 #include "data_model/Constraints.hpp"

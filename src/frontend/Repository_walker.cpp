@@ -16,8 +16,6 @@
 
 #include "frontend/Repository_walker.hpp"
 
-#include <utility>
-#include <spdlog/spdlog.h>
 
 
 Repository_walker::Repository_walker(const std::shared_ptr<settings_store>& s, const std::shared_ptr<data_store>& d, bool ephimeral) : pool(max_threads){

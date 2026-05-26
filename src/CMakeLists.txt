@@ -89,7 +89,6 @@ target_sources(ananke_lib
     frontend/analysis/preprocessor/source_mapper.cpp
     frontend/analysis/preprocessor/conditional_solver.cpp
     frontend/analysis/preprocessor/macro_processor.cpp
-    frontend/cache_manager.cpp
 )
 
 target_link_libraries(ananke_lib PUBLIC

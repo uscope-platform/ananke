@@ -36,7 +36,6 @@ set(ANANKE_TESTS
         Backend/Application_definition_generator.cpp
         Backend/Peripheral_definition_generator.cpp
         Backend/toolchain_manager.cpp
-        frontend/cache_manager.cpp
         frontend/sv_preprocessor.cpp
         frontend/repository_walker.cpp
         Backend/python_script_runner.cpp
