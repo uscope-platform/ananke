@@ -20,13 +20,14 @@ void port_solution::process_node(const std::shared_ptr<HDL_instance_AST> &node) 
     auto ports = node->get_ports();
     if(node->get_parent() != nullptr) {
         auto parameters = node->get_parent()->get_parameters();
+        std::map<qualified_identifier, resolved_parameter> ctx;
+        for(const auto param:parameters) {
+            auto val = param->get_value();
+            if(val.has_value()) ctx[param->get_identifier()] = val.value();
+        }
         for(auto [port_name, nets]:node->get_ports()) {
             for(auto &n:nets) {
-                for(const auto param:parameters) {
-                    auto val = param->get_value();
-                    if(val.has_value()) n.propagate_constant( param->get_identifier(), val.value());
-                }
-                n.evaluate({}); // Using an empty context here is fine because all parameters are already solved in the ast building phase
+                n.evaluate(ctx);
             }
         }
         node->set_ports(ports);

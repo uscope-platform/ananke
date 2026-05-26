@@ -85,8 +85,7 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
 
                         // The loop structure is attached to the looped instances, that need to be repeated,
                         // But the parent parameters only need to be propagated in its expressions
-                        update_loop_constants(child, current_param_values);
-                        auto loop_idx = loop_solver::solve_loop(child, {});
+                        auto loop_idx = loop_solver::solve_loop(child, current_param_values);
                         process_quantifier(child->get_array_quantifier(), current_param_values);
 
                         if (!loop_idx.empty()) {
@@ -94,9 +93,11 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                                 auto new_child = std::make_shared<HDL_instance_AST>(*child);
                                 auto specialized_child = specialize_instance(*new_child, idx, child->get_inner_loop().get_init().get_name());
                                 working_instance->add_child(specialized_child);
+                                auto parent_params = current_param_values;
+                                parent_params[{"", "", child->get_inner_loop().get_init().get_name()}] = resolved_parameter(idx);
                                 child_wo.push_back({
                                     specialized_child,
-                                    current_param_values,
+                                    parent_params,
                                     wo.path + "." + working_instance->get_name()
                                 });
                             }
@@ -123,17 +124,6 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
         }
     return top;
 }
-
-void HDL_ast_builder_v2::update_loop_constants(std::shared_ptr<HDL_instance_AST> &instance, const std::map<qualified_identifier, resolved_parameter> &parameters) {
-    if (instance->get_n_loops()>0) {
-        auto loop = instance->get_inner_loop();
-        for (auto &[param_name, param_value]: parameters) {
-            loop.propagate_constant(param_name, param_value);
-        }
-        instance->update_loop(loop, 0);
-    }
-}
-
 
 std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::specialize_instance(const HDL_instance_AST &i, hdl_integer idx, std::string idx_name) {
     HDL_instance_AST specialized_d = i;
@@ -162,21 +152,14 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::specialize_instance(const 
         new_ports[port_name] = port_content;
     }
     specialized_d.set_ports(new_ports);
-    for(auto &p: specialized_d.get_parameters()) {
-         p->propagate_constant({"","", idx_name}, idx);
-    }
     return std::make_shared<HDL_instance_AST>(specialized_d);
 }
 
 void HDL_ast_builder_v2::process_quantifier(const std::shared_ptr<HDL_parameter> &quantifier, const std::map<qualified_identifier, resolved_parameter> &parameters) {
 
     if (quantifier != nullptr) {
-        bool complete = true;
-        for (auto &param:parameters) {
-            complete &= quantifier->propagate_constant(param.first, param.second);
-        }
-        if (!complete) throw std::runtime_error("unknown indentifiers remain in an array quantifier");
         auto value = quantifier->evaluate(parameters);
+        if (!value.has_value()) throw std::runtime_error("unknown identifiers remain in an array quantifier");
         quantifier->set_value(value.value());
     }
 }
@@ -187,14 +170,14 @@ std::map<qualified_identifier, resolved_parameter> HDL_ast_builder_v2::process_r
         if (value.is_string()) {
             if (value.get_string() == "__RUNTIME_ONLY_PARAMETER__") {
                 auto raw_param = res.get_parameters().get(name.name);
+                std::map<qualified_identifier, resolved_parameter> pkg_ctx;
                 for (const auto dep: raw_param->get_dependencies()) {
                     if (!dep.prefix.empty()) {
                         auto package_params= d_store->get_HDL_resource(dep.prefix).get_default_parameters();
-                        auto pv = package_params[{"", "", dep.name}];
-                        raw_param->propagate_constant(dep, pv);
+                        pkg_ctx[dep] = package_params[{"", "", dep.name}];
                     }
                 }
-                auto val = raw_param->evaluate({});
+                auto val = raw_param->evaluate(pkg_ctx);
                 if (val.has_value()) runtime_parameters.insert({name, val.value()});
             }
         }

@@ -34,7 +34,6 @@ public:
     std::vector<std::shared_ptr<HDL_instance_AST>> build_ast(const std::vector<std::string>& modules);
 private:
     std::shared_ptr<HDL_instance_AST> build_ast(const std::string& top_level_module);
-    void update_loop_constants(std::shared_ptr<HDL_instance_AST> &instance, const std::map<qualified_identifier, resolved_parameter> &parameters);
     std::shared_ptr<HDL_instance_AST> specialize_instance(const HDL_instance_AST &i, hdl_integer idx, std::string idx_name);
     void process_quantifier(const std::shared_ptr<HDL_parameter> &quantifier, const std::map<qualified_identifier, resolved_parameter> &parameters);
     std::map<qualified_identifier, resolved_parameter> process_runtime_parameters(const std::map<qualified_identifier, resolved_parameter> &parameters, const HDL_Resource &res);
