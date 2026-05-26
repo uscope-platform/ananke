@@ -34,7 +34,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
         for (auto &[param_id, dependencies] : dependencies_map ) {
             if (dependencies.empty() && !solved_parameters.contains(param_id)) {
                 auto to_solve = map.const_get(param_id.name);
-                std::optional<resolved_parameter> value = to_solve->evaluate();
+                std::optional<resolved_parameter> value = to_solve->evaluate({});
 
                 if (value.has_value()) {
                     solved_parameters.insert({param_id, value.value()});

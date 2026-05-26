@@ -26,7 +26,7 @@ void port_solution::process_node(const std::shared_ptr<HDL_instance_AST> &node) 
                     auto val = param->get_value();
                     if(val.has_value()) n.propagate_constant( param->get_identifier(), val.value());
                 }
-                n.evaluate();
+                n.evaluate({}); // Using an empty context here is fine because all parameters are already solved in the ast building phase
             }
         }
         node->set_ports(ports);

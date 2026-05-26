@@ -38,11 +38,11 @@ public:
     std::set<qualified_identifier> get_dependencies()const  override;
     bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) override;
     void propagate_function(const HDL_function_def &def) override;
-    std::optional<resolved_parameter> evaluate()  override;
+    std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context)  override;
 
-    std::optional<resolved_parameter> evaluate_scalar();
-    std::optional<resolved_parameter> evaluate_vector();
-    std::optional<resolved_parameter> evaluate_system_task();
+    std::optional<resolved_parameter> evaluate_scalar(const std::map<qualified_identifier, resolved_parameter> &context);
+    std::optional<resolved_parameter> evaluate_vector(const std::map<qualified_identifier, resolved_parameter> &context);
+    std::optional<resolved_parameter> evaluate_system_task(const std::map<qualified_identifier, resolved_parameter> &context);
 
     void set_container_sizes(const resolved_type &s) override;
 

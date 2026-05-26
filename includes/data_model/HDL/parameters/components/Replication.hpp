@@ -49,7 +49,7 @@ public:
     bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value)override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
     void propagate_function(const HDL_function_def &def) override;
-    std::optional<resolved_parameter> evaluate() override;
+    std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
 
     hdl_integer pack_repetition(hdl_integer value, int64_t width, int64_t count);
 

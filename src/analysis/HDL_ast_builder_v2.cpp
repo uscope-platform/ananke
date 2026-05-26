@@ -86,7 +86,7 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                         // The loop structure is attached to the looped instances, that need to be repeated,
                         // But the parent parameters only need to be propagated in its expressions
                         update_loop_constants(child, current_param_values);
-                        auto loop_idx = loop_solver::solve_loop(child, res);
+                        auto loop_idx = loop_solver::solve_loop(child, {});
                         process_quantifier(child->get_array_quantifier(), current_param_values);
 
                         if (!loop_idx.empty()) {
@@ -176,7 +176,7 @@ void HDL_ast_builder_v2::process_quantifier(const std::shared_ptr<HDL_parameter>
             complete &= quantifier->propagate_constant(param.first, param.second);
         }
         if (!complete) throw std::runtime_error("unknown indentifiers remain in an array quantifier");
-        auto value = quantifier->evaluate();
+        auto value = quantifier->evaluate(parameters);
         quantifier->set_value(value.value());
     }
 }
@@ -194,7 +194,7 @@ std::map<qualified_identifier, resolved_parameter> HDL_ast_builder_v2::process_r
                         raw_param->propagate_constant(dep, pv);
                     }
                 }
-                auto val = raw_param->evaluate();
+                auto val = raw_param->evaluate({});
                 if (val.has_value()) runtime_parameters.insert({name, val.value()});
             }
         }

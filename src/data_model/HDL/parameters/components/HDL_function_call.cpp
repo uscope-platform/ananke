@@ -79,23 +79,22 @@ void HDL_function_call::propagate_function(const HDL_function_def &def) {
                 a.propagate_argument(arg_names[i], arguments[i]);
             }
         }
-        //TODO: do actual argument inlining
     }
 }
 
-std::optional<resolved_parameter> HDL_function_call::evaluate() {
+std::optional<resolved_parameter> HDL_function_call::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     if (function_name.starts_with("$")) {
-        return evaluate_system_task();
+        return evaluate_system_task(context);
     }
     if( !loop_metadata.has_value() && assignments.size() == 1) {
-        return evaluate_scalar();
+        return evaluate_scalar(context);
     } else {
-        return evaluate_vector();
+        return evaluate_vector(context);
     }
 }
 
-std::optional<resolved_parameter> HDL_function_call::evaluate_scalar() {
-    auto raw_value = assignments[0].get_value()->evaluate();
+std::optional<resolved_parameter> HDL_function_call::evaluate_scalar(const std::map<qualified_identifier, resolved_parameter> &context) {
+    auto raw_value = assignments[0].get_value()->evaluate(context);
     if (!raw_value) return std::nullopt;
     if (packing) {
         if (!raw_value.value().is_int_array()) return raw_value;
@@ -110,10 +109,10 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_scalar() {
     }
 }
 
-std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
+std::optional<resolved_parameter> HDL_function_call::evaluate_vector(const std::map<qualified_identifier, resolved_parameter> &context) {
     std::vector<hdl_integer> loop_indexes;
     if(loop_metadata.has_value()) {
-        loop_indexes = loop_solver::solve_loop(loop_metadata.value());
+        loop_indexes = loop_solver::solve_loop(loop_metadata.value(), context);
 
         qualified_identifier loop_var = loop_metadata.value().get_init().get_identifier();
     } else {
@@ -122,11 +121,11 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
     std::vector<hdl_integer> values(assignments.size() + loop_indexes.size());
     std::vector<int64_t> value_sizes(assignments.size() + loop_indexes.size());
     for(auto &a:assignments) {
-        auto idx = a.get_index().value()->evaluate();
+        auto idx = a.get_index().value()->evaluate(context);
         if(!idx.has_value()) return std::nullopt;
         if(!idx.value().is_integer()) return std::nullopt;
         auto idx_val = idx.value().get_integer();
-        auto value = a.get_value()->evaluate();
+        auto value = a.get_value()->evaluate(context);
         value_sizes[idx_val.get_value()] = a.get_value()->get_size();
         if(!value.has_value()) return std::nullopt;
         values[idx_val.get_value()] = value.value().get_integer();
@@ -139,10 +138,10 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
             for(auto &l:loop_indexes) {
                 auto la = loop_assignments[i].clone();
                 la.get_index().value()->propagate_constant(loop_var, l);
-                auto idx_val = la.get_index().value()->evaluate().value().get_integer();
+                auto idx_val = la.get_index().value()->evaluate(context).value().get_integer();
                 la.get_value()->propagate_constant(loop_var, l);
                 value_sizes[idx_val.get_value()] = la.get_value()->get_size();
-                auto var = la.get_value()->evaluate();
+                auto var = la.get_value()->evaluate(context);
                 values[idx_val.get_value()] = var.value().get_integer();
             }
         }
@@ -156,11 +155,11 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector() {
     return result;
 }
 
-std::optional<resolved_parameter> HDL_function_call::evaluate_system_task() {
+std::optional<resolved_parameter> HDL_function_call::evaluate_system_task(const std::map<qualified_identifier, resolved_parameter> &context) {
     std::string task_name = function_name.substr(1, function_name.size()-1);
     std::vector<resolved_parameter> resolved_arguments;
     for (auto &arg:arguments) {
-        auto resolved_val = arg->evaluate();
+        auto resolved_val = arg->evaluate(context);
         if (!resolved_val.has_value()) return std::nullopt;
         resolved_arguments.push_back(resolved_val.value());
     }

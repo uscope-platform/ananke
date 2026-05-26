@@ -44,7 +44,7 @@ public:
     virtual bool propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &value) {return true;}
     virtual void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value){}
     virtual void propagate_function(const HDL_function_def &def) {}
-    virtual std::optional<resolved_parameter> evaluate() {return std::nullopt;}
+    virtual std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {return std::nullopt;}
     virtual std::string print() const {return "";}
     virtual int64_t get_size() {return 0;}
 

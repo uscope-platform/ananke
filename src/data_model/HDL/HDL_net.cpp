@@ -32,33 +32,33 @@ std::string HDL_net::get_full_name() const {
 
 }
 
-void HDL_net::evaluate() {
-    auto val = range.accessor.evaluate();
+void HDL_net::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
+    auto val = range.accessor.evaluate(context);
     if(val.has_value()) {
         if(val.value().get_integer().get_value()) {
             range.accessor = {Expression_component(val.value().get_integer(), 0)};
         }
     }
-    val = range.range.evaluate();
+    val = range.range.evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
             range.range = {Expression_component(val.value().get_integer(), 0)};
         }
     }
-    index.evaluate();
-    val = index.evaluate();
+    index.evaluate(context);
+    val = index.evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
             index = {Expression_component(val.value().get_integer(), 0)};
         }
     }
-    val = replication.size.evaluate();
+    val = replication.size.evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
             replication.size = {Expression_component(val.value().get_integer(), 0)};
         }
     }
-    val = replication.target.evaluate();
+    val = replication.target.evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
             replication.target = {Expression_component(val.value().get_integer(), 0)};

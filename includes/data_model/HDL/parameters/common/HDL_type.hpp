@@ -101,7 +101,7 @@ public:
     std::set<qualified_identifier> get_dependencies();
 
 
-    std::optional<resolved_type> evaluate_type();
+    std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context);
 
     template<class Archive>
     void serialize( Archive & ar ) {

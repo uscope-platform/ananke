@@ -65,10 +65,10 @@ void Cast::propagate_expression(const qualified_identifier &constant_id,
     size.propagate_expression(constant_id, value);
 }
 
-std::optional<resolved_parameter> Cast::evaluate() {
+std::optional<resolved_parameter> Cast::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     if (type_cast) {
         if (!container_size) return std::nullopt;
-        auto content_val = content->evaluate();
+        auto content_val = content->evaluate(context);
         if (!content_val.has_value()) return std::nullopt;
         if (!content_val.value().is_integer()) {
             spdlog::warn("Casting of non scalar integer values is not supported");
@@ -90,10 +90,10 @@ std::optional<resolved_parameter> Cast::evaluate() {
 
         }
     } else {
-        auto content_val = content->evaluate();
+        auto content_val = content->evaluate(context);
         if (!content_val.has_value()) return std::nullopt;
         if (!content_val.value().is_integer()) return content_val.value();
-        auto raw_cast_size = size.evaluate();
+        auto raw_cast_size = size.evaluate(context);
         if (!raw_cast_size.has_value()) return std::nullopt;
         if (!raw_cast_size.value().is_integer()) {
             spdlog::warn("Cast size evaluates to a non integer");
@@ -115,7 +115,7 @@ std::string Cast::print() const {
 }
 
 int64_t Cast::get_size() {
-    return size.evaluate().value().get_integer().get_value();
+    return size.evaluate({}).value().get_integer().get_value();
 }
 
 
@@ -133,7 +133,7 @@ void Cast::set_container_sizes(const resolved_type &s) {
     if (type_cast)
         content->set_container_sizes(s);
     else {
-        auto cast_size = size.evaluate();
+        auto cast_size = size.evaluate({});
         resolved_type t;
         t.packed_sizes.push_back(cast_size.value().get_integer().get_value());
         if (cast_size) content->set_container_sizes(t);

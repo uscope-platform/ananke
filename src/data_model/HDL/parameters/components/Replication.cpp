@@ -98,15 +98,15 @@ void Replication::propagate_function(const HDL_function_def &def) {
     repeated_item->propagate_function(def);
 }
 
-std::optional<resolved_parameter> Replication::evaluate() {
+std::optional<resolved_parameter> Replication::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     mdarray<hdl_integer> result;
-    auto raw_size = repetition_size.evaluate();
+    auto raw_size = repetition_size.evaluate(context);
     if (!raw_size.has_value()) return false;
     if (!raw_size.value().is_integer()) return false;
     auto size = raw_size.value().get_integer().get_value();
     mdarray<hdl_integer>::md_1d_array repeated_value;
     if (repeated_item->is_expression()) {
-        auto item = repeated_item->as<Expression>().evaluate();
+        auto item = repeated_item->as<Expression>().evaluate(context);
         int64_t repeated_size = repeated_item->as<Expression>().get_size();
         if (!item.has_value()) return false;
         if (!item.value().is_integer()) throw std::runtime_error("Tried to replicate non integer");
@@ -117,7 +117,7 @@ std::optional<resolved_parameter> Replication::evaluate() {
         }
     } else if (repeated_item->is_concatenation()) {
 
-        auto raw_item = repeated_item->as<Concatenation>().evaluate();
+        auto raw_item = repeated_item->as<Concatenation>().evaluate(context);
         if (!raw_item.has_value()) return std::nullopt;
         auto item = raw_item.value();
         if (item.is_integer())

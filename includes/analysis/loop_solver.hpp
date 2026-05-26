@@ -25,12 +25,16 @@
 class loop_solver {
 public:
     loop_solver() = default;
-    static std::vector<hdl_integer> solve_loop(std::shared_ptr<HDL_instance_AST> &node, HDL_Resource &spec);
-    static std::vector<hdl_integer> solve_loop(const HDL_loop_metadata &loop);
+    static std::vector<hdl_integer> solve_loop(std::shared_ptr<HDL_instance_AST> &node, const std::map<qualified_identifier, resolved_parameter> &context);
+    static std::vector<hdl_integer> solve_loop(const HDL_loop_metadata &loop, const std::map<qualified_identifier, resolved_parameter> &context);
 private:
-    static std::shared_ptr<HDL_parameter> get_init_variable(const HDL_loop_metadata &l);
-    static std::shared_ptr<HDL_parameter> update_loop(const Expression e, std::shared_ptr<HDL_parameter> loop_var);
-    static bool is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression end_cond);
+    static std::shared_ptr<HDL_parameter> get_init_variable(const HDL_loop_metadata &l, const std::map<qualified_identifier, resolved_parameter> &context);
+    static std::shared_ptr<HDL_parameter> update_loop(
+        Expression e,
+        std::shared_ptr<HDL_parameter> loop_var,
+        const std::map<qualified_identifier, resolved_parameter> &context
+    );
+    static bool is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression end_cond,const std::map<qualified_identifier, resolved_parameter> &context);
 };
 
 

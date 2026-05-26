@@ -75,7 +75,7 @@ public:
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
 
     void propagate_function(const HDL_function_def &def) override;
-    std::optional<resolved_parameter> evaluate() override;
+    std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
     std::string print() const override;
 
 

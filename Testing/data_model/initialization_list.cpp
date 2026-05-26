@@ -38,7 +38,7 @@ TEST(Initialization_list, get_values_1d_unpacked)  {
     mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {69, 6, 4 , 3, 5});
 
-    auto res = p.evaluate();
+    auto res = p.evaluate({});
     ASSERT_TRUE(res.has_value());
     auto values = res.value().get_int_array();
     ASSERT_EQ(values, check_array);
@@ -69,7 +69,7 @@ TEST(Initialization_list, get_values_2d_unpacked) {
     mdarray<hdl_integer> check_array;
     check_array.set_2d_slice({0, 0}, {{54,69,6},{4,3,5}});
 
-    auto res = p.evaluate();
+    auto res = p.evaluate({});
     ASSERT_TRUE(res.has_value());
     auto values = res.value().get_int_array();
     ASSERT_EQ(values, check_array);
@@ -115,7 +115,7 @@ TEST(Initialization_list, get_values_3d_unpacked) {
     mdarray<hdl_integer> check_array;
     check_array.set_data({{{11,82,43},{24,13,57}},{{54,69,6},{4,3,5}}});
 
-    auto res = p.evaluate();
+    auto res = p.evaluate({});
     ASSERT_TRUE(res.has_value());
     auto values = res.value().get_int_array();
     EXPECT_EQ(values, check_array);
@@ -138,7 +138,7 @@ TEST(Initialization_list, packed_concatenation) {
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
 
     p.add_item(std::make_shared<Concatenation>(c));
-    auto res = p.evaluate();
+    auto res = p.evaluate({});
 
 
     ASSERT_TRUE(res.has_value());
@@ -191,7 +191,7 @@ TEST(Initialization_list, get_values_1d_packed) {
     mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {1, 6, 5, 2, 5});
 
-    auto res = p.evaluate();
+    auto res = p.evaluate({});
     ASSERT_TRUE(res.has_value());
     auto values = res.value().get_int_array();
     ASSERT_EQ(check_array, values);
@@ -247,7 +247,7 @@ TEST(Initialization_list, get_values_2d_packed) {
     mdarray<hdl_integer> check_array;
     check_array.set_2d_slice({0}, {{6, 5}, {2, 5}});
 
-    auto res = p.evaluate();
+    auto res = p.evaluate({});
     ASSERT_TRUE(res.has_value());
     auto values = res.value().get_int_array();
 
@@ -338,7 +338,7 @@ TEST(Initialization_list, get_values_3d_packed) {
         }
     );
 
-    auto res = p.evaluate();
+    auto res = p.evaluate({});
     ASSERT_TRUE(res.has_value());
     auto values = res.value().get_int_array();
     ASSERT_EQ(check_array, values);
@@ -362,7 +362,7 @@ TEST(Initialization_list, get_values_concatenation_initialization) {
     mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {43, 31});
 
-    auto res = p.evaluate();
+    auto res = p.evaluate({});
     ASSERT_TRUE(res.has_value());
     auto values = res.value().get_int_array();
 
@@ -399,7 +399,7 @@ TEST(Initialization_list, get_values_1d_mixed_packed_unpacked) {
     mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {0x27e0, 0x220e0, 3 , 3, 3});
 
-    auto res = p.evaluate();
+    auto res = p.evaluate({});
     ASSERT_TRUE(res.has_value());
     auto values = res.value().get_int_array();
 

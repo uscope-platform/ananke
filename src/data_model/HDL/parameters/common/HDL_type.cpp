@@ -122,18 +122,18 @@ std::set<qualified_identifier> HDL_type::get_dependencies() {
     return result;
 }
 
-std::optional<resolved_type> HDL_type::evaluate_type() {
+std::optional<resolved_type> HDL_type::evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) {
     resolved_type result;
     for (auto &dim: unpacked_dimensions) {
-        auto f_b = dim.first_bound.evaluate();
-        auto s_b = dim.second_bound.evaluate();
+        auto f_b = dim.first_bound.evaluate(context);
+        auto s_b = dim.second_bound.evaluate(context);
         if (!(f_b.has_value() && s_b.has_value())) return std::nullopt;
         auto diff = std::abs(f_b.value().get_integer() - s_b.value().get_integer())+1;
         result.unpacked_sizes.push_back(diff.get_value());
     }
     for (auto &dim: packed_dimensions) {
-        auto f_b = dim.first_bound.evaluate();
-        auto s_b = dim.second_bound.evaluate();
+        auto f_b = dim.first_bound.evaluate(context);
+        auto s_b = dim.second_bound.evaluate(context);
         if (!(f_b.has_value() && s_b.has_value())) return std::nullopt;
         auto diff = std::abs(f_b.value().get_integer() - s_b.value().get_integer())+1;
         result.packed_sizes.push_back(diff.get_value());

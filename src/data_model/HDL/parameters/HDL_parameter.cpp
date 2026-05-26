@@ -63,12 +63,12 @@ void HDL_parameter::add_dimension(const dimension_t &d) {
     type.add_dimension(d);
 }
 
-std::optional<resolved_parameter> HDL_parameter::evaluate() {
-    auto container_size = type.evaluate_type();
+std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
+    auto container_size = type.evaluate_type(context);
     if (!container_size) return std::nullopt;
     raw_value->set_container_sizes(container_size.value());
 
-    return raw_value->evaluate();
+    return raw_value->evaluate(context);
 }
 
 bool HDL_parameter::propagate_constant(const qualified_identifier &constant_id, const resolved_parameter &constant_value) {

@@ -85,7 +85,7 @@ void Concatenation::propagate_function(const HDL_function_def &def) {
     }
 }
 
-std::optional<resolved_parameter> Concatenation::evaluate(){
+std::optional<resolved_parameter> Concatenation::evaluate(const std::map<qualified_identifier, resolved_parameter> &context){
     std::optional<resolved_parameter> result;
     auto concat_size = components.size();
     if (packing) {
@@ -93,7 +93,7 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
         std::vector<hdl_integer> values(concat_size);
         for (int i = 0;i<concat_size; i++) {
 
-            auto value_opt = components[concat_size-i-1]->evaluate();
+            auto value_opt = components[concat_size-i-1]->evaluate(context);
             sizes[i] = components[concat_size-i-1]->get_size();
             if (!value_opt.has_value()) return std::nullopt;
             auto raw_value = value_opt.value();
@@ -103,11 +103,11 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
         result = pack_values(values, sizes);
     } else {
         if (components.empty())return std::nullopt;
-        auto v = components[0]->evaluate();
+        auto v = components[0]->evaluate(context);
         if (v.value().is_string()) {
             mdarray<std::string> result_string;
             for (int64_t i = 0;i<concat_size; i++) {
-                auto value_opt = components[concat_size-i-1]->evaluate();
+                auto value_opt = components[concat_size-i-1]->evaluate(context);
                 if (!value_opt.has_value()) return std::nullopt;
                 mdarray<std::string> to_concat;
                 to_concat.set_value(0,value_opt.value().get_string());
@@ -117,7 +117,7 @@ std::optional<resolved_parameter> Concatenation::evaluate(){
         } else {
             mdarray<hdl_integer> result_array;
             for (int64_t i = 0;i<concat_size; i++) {
-                auto value_opt = components[concat_size-i-1]->evaluate();
+                auto value_opt = components[concat_size-i-1]->evaluate(context);
                 if (!value_opt.has_value()) return std::nullopt;
                 if (value_opt.value().is_integer()) {
                     mdarray<hdl_integer> to_concat;
