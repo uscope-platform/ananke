@@ -51,7 +51,6 @@ public:
     void add_parameters(Parameters_map &p);
     void set_parameters(Parameters_map &p);
     Parameters_map get_parameters();
-    Parameters_map get_parameters_copy();
     bool has_parameter(const std::string &s){return parameters.contains(s);};
     std::shared_ptr<HDL_parameter> get_parameter_value(const std::string& parameter_name) {return parameters.get(parameter_name);};
 

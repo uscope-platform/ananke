@@ -32,8 +32,8 @@ data_store::data_store(bool e, std::string cache_dir_path) {
 }
 
 HDL_Resource data_store::get_HDL_resource(const std::string& name) {
-    if(cache.interfaces.contains(name)) return cache.interfaces[name].clone();
-    return cache.hdl[name].clone();
+    if(cache.interfaces.contains(name)) return cache.interfaces[name];
+    return cache.hdl[name];
 }
 
 void data_store::store_hdl_entity(std::vector<HDL_Resource>& vect,const std::string &hash, const std::string &path) {

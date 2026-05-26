@@ -29,7 +29,7 @@ HDL_instance::HDL_instance(const HDL_instance &c) {
 
 HDL_instance HDL_instance::clone() {
     HDL_instance  c;
-    c.parameters = parameters.clone();
+    c.parameters = parameters;
     c.dep_class = dep_class;
     c.type = type;
     c.name = name;
@@ -119,7 +119,4 @@ Parameters_map HDL_instance::get_parameters() {
     return parameters;
 }
 
-Parameters_map HDL_instance::get_parameters_copy() {
-    return parameters.clone();
-}
 
