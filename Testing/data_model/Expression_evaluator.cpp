@@ -34,10 +34,10 @@ TEST(Expression_evaluator, pure_number){
 
 TEST(Expression_evaluator, identifier){
     Expression e;
-    e.emplace_back("test", Expression_component::get_type("test"));
+    e.emplace_back("\"test\"", Expression_component::get_type("\"test\""));
     auto val = e.evaluate({});
     ASSERT_TRUE(val.has_value());
-    ASSERT_EQ(val.value().get_string(), "test");
+    ASSERT_EQ(val.value().get_string(), "\"test\"");
 }
 
 
