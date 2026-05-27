@@ -439,32 +439,31 @@ uint32_t sv_visitor::parse_number(const std::string& s) {
 void sv_visitor::exitAnsi_port_declaration(sv2017::Ansi_port_declarationContext *ctx) {
     if(current_declaration_type == "module"){
         std::string port_name = ctx->port_identifier()->getText();
-        port_direction_t dir;
+        HDL_port port;
+        port.direction = raw_port;
         if(!ctx->port_direction()){
             if(ctx->DOT()){
-                dir = interface_port;
+                port.direction = interface_port;
                 if(ctx->identifier().size() >= 2) {
-                    std::string if_type = ctx->identifier(0)->getText();
-                    std::string modport_type = ctx->identifier(1)->getText();
-                    modules_factory.add_if_port_specs(port_name, if_type, modport_type);
+                    port.if_info.type =ctx->identifier(0)->getText();
+                    port.if_info.modport = ctx->identifier(1)->getText();
                 }
             } else if(ctx->net_or_var_data_type()){
-                dir = interface_port;
-                std::string if_type = ctx->net_or_var_data_type()->getText();
-                modules_factory.add_if_port_specs(port_name, if_type, "");
+                port.direction  = interface_port;
+                port.if_info.type = ctx->net_or_var_data_type()->getText();
             } else{
-                dir = raw_port;
+                port.direction = raw_port;
             }
         } else{
             std::string dir_s = ctx->port_direction()->getText();
             if(dir_s=="input")
-                dir = input_port;
+                port.direction = input_port;
             else if(dir_s=="output")
-                dir = output_port;
+                port.direction = output_port;
             else if(dir_s=="inout")
-                dir = inout_port;
+                port.direction = inout_port;
         }
-        modules_factory.add_port(port_name, dir);
+        modules_factory.add_port(port_name, port);
     }
 }
 

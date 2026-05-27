@@ -32,8 +32,8 @@ void HDL_modules_factory::add_typedef(const std::string &name, const HDL_type &t
     current_resource.add_typedef(name, type);
 }
 
-void HDL_modules_factory::add_port(const std::string &p_n, port_direction_t dir) {
-    current_resource.add_ports(p_n, dir);
+void HDL_modules_factory::add_port(const std::string &p_n, HDL_port p) {
+    current_resource.add_ports(p_n, p);
 }
 
 
@@ -44,10 +44,6 @@ HDL_Resource HDL_modules_factory::get_module() {
     return res;
 }
 
-void
-HDL_modules_factory::add_if_port_specs(const std::string &p_n, const std::string &if_name, const std::string &modport) {
-    current_resource.add_if_port_specs(p_n, if_name, modport);
-}
 
 void HDL_modules_factory::add_parameter(const std::shared_ptr<HDL_parameter> &p) {
     current_resource.add_parameter(p);

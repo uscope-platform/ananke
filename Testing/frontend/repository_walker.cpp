@@ -77,12 +77,12 @@ TEST_F(repository_walker , directory_analysis) {
     ASSERT_EQ(constraints_results, constraints_check);
 
 
-    std::unordered_map<std::string, port_direction_t> test_ports;
+    std::unordered_map<std::string, HDL_port> test_ports;
 
-    test_ports["clock"] = input_port;
-    test_ports["reset"] = input_port;
-    test_ports["data_in"] = interface_port;
-    test_ports["data_out"] = interface_port;
+    test_ports["clock"] = {input_port};
+    test_ports["reset"] = {input_port};
+    test_ports["data_in"] = {interface_port, {"axi_stream", "slave"}};
+    test_ports["data_out"] = {interface_port, {"axi_stream", "master"}};
 
 
     HDL_Resource sv_res;
@@ -91,9 +91,6 @@ TEST_F(repository_walker , directory_analysis) {
     sv_res.set_path("repository_walker/test_sv_module.sv");
     sv_res.set_ports(test_ports);
     sv_res.set_line_n(2);
-
-    sv_res.add_if_port_specs("data_out", "axi_stream", "master");
-    sv_res.add_if_port_specs("data_in", "axi_stream", "slave");
 
     HDL_Resource vh_res;
     vh_res.set_name("half_adder");

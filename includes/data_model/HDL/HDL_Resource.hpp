@@ -38,7 +38,32 @@
 #include "data_model/HDL/HDL_definitions.hpp"
 #include "parameters/HDL_function_def.hpp"
 
- class HDL_Resource {
+struct if_port_specs {
+    std::string type;
+    std::string modport;
+
+    template<class Archive>
+    void serialize( Archive & ar ) {
+        ar(type, modport);
+    }
+
+    bool operator==(const if_port_specs&) const = default;
+};
+
+struct HDL_port {
+    port_direction_t direction;
+    if_port_specs if_info;
+
+    template<class Archive>
+    void serialize( Archive & ar ) {
+        ar(direction, if_info);
+    }
+
+    bool operator==(const HDL_port&) const = default;
+};
+
+
+class HDL_Resource {
     public:
         HDL_Resource( const HDL_Resource &c );
         explicit HDL_Resource(const std::string &n){name = n;}
@@ -76,16 +101,12 @@
         dependency_class get_type() {return hdl_type;};
         bool is_interface();
 
-        void set_ports(std::unordered_map<std::string, port_direction_t> m) {
-            ports = std::move(m);
+        void set_ports(std::unordered_map<std::string, HDL_port> p_s) {
+            port_specs = std::move(p_s);
         };
-        void add_ports(const std::string &p_n, port_direction_t dir) {
-            ports[p_n] = dir;
+        void add_ports(const std::string &p_n, HDL_port spec) {
+            port_specs[p_n] = spec;
         };
-
-        void add_if_port_specs(const std::string &p_n, const std::string &if_name, const std::string &modport);
-        std::unordered_map<std::string, std::array<std::string, 2>> get_if_port_specs();
-
 
         void add_processor_doc(processor_instance &p) {
             processor_docs.push_back(p);
@@ -120,7 +141,7 @@
 
         template<class Archive>
         void serialize( Archive & ar ) {
-            ar(name, path, hdl_type, dependencies, if_specs, parameters_spec, ports, doc, processor_docs, functions, default_values, line_n, typedefs);
+            ar(name, path, hdl_type, dependencies, parameters_spec, port_specs, doc, processor_docs, functions, default_values, line_n, typedefs);
         }
 
         bool is_empty();
@@ -136,8 +157,7 @@ private:
         unsigned int line_n = 0;
         dependency_class hdl_type = module;
         std::vector<HDL_instance> dependencies;
-        std::unordered_map<std::string, port_direction_t> ports;
-        std::unordered_map<std::string, std::array<std::string, 2>> if_specs;
+        std::unordered_map<std::string, HDL_port> port_specs;
 
         Parameters_map parameters_spec;
         std::map<qualified_identifier, resolved_parameter> default_values;

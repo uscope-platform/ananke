@@ -819,7 +819,8 @@ TEST(parameter_processing, nested_override_with_interface_param) {
     interface test_if #(DATA_WIDTH = 32);
     endinterface
         module outer_dependency #()(
-            test_if iface
+            test_if iface,
+            axi_stream.slave test
         );
             inner_dependency #(
                 .param_1(iface.DATA_WIDTH)

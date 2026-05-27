@@ -70,9 +70,11 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                 auto res = d_store->get_HDL_resource(type);
 
                 spdlog::trace("Processing dependency {} in module {}",working_instance->get_name(), type);
-
                 auto current_param_values = parameter_solver::override_parameters(wo, d_store);
-
+                std::unordered_map<std::string, std::string> interfaces_map;
+                for (auto &[port_name, port_net] :wo.node->get_ports()) {
+                     auto port_specs = res;
+                }
                 for (auto &[name, value]: process_runtime_parameters(current_param_values, res)) {
                     current_param_values[name] = value;
                 }

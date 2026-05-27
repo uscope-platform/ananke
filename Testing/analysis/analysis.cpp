@@ -164,12 +164,12 @@ TEST( analysis_test , sv_module) {
     std::vector deps = {d0, d1, d2, d3};
 
 
-    std::unordered_map<std::string, port_direction_t> test_ports;
+    std::unordered_map<std::string, HDL_port> test_ports;
 
-    test_ports["clock"] = input_port;
-    test_ports["reset"] = input_port;
-    test_ports["data_in"] = interface_port;
-    test_ports["data_out"] = interface_port;
+    test_ports["clock"] = {input_port};
+    test_ports["reset"] = {input_port};
+    test_ports["data_in"] = {interface_port, {"axi_stream", "slave"}};
+    test_ports["data_out"] = {interface_port, {"axi_stream", "master"}};
 
     HDL_Resource check_res;
     check_res.set_name("Decoder");
@@ -178,10 +178,6 @@ TEST( analysis_test , sv_module) {
     check_res.set_line_n(3);
     check_res.add_dependencies(deps);
     check_res.set_ports(test_ports);
-
-    check_res.add_if_port_specs("data_out", "axi_stream", "master");
-    check_res.add_if_port_specs("data_in", "axi_stream", "slave");
-
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("module_parameter_1");

@@ -33,9 +33,8 @@ HDL_Resource::HDL_Resource(const HDL_Resource &c) {
     parameters_spec = c.parameters_spec;
     doc = c.doc;
     processor_docs = c.processor_docs;
-    ports = c.ports;
+    port_specs = c.port_specs;
     typedefs = c.typedefs;
-    if_specs = c.if_specs;
 }
 
 bool HDL_Resource::is_interface() {
@@ -63,8 +62,7 @@ bool HDL_Resource::is_empty() {
     ret &= hdl_type == module;
     ret &= processor_docs.empty();
     ret &= dependencies.empty();
-    ret &= ports.empty();
-    ret &= if_specs.empty();
+    ret &= port_specs.empty();
     ret &= parameters_spec.empty();
     ret &= functions.empty();
     ret &= typedefs.empty();
@@ -84,8 +82,7 @@ std::unordered_map<std::string, HDL_Resource>::mapped_type HDL_Resource::clone()
     ret.path = path;
     ret.line_n = line_n;
     ret.hdl_type = hdl_type;
-    ret.ports = ports;
-    ret.if_specs  = if_specs;
+    ret.port_specs = port_specs;
     ret.default_values = default_values;
     ret.processor_docs = processor_docs;
     ret.doc = doc;
@@ -119,8 +116,7 @@ bool operator==(const HDL_Resource &lhs, const HDL_Resource &rhs) {
     ret &= lhs.hdl_type == rhs.hdl_type;
     ret &= lhs.dependencies == rhs.dependencies;
     ret &= lhs.processor_docs == rhs.processor_docs;
-    ret &= lhs.ports == rhs.ports;
-    ret &= lhs.if_specs == rhs.if_specs;
+    ret &= lhs.port_specs == rhs.port_specs;
     ret &= lhs.default_values == rhs.default_values;
     ret &= lhs.parameters_spec == rhs.parameters_spec;
     ret &= lhs.functions == rhs.functions;
@@ -133,13 +129,6 @@ bool operator<(const HDL_Resource &lhs, const HDL_Resource &rhs) {
     return lhs.name<rhs.name;
 }
 
-void HDL_Resource::add_if_port_specs(const std::string &p_n, const std::string &if_name, const std::string &modport) {
-    if_specs[p_n] = {if_name, modport};
-}
-
-std::unordered_map<std::string, std::array<std::string, 2>> HDL_Resource::get_if_port_specs() {
-    return if_specs;
-}
 
 void HDL_Resource::set_parameters(Parameters_map p) {
     parameters_spec = std::move(p);

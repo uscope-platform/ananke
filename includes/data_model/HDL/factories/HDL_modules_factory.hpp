@@ -33,8 +33,7 @@ public:
 
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);
     void add_function(const HDL_function_def &f);
-    void add_port(const std::string &p_n, port_direction_t dir);
-    void add_if_port_specs(const std::string &p_n,const std::string &if_name, const std::string &modport);
+    void add_port(const std::string &p_n, HDL_port p);
     bool is_current_valid() {return valid_resource;};
 };
 
