@@ -31,7 +31,7 @@ enum port_direction_t {
     input_port = 0,
     output_port = 1,
     inout_port = 2,
-    modport = 3,
+    interface_port = 3,
     raw_port = 4
 };
 

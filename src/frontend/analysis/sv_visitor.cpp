@@ -442,10 +442,16 @@ void sv_visitor::exitAnsi_port_declaration(sv2017::Ansi_port_declarationContext 
         port_direction_t dir;
         if(!ctx->port_direction()){
             if(ctx->DOT()){
-                dir = modport;
-                std::string if_type = ctx->identifier(0)->getText();
-                std::string modport_type = ctx->identifier(1)->getText();
-                modules_factory.add_if_port_specs(port_name, if_type, modport_type);
+                dir = interface_port;
+                if(ctx->identifier().size() >= 2) {
+                    std::string if_type = ctx->identifier(0)->getText();
+                    std::string modport_type = ctx->identifier(1)->getText();
+                    modules_factory.add_if_port_specs(port_name, if_type, modport_type);
+                }
+            } else if(ctx->net_or_var_data_type()){
+                dir = interface_port;
+                std::string if_type = ctx->net_or_var_data_type()->getText();
+                modules_factory.add_if_port_specs(port_name, if_type, "");
             } else{
                 dir = raw_port;
             }

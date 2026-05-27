@@ -81,8 +81,8 @@ TEST_F(repository_walker , directory_analysis) {
 
     test_ports["clock"] = input_port;
     test_ports["reset"] = input_port;
-    test_ports["data_in"] = modport;
-    test_ports["data_out"] = modport;
+    test_ports["data_in"] = interface_port;
+    test_ports["data_out"] = interface_port;
 
 
     HDL_Resource sv_res;
