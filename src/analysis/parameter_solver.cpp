@@ -252,7 +252,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                     if (!inst_param_found) {
                         auto path = get_full_path(work.node);
                         spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.instance, dep.name);
-                        value = 0;
+                        value.set_undefined();
                     }
                 }else if(node_overrides.contains(dep.name)) {
                     internal_dependency = true;

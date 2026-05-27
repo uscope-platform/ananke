@@ -29,12 +29,30 @@
 class resolved_parameter {
 public:
     resolved_parameter() = default;
-    resolved_parameter(int init_val) { content = static_cast<hdl_integer>(init_val); }
-    resolved_parameter(hdl_integer init_val){content = init_val;}
-    resolved_parameter(const std::string &init_val){content = init_val;}
-    resolved_parameter(double init_val){content = init_val;}
-    resolved_parameter(const mdarray<hdl_integer> &init_val){content = init_val;}
-    resolved_parameter(const mdarray<std::string> &init_val){content = init_val;}
+    resolved_parameter(int init_val) {
+        content = static_cast<hdl_integer>(init_val);
+        undefined = false;
+    }
+    resolved_parameter(hdl_integer init_val) {
+        content = init_val;
+        undefined = false;
+    }
+    resolved_parameter(const std::string &init_val) {
+        content = init_val;
+        undefined = false;
+    }
+    resolved_parameter(double init_val) {
+        content = init_val;
+        undefined = false;
+    }
+    resolved_parameter(const mdarray<hdl_integer> &init_val) {
+        content = init_val;
+        undefined = false;
+    }
+    resolved_parameter(const mdarray<std::string> &init_val) {
+        content = init_val;
+        undefined = false;
+    }
     [[nodiscard]] hdl_integer get_integer() const;
     [[nodiscard]] std::string get_string() const;
     [[nodiscard]] mdarray<hdl_integer> get_int_array() const;
@@ -45,6 +63,11 @@ public:
     [[nodiscard]] bool is_int_array() const {return std::holds_alternative<mdarray<hdl_integer>>(content);}
     [[nodiscard]] bool is_string_array() const {return std::holds_alternative<mdarray<std::string>>(content);}
     [[nodiscard]] bool is_real() const {return std::holds_alternative<double>(content);}
+
+    void set_undefined() {
+        content = 0;
+        undefined = true;
+    }
 
     bool operator==(const resolved_parameter&) const = default;
 
@@ -76,6 +99,7 @@ public:
 private:
 
     std::variant<hdl_integer, std::string, mdarray<hdl_integer>,  double, mdarray<std::string>> content;
+    bool undefined = true;
 
 };
 
