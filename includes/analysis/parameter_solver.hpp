@@ -64,6 +64,14 @@ public:
     );
 
     static std::string get_full_path(const std::shared_ptr<HDL_instance_AST> &node);
+
+private:
+    static void resolve_interface_chain(
+        work_order &work,
+        const std::shared_ptr<data_store> &d_store,
+        std::shared_ptr<HDL_instance_AST> &examined_node,
+        std::string &instance_name
+    );
 };
 
 

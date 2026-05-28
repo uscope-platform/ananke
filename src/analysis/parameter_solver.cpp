@@ -18,6 +18,43 @@
 
 using namespace std::string_literals;
 
+void parameter_solver::resolve_interface_chain(
+    work_order &work,
+    const std::shared_ptr<data_store> &d_store,
+    std::shared_ptr<HDL_instance_AST> &examined_node,
+    std::string &instance_name
+) {
+    auto is_interface_at = [&](const std::string &name, const std::shared_ptr<HDL_instance_AST> &node) -> bool {
+        if (!node) return false;
+        auto node_type = node->get_type();
+        if (!d_store->contains_hdl_entity(node_type)) return false;
+        auto res = d_store->get_HDL_resource(node_type);
+        auto ports = res.get_port_specs();
+        return ports.contains(name) && ports.at(name).direction == interface_port;
+    };
+
+    examined_node = work.node;
+    auto current_instance = instance_name;
+
+    auto parent = examined_node->get_parent();
+    if (!parent) return;
+    auto ports = parent->get_ports();
+    if (!ports.contains(current_instance)) return;
+    instance_name = ports.at(current_instance)[0].get_name();
+    examined_node = parent;
+
+    while (is_interface_at(instance_name, examined_node->get_parent())) {
+        auto next_parent = examined_node->get_parent();
+        ports = next_parent->get_ports();
+        if (!ports.contains(instance_name)) break;
+        instance_name = ports.at(instance_name)[0].get_name();
+        examined_node = next_parent;
+    }
+
+    auto container = examined_node->get_parent();
+    if (container) examined_node = container;
+}
+
 std::map<qualified_identifier, resolved_parameter> parameter_solver::process_parameters(
     const Parameters_map &map_in,
     const std::string_view &parent_module,
@@ -238,18 +275,15 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                 }else if (!dep.instance.empty()){
                     bool inst_param_found = false;
                     auto dep_name = dep.instance;
-                    int backtracking_level = 1;
                     auto instance_name = dep.instance;
+                    std::shared_ptr<HDL_instance_AST> examined_node = work.node;
+
                     if (work.interfaces_map.contains(dep.instance)) {
-                        backtracking_level++;
-                        instance_name = work.node->get_parent()->get_ports().at(dep.instance)[0].get_name();
+                        resolve_interface_chain(work, d_store, examined_node, instance_name);
+                    } else {
+                        examined_node = examined_node->get_parent();
                     }
 
-                    std::shared_ptr<HDL_instance_AST> examined_node = work.node;
-                    while (backtracking_level>0) {
-                        examined_node = examined_node->get_parent();
-                        backtracking_level--;
-                    }
                     for (const auto &brother_inst:examined_node->get_dependencies()) {
                         if (brother_inst->get_name() == instance_name) {
                             auto inst_param = brother_inst->get_parameters().get(dep.name)->get_numeric_value();
