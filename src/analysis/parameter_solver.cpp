@@ -237,8 +237,21 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                     value = package.get_default_parameters()[{"", "", dep.name}];
                 }else if (!dep.instance.empty()){
                     bool inst_param_found = false;
-                    for (const auto &brother_inst:work.node->get_parent()->get_dependencies()) {
-                        if (brother_inst->get_name() == dep.instance) {
+                    auto dep_name = dep.instance;
+                    int backtracking_level = 1;
+                    auto instance_name = dep.instance;
+                    if (work.interfaces_map.contains(dep.instance)) {
+                        backtracking_level++;
+                        instance_name = work.node->get_parent()->get_ports().at(dep.instance)[0].get_name();
+                    }
+
+                    std::shared_ptr<HDL_instance_AST> examined_node = work.node;
+                    while (backtracking_level>0) {
+                        examined_node = examined_node->get_parent();
+                        backtracking_level--;
+                    }
+                    for (const auto &brother_inst:examined_node->get_dependencies()) {
+                        if (brother_inst->get_name() == instance_name) {
                             auto inst_param = brother_inst->get_parameters().get(dep.name)->get_numeric_value();
                             if (!inst_param.has_value()) {
                                 spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.instance, dep.name);

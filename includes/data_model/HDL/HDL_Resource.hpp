@@ -85,7 +85,9 @@ class HDL_Resource {
 
         void set_name(const std::string &n) {
             name  = n;
-        };
+        }
+
+        [[nodiscard]] std::unordered_map<std::string, HDL_port> get_port_specs() const {return  port_specs;}
         const std::string &getName() const {return name;};
 
         void set_path(const std::string &p) {

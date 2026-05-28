@@ -29,6 +29,7 @@ struct work_order {
     std::shared_ptr<HDL_instance_AST> node;
     std::map<qualified_identifier, resolved_parameter> parent_parameters;
     std::string path;
+    std::unordered_map<std::string, std::string> interfaces_map;
 };
 
 class parameter_solver {

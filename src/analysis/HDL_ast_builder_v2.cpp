@@ -69,17 +69,23 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                 }
                 auto res = d_store->get_HDL_resource(type);
 
+
                 spdlog::trace("Processing dependency {} in module {}",working_instance->get_name(), type);
                 auto current_param_values = parameter_solver::override_parameters(wo, d_store);
-                std::unordered_map<std::string, std::string> interfaces_map;
-                for (auto &[port_name, port_net] :wo.node->get_ports()) {
-                     auto port_specs = res;
-                }
+
                 for (auto &[name, value]: process_runtime_parameters(current_param_values, res)) {
                     current_param_values[name] = value;
                 }
 
                 std::vector<work_order> child_wo;
+
+                std::unordered_map<std::string, std::string> interfaces_map;
+                for (auto &[port_name, port_net] :wo.node->get_ports()) {
+                    auto port_spec = res.get_port_specs()[port_name];
+                    if (port_spec.direction == interface_port) {
+                        interfaces_map[port_name] = port_spec.if_info.type;
+                    }
+                }
                 for (auto &dep: res.get_dependencies()) {
                     if(dep.get_dependency_class() == interface || dep.get_dependency_class() == module) {
                         auto child = std::make_shared<HDL_instance_AST>(dep);
@@ -100,7 +106,8 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                                 child_wo.push_back({
                                     specialized_child,
                                     parent_params,
-                                    wo.path + "." + working_instance->get_name()
+                                    wo.path + "." + working_instance->get_name(),
+                                    interfaces_map
                                 });
                             }
                         } else {
@@ -108,7 +115,8 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                             child_wo.push_back({
                                 child,
                                 current_param_values,
-                                wo.path + "." + working_instance->get_name()
+                                wo.path + "." + working_instance->get_name(),
+                                interfaces_map
                             });
                         }
                     } else if(dep.get_dependency_class() == package) {
