@@ -57,7 +57,7 @@ TEST(parameter_processing, override_after_fatal) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -99,7 +99,7 @@ TEST(parameter_processing, mixed_dep_override) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -152,7 +152,7 @@ TEST(parameter_processing, package_parameters_in_array_init) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -189,7 +189,7 @@ TEST(parameter_processing, package_parameters_use) {
 
     sv_analyzer analyzer;
 
-    
+
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
@@ -1606,5 +1606,54 @@ TEST(parameter_processing, intermediate_interface_param) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
     auto param = ast_v2->get_dependencies()[1]->get_parameters().get("local_dw");
+    EXPECT_EQ(param->get_numeric_value().value(), 8);
+}
+
+
+TEST(parameter_processing, intermediate_interface_in_override_param) {
+    auto test_pattern = R"(
+
+    interface axis_if #(DATA_WIDTH = 32, DEST_WIDTH = 32, USER_WIDTH = 32);
+    endinterface
+
+        module child #(
+            parameter DATA_WIDTH_2 = 32
+        )();
+
+        endmodule
+
+        module middle #()(
+            axis_if.data_out tsif
+        );
+
+            child #(
+                .DATA_WIDTH_2(tsif.DATA_WIDTH)
+            ) inner_inst ();
+
+        endmodule
+
+        module top #(
+        )();
+
+            axis_if #(.DATA_WIDTH(8)) iface();
+
+            middle mid_inst (
+                .tsif(iface)
+            );
+
+        endmodule
+    )";
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    auto param = ast_v2->get_dependencies()[1]->get_dependencies()[0]->get_parameters().get("DATA_WIDTH_2");
     EXPECT_EQ(param->get_numeric_value().value(), 8);
 }
