@@ -45,7 +45,7 @@ struct qualified_identifier {
     }
 
     bool operator<(const qualified_identifier& other) const {
-        return std::tie(prefix,instance, name) < std::tie(other.prefix,instance, other.name);
+        return std::tie(prefix,instance, name) < std::tie(other.prefix,other.instance, other.name);
     }
 
     template<class Archive>

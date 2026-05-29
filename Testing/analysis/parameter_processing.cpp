@@ -1657,3 +1657,171 @@ TEST(parameter_processing, intermediate_interface_in_override_param) {
     auto param = ast_v2->get_dependencies()[1]->get_dependencies()[0]->get_parameters().get("DATA_WIDTH_2");
     EXPECT_EQ(param->get_numeric_value().value(), 8);
 }
+
+
+TEST(parameter_processing, interface_param_same_name_as_child_param_with_loopback) {
+    // This test reproduces the issue seen in noise_generator.sv where the axis_skid_buffer
+    // child module has parameters DATA_WIDTH, DEST_WIDTH, USER_WIDTH that match the
+    // axi_stream interface parameter names, and the child's output loops back to the same
+    // interface port, creating a circular dependency that can't be resolved in 100 passes.
+    auto test_pattern = R"(
+
+    interface axi_stream #(DATA_WIDTH = 32, DEST_WIDTH = 32, USER_WIDTH = 32);
+        logic [DATA_WIDTH-1:0] data;
+        logic [DEST_WIDTH-1:0] dest;
+        logic [USER_WIDTH-1:0] user;
+        logic valid;
+        logic ready;
+        logic tlast;
+        modport master(input ready, output data, valid, tlast, user, dest);
+        modport slave(output ready, input data, valid, tlast, user, dest);
+    endinterface
+
+        module axis_skid_buffer #(
+            parameter DATA_WIDTH = 16,
+            parameter DEST_WIDTH = 16,
+            parameter USER_WIDTH = 16,
+            REGISTER_OUTPUT = 1,
+            LATCHING = 0
+        )(
+            input wire clock,
+            input wire reset,
+            axi_stream.slave axis_in,
+            axi_stream.master axis_out
+        );
+
+
+        endmodule
+
+        module noise_generator #(
+            FLOAT_OUT = 0
+        )(
+            input wire clock,
+            input wire reset,
+            axi_stream.master data_out
+        );
+
+            axi_stream reg_in();
+
+            axis_skid_buffer #(
+                .REGISTER_OUTPUT(1),
+                .LATCHING(0),
+                .DATA_WIDTH(data_out.DATA_WIDTH),
+                .DEST_WIDTH(data_out.DEST_WIDTH),
+                .USER_WIDTH(data_out.USER_WIDTH)
+            ) output_reg (
+                .clock(clock),
+                .reset(reset),
+                .axis_in(reg_in),
+                .axis_out(data_out)
+            );
+
+        endmodule
+
+        module top #(
+        )();
+
+            axi_stream #(.DATA_WIDTH(14), .DEST_WIDTH(14), .USER_WIDTH(14)) iface();
+
+            noise_generator ng (
+                .clock(1'b0),
+                .reset(1'b0),
+                .data_out(iface)
+            );
+
+        endmodule
+    )";
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+
+    // noise_generator is dependency[1] in top (after the interface instance)
+    // axis_skid_buffer is dependency[1] in noise_generator (after the reg_in interface instance)
+    auto params = ast_v2->get_dependencies()[1]->get_dependencies()[1]->get_parameters();
+
+    // These should resolve to 32 from the interface default/override,
+    // but the 100-pass bug prevents resolution
+    EXPECT_TRUE(params.contains("DATA_WIDTH"));
+    EXPECT_TRUE(params.contains("DEST_WIDTH"));
+    EXPECT_TRUE(params.contains("USER_WIDTH"));
+
+    auto dw = params.get("DATA_WIDTH")->get_numeric_value();
+    auto dew = params.get("DEST_WIDTH")->get_numeric_value();
+    auto uw = params.get("USER_WIDTH")->get_numeric_value();
+
+    EXPECT_TRUE(dw.has_value());
+    EXPECT_TRUE(dew.has_value());
+    EXPECT_TRUE(uw.has_value());
+    if(dw.has_value()) EXPECT_EQ(dw.value().get_value(), 14);
+    if(dew.has_value()) EXPECT_EQ(dew.value().get_value(), 14);
+    if(uw.has_value()) EXPECT_EQ(uw.value().get_value(), 14);
+}
+
+
+TEST(parameter_processing, interface_param_same_name_as_child_param_no_loopback) {
+    // Isolates whether the issue is the same parameter names (DATA_WIDTH = data_out.DATA_WIDTH)
+    // or the loopback connection. This variant has same-name parameters but NO loopback.
+    auto test_pattern = R"(
+
+    interface axi_stream #(DATA_WIDTH = 32, DEST_WIDTH = 32, USER_WIDTH = 32);
+        logic [DATA_WIDTH-1:0] data;
+        logic [DEST_WIDTH-1:0] dest;
+        logic [USER_WIDTH-1:0] user;
+        modport master(output data, dest, user);
+        modport slave(input data, dest, user);
+    endinterface
+
+        module child #(
+            parameter DATA_WIDTH = 32
+        )();
+
+        endmodule
+
+        module parent #()(
+            axi_stream.master data_out
+        );
+
+            child #(
+                .DATA_WIDTH(data_out.DATA_WIDTH)
+            ) ch ();
+
+        endmodule
+
+        module top #(
+        )();
+
+            axi_stream #(.DATA_WIDTH(8), .DEST_WIDTH(16), .USER_WIDTH(4)) iface();
+
+            parent p (
+                .data_out(iface)
+            );
+
+        endmodule
+    )";
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+
+    auto params = ast_v2->get_dependencies()[1]->get_dependencies()[0]->get_parameters();
+
+    EXPECT_TRUE(params.contains("DATA_WIDTH"));
+    auto dw = params.get("DATA_WIDTH")->get_numeric_value();
+    EXPECT_TRUE(dw.has_value());
+    if(dw.has_value()) EXPECT_EQ(dw.value().get_value(), 8);
+}
