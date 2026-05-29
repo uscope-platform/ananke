@@ -1558,3 +1558,52 @@ endmodule
     EXPECT_TRUE(dep_6->get_parameters().contains("addr2"));
     EXPECT_EQ(dep_6->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 1200);
 }
+
+TEST(parameter_processing, intermediate_interface_param) {
+    auto test_pattern = R"(
+
+    interface axis_if #(DATA_WIDTH = 32, DEST_WIDTH = 32, USER_WIDTH = 32);
+    endinterface
+
+        module child #(
+            parameter DATA_WIDTH_2 = 32
+        )();
+
+        endmodule
+
+        module middle #()(
+            axis_if.data_out tsif
+        );
+
+            parameter local_dw = tsif.DATA_WIDTH;
+
+            child #(
+                .DATA_WIDTH_2(local_dw)
+            ) inner_inst ();
+
+        endmodule
+
+        module top #(
+        )();
+
+            axis_if #(.DATA_WIDTH(8)) iface();
+
+            middle mid_inst (
+                .tsif(iface)
+            );
+
+        endmodule
+    )";
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+
+}
