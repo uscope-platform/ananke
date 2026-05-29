@@ -1605,5 +1605,6 @@ TEST(parameter_processing, intermediate_interface_param) {
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
-
+    auto param = ast_v2->get_dependencies()[1]->get_parameters().get("local_dw");
+    EXPECT_EQ(param->get_numeric_value().value(), 8);
 }

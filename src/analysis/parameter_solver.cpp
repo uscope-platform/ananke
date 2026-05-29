@@ -182,7 +182,74 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     auto overrides_solution = solve_complex_overrides(work, d_store, node_defaults);
     solved_parameters.insert(overrides_solution.begin(), overrides_solution.end());
 
-    // Handle overridden parameters
+    // Handle module-body parameters with instance dependencies (e.g. parameter x = inst.param)
+    // Must run BEFORE specialize_runtime_parameters since process_parameters can't resolve
+    // instance-qualified deps and will exit(-1) on unresolved ones
+    for (auto &[p_name, param] : node_parameters) {
+        auto p_id = param->get_identifier();
+        if (solved_parameters.contains(p_id)) continue;
+
+        auto deps = param->get_dependencies();
+        bool has_instance_dep = false;
+        for (auto &dep : deps) {
+            if (!dep.instance.empty()) {
+                has_instance_dep = true;
+                break;
+            }
+        }
+        if (!has_instance_dep) continue;
+
+        std::map<qualified_identifier, resolved_parameter> ctx;
+        ctx.insert(solved_parameters.begin(), solved_parameters.end());
+        ctx.insert(node_defaults.begin(), node_defaults.end());
+        ctx.insert(work.parent_parameters.begin(), work.parent_parameters.end());
+
+        for (auto &dep : deps) {
+            if (!dep.instance.empty() && !ctx.contains(dep)) {
+                auto instance_name = dep.instance;
+                std::shared_ptr<HDL_instance_AST> examined_node = work.node;
+
+                // Check if dep.instance is a port of the current node first
+                auto current_ports = work.node->get_ports();
+                if (current_ports.contains(dep.instance)) {
+                    instance_name = current_ports.at(dep.instance)[0].get_name();
+                    examined_node = work.node->get_parent();
+                } else if (work.interfaces_map.contains(dep.instance)) {
+                    resolve_interface_chain(work, d_store, examined_node, instance_name);
+                } else if (examined_node) {
+                    examined_node = examined_node->get_parent();
+                }
+
+                if (examined_node) {
+                    for (const auto &brother_inst : examined_node->get_dependencies()) {
+                        if (brother_inst->get_name() == instance_name) {
+                            auto inst_param = brother_inst->get_parameters().get(dep.name);
+                            auto val = inst_param->get_numeric_value();
+                            if (val.has_value()) {
+                                ctx[dep] = val.value();
+                            } else {
+                                spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.instance, dep.name);
+                                ctx[dep] = resolved_parameter(0);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (!ctx.contains(dep)) {
+                    auto path = get_full_path(work.node);
+                    spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.instance, dep.name);
+                    ctx[dep] = resolved_parameter();
+                    ctx[dep].set_undefined();
+                }
+            }
+        }
+
+        auto eval_result = param->evaluate(ctx);
+        if (eval_result.has_value()) {
+            solved_parameters[p_id] = eval_result.value();
+        }
+    }
 
     auto runtime_params = specialize_runtime_parameters(solved_parameters, node_parameters, work.node->get_name());
     solved_parameters.insert(runtime_params.begin(), runtime_params.end());
@@ -194,6 +261,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
         } else {
             results.insert({name, solved_parameters.at(name)});
         }
+    }
+    // Include any instance-resolved params not in node_defaults so children can use them
+    for (auto &[id, val] : solved_parameters) {
+        results.try_emplace(id, val);
     }
 
     update_parameters_map(solved_parameters, work.node, d_store);
