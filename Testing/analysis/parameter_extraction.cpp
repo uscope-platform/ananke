@@ -18,6 +18,7 @@
 
 #include "frontend/analysis/sv_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "analysis/parameter_solver.hpp"
 
 using namespace std::string_literals;
 
@@ -65,7 +66,7 @@ TEST(parameter_extraction, init_list_after_reg) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
         {{"","", "low_control_p"}, 15},
         {{"","", "low_control_n"}, 48}
@@ -110,7 +111,7 @@ TEST(parameter_extraction, size_cast) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     ASSERT_EQ(3, defaults.at({"","", "TEST_PARAM"}).get_integer());
 }
@@ -160,7 +161,7 @@ TEST(parameter_extraction, paretesized_cast) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     ASSERT_EQ(3, defaults.at({"","", "TEST_PARAM"}).get_integer());
 }
@@ -209,7 +210,7 @@ TEST(parameter_extraction, type_cast) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     ASSERT_EQ(251, defaults.at({"","", "TEST_PARAM"}).get_integer());
 }
@@ -273,7 +274,7 @@ TEST(parameter_extraction, nested_type_cast) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     ASSERT_EQ(11, defaults.at({"","", "TEST_PARAM"}).get_integer());
 }
@@ -337,7 +338,7 @@ TEST(parameter_extraction, multiple_type_cast) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     ASSERT_EQ(251, defaults.at({"","", "TEST_PARAM"}).get_integer());
     ASSERT_EQ(3, defaults.at({"","", "TEST_PARAM_2"}).get_integer());
@@ -374,7 +375,7 @@ TEST(parameter_extraction,time_literal) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     ASSERT_EQ("10ns", defaults.at({"","", "TEST_PARAM"}).get_string());
 }
@@ -423,7 +424,7 @@ TEST(parameter_extraction, cast_in_concat) {
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     ASSERT_EQ(35, defaults.at({"","", "TEST_PARAM"}).get_integer());
 }
@@ -472,7 +473,7 @@ TEST(parameter_extraction, strings_dafault_init) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<std::string> tti_val;
     tti_val.set_1d_slice({0, 0}, {"\"FILE\"", "\"FILE\"", "\"FILE\"", "\"FILE\""});
 
@@ -534,7 +535,7 @@ TEST(parameter_extraction, string_array_selection) {
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<std::string> tti_val;
     tti_val.set_1d_slice({0, 0}, {"\"FILE\"", "\"FILE\"", "\"FILE\"", "\"FILE\""});
 
@@ -595,7 +596,7 @@ TEST(parameter_extraction, strings_array) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<std::string> tti_val;
     tti_val.set_1d_slice({0, 0}, {"\"FILE\"", "\"FILE\"", "\"FILE\""});
 
@@ -649,7 +650,7 @@ TEST(parameter_extraction, float_parameter) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
         {{"","", "LUT_DEPTH"}, 9},
         {{"","", "STEP"}, 0.17453292519943295f}
@@ -694,7 +695,7 @@ TEST(parameter_extraction, simple_system_task) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
         {{"","", "CAST"}, 17},
     };
@@ -753,7 +754,7 @@ TEST(parameter_extraction, multiple_system_task) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
         {{"","", "CAST"}, 17},
         {{"","", "CAST_2"}, 12},
@@ -811,7 +812,7 @@ TEST(parameter_extraction, system_task_propagation) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
         {{"","", "CAST"}, 17},
     };
@@ -869,7 +870,7 @@ TEST(parameter_extraction, nested_system_task) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
         {{"","", "PARAMETER_1"}, 46},
         {{"","", "CAST"}, 3}
@@ -956,7 +957,7 @@ TEST(parameter_extraction, package_parameters) {
 
 
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
         {{"","", "bus_base"}, 0x43c00000},
         {{"","", "timebase"}, 0x43c00000},
@@ -1033,7 +1034,7 @@ TEST(parameter_extraction, simple_parameters) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
         {{"","", "simple_numeric_p"}, 32},
         {{"","", "local_p"}, 74},
@@ -1191,7 +1192,7 @@ TEST(parameter_extraction, simple_expressions) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"", "", "simple_numeric_p"}, 32},
         {{"", "", "sv_numeric_p"}, 8},
@@ -1269,7 +1270,7 @@ TEST(parameter_extraction, assay_assignment) {
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8, 32});
@@ -1328,7 +1329,7 @@ TEST(parameter_extraction, default_assign) {
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {5, 5});
@@ -1398,7 +1399,7 @@ TEST(parameter_extraction, array_concatenation) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8,32});
@@ -1461,7 +1462,7 @@ TEST(parameter_extraction, array_parameter) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -1515,7 +1516,7 @@ TEST(parameter_extraction, integer_localparams) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "serial_msb_out_first"}, 0},
         {{"","", "serial_lsb_out_first"}, 1},
@@ -1592,7 +1593,7 @@ TEST(parameter_extraction, simple_array_propagation) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -1677,7 +1678,7 @@ TEST(parameter_extraction, array_expression) {
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -1762,7 +1763,7 @@ TEST(parameter_extraction, multidimensional_array_expression) {
     }
 
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     mdarray<hdl_integer> av;
     av.set_2d_slice({0}, {{6,5}, {32,32}});
@@ -1818,7 +1819,7 @@ TEST(parameter_extraction, int_concat_initialization) {
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "test_parameter"}, 7}
@@ -1868,7 +1869,7 @@ TEST(parameter_extraction, implicit_type_concatenation) {
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "test_parameter"}, 7}
@@ -1932,7 +1933,7 @@ TEST(parameter_extraction, simple_repetition_initialization) {
         EXPECT_EQ(*item, *parameters.get(item->get_name()));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     mdarray<hdl_integer> av;
     av.set_2d_slice({0}, {{1,1}});
@@ -1996,7 +1997,7 @@ TEST(parameter_extraction, packed_repetition_initialization) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "repetition_size"}, 2},
@@ -2111,7 +2112,7 @@ TEST(parameter_extraction, repetition_initialization) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     mdarray<hdl_integer> av, av2, av3, av4;
     av.set_2d_slice({0}, {{1,1}});
@@ -2180,7 +2181,7 @@ TEST(parameter_extraction, packed_array) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -2253,7 +2254,7 @@ TEST(parameter_extraction, multpidim_packed_array) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {201, 169});
@@ -2282,7 +2283,9 @@ TEST(parameter_extraction, package_parameters_use) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern)[1];
+    auto resources = analyzer.analyze("", test_pattern);
+    auto resource = resources[1];
+    auto pkg = resources[0];
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
@@ -2303,18 +2306,21 @@ TEST(parameter_extraction, package_parameters_use) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
 
-
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    std::map<qualified_identifier, resolved_parameter> pkg_ctx;
+    for (auto &[id, val] : pkg_defaults) {
+        pkg_ctx[{"test_package", "", id.name}] = val;
+    }
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, pkg_ctx);
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "package_param"}, "__RUNTIME_ONLY_PARAMETER__"s}
+        {{"","", "package_param"}, 67}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
         ASSERT_EQ(value, defaults.at(name));
     }
 }
-
 
 TEST(parameter_extraction, interface_parameter_use) {
     auto test_pattern = R"(
@@ -2384,7 +2390,7 @@ TEST(parameter_extraction, negative_number_parameters) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8, 32});
 
@@ -2450,7 +2456,7 @@ TEST(parameter_extraction, packed_bit_access) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8, 32});
 
@@ -2505,7 +2511,7 @@ TEST(parameter_extraction, negative_number_array_init) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {32767, -32767});
 
@@ -2566,7 +2572,7 @@ TEST(parameter_extraction, expression_array_init) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {42, 9});
 
@@ -2666,7 +2672,7 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> av, av2;
     av.set_1d_slice({0, 0}, {29, 226});
     av2.set_1d_slice({0, 0}, {0, 255});
@@ -2831,7 +2837,7 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {0x27e0, 0xe0, 3 , 3, 3});
 
@@ -2938,7 +2944,7 @@ TEST(parameter_extraction, multidimensional_packed_array) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {226, 29});
     av.set_1d_slice({0, 1}, {29, 226});
@@ -2992,7 +2998,7 @@ TEST(parameter_extraction, packed_replication_init) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "test_parameter"}, 31}
@@ -3050,7 +3056,7 @@ TEST(parameter_extraction, array_initialization_default) {
         ASSERT_TRUE(parameters.contains(name));
         ASSERT_EQ(*item, *parameters.get(name));
     }
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {3, 3});
     av.set_1d_slice({0, 1}, {3, 3});
@@ -3108,7 +3114,7 @@ TEST(parameter_extraction, simple_function_parameter) {
 
     ASSERT_EQ(p, *param);
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "TEST_PARAM"}, 100}
@@ -3162,7 +3168,7 @@ TEST(parameter_extraction, concat_in_function) {
 
     EXPECT_EQ(p, *param);
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "TEST_PARAM"}, 3}
@@ -3222,7 +3228,7 @@ TEST(parameter_extraction, replication_in_function) {
 
     EXPECT_EQ(p, *param);
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "TEST_PARAM"}, 15}
@@ -3284,7 +3290,7 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
 
     EXPECT_EQ(p, *param);
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "TEST_PARAM"}, 19}
@@ -3402,7 +3408,7 @@ TEST(parameter_extraction, loop_function_parameter) {
 
     ASSERT_EQ(p, *param);
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {0, 100, 200});
@@ -3495,7 +3501,7 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
 
     EXPECT_EQ(p, *param);
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {0, 100, 200});
@@ -3554,7 +3560,7 @@ TEST(parameter_extraction, function_with_arguments) {
 
     ASSERT_EQ(p, *param);
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -3627,7 +3633,7 @@ TEST(parameter_extraction, interface_parameters) {
     check_params.insert(p);
 
     ASSERT_EQ(check_params, parameters);
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8, 32});
 
@@ -3765,7 +3771,7 @@ TEST(parameter_extraction, param_ternary_conditional) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "condition"}, 2},
@@ -3842,7 +3848,7 @@ TEST(parameter_extraction, nested_ternary_conditional) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "condition"}, 2},
@@ -3907,7 +3913,7 @@ TEST(parameter_extraction, complex_ternary_conditional) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "NM"}, 4},
@@ -3952,7 +3958,7 @@ TEST(parameter_extraction, typedef_parameter) {
     EXPECT_EQ(unpacked_dim, check_d);
 
 
-    auto defaults = resource.get_default_parameters();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), "", {}, {});
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {

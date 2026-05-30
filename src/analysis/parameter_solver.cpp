@@ -254,18 +254,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     auto runtime_params = specialize_runtime_parameters(solved_parameters, node_parameters, work.node->get_name());
     solved_parameters.insert(runtime_params.begin(), runtime_params.end());
 
-    std::map<qualified_identifier, resolved_parameter> results;
-    for (auto &name: std::views::keys(node_defaults)) {
-        if (runtime_params.contains(name)) {
-            results.insert({name, runtime_params.at(name)});
-        } else {
-            results.insert({name, solved_parameters.at(name)});
-        }
-    }
-    // Include any instance-resolved params not in node_defaults so children can use them
-    for (auto &[id, val] : solved_parameters) {
-        results.try_emplace(id, val);
-    }
+    std::map<qualified_identifier, resolved_parameter> results = solved_parameters;
 
     update_parameters_map(solved_parameters, work.node, d_store);
     return results;
@@ -299,10 +288,18 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     auto node_overrides = work.node->get_parameters();
 
     Parameters_map to_solve;
-    for(const auto& [override_name, override]:node_overrides) {
-        for(const auto &[p_name, param]: node_parameters) {
-            auto deps = param->get_dependencies();
-            if(deps.contains(override->get_identifier()) && !node_overrides.contains(p_name)) {
+    for(const auto &[p_name, param]: node_parameters) {
+        if (node_overrides.contains(p_name)) {
+            to_solve.insert(node_overrides.get(p_name));
+        } else {
+            bool has_instance_dep = false;
+            for (auto &dep : param->get_dependencies()) {
+                if (!dep.instance.empty()) {
+                    has_instance_dep = true;
+                    break;
+                }
+            }
+            if (!has_instance_dep) {
                 to_solve.insert(param);
             }
         }
@@ -329,9 +326,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             auto deps = param->get_dependencies();
             if(deps.empty()) {
                 if(!to_solve.contains(override_name)) {
-                    completed_parameters.insert(override_name);
                     to_solve.insert(param);
                 }
+                completed_parameters.insert(override_name);
                 continue;
             }
             for(auto &dep:deps) {
@@ -374,10 +371,11 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                     }
                 }else if(node_overrides.contains(dep.name)) {
                     internal_dependency = true;
-                }else if(node_defaults.contains({"", "", dep.name})) {
-                    value = node_defaults.at({"", "", dep.name});
+                }else if(dep.prefix.empty() && dep.instance.empty() && to_solve.contains(dep.name)) {
+                    continue;
                 } else {
                     spdlog::warn("Parameter {}::{} is not defined in the design", dep.prefix, dep.name);
+                    value.set_undefined();
                 }
 
                 if(!internal_dependency) {
@@ -392,6 +390,8 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                         all_solved = false;
                         break;
                     }
+                } else if(dep.prefix.empty() && dep.instance.empty() && to_solve.contains(dep.name)) {
+                    continue;
                 } else if(!ctx.contains(dep)) {
                     all_solved = false;
                     break;

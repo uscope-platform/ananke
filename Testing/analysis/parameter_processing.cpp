@@ -20,8 +20,7 @@
 #include "frontend/analysis/sv_analyzer.hpp"
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
-
-
+#include "analysis/parameter_solver.hpp"
 
 
 TEST(parameter_processing, override_after_fatal) {
@@ -152,23 +151,23 @@ TEST(parameter_processing, package_parameters_in_array_init) {
 
     sv_analyzer analyzer;
 
-
     auto resources = analyzer.analyze("", test_pattern);
-    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    auto& pkg = resources[0];
+    auto& mod = resources[2];
 
-    d_store->store_hdl_entity(resources, "", "");
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto& [id, val] : pkg_defaults) {
+        ctx[{"test_package", "", id.name}] = val;
+    }
 
+    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", {}, ctx);
 
-    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
-    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
-
-    auto param_val = ast_v2->get_parameters().get("AXI_ADDRESSES")->get_int_array_value();
-    ASSERT_TRUE(param_val.has_value());
+    auto param_val = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0,0}, {3,2,1});
-    ASSERT_EQ(param_val.value(), av);
+    ASSERT_EQ(param_val, av);
 }
 
 
@@ -189,38 +188,20 @@ TEST(parameter_processing, package_parameters_use) {
 
     sv_analyzer analyzer;
 
-
     auto resources = analyzer.analyze("", test_pattern);
-    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    auto& pkg = resources[0];
+    auto& mod = resources[1];
 
-    d_store->store_hdl_entity(resources, "", "");
-
-
-    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
-    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
-
-    auto dependency_parameters = ast_v2->get_parameters();
-
-    Parameters_map check_params;
-
-    auto p = std::make_shared<HDL_parameter>();
-    p->set_name("package_param");
-    p->set_declared_type("implicit");
-    Expression_component ec("bus_base", Expression_component::identifier);
-    ec.set_package_prefix("test_package");
-    p->add_component(ec);
-    p->set_value(67);
-
-    check_params.insert(p);
-
-    ASSERT_EQ(check_params.size(), dependency_parameters.size());
-
-    for(const auto& [name, item]:check_params){
-        ASSERT_TRUE(dependency_parameters.contains(name));
-        ASSERT_EQ(*item, *dependency_parameters.get(name));
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto& [id, val] : pkg_defaults) {
+        ctx[{"test_package", "", id.name}] = val;
     }
 
+    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", {}, ctx);
+
+    ASSERT_TRUE(solved.contains({"", "", "package_param"}));
+    ASSERT_EQ(67, solved.at({"", "", "package_param"}).get_integer());
 }
 
 
@@ -609,22 +590,22 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
     )";
 
 
-    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
-
-
     sv_analyzer analyzer;
 
-
     auto resources = analyzer.analyze("", test_pattern);
-    d_store->store_hdl_entity(resources, "", "");
+    auto& pkg = resources[0];
+    auto& mod = resources[1];
 
-    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
-    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto& [id, val] : pkg_defaults) {
+        ctx[{"hil_address_space", "", id.name}] = val;
+    }
 
-    auto param = ast_v2->get_parameters().get("AXI_ADDRESSES");
-    ASSERT_TRUE(param->get_int_array_value().has_value());
-    auto param_value = param->get_int_array_value().value().get_1d_slice({0, 0});
+    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", {}, ctx);
+
+    auto param = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
+    auto param_value = param.get_1d_slice({0, 0});
     mdarray<hdl_integer>::md_1d_array reference = {0x43c00000,0x43c30004};
     ASSERT_EQ(param_value, reference);
 }
@@ -659,21 +640,23 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
 
     )";
 
-    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
-
     sv_analyzer analyzer;
 
 
     auto resources = analyzer.analyze("", test_pattern);
-    d_store->store_hdl_entity(resources, "", "");
+    auto& pkg = resources[0];
+    auto& mod = resources[1];
 
-    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
-    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto& [id, val] : pkg_defaults) {
+        ctx[{"hil_address_space", "", id.name}] = val;
+    }
 
-    auto param = ast_v2->get_parameters().get("AXI_ADDRESSES");
-    ASSERT_TRUE(param->get_int_array_value().has_value());
-    auto param_value = param->get_int_array_value().value().get_1d_slice({0, 0});
+    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", {}, ctx);
+
+    auto param = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
+    auto param_value = param.get_1d_slice({0, 0});
     mdarray<hdl_integer>::md_1d_array reference = {0x43c00000,0x43c30004};
     ASSERT_EQ(param_value, reference);
 }
@@ -960,25 +943,41 @@ TEST(parameter_processing, override_with_package_parameter) {
 
 
 
-    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
-
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern);
+    auto& pkg = resources[0];
+    auto& dep = resources[1];
 
-    d_store->store_hdl_entity(resources, "", "");
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto& [id, val] : pkg_defaults) {
+        ctx[{"test_package", "", id.name}] = val;
+    }
 
+    auto dep_params = dep.get_parameters();
+    Parameters_map to_solve;
+    for (auto& [name, param] : dep_params) {
+        if (name == "param_1") {
+            auto override_param = std::make_shared<HDL_parameter>();
+            override_param->set_name("param_1");
+            override_param->set_declared_type("implicit");
+            Expression_component ec("base", Expression_component::identifier);
+            ec.set_package_prefix("test_package");
+            override_param->add_component(ec);
+            override_param->set_type(param->get_type());
+            override_param->set_packed_dimensions(param->get_packed_dimensions());
+            override_param->set_unpacked_dimensions(param->get_unpacked_dimensions());
+            to_solve.insert(override_param);
+        } else {
+            to_solve.insert(param);
+        }
+    }
 
-    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
-    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+    auto solved = parameter_solver::process_parameters(to_solve, "", {}, ctx);
 
-
-    auto params = ast_v2->get_dependencies()[0]->get_parameters();
-    auto param_1 = params.get("param_1");
-    EXPECT_EQ(param_1->get_numeric_value(), 33);
-    auto p1_t = params.get("p1_t");
-    EXPECT_EQ(p1_t->get_numeric_value(), 35);
+    EXPECT_EQ(33, solved.at({"", "", "param_1"}).get_integer());
+    EXPECT_EQ(35, solved.at({"", "", "p1_t"}).get_integer());
 }
 
 
@@ -1086,23 +1085,42 @@ TEST(parameter_processing, override_package_function) {
 
 
 
-    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
-
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern);
+    auto& pkg = resources[0];
+    auto& dep = resources[1];
 
-    d_store->store_hdl_entity(resources, "", "");
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto& [id, val] : pkg_defaults) {
+        ctx[{"test_pack", "", id.name}] = val;
+    }
 
+    auto dep_params = dep.get_parameters();
+    Parameters_map to_solve;
+    for (auto& [name, param] : dep_params) {
+        if (name == "param_1") {
+            auto override_param = std::make_shared<HDL_parameter>();
+            override_param->set_name("param_1");
+            override_param->set_declared_type("implicit");
+            Expression_component ec("test_param", Expression_component::identifier);
+            ec.set_package_prefix("test_pack");
+            override_param->add_component(ec);
+            override_param->set_type(param->get_type());
+            override_param->set_packed_dimensions(param->get_packed_dimensions());
+            override_param->set_unpacked_dimensions(param->get_unpacked_dimensions());
+            to_solve.insert(override_param);
+        } else {
+            to_solve.insert(param);
+        }
+    }
 
-    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
-    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+    auto solved = parameter_solver::process_parameters(to_solve, "", {}, ctx);
 
-    auto p = ast_v2->get_dependencies()[0]->get_parameters().get("p1_t");
     mdarray<hdl_integer>av;
     av.set_1d_slice({0,0}, {0, 100, 200});
-    EXPECT_EQ(p->get_int_array_value(), av);
+    EXPECT_EQ(solved.at({"", "", "p1_t"}).get_int_array(), av);
 }
 
 
@@ -1408,7 +1426,7 @@ TEST(parameter_processing, override_as_dependency) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
 
-    d_store->store_hdl_entity(resources, "", "");\
+    d_store->store_hdl_entity(resources, "", "");
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -1543,8 +1561,10 @@ endmodule
 
     sv_analyzer analyzer;
 
-
     auto resources = analyzer.analyze("", test_pattern);
+    auto pkg_solved = parameter_solver::process_parameters(
+        resources[0].get_parameters(), "module::" + resources[0].getName(), {}, {});
+    resources[0].set_default_parameters(pkg_solved);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
     d_store->store_hdl_entity(resources, "", "");

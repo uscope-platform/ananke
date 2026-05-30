@@ -191,10 +191,6 @@ TEST( analysis_test , sv_module) {
     p->set_declared_type("implicit");
     p->add_component(Expression_component("74", Expression_component::number));
     check_res.add_parameter(p);
-    std::map<qualified_identifier, resolved_parameter> check_defaults;
-    check_defaults[{"","", "module_parameter_1"}] = 56;
-    check_defaults[{"","", "module_parameter_2"}] = 74;
-    check_res.set_default_parameters(check_defaults);
     ASSERT_EQ(resource, check_res);
     resource = res[1];
     check_res = HDL_Resource();
