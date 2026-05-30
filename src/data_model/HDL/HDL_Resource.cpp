@@ -29,7 +29,6 @@ HDL_Resource::HDL_Resource(const HDL_Resource &c) {
     hdl_type = c.hdl_type;
     dependencies = c.dependencies;
     functions = c.functions;
-    default_values = c.default_values;
     parameters_spec = c.parameters_spec;
     doc = c.doc;
     processor_docs = c.processor_docs;
@@ -39,10 +38,6 @@ HDL_Resource::HDL_Resource(const HDL_Resource &c) {
 
 bool HDL_Resource::is_interface() {
     return hdl_type == interface;
-}
-
-void HDL_Resource::process_parameters() {
-    default_values = parameter_solver::process_parameters(parameters_spec, "module::" + name, {}, {});
 }
 
 void HDL_Resource::process_calls() {
@@ -66,7 +61,6 @@ bool HDL_Resource::is_empty() {
     ret &= parameters_spec.empty();
     ret &= functions.empty();
     ret &= typedefs.empty();
-    ret &= default_values.empty();
 
     return ret;
 }
@@ -83,7 +77,6 @@ std::unordered_map<std::string, HDL_Resource>::mapped_type HDL_Resource::clone()
     ret.line_n = line_n;
     ret.hdl_type = hdl_type;
     ret.port_specs = port_specs;
-    ret.default_values = default_values;
     ret.processor_docs = processor_docs;
     ret.doc = doc;
     ret.typedefs = typedefs;
@@ -117,7 +110,6 @@ bool operator==(const HDL_Resource &lhs, const HDL_Resource &rhs) {
     ret &= lhs.dependencies == rhs.dependencies;
     ret &= lhs.processor_docs == rhs.processor_docs;
     ret &= lhs.port_specs == rhs.port_specs;
-    ret &= lhs.default_values == rhs.default_values;
     ret &= lhs.parameters_spec == rhs.parameters_spec;
     ret &= lhs.functions == rhs.functions;
     ret &= lhs.typedefs == rhs.typedefs;

@@ -153,11 +153,7 @@ void parameter_solver::update_parameters_map(
         else
             ast_param = std::make_shared<HDL_parameter>(*param);
         resolved_parameter param_val;
-        if(solved_parameters.contains(param->get_identifier())) {
-            param_val = solved_parameters.at(param->get_identifier());
-        } else {
-            param_val = resource.get_default_parameters()[param->get_identifier()];
-        }
+        param_val = solved_parameters.at(param->get_identifier());
         ast_param->set_value(param_val);
         node_parameters.insert(ast_param);
     }
@@ -167,7 +163,6 @@ void parameter_solver::update_parameters_map(
 
 std::map<qualified_identifier, resolved_parameter> parameter_solver::override_parameters(work_order &work, const std::shared_ptr<data_store> &d_store) {
     auto node_spec = d_store->get_HDL_resource(work.node->get_type());
-    auto node_defaults = node_spec.get_default_parameters();
     auto node_overrides = work.node->get_parameters();
     auto node_parameters = node_spec.get_parameters();
 
@@ -175,11 +170,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
 
     std::map<qualified_identifier, resolved_parameter> solved_parameters = retrieve_package_parameters(node_parameters, d_store);
 
-    for (const auto &[parameter_id, value] : solved_parameters) {
-        node_defaults[parameter_id] = value;
-    }
-
-    auto overrides_solution = solve_complex_overrides(work, d_store, node_defaults);
+    auto overrides_solution = solve_complex_overrides(work, d_store, solved_parameters);
     solved_parameters.insert(overrides_solution.begin(), overrides_solution.end());
 
     // Handle module-body parameters with instance dependencies (e.g. parameter x = inst.param)
@@ -201,7 +192,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
 
         std::map<qualified_identifier, resolved_parameter> ctx;
         ctx.insert(solved_parameters.begin(), solved_parameters.end());
-        ctx.insert(node_defaults.begin(), node_defaults.end());
         ctx.insert(work.parent_parameters.begin(), work.parent_parameters.end());
 
         for (auto &dep : deps) {
@@ -254,18 +244,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     auto runtime_params = specialize_runtime_parameters(solved_parameters, node_parameters, work.node->get_name());
     solved_parameters.insert(runtime_params.begin(), runtime_params.end());
 
-    std::map<qualified_identifier, resolved_parameter> results;
-    for (auto &name: std::views::keys(node_defaults)) {
-        if (runtime_params.contains(name)) {
-            results.insert({name, runtime_params.at(name)});
-        } else {
-            results.insert({name, solved_parameters.at(name)});
-        }
-    }
-    // Include any instance-resolved params not in node_defaults so children can use them
-    for (auto &[id, val] : solved_parameters) {
-        results.try_emplace(id, val);
-    }
+    std::map<qualified_identifier, resolved_parameter> results = solved_parameters;
 
     update_parameters_map(solved_parameters, work.node, d_store);
     return results;
@@ -276,10 +255,13 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
     auto deps_map = get_dependency_map(node_parameters);
     for (auto &param_deps: deps_map | std::views::values) {
         for (const auto& identifier:param_deps) {
-            if (!identifier.prefix.empty()) {
+            if (!identifier.prefix.empty() && !package_parameters.contains(identifier)) {
                 auto package = d_store->get_HDL_resource(identifier.prefix);
-                auto param_value = package.get_default_parameters();
-                package_parameters[identifier] = param_value[{"","", identifier.name}];
+                auto pkg_solved = process_parameters(package.get_parameters(), "module::" + package.getName(), {}, {});
+                for (auto &[pkg_id, pkg_val]: pkg_solved) {
+                    qualified_identifier qid{identifier.prefix, "", pkg_id.name};
+                    package_parameters[qid] = pkg_val;
+                }
             }
         }
     }
@@ -299,10 +281,18 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     auto node_overrides = work.node->get_parameters();
 
     Parameters_map to_solve;
-    for(const auto& [override_name, override]:node_overrides) {
-        for(const auto &[p_name, param]: node_parameters) {
-            auto deps = param->get_dependencies();
-            if(deps.contains(override->get_identifier()) && !node_overrides.contains(p_name)) {
+    for(const auto &[p_name, param]: node_parameters) {
+        if (node_overrides.contains(p_name)) {
+            to_solve.insert(node_overrides.get(p_name));
+        } else {
+            bool has_instance_dep = false;
+            for (auto &dep : param->get_dependencies()) {
+                if (!dep.instance.empty()) {
+                    has_instance_dep = true;
+                    break;
+                }
+            }
+            if (!has_instance_dep) {
                 to_solve.insert(param);
             }
         }
@@ -329,9 +319,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             auto deps = param->get_dependencies();
             if(deps.empty()) {
                 if(!to_solve.contains(override_name)) {
-                    completed_parameters.insert(override_name);
                     to_solve.insert(param);
                 }
+                completed_parameters.insert(override_name);
                 continue;
             }
             for(auto &dep:deps) {
@@ -340,9 +330,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                 if (ctx.contains(dep)) continue;
                 if (work.parent_parameters.contains(dep)) {
                     value = work.parent_parameters.at(dep);
-                }else if(!dep.prefix.empty()) {
-                    auto package = d_store->get_HDL_resource(dep.prefix);
-                    value = package.get_default_parameters()[{"", "", dep.name}];
                 }else if (!dep.instance.empty()){
                     bool inst_param_found = false;
                     auto dep_name = dep.instance;
@@ -374,10 +361,11 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                     }
                 }else if(node_overrides.contains(dep.name)) {
                     internal_dependency = true;
-                }else if(node_defaults.contains({"", "", dep.name})) {
-                    value = node_defaults.at({"", "", dep.name});
+                }else if(dep.prefix.empty() && dep.instance.empty() && to_solve.contains(dep.name)) {
+                    continue;
                 } else {
                     spdlog::warn("Parameter {}::{} is not defined in the design", dep.prefix, dep.name);
+                    value.set_undefined();
                 }
 
                 if(!internal_dependency) {
@@ -392,6 +380,8 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                         all_solved = false;
                         break;
                     }
+                } else if(dep.prefix.empty() && dep.instance.empty() && to_solve.contains(dep.name)) {
+                    continue;
                 } else if(!ctx.contains(dep)) {
                     all_solved = false;
                     break;
