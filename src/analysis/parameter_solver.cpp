@@ -167,8 +167,11 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     auto node_parameters = node_spec.get_parameters();
 
     //retrieve default package parameters
-
-    std::map<qualified_identifier, resolved_parameter> solved_parameters = retrieve_package_parameters(node_parameters, d_store);
+    Parameters_map combined_params = node_parameters;
+    for (const auto &[name, param] : node_overrides) {
+        combined_params.insert(param);
+    }
+    std::map<qualified_identifier, resolved_parameter> solved_parameters = retrieve_package_parameters(combined_params, d_store);
 
     auto overrides_solution = solve_complex_overrides(work, d_store, solved_parameters);
     solved_parameters.insert(overrides_solution.begin(), overrides_solution.end());

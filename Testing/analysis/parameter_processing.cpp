@@ -1578,6 +1578,42 @@ endmodule
     EXPECT_EQ(dep_6->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 1200);
 }
 
+TEST(parameter_processing, override_with_package_ref_in_array_init) {
+    auto test_pattern = R"(
+
+    package pkg;
+        parameter a = 10;
+        parameter b = 20;
+        parameter c = 30;
+    endpackage;
+
+    module child #(
+        parameter int X = 0
+    )();
+        parameter Y = X * 2;
+    endmodule
+
+    module top();
+        child #(
+            .X({pkg::a, pkg::b, pkg::c})
+        ) inst();
+    endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", test_pattern);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    auto inst = ast_v2->get_dependencies()[0];
+    EXPECT_TRUE(inst->get_parameters().contains("X"));
+    EXPECT_TRUE(inst->get_parameters().get("X")->get_numeric_value().has_value());
+    EXPECT_EQ(inst->get_parameters().get("X")->get_numeric_value().value(), 30);
+}
+
 TEST(parameter_processing, intermediate_interface_param) {
     auto test_pattern = R"(
 
