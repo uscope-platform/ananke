@@ -130,6 +130,8 @@ std::optional<resolved_parameter> Expression::evaluate(const std::map<qualified_
             } else {
                 return std::nullopt;
             }
+        } else if (i.is_string()) {
+            evaluator_stack.push(i);
         } else {
             std::variant<hdl_integer, double> result;
             if (!i.is_operator() && !i.is_function()) return std::nullopt;
@@ -172,6 +174,14 @@ int64_t Expression::get_size() {
 }
 
 std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, const std::string &operation) {
+
+    if(operation ==  "=="){
+        return op_a == op_b;
+    }
+    if(operation ==  "!="){
+        return op_a != op_b;
+    }
+
     bool supported_a = (op_a.is_integer() || op_a.is_real() );
     bool supported_b = (op_b.is_integer() || op_b.is_real() );
     if(  !supported_a || !supported_b) {
@@ -236,12 +246,6 @@ std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolve
     if(operation ==  "<="){
         if(int_exec) return i_a <= i_b;
         return d_a <= d_b;
-    }
-    if(operation ==  "=="){
-        return op_a == op_b;
-    }
-    if(operation ==  "!="){
-        return op_a != op_b;
     }
     throw std::runtime_error("Error: Attempted evaluation of an unsupported binary expression expression " + operation);
 }

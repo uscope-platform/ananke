@@ -118,6 +118,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
             }
         }
         rounds_counter++;
+        spdlog::trace("Process parameters round {}: {} params remaining in deps map", rounds_counter, dependencies_map.size());
     }
 
     if (rounds_counter >=100) {

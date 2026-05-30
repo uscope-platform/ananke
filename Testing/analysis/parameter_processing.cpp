@@ -1880,3 +1880,42 @@ TEST(parameter_processing, interface_param_same_name_as_child_param_no_loopback)
     EXPECT_TRUE(dw.has_value());
     if(dw.has_value()) EXPECT_EQ(dw.value().get_value(), 8);
 }
+
+TEST(parameter_processing, ternary_with_package_override) {
+    auto test_pattern = R"(
+
+    package pkg;
+        parameter a = 16'h100;
+        parameter b = 16'h200;
+    endpackage;
+
+    module child #(
+        parameter string CONVERTER_SELECTION = "",
+        parameter N_PWM_CHANNELS = 4,
+        parameter N_PARAMETERS = CONVERTER_SELECTION=="VSI" ? N_PWM_CHANNELS: 13,
+        parameter [31:0] INITIAL_PARAMETERS_VALUES [N_PARAMETERS+1:0] = '{default:0}
+    )();
+    endmodule
+
+    module top();
+        child #(
+            .CONVERTER_SELECTION("DAB"),
+            .BASE_ADDRESS(pkg::a),
+            .PWM_BASE_ADDR(pkg::b),
+            .N_PWM_CHANNELS(2)
+        ) inst();
+    endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", test_pattern);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    auto inst = ast_v2->get_dependencies()[0];
+    EXPECT_TRUE(inst->get_parameters().contains("N_PARAMETERS"));
+    EXPECT_TRUE(inst->get_parameters().contains("INITIAL_PARAMETERS_VALUES"));
+}
