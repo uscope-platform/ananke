@@ -178,14 +178,7 @@ std::map<qualified_identifier, resolved_parameter> HDL_ast_builder_v2::process_r
         if (value.is_string()) {
             if (value.get_string() == "__RUNTIME_ONLY_PARAMETER__") {
                 auto raw_param = res.get_parameters().get(name.name);
-                std::map<qualified_identifier, resolved_parameter> pkg_ctx;
-                for (const auto dep: raw_param->get_dependencies()) {
-                    if (!dep.prefix.empty()) {
-                        auto package_params= d_store->get_HDL_resource(dep.prefix).get_default_parameters();
-                        pkg_ctx[dep] = package_params[{"", "", dep.name}];
-                    }
-                }
-                auto val = raw_param->evaluate(pkg_ctx);
+                auto val = raw_param->evaluate({});
                 if (val.has_value()) runtime_parameters.insert({name, val.value()});
             }
         }

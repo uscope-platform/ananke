@@ -127,23 +127,14 @@ class HDL_Resource {
         }
         std::unordered_map<std::string, HDL_function_def> get_functions() {return functions;};
 
-        std::map<qualified_identifier, resolved_parameter> get_default_parameters() {
-            return default_values;
-        };
-
-        void set_default_parameters(const std::map<qualified_identifier, resolved_parameter>  &values) {
-            default_values = values;
-        }
         void set_documentation(module_documentation &d) {
             doc= d;
         };
         module_documentation get_documentation() const { return doc;}
 
-        void process_parameters();
-
         template<class Archive>
         void serialize( Archive & ar ) {
-            ar(name, path, hdl_type, dependencies, parameters_spec, port_specs, doc, processor_docs, functions, default_values, line_n, typedefs);
+            ar(name, path, hdl_type, dependencies, parameters_spec, port_specs, doc, processor_docs, functions, line_n, typedefs);
         }
 
         bool is_empty();
@@ -162,7 +153,6 @@ private:
         std::unordered_map<std::string, HDL_port> port_specs;
 
         Parameters_map parameters_spec;
-        std::map<qualified_identifier, resolved_parameter> default_values;
         std::unordered_map<std::string, HDL_function_def> functions;
 
         std::vector<processor_instance> processor_docs;

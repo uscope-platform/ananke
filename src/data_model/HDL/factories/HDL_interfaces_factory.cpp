@@ -24,9 +24,7 @@ void HDL_interfaces_factory::new_interface(const std::string &name, const std::s
 }
 
 HDL_Resource HDL_interfaces_factory::get_interface() {
-    auto res = get_resource();
-    res.process_parameters();
-    return res;
+    return get_resource();
 }
 
 void HDL_interfaces_factory::add_parameter(const std::shared_ptr<HDL_parameter> &p) {
