@@ -155,13 +155,13 @@ TEST(parameter_processing, package_parameters_in_array_init) {
     auto& pkg = resources[0];
     auto& mod = resources[2];
 
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
         ctx[{"test_package", "", id.name}] = val;
     }
 
-    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", {}, ctx);
+    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", ctx);
 
     auto param_val = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
 
@@ -192,13 +192,13 @@ TEST(parameter_processing, package_parameters_use) {
     auto& pkg = resources[0];
     auto& mod = resources[1];
 
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
         ctx[{"test_package", "", id.name}] = val;
     }
 
-    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", {}, ctx);
+    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", ctx);
 
     ASSERT_TRUE(solved.contains({"", "", "package_param"}));
     ASSERT_EQ(67, solved.at({"", "", "package_param"}).get_integer());
@@ -596,13 +596,13 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
     auto& pkg = resources[0];
     auto& mod = resources[1];
 
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
         ctx[{"hil_address_space", "", id.name}] = val;
     }
 
-    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", {}, ctx);
+    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", ctx);
 
     auto param = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
     auto param_value = param.get_1d_slice({0, 0});
@@ -647,13 +647,13 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
     auto& pkg = resources[0];
     auto& mod = resources[1];
 
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
         ctx[{"hil_address_space", "", id.name}] = val;
     }
 
-    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", {}, ctx);
+    auto solved = parameter_solver::process_parameters(mod.get_parameters(), "", ctx);
 
     auto param = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
     auto param_value = param.get_1d_slice({0, 0});
@@ -949,7 +949,7 @@ TEST(parameter_processing, override_with_package_parameter) {
     auto& pkg = resources[0];
     auto& dep = resources[1];
 
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "",  {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
         ctx[{"test_package", "", id.name}] = val;
@@ -974,7 +974,7 @@ TEST(parameter_processing, override_with_package_parameter) {
         }
     }
 
-    auto solved = parameter_solver::process_parameters(to_solve, "", {}, ctx);
+    auto solved = parameter_solver::process_parameters(to_solve, "", ctx);
 
     EXPECT_EQ(33, solved.at({"", "", "param_1"}).get_integer());
     EXPECT_EQ(35, solved.at({"", "", "p1_t"}).get_integer());
@@ -1091,7 +1091,7 @@ TEST(parameter_processing, override_package_function) {
     auto& pkg = resources[0];
     auto& dep = resources[1];
 
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "", {}, {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), "",  {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
         ctx[{"test_pack", "", id.name}] = val;
@@ -1116,7 +1116,7 @@ TEST(parameter_processing, override_package_function) {
         }
     }
 
-    auto solved = parameter_solver::process_parameters(to_solve, "", {}, ctx);
+    auto solved = parameter_solver::process_parameters(to_solve, "", ctx);
 
     mdarray<hdl_integer>av;
     av.set_1d_slice({0,0}, {0, 100, 200});
@@ -1563,7 +1563,7 @@ endmodule
 
     auto resources = analyzer.analyze("", test_pattern);
     auto pkg_solved = parameter_solver::process_parameters(
-        resources[0].get_parameters(), "module::" + resources[0].getName(), {}, {});
+        resources[0].get_parameters(), "module::" + resources[0].getName(), {});
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
     d_store->store_hdl_entity(resources, "", "");
