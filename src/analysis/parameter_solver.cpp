@@ -276,9 +276,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     const std::shared_ptr<data_store> &d_store,
     const std::map<qualified_identifier, resolved_parameter> &node_defaults
 ) {
-
-    std::map<qualified_identifier, resolved_parameter> solved_parameters;
-
     auto node_spec = d_store->get_HDL_resource(work.node->get_type());
     auto node_parameters = node_spec.get_parameters();
     auto node_overrides = work.node->get_parameters();
@@ -313,94 +310,48 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     ctx.insert(work.parent_parameters.begin(), work.parent_parameters.end());
     ctx.insert(node_defaults.begin(), node_defaults.end());
 
-    int solution_rounds = 0;
-    std::set<std::string> completed_parameters;
-    while(completed_parameters.size() != node_overrides.size()) {
-        if(solution_rounds > 100) throw std::runtime_error("Exceded maximum number of iterations when solving a parameter override");
-        for(auto &[override_name, param]:node_overrides) {
-            if(completed_parameters.contains(override_name)) continue;
-            auto deps = param->get_dependencies();
-            if(deps.empty()) {
-                if(!to_solve.contains(override_name)) {
-                    to_solve.insert(param);
-                }
-                completed_parameters.insert(override_name);
-                continue;
-            }
-            for(auto &dep:deps) {
+    for(auto &[override_name, param]:node_overrides) {
+        for(auto &dep: param->get_dependencies()) {
+            if (ctx.contains(dep)) continue;
+            if (!dep.instance.empty()) {
                 resolved_parameter value;
-                bool internal_dependency = false;
-                if (ctx.contains(dep)) continue;
-                if (work.parent_parameters.contains(dep)) {
-                    value = work.parent_parameters.at(dep);
-                }else if (!dep.instance.empty()){
-                    bool inst_param_found = false;
-                    auto dep_name = dep.instance;
-                    auto instance_name = dep.instance;
-                    std::shared_ptr<HDL_instance_AST> examined_node = work.node;
+                auto instance_name = dep.instance;
+                std::shared_ptr<HDL_instance_AST> examined_node = work.node;
 
-                    if (work.interfaces_map.contains(dep.instance)) {
-                        resolve_interface_chain(work, d_store, examined_node, instance_name);
-                    } else {
-                        examined_node = examined_node->get_parent();
-                    }
-
-                    for (const auto &brother_inst:examined_node->get_dependencies()) {
-                        if (brother_inst->get_name() == instance_name) {
-                            auto inst_param = brother_inst->get_parameters().get(dep.name)->get_numeric_value();
-                            if (!inst_param.has_value()) {
-                                spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.instance, dep.name);
-                            }
-                            value = inst_param.value_or(0);
-
-                            inst_param_found = true;
-                            break;
-                        }
-                    }
-                    if (!inst_param_found) {
-                        auto path = get_full_path(work.node);
-                        spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.instance, dep.name);
-                        value.set_undefined();
-                    }
-                }else if(node_overrides.contains(dep.name)) {
-                    internal_dependency = true;
-                }else if(dep.prefix.empty() && dep.instance.empty() && to_solve.contains(dep.name)) {
-                    continue;
+                if (work.interfaces_map.contains(dep.instance)) {
+                    resolve_interface_chain(work, d_store, examined_node, instance_name);
                 } else {
-                    spdlog::warn("Parameter {}::{} is not defined in the design", dep.prefix, dep.name);
-                    value.set_undefined();
+                    examined_node = examined_node->get_parent();
                 }
 
-                if(!internal_dependency) {
-                    ctx[dep] = value;
-                }
-            }
-            // Check if all deps are satisfied
-            bool all_solved = true;
-            for(auto &dep:deps) {
-                if(dep.prefix.empty() && dep.instance.empty() && node_overrides.contains(dep.name) && dep.name != param->get_name()) {
-                    if(!completed_parameters.contains(dep.name)) {
-                        all_solved = false;
+                bool inst_param_found = false;
+                for (const auto &brother_inst:examined_node->get_dependencies()) {
+                    if (brother_inst->get_name() == instance_name) {
+                        auto inst_param = brother_inst->get_parameters().get(dep.name)->get_numeric_value();
+                        if (!inst_param.has_value()) {
+                            spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.instance, dep.name);
+                        }
+                        value = inst_param.value_or(0);
+                        inst_param_found = true;
                         break;
                     }
-                } else if(dep.prefix.empty() && dep.instance.empty() && to_solve.contains(dep.name)) {
-                    continue;
-                } else if(!ctx.contains(dep)) {
-                    all_solved = false;
-                    break;
                 }
-            }
-            if(all_solved) {
-                to_solve.insert(param);
-                completed_parameters.insert(param->get_name());
+                if (!inst_param_found) {
+                    auto path = get_full_path(work.node);
+                    spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.instance, dep.name);
+                    value.set_undefined();
+                }
+                ctx[dep] = value;
+            } else if(!node_overrides.contains(dep.name)) {
+                spdlog::warn("Parameter {}::{} is not defined in the design", dep.prefix, dep.name);
+                resolved_parameter value;
+                value.set_undefined();
+                ctx[dep] = value;
             }
         }
-        ++solution_rounds;
     }
 
-    solved_parameters = process_parameters(to_solve, work.node->get_name(), ctx);
-
-    return solved_parameters;
+    return process_parameters(to_solve, work.node->get_name(), ctx);
 }
 
 
