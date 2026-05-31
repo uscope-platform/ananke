@@ -255,14 +255,13 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
 
 std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store) {
     std::map<qualified_identifier, resolved_parameter> package_parameters;
-    auto deps_map = get_dependency_map(node_parameters);
-    for (auto &param_deps: deps_map | std::views::values) {
-        for (const auto& identifier:param_deps) {
-            if (!identifier.prefix.empty() && !package_parameters.contains(identifier)) {
-                auto package = d_store->get_HDL_resource(identifier.prefix);
+    for (auto &[p_name, param]: node_parameters) {
+        for (const auto& dep: param->get_dependencies()) {
+            if (!dep.prefix.empty() && !package_parameters.contains(dep)) {
+                auto package = d_store->get_HDL_resource(dep.prefix);
                 auto pkg_solved = process_parameters(package.get_parameters(), "module::" + package.getName(), {});
                 for (auto &[pkg_id, pkg_val]: pkg_solved) {
-                    qualified_identifier qid{identifier.prefix, "", pkg_id.name};
+                    qualified_identifier qid{dep.prefix, "", pkg_id.name};
                     package_parameters[qid] = pkg_val;
                 }
             }
