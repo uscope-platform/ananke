@@ -10,6 +10,7 @@ target_sources(ananke_lib
     analysis/parameter_solver.cpp
     analysis/passes/processor_detection.cpp
     analysis/passes/port_solution.cpp
+    analysis/topological_sorter.cpp
     analysis/data_acquisition_analysis.cpp
     analysis/control_bus_analysis.cpp
     analysis/type_cast_engine.cpp

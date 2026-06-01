@@ -14,7 +14,7 @@
 //  limitations under the License.
 
 #include "analysis/parameter_solver.hpp"
-#include "data_model/data_store.hpp"
+
 
 using namespace std::string_literals;
 
@@ -63,75 +63,22 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
     std::map<qualified_identifier, resolved_parameter> ctx = context;
 
     std::map<qualified_identifier, resolved_parameter> solved_parameters;
-    auto dependencies_map = get_dependency_map(map_in);
 
+    topological_sorter s;
+    s.analyze(map_in, ctx);
 
-    int rounds_counter = 0;
-    while (!dependencies_map.empty() && rounds_counter < 100) {
-        // Phase 1: evaluate params with no remaining dependencies
-        for (auto &[param_id, dependencies] : dependencies_map ) {
-            if (dependencies.empty() && !solved_parameters.contains(param_id)) {
-                auto to_solve = map_in.const_get(param_id.name);
-                std::optional<resolved_parameter> value = to_solve->evaluate(ctx);
-
-                if (value.has_value()) {
-                    solved_parameters.insert({param_id, value.value()});
-                    ctx[param_id] = value.value();
-                }
-
-            } else {
-                for(const auto&[prefix, identifier, name]:dependencies) {
-                     if(!prefix.empty() && parent_module.starts_with("module::")) {
-                        solved_parameters.insert({param_id, "__RUNTIME_ONLY_PARAMETER__"s});
-                    }
-                }
-            }
+    while (auto next = s.get_next()) {
+        auto param = map_in.const_get(next.value().name);
+        auto res = param->evaluate(ctx);
+        if (res) {
+            ctx[next.value()] = res.value();
+            solved_parameters[next.value()] = res.value();
+        } else {
+            spdlog::warn("The parameter {} can't be solved, defaulting to 0",  next.value().name);
+            ctx[next.value()] = 0;
+            solved_parameters[next.value()] = 0;
         }
-
-        // Phase 2: erase solved param IDs from remaining dependency sets
-        for (auto &[param_id, param_value]: solved_parameters) {
-            for (auto &dep: dependencies_map) {
-                dep.second.erase(param_id);
-            }
-            dependencies_map.erase(param_id);
-        }
-
-        // Phase 3: resolve external deps (parent/package params not in this map)
-        std::map<qualified_identifier, std::set<qualified_identifier>> to_erase;
-        for (auto &[param_id, dependencies] : dependencies_map ) {
-            for (auto &dep: dependencies) {
-                if (dep == param_id) {
-                    to_erase[param_id].insert(dep);
-                } else if (!dependencies_map.contains(dep) && !parent_module.starts_with("module::")) {
-                    if (!ctx.contains(dep)) {
-                        spdlog::error("The parameter {} does not exist in module {}", dep.name, parent_module);
-                        exit(-1);
-                    }
-                    to_erase[param_id].insert(dep);
-                }
-            }
-        }
-        for (auto&e: to_erase) {
-            for (auto & dep: e.second) {
-                dependencies_map[e.first].erase(dep);
-            }
-        }
-        rounds_counter++;
-        spdlog::trace("Process parameters round {}: {} params remaining in deps map", rounds_counter, dependencies_map.size());
-    }
-
-    if (rounds_counter >=100) {
-        std::string parameters;
-        int i = 0;
-        for(const auto &name: dependencies_map | std::views::keys) {
-            parameters += name.name;
-            if(dependencies_map.size()>1 && i<dependencies_map.size()-1) {
-                parameters += ", ";
-                i++;
-            }
-        }
-        spdlog::warn("Parameters {} could not be solved in 100 passes while processing instance {}",
-            parameters,  parent_module);
+        s.purge(next.value());
     }
 
     return solved_parameters;

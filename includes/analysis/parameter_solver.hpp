@@ -21,6 +21,8 @@
 #include "data_model/HDL/HDL_Resource.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
 #include "data_model/HDL/parameters/Expression_evaluator.hpp"
+#include "analysis/topological_sorter.hpp"
+#include "data_model/data_store.hpp"
 
 
 class data_store;
