@@ -155,7 +155,8 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     }
     auto solved_parameters = retrieve_package_parameters(combined_params, d_store);
 
-    solved_parameters = solve_complex_overrides(work, d_store, solved_parameters);
+    auto solution = solve_complex_overrides(work, d_store, solved_parameters);
+    solved_parameters.insert(solution.begin(), solution.end());
 
     update_parameters_map(solved_parameters, work.node, d_store);
     return solved_parameters;
@@ -213,6 +214,8 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             if (ctx.contains(dep)) continue;
             if (!dep.instance.empty()) {
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);
+            } else if (dep.prefix.empty() && dep.instance.empty() && to_solve.contains(dep.name)) {
+                continue;
             } else if(!node_overrides.contains(dep.name)) {
                 spdlog::warn("Parameter {}::{} is not defined in the design", dep.prefix, dep.name);
                 resolved_parameter value;
