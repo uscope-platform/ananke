@@ -55,11 +55,6 @@ public:
             const std::map<qualified_identifier, resolved_parameter> &node_defaults
         );
 
-    static std::map<qualified_identifier, resolved_parameter> specialize_runtime_parameters(
-        const std::map<qualified_identifier, resolved_parameter> &solved_parameters,
-        Parameters_map &node_parameters
-    );
-
     static std::string get_full_path(const std::shared_ptr<HDL_instance_AST> &node);
 
 private:

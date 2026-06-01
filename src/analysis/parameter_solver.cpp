@@ -16,7 +16,6 @@
 #include "analysis/parameter_solver.hpp"
 
 
-using namespace std::string_literals;
 
 void parameter_solver::resolve_interface_chain(
     work_order &work,
@@ -98,9 +97,7 @@ void parameter_solver::update_parameters_map(
             ast_param = std::make_shared<HDL_parameter>(*node_parameters.get(p_name));
         else
             ast_param = std::make_shared<HDL_parameter>(*param);
-        resolved_parameter param_val;
-        param_val = solved_parameters.at(param->get_identifier());
-        ast_param->set_value(param_val);
+        ast_param->set_value(solved_parameters.at(param->get_identifier()));
         node_parameters.insert(ast_param);
     }
 
@@ -156,46 +153,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     for (const auto &[name, param] : node_overrides) {
         combined_params.insert(param);
     }
-    std::map<qualified_identifier, resolved_parameter> solved_parameters = retrieve_package_parameters(combined_params, d_store);
+    auto solved_parameters = retrieve_package_parameters(combined_params, d_store);
 
-    auto overrides_solution = solve_complex_overrides(work, d_store, solved_parameters);
-    solved_parameters.insert(overrides_solution.begin(), overrides_solution.end());
-
-    // Handle module-body parameters with instance dependencies (e.g. parameter x = inst.param)
-    // Must run BEFORE specialize_runtime_parameters since process_parameters can't resolve
-    // instance-qualified deps and will exit(-1) on unresolved ones
-    for (auto &[p_name, param] : node_parameters) {
-        auto p_id = param->get_identifier();
-        if (solved_parameters.contains(p_id)) continue;
-
-        auto deps = param->get_dependencies();
-        bool has_instance_dep = false;
-        for (auto &dep : deps) {
-            if (!dep.instance.empty()) {
-                has_instance_dep = true;
-                break;
-            }
-        }
-        if (!has_instance_dep) continue;
-
-        std::map<qualified_identifier, resolved_parameter> ctx;
-        ctx.insert(solved_parameters.begin(), solved_parameters.end());
-        ctx.insert(work.parent_parameters.begin(), work.parent_parameters.end());
-
-        for (auto &dep : deps) {
-            if (!dep.instance.empty() && !ctx.contains(dep)) {
-                ctx[dep] = resolve_instance_dependency(dep, work, d_store);
-            }
-        }
-
-        auto eval_result = param->evaluate(ctx);
-        if (eval_result.has_value()) {
-            solved_parameters[p_id] = eval_result.value();
-        }
-    }
-
-    auto runtime_params = specialize_runtime_parameters(solved_parameters, node_parameters);
-    solved_parameters.insert(runtime_params.begin(), runtime_params.end());
+    solved_parameters = solve_complex_overrides(work, d_store, solved_parameters);
 
     update_parameters_map(solved_parameters, work.node, d_store);
     return solved_parameters;
@@ -232,16 +192,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         if (node_overrides.contains(p_name)) {
             to_solve.insert(node_overrides.get(p_name));
         } else {
-            bool has_instance_dep = false;
-            for (auto &dep : param->get_dependencies()) {
-                if (!dep.instance.empty()) {
-                    has_instance_dep = true;
-                    break;
-                }
-            }
-            if (!has_instance_dep) {
-                to_solve.insert(param);
-            }
+            to_solve.insert(param);
         }
     }
 
@@ -271,27 +222,21 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
+    for (const auto &[p_name, param] : node_parameters) {
+        auto p_id = param->get_identifier();
+        if (ctx.contains(p_id)) continue;
+        for (auto &dep : param->get_dependencies()) {
+            if (!dep.instance.empty() && !ctx.contains(dep)) {
+                ctx[dep] = resolve_instance_dependency(dep, work, d_store);
+            }
+        }
+    }
+
     return process_parameters(to_solve, ctx);
 }
 
-std::map<qualified_identifier, resolved_parameter> parameter_solver::specialize_runtime_parameters(
-    const std::map<qualified_identifier, resolved_parameter> &solved_parameters,
-    Parameters_map &node_parameters
-    ) {
-
-    Parameters_map runtime_to_eval;
-
-    for(auto &[p_name, param]:node_parameters) {
-        if(!solved_parameters.contains(param->get_identifier())) {
-            runtime_to_eval.insert(param);
-        }
-    }
-    if(runtime_to_eval.empty()) return {};
-    return process_parameters(runtime_to_eval, solved_parameters);
-}
-
 std::string parameter_solver::get_full_path(const std::shared_ptr<HDL_instance_AST> &node) {
-    std::string res = "";
+    std::string res;
 
     std::shared_ptr<HDL_instance_AST> current_node = node;
 
@@ -299,7 +244,7 @@ std::string parameter_solver::get_full_path(const std::shared_ptr<HDL_instance_A
         res = current_node->get_name() + "." + res;
         current_node = current_node->get_parent();
     }
-    res.erase(res.size()-1, 1);
+    res.pop_back();
 
     return res;
 }
