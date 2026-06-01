@@ -69,6 +69,11 @@ private:
         std::shared_ptr<HDL_instance_AST> &examined_node,
         std::string &instance_name
     );
+    static resolved_parameter resolve_instance_dependency(
+        const qualified_identifier &dep,
+        work_order &work,
+        const std::shared_ptr<data_store> &d_store
+    );
 };
 
 
