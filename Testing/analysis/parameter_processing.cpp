@@ -1919,3 +1919,44 @@ TEST(parameter_processing, ternary_with_package_override) {
     EXPECT_TRUE(inst->get_parameters().contains("N_PARAMETERS"));
     EXPECT_TRUE(inst->get_parameters().contains("INITIAL_PARAMETERS_VALUES"));
 }
+
+TEST(parameter_processing, override_dep_on_local_param_chain) {
+    auto test_pattern = R"(
+
+    module child #(
+        parameter W = 8,
+        parameter X = W+1,
+        parameter [X-1:0] P = 0
+    )();
+
+    endmodule
+
+    module top #()();
+        child #(.P(X+1)) inst();
+    endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+
+    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
+    EXPECT_TRUE(dependency_parameters.contains("W"));
+    auto w_val = dependency_parameters.get("W")->get_numeric_value();
+    EXPECT_EQ(w_val.value(), 8);
+
+    EXPECT_TRUE(dependency_parameters.contains("X"));
+    auto x_val = dependency_parameters.get("X")->get_numeric_value();
+    EXPECT_EQ(x_val.value(), 9);
+
+    EXPECT_TRUE(dependency_parameters.contains("P"));
+    auto p_val = dependency_parameters.get("P")->get_numeric_value();
+    EXPECT_EQ(p_val.value(), 10);
+}
