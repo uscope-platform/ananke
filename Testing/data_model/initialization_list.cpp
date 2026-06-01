@@ -469,7 +469,7 @@ TEST(Initialization_list, concatenation_of_packed_arrays) {
 
     auto resource = analyzer.analyze("",test_pattern)[0];
 
-    auto p = parameter_solver::process_parameters(resource.get_parameters(), "", {});
+    auto p = parameter_solver::process_parameters(resource.get_parameters(), {});
     auto param = p[{"","", "INITIAL_REGISTER_VALUES"}];
     mdarray<hdl_integer>::md_1d_array check_array = {224,1,0,0,2,2,2};
     auto result = param.get_int_array().get_1d_slice({0,0});

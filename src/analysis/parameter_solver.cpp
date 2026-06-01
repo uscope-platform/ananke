@@ -57,7 +57,6 @@ void parameter_solver::resolve_interface_chain(
 
 std::map<qualified_identifier, resolved_parameter> parameter_solver::process_parameters(
     const Parameters_map &map_in,
-    const std::string_view &parent_module,
     const std::map<qualified_identifier, resolved_parameter> &context
 ) {
     std::map<qualified_identifier, resolved_parameter> ctx = context;
@@ -206,7 +205,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
         for (const auto& dep: param->get_dependencies()) {
             if (!dep.prefix.empty() && !package_parameters.contains(dep)) {
                 auto package = d_store->get_HDL_resource(dep.prefix);
-                auto pkg_solved = process_parameters(package.get_parameters(), "module::" + package.getName(), {});
+                auto pkg_solved = process_parameters(package.get_parameters(), {});
                 for (auto &[pkg_id, pkg_val]: pkg_solved) {
                     qualified_identifier qid{dep.prefix, "", pkg_id.name};
                     package_parameters[qid] = pkg_val;
@@ -297,7 +296,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
-    return process_parameters(to_solve, work.node->get_name(), ctx);
+    return process_parameters(to_solve, ctx);
 }
 
 
@@ -326,7 +325,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::specialize_
         }
     }
     if(runtime_to_eval.empty()) return {};
-    return process_parameters(runtime_to_eval, parent_module, solved_parameters);
+    return process_parameters(runtime_to_eval, solved_parameters);
 }
 
 std::string parameter_solver::get_full_path(const std::shared_ptr<HDL_instance_AST> &node) {
