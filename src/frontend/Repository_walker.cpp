@@ -32,16 +32,8 @@ void Repository_walker::construct_walker(std::shared_ptr<settings_store> s, std:
     s_store = std::move(s);
     d_store = std::move(d);
     excluded_directories = std::move(ex);
-    target_repository = s_store->get_setting("hdl_store");
-    if(target_repository.empty()){
-        spdlog::info("Please enter the absolute path of the HDL repository");
-        std::cin >> target_repository;
-        s_store->set_setting("hdl_store", target_repository);
-    }
-    for (auto &i : s_store->get_setting_list("default_includes")) {
-        auto full_path =std::filesystem::path(target_repository).append(i);
-        default_includes.insert(full_path);
-    }
+    target_repository = s_store->get_hdl_store();
+    default_includes = s_store->get_default_includes();
     analyze_dir();
 }
 

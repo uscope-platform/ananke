@@ -56,18 +56,21 @@ std::filesystem::path settings_store::get_tool_path(const std::string &tool) {
     return settings_backend[tool + "_path"];
 }
 
-/*
-std::optional<std::string> get_path(const std::string &setting) {
-    std::string ret_val = settings_backend[setting];
-    if (ret_val.ends_with("/")) ret_val.replace(ret_val.size()-1, 1, "");
-    return ret_val;
+std::set<std::string> settings_store::get_default_includes() {
+    std::set<std::string> raw_includes;
+    if (settings_backend.contains("default_includes")) {
+        raw_includes = settings_backend["default_includes"];
+    }
+    return  raw_includes;
 }
 
-std::set<std::string> get_setting_list(const std::string &setting) const{
-    if (!settings_backend.contains(setting)) return {};
-    return settings_backend[setting];
+std::set<std::string> settings_store::get_excluded_paths() {
+    std::set<std::string> raw_includes;
+    if (settings_backend.contains("excluded_paths")) {
+        raw_includes = settings_backend["excluded_paths"];
+    }
+    return  raw_includes;
 }
-*/
 
 settings_store::~settings_store() {
     if(!ephemeral){

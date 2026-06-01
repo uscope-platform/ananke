@@ -51,20 +51,6 @@ std::optional<int> ananke::clear_cache() const {
     return std::nullopt;
 }
 
-void ananke::set_settings() const {
-    if(!opts.set_setting.empty()) {
-        auto name = opts.set_setting.substr(0, opts.set_setting.find_first_of('='));
-        auto value = opts.set_setting.substr(opts.set_setting.find_first_of('=')+1);
-        s_store->set_setting( name, value);
-    }
-}
-
-void ananke::get_settings() const {
-    if(!opts.get_setting.empty()){
-        std::cout << s_store->get_setting(opts.get_setting) << std::endl;
-    }
-}
-
 std::optional<int> ananke::generate_new_app() const {
     if(!opts.new_app_name.empty()){
         std::string lang = "sv";
@@ -113,7 +99,7 @@ std::optional<int> ananke::load_data_cache() {
     d_store = std::make_shared<data_store>(opts.no_cache, opts.cache_dir);
 
     // analyze repository content and update cache
-    Repository_walker walker(s_store, d_store, opts.no_cache, s_store->get_setting_list("excluded_paths"));
+    Repository_walker walker(s_store, d_store, opts.no_cache, s_store->get_excluded_paths());
 
     if(opts.refresh_cache) {
        return 0;

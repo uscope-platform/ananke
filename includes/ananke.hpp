@@ -78,8 +78,6 @@ class ananke {
     explicit ananke(const CLI_opt &options);
     ~ananke();
     [[nodiscard]] std::optional<int> clear_cache() const;
-    void set_settings() const;
-    void get_settings() const;
 
     [[nodiscard]] std::optional<int> generate_new_app() const;
     [[nodiscard]] std::expected<std::unordered_map<std::string, std::string>, int> directed_parsing() const;

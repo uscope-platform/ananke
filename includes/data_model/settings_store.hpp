@@ -33,7 +33,8 @@ public:
 
     std::filesystem::path get_hdl_store();
     std::filesystem::path get_tool_path(const std::string &tool);
-
+    std::set<std::string> get_default_includes();
+    std::set<std::string> get_excluded_paths();
     void remove_setting(const std::string& setting);
     void flush();
     ~settings_store();

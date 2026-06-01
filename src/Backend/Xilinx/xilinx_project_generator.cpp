@@ -120,7 +120,7 @@ void xilinx_project_generator::write_makefile(std::ostream &output) {
 }
 
 void xilinx_project_generator::generate_sim_script(std::ostream &output) {
-    auto vivado_dir = settings->get_tool_path("vivado");
+    std::string vivado_dir = settings->get_tool_path("vivado");
     auto sim_dir = data.repo_dir + "/sim";
 
     output << "FILES=( ";
