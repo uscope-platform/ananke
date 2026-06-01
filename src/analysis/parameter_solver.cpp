@@ -190,13 +190,11 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
         }
     }
 
-    auto runtime_params = specialize_runtime_parameters(solved_parameters, node_parameters, work.node->get_name());
+    auto runtime_params = specialize_runtime_parameters(solved_parameters, node_parameters);
     solved_parameters.insert(runtime_params.begin(), runtime_params.end());
 
-    std::map<qualified_identifier, resolved_parameter> results = solved_parameters;
-
     update_parameters_map(solved_parameters, work.node, d_store);
-    return results;
+    return solved_parameters;
 }
 
 std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store) {
@@ -299,22 +297,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     return process_parameters(to_solve, ctx);
 }
 
-
-std::map<qualified_identifier, std::set<qualified_identifier>> parameter_solver::get_dependency_map(const Parameters_map &map) {
-
-    std::map<qualified_identifier, std::set<qualified_identifier>> dependencies_map;
-    for (auto &[p_name, param]: map) {
-        auto param_id = param->get_identifier();
-        dependencies_map[param_id] = {};
-        auto deps = param->get_dependencies();
-        dependencies_map[param_id].insert(deps.begin(), deps.end());
-    }
-    return dependencies_map;
-}
-
 std::map<qualified_identifier, resolved_parameter> parameter_solver::specialize_runtime_parameters(
     const std::map<qualified_identifier, resolved_parameter> &solved_parameters,
-    Parameters_map &node_parameters, const std::string_view &parent_module
+    Parameters_map &node_parameters
     ) {
 
     Parameters_map runtime_to_eval;
