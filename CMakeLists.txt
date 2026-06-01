@@ -18,6 +18,7 @@ find_package(valijson REQUIRED)
 find_package(cereal)
 find_package(GTest REQUIRED)
 find_package(ctre REQUIRED)
+find_package(tomlplusplus REQUIRED)
 
 include_directories(includes)
 

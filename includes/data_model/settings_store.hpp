@@ -18,29 +18,28 @@
 
 
 #include <filesystem>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <sstream>
 #include <fstream>
 #include <set>
 #include <map>
+#include <spdlog/spdlog.h>
+#include <iostream>
 
 class settings_store {
 public:
     settings_store(bool e, std::string cache_dir_path);
 
-    std::string get_setting(const std::string& setting);
-    std::string get_path(const std::string& setting);
-    std::set<std::string> get_setting_list(const std::string& setting) const;
-    void set_setting(const std::string& name, const std::string& value);
+    std::filesystem::path get_hdl_store();
+    std::filesystem::path get_tool_path(const std::string &tool);
+
     void remove_setting(const std::string& setting);
     void flush();
     ~settings_store();
 private:
 
-    void load_settings_backend();
-    void store_settings_backend();
-
-    std::map<std::string, std::string> settings_backend;
+    nlohmann::json settings_backend;
 
     bool ephemeral;
     std::string store_path;

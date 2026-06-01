@@ -14,69 +14,64 @@
 // limitations under the License.
 #include "data_model/settings_store.hpp"
 
+#include <utility>
+
 settings_store::settings_store(bool e, std::string cache_dir_path) {
-    store_path = cache_dir_path;
+    store_path = std::move(cache_dir_path);
     std::filesystem::create_directory(store_path);
     ephemeral = e;
     settings_file = store_path + "/settings";
 
-    if(std::filesystem::exists(settings_file) && !ephemeral){
-        load_settings_backend();
+    if(!ephemeral){
+        if(!std::filesystem::exists(settings_file) ) {
+            std::ofstream ofs(settings_file);
+            ofs << "{}";
+            ofs.flush();
+            ofs.close();
+        }
+        std::ifstream ifs(settings_file);
+        settings_backend =  nlohmann::json::parse( ifs );
     }
 }
 
-void settings_store::set_setting(const std::string& name, const std::string& value) {
-    settings_backend[name] = value;
-    flush();
+std::filesystem::path settings_store::get_hdl_store() {
+    if (!settings_backend.contains("hdl_store")) {
+        std::string target_repository;
+        spdlog::info("Please enter the absolute path of the HDL repository");
+        std::cin >> target_repository;
+        settings_backend["hdl_store"]  = target_repository;
+    }
+
+    return settings_backend["hdl_store"];
 }
 
-std::string settings_store::get_setting(const std::string& setting) {
-    return settings_backend[setting];
+std::filesystem::path settings_store::get_tool_path(const std::string &tool) {
+    if (!settings_backend.contains(tool + "_path")) {
+        std::string target_repository;
+        spdlog::info("Please enter the absolute path of the {} installation", tool);
+        std::cin >> target_repository;
+        settings_backend[tool + "_path"]  = target_repository;
+    }
+
+    return settings_backend[tool + "_path"];
 }
 
-std::string settings_store::get_path(const std::string &setting) {
-    auto ret_val = settings_backend[setting];
+/*
+std::optional<std::string> get_path(const std::string &setting) {
+    std::string ret_val = settings_backend[setting];
     if (ret_val.ends_with("/")) ret_val.replace(ret_val.size()-1, 1, "");
     return ret_val;
 }
 
-std::set<std::string> settings_store::get_setting_list(const std::string &setting) const{
-    std::set<std::string> ret_val;
-    if (!settings_backend.contains(setting)) return ret_val;
-    std::stringstream ss(settings_backend.at(setting));
-    std::string item;
-
-    while (std::getline(ss, item, ':')) {
-        if (!item.empty()) ret_val.insert(item);
-    }
-    return ret_val;
+std::set<std::string> get_setting_list(const std::string &setting) const{
+    if (!settings_backend.contains(setting)) return {};
+    return settings_backend[setting];
 }
-
-void settings_store::load_settings_backend() {
-    std::ifstream setting_stream(settings_file);
-    std::string line;
-    while (std::getline(setting_stream, line)){
-        std::istringstream ss(line);
-        std::string tokens[2];
-        int i = 0;
-        while(std::getline(ss, tokens[i], ',')) {
-            i++;
-        }
-        settings_backend[tokens[0]] = tokens[1];
-    }
-}
-
-void settings_store::store_settings_backend() {
-    std::filesystem::remove(settings_file);
-    std::ofstream settings_stream(settings_file);
-    for (auto const& [key, val] : settings_backend){
-        settings_stream << key << ',' << val << std::endl;
-    }
-}
+*/
 
 settings_store::~settings_store() {
     if(!ephemeral){
-        store_settings_backend();
+        flush();
     }
 
 }
@@ -86,7 +81,8 @@ void settings_store::remove_setting(const std::string &setting) {
 }
 
 void settings_store::flush() {
-    store_settings_backend();
+    std::ofstream ofs(settings_file);
+    ofs << settings_backend.dump();
 }
 
 

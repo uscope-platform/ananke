@@ -20,7 +20,7 @@
 project_generator_base::project_generator_base(const std::shared_ptr<settings_store> &s_store) {
     data.board_part = "";
     settings = s_store;
-    base_dir = settings->get_path("hdl_store");
+    base_dir = settings->get_hdl_store();
 }
 
 void project_generator_base::set_data(const project_data &d) {

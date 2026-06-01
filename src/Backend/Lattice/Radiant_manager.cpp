@@ -20,12 +20,8 @@
 
 Radiant_manager::Radiant_manager(std::shared_ptr<settings_store> s, bool del_mkfile, std::string name) : Toolchain_manager(std::move(s), del_mkfile, std::move(name)) {
     radiant_path = "";
-    radiant_path = s_store->get_setting("radiant_path");
-    if(radiant_path.empty()){
-        spdlog::info("Enter the full path of the Radiant installation:");
-        std::cin >> radiant_path;
-        s_store->set_setting("radiant_path", radiant_path);
-    }
+    radiant_path = s_store->get_tool_path("lattice_radiant");
+
 }
 
 void Radiant_manager::create_project(const std::string &makefile, bool start_gui) {
