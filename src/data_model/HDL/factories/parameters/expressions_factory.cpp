@@ -26,14 +26,14 @@ void expressions_factory::pop_level() {
 }
 
 void expressions_factory::start_expression() {
-    active = true;
+    factory_active = true;
     expression_level++;
 }
 
 void expressions_factory::stop_expression() {
     expression_level--;
     if (expression_level == 0) {
-        active = false;
+        factory_active = false;
     }
 }
 
@@ -47,7 +47,7 @@ void expressions_factory::pause() {
 }
 
 void expressions_factory::add_component(const Expression_component &ec) {
-    if (active && !paused) {
+    if (factory_active && !paused) {
         current.push_back(ec);
     }
     if (paused) paused = false;
@@ -56,4 +56,11 @@ void expressions_factory::add_component(const Expression_component &ec) {
 
 void expressions_factory::add_index(const Expression &idx) {
     current.add_index(idx);
+}
+
+void expressions_factory::consume(const std::shared_ptr<Parameter_value_base> &v) {
+}
+
+bool expressions_factory::active() const {
+    return factory_active;
 }

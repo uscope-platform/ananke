@@ -51,3 +51,10 @@ std::shared_ptr<Replication> replication_factory::finish() {
 bool replication_factory::is_assignment_context() const {
     return is_assignment;
 }
+
+void replication_factory::consume(const std::shared_ptr<Parameter_value_base> &v) {
+}
+
+bool replication_factory::active() const {
+    return state != build_phase::inactive;
+}

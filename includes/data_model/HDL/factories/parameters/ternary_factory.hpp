@@ -18,16 +18,19 @@
 
 #include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
 #include "data_model/HDL/parameters/components/Ternary.hpp"
+#include "data_model/HDL/factories/parameters/factory_base.hpp"
 
-class ternary_factory {
+class ternary_factory : public factory_base{
 public:
     void start_conditional();
 
-    void add_component(const std::shared_ptr<Parameter_value_base>& component);
     std::shared_ptr<Ternary> finish();
 
-    [[nodiscard]] bool in_ternary() const {return state != build_phase::inactive;};
     bool is_nested() {return !ternary_stack.empty();}
+
+    void consume(const std::shared_ptr<Parameter_value_base>& v) override;
+    bool active() const override;
+
 private:
     enum class build_phase {
         inactive,

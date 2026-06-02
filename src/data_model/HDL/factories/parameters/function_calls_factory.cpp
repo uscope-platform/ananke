@@ -24,9 +24,6 @@ void function_calls_factory::start_function(const std::string &name) {
     state = build_phase::arguments;
 }
 
-void function_calls_factory::add_argument(const std::shared_ptr<Parameter_value_base> &arg) {
-    new_call.add_argument(arg);
-}
 
 void function_calls_factory::finish() {
     if (!calls_stack.empty()) {
@@ -43,5 +40,13 @@ std::shared_ptr<HDL_function_call> function_calls_factory::get_function() {
     auto call = std::make_shared<HDL_function_call>(new_call);
     new_call = HDL_function_call();
     return call;
+}
+
+void function_calls_factory::consume(const std::shared_ptr<Parameter_value_base> &arg) {
+    new_call.add_argument(arg);
+}
+
+bool function_calls_factory::active() const {
+    return state != build_phase::inactive;
 }
 

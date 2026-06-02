@@ -18,8 +18,9 @@
 #define ANANKE_EXPRESSIONS_FACTORY_HPP
 
 #include "data_model/HDL/parameters/components/Expression.hpp"
+#include "data_model/HDL/factories/parameters/factory_base.hpp"
 
-class expressions_factory {
+class expressions_factory : public factory_base{
 public:
     void increase_level() {expression_level++;}
     void decrease_level() {expression_level--;}
@@ -30,13 +31,16 @@ public:
     void stop_expression();
     void clear_expression() {current.clear();}
     std::optional<Expression> get_expression();
-    [[nodiscard]] bool is_active() const {return active;}
     [[nodiscard]] int get_level() const {return expression_level;}
     void add_component(const Expression_component &ec);
     void pause();
     void add_index(const Expression &idx);
+
+    void consume(const std::shared_ptr<Parameter_value_base>& v) override;
+    bool active() const override;
+
 private:
-    bool active = false;
+    bool factory_active = false;
     bool paused = false;
     int expression_level = 0;
     Expression current;

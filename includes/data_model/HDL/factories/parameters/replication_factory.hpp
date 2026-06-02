@@ -17,9 +17,10 @@
 #define ANANKE_REPLICATION_FACTORY_HPP
 
 #include "data_model/HDL/parameters/components/Replication.hpp"
+#include "data_model/HDL/factories/parameters/factory_base.hpp"
 #include <stack>
 
-class replication_factory {
+class replication_factory : public factory_base{
 public:
 
     void start_replication(bool is_ass = false);
@@ -27,7 +28,9 @@ public:
     std::shared_ptr<Replication> finish();
 
     [[nodiscard]] bool is_assignment_context() const;
-    [[nodiscard]] bool in_replication() const {return state != build_phase::inactive;};
+
+    void consume(const std::shared_ptr<Parameter_value_base>& v) override;
+    bool active() const override;
 
 private:
     std::stack<std::pair<Replication, bool>> replication_stack;

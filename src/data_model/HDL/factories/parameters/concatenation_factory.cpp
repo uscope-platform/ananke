@@ -17,16 +17,16 @@
 #include "data_model/HDL/factories/parameters/concatenation_factory.hpp"
 
 void concatenation_factory::start_concatenation() {
-    if (active) {
+    if (factory_active) {
         concatenations_stack.push(new_concatenation);
     }
     new_concatenation = Concatenation();
-    active = true;
+    factory_active = true;
 }
 
 void concatenation_factory::stop_concatenation() {
     if (concatenations_stack.empty()) {
-        active = false;
+        factory_active = false;
     } else {
        auto current = new_concatenation;
         new_concatenation = concatenations_stack.top();
@@ -39,7 +39,11 @@ void concatenation_factory::set_default_init() {
     new_concatenation.set_default_init();
 }
 
-void concatenation_factory::add_component(const std::shared_ptr<Parameter_value_base> &expr) {
+void concatenation_factory::consume(const std::shared_ptr<Parameter_value_base> &expr) {
     new_concatenation.add_component(expr);
+}
+
+bool concatenation_factory::active() const {
+ return factory_active;
 }
 

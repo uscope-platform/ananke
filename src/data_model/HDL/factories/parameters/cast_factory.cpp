@@ -25,17 +25,6 @@ void cast_factory::start() {
     state = build_phase::size;
 }
 
-void cast_factory::set_content(const std::shared_ptr<Parameter_value_base> &c) {
-    if (state == build_phase::size) {
-        if (c->is_expression()) {
-            new_cast.set_size(c->as<Expression>());
-        } else {
-            spdlog::warn("non expression cast size: {}", c->print());
-        }
-    } else {
-        new_cast.set_content(c);
-    }
-}
 
 void cast_factory::set_type(const std::string &t) {
     new_cast.set_type_cast();
@@ -55,4 +44,20 @@ std::shared_ptr<Cast> cast_factory::get_cast() {
         state = build_phase::inactive;
     }
     return std::make_shared<Cast>(cast);
+}
+
+void cast_factory::consume(const std::shared_ptr<Parameter_value_base> &c) {
+    if (state == build_phase::size) {
+        if (c->is_expression()) {
+            new_cast.set_size(c->as<Expression>());
+        } else {
+            spdlog::warn("non expression cast size: {}", c->print());
+        }
+    } else {
+        new_cast.set_content(c);
+    }
+}
+
+bool cast_factory::active() const {
+    return state != build_phase::inactive;
 }

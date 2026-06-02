@@ -22,16 +22,18 @@
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/components/Cast.hpp"
 #include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
+#include "data_model/HDL/factories/parameters/factory_base.hpp"
 
-class cast_factory {
+class cast_factory : public factory_base{
 public:
     void start();
-    void set_content(const std::shared_ptr<Parameter_value_base> &c);
     void set_type(const std::string &t);
     void advance_cast() {state = build_phase::content;}
     std::shared_ptr<Cast> get_cast();
-    bool in_cast() const {return state != build_phase::inactive;}
     bool in_size() const {return state == build_phase::size;}
+    void consume(const std::shared_ptr<Parameter_value_base>& v) override;
+    bool active() const override;
+
 private:
 
     enum class build_phase {

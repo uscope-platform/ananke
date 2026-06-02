@@ -18,8 +18,9 @@
 
 #include "data_model/HDL/parameters/common/dimension.hpp"
 #include "data_model/HDL/parameters/common/HDL_type.hpp"
+#include "data_model/HDL/factories/parameters/factory_base.hpp"
 
-class ranges_factory {
+class ranges_factory : public factory_base{
 public:
     void start();
     void open_range();
@@ -29,8 +30,10 @@ public:
     void stop();
     void advance_range();
     void clear();
-    [[nodiscard]] bool active()const {return is_active;}
+    [[nodiscard]] bool active()const override {return is_active;}
     std::pair<std::vector<dimension_t>,std::vector<dimension_t>> get_dimensions();
+
+    void consume(const std::shared_ptr<Parameter_value_base>& v) override;
 private:
     enum dimensions_stage{
         packed,

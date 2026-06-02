@@ -24,19 +24,6 @@ void ternary_factory::start_conditional() {
     state = build_phase::condition;
 }
 
-void ternary_factory::add_component(const std::shared_ptr<Parameter_value_base> &component) {
-    if (state == build_phase::condition) {
-        if (!component->is_expression()) throw std::invalid_argument("Only valid expressions can be the condition of a ternary assignments");
-        current.set_condition(component->as<Expression>());
-        state = build_phase::true_assignment;
-    }else if (state == build_phase::true_assignment) {
-        current.set_true_value(component);
-        state = build_phase::false_assignment;
-    }else if (state == build_phase::false_assignment) {
-        current.set_false_value(component);
-    }
-}
-
 std::shared_ptr<Ternary> ternary_factory::finish() {
     auto ret = std::make_shared<Ternary>(current);
     if (!ternary_stack.empty()) {
@@ -49,4 +36,21 @@ std::shared_ptr<Ternary> ternary_factory::finish() {
         state = build_phase::inactive;
     }
         return ret;
+}
+
+void ternary_factory::consume(const std::shared_ptr<Parameter_value_base> &component) {
+    if (state == build_phase::condition) {
+        if (!component->is_expression()) throw std::invalid_argument("Only valid expressions can be the condition of a ternary assignments");
+        current.set_condition(component->as<Expression>());
+        state = build_phase::true_assignment;
+    }else if (state == build_phase::true_assignment) {
+        current.set_true_value(component);
+        state = build_phase::false_assignment;
+    }else if (state == build_phase::false_assignment) {
+        current.set_false_value(component);
+    }
+}
+
+bool ternary_factory::active() const {
+    return state != build_phase::inactive;
 }

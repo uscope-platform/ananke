@@ -92,9 +92,9 @@ public:
     bool is_param_override() const {return in_param_override && !paused;}
     bool is_component_relevant() const {
         if (paused) return false;
-        return expr_factory.is_active() ||
-            c_factory.in_cast() || in_packed_assignment || calls_factory.in_function_call() || concat_factory.in_concatenation() ||
-            t_factory.in_ternary() || f_factory.is_active() || r_factory.active();
+        return expr_factory.active() ||
+            c_factory.active() || in_packed_assignment || calls_factory.active() || concat_factory.active() ||
+            t_factory.active() || f_factory.is_active() || r_factory.active();
     }
 
     void advance_range();

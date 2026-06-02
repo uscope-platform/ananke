@@ -20,15 +20,18 @@
 #include <stack>
 
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
+#include "data_model/HDL/factories/parameters/factory_base.hpp"
 
-class function_calls_factory {
+class function_calls_factory : public factory_base{
 public:
     void start_function(const std::string& name);
-    void add_argument(const std::shared_ptr<Parameter_value_base> &arg);
     void finish();
     std::shared_ptr<HDL_function_call> get_function();
     bool is_nested() const {return !calls_stack.empty();}
-    bool in_function_call() const {return state != build_phase::inactive;}
+
+    void consume(const std::shared_ptr<Parameter_value_base> &arg) override;
+    bool active() const override;
+
 private:
     std::stack<HDL_function_call> calls_stack;
     HDL_function_call new_call;

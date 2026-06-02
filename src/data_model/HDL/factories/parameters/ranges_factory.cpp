@@ -41,6 +41,9 @@ std::pair<std::vector<dimension_t>, std::vector<dimension_t>> ranges_factory::ge
     return {packed_dimensions, unpacked_dimensions};
 }
 
+void ranges_factory::consume(const std::shared_ptr<Parameter_value_base> &v) {
+}
+
 
 void ranges_factory::close_range() {
     if (!is_active) return;
