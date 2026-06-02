@@ -55,8 +55,8 @@ void HDL_parameters_factory::add_component(const Expression_component &c, bool i
         // subsequent stop_expression so it doesn't underflow the outer expression level.
         expr_factory.increase_level();
         expr_factory.stop_expression();
-    } else if (index_factory.is_active()) {
-        index_factory.add_component(c);
+    } else if (in_bit_selection) {
+        bit_index.push_back(c);
     } else {
         expr_factory.add_component(c);
     }
@@ -86,19 +86,23 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
 
 
 void HDL_parameters_factory::start_bit_selection() {
-    index_factory.start_index();
+    if (!r_factory.active()) {
+        in_bit_selection = true;
+        bit_index = Expression();
+    }
 }
 
 void HDL_parameters_factory::stop_bit_selection() {
-    expr_factory.add_index(index_factory.get_index());
-    index_factory.stop_index();
-
+    if (in_bit_selection) {
+        expr_factory.add_index(bit_index);
+        in_bit_selection = false;
+    }
 }
 
 void HDL_parameters_factory::close_array_index() {
-    if(index_factory.is_active() && (in_param_assignment || in_packed_assignment || repl_factory.is_assignment_context() || in_param_override)){
-        index_factory.stop_index();
-        expr_factory.add_index(index_factory.get_index());
+    if(in_bit_selection && (in_param_assignment || in_packed_assignment || repl_factory.is_assignment_context() || in_param_override)){
+        in_bit_selection = false;
+        expr_factory.add_index(bit_index);
     }
 }
 
@@ -309,14 +313,6 @@ HDL_function_def HDL_parameters_factory::stop_function_decl() {
     return f;
 }
 
-void HDL_parameters_factory::start_array_quantifier() {
-    index_factory.set_quantifier(true);
-}
-
-void HDL_parameters_factory::stop_array_quantifier() {
-    index_factory.set_quantifier(false);
-}
-
 void HDL_parameters_factory::start_cast(bool expression_size) {
     if (in_param_assignment || in_param_override || in_packed_assignment|| f_factory.is_active()|| concat_factory.in_concatenation()) {
         if (concat_factory.in_concatenation() || expression_size) {
@@ -401,8 +397,8 @@ void HDL_parameters_factory::stop_function_call() {
             t_factory.add_component(call);
         } else if(expr_factory.is_active()) {
             expr_factory.add_component(ec);
-        } else if (index_factory.is_active()) {
-            index_factory.add_component(ec);
+        } else if (in_bit_selection) {
+            bit_index.push_back(ec);
         } else if (concat_factory.in_concatenation()) {
             concat_factory.add_component(std::make_shared<Expression>(Expression({ec})));
         } else if (repl_factory.in_replication()) {

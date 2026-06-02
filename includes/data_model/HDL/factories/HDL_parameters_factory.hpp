@@ -24,7 +24,6 @@
 #include "data_model/HDL/factories/parameters/concatenation_factory.hpp"
 #include "data_model/HDL/factories/parameters/function_calls_factory.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
-#include "data_model/HDL/factories/parameters/indexing_factory.hpp"
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 #include "data_model/HDL/factories/parameters/ternary_factory.hpp"
 #include "parameters/cast_factory.hpp"
@@ -75,9 +74,6 @@ public:
 
     void start_packed_dimension();
     void stop_packed_dimension();
-
-    void start_array_quantifier();
-    void stop_array_quantifier();
 
     void start_cast(bool expression_size);
     void set_cast_type(const std::string &t);
@@ -141,7 +137,6 @@ private:
     replication_factory repl_factory;
     concatenation_factory concat_factory;
     function_calls_factory calls_factory;
-    indexing_factory index_factory;
     ranges_factory r_factory;
 
     expressions_factory expr_factory;
@@ -152,6 +147,8 @@ private:
     bool in_typedef = false;
     bool in_packed_assignment = false;
     bool paused = false;
+    bool in_bit_selection = false;
+    Expression bit_index;
     bool skip_expression = false;
 
     std::string current_type;

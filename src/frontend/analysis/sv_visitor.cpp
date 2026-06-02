@@ -88,13 +88,11 @@ void sv_visitor::enterName_of_instance(sv2017::Name_of_instanceContext *ctx) {
     if(!ctx->unpacked_dimension().empty()){
         params_factory.start_param_assignment();
         params_factory.new_parameter("instance_array_qualifier");
-        params_factory.start_array_quantifier();
     }
 }
 
 void sv_visitor::exitName_of_instance(sv2017::Name_of_instanceContext *ctx) {
     if(!ctx->unpacked_dimension().empty()){
-        params_factory.stop_array_quantifier();
         deps_factory.add_array_quantifier(params_factory.get_parameter());
     }
 }
