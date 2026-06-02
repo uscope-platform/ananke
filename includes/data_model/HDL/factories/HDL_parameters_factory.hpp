@@ -91,9 +91,9 @@ public:
     void stop_function_call();
 
     bool in_replication_assignment_context() const {return repl_factory.is_assignment_context();}
-    bool in_packed_context() const {return in_packed_assignment && ~paused; }
-    bool is_param_assignment() const {return in_param_assignment&& ~paused;}
-    bool is_param_override() const {return in_param_override && ~paused;}
+    bool in_packed_context() const {return in_packed_assignment && !paused; }
+    bool is_param_assignment() const {return in_param_assignment && !paused;}
+    bool is_param_override() const {return in_param_override && !paused;}
     bool is_component_relevant() const {
         if (paused) return false;
         return expr_factory.is_active() || index_factory.is_range() && index_factory.is_active() ||

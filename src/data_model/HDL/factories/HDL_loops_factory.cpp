@@ -13,7 +13,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "data_model/HDL/factories/HDL_loops_factory.h"
+#include "data_model/HDL/factories/HDL_loops_factory.hpp"
 
 void HDL_loops_factory::new_loop() {
     repeated_instances.clear();

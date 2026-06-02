@@ -50,7 +50,10 @@ void HDL_parameters_factory::add_component(const Expression_component &c, bool i
         f_factory.add_component(c);
     }else if (is_call_argument) {
         calls_factory.add_argument(std::make_shared<Expression>(Expression({c})));
-        expr_factory.increase_level();//this is a ugly hack, why is it needed?
+        // The grammar parses the data_type argument of a system function call
+        // inside an expression context. This increase_level balances the
+        // subsequent stop_expression so it doesn't underflow the outer expression level.
+        expr_factory.increase_level();
         expr_factory.stop_expression();
     } else if (index_factory.is_active() && !index_factory.is_range()) {
         index_factory.add_component(c);
@@ -94,7 +97,7 @@ void HDL_parameters_factory::stop_bit_selection() {
 }
 
 void HDL_parameters_factory::close_array_index() {
-    if(index_factory.is_active() & (in_param_assignment || in_packed_assignment || repl_factory.is_assignment_context() || in_param_override)){
+    if(index_factory.is_active() && (in_param_assignment || in_packed_assignment || repl_factory.is_assignment_context() || in_param_override)){
         index_factory.stop_index();
         expr_factory.add_index(index_factory.get_index());
     }

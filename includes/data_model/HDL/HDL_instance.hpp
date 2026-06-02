@@ -82,7 +82,7 @@ public:
     void update_loop(const HDL_loop_metadata &l, int i) {
         loop_specs[i] = l;
     }
-    HDL_loop_metadata get_inner_loop() {return loop_specs[0];};
+    HDL_loop_metadata get_inner_loop() {return loop_specs.empty() ? HDL_loop_metadata{} : loop_specs[0];};
     unsigned int get_n_loops() {return loop_specs.size();};
 
     void set_channel_groups(const std::vector<channel_group> &g) {

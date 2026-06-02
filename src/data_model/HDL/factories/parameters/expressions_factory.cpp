@@ -47,7 +47,7 @@ void expressions_factory::pause() {
 }
 
 void expressions_factory::add_component(const Expression_component &ec) {
-    if (active & !paused) {
+    if (active && !paused) {
         current.push_back(ec);
     }
     if (paused) paused = false;

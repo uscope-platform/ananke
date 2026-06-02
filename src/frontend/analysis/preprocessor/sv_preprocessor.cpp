@@ -63,17 +63,25 @@ namespace preprocessor {
 
                 auto included_file = parse_include_path(trimmed_line);
                 if (included_file.has_value()) {
-                    auto current_line =line_number;
-                    auto current_path = path;
+                    auto saved_path = path;
+                    auto saved_line = line_number;
                     path = included_file.value();
-                    mm_file file(path);
                     source_map.close_range(output_line_n);
-                    auto content = preprocess(file.view(), output_line_n);
-                    out << content + '\n';
-                    line_number = current_line;
-                    path = current_path;
-                    source_map.open_range(output_line_n, path);
 
+                    try {
+                        mm_file file(path);
+                        auto content = preprocess(file.view(), output_line_n);
+                        out << content + '\n';
+                    } catch (...) {
+                        path = saved_path;
+                        line_number = saved_line;
+                        source_map.open_range(output_line_n, path);
+                        throw;
+                    }
+
+                    line_number = saved_line;
+                    path = saved_path;
+                    source_map.open_range(output_line_n, path);
                 }
             } else if (trimmed_line.starts_with("`ifdef")) {
                 auto condition = parse_one_arg_directive(trimmed_line, 6);

@@ -24,7 +24,7 @@
 #include "data_model/HDL/factories/HDL_interfaces_factory.hpp"
 #include "data_model/HDL/factories/HDL_instances_factory.hpp"
 #include "data_model/HDL/factories/HDL_functions_factory.hpp"
-#include "data_model/HDL/factories/HDL_loops_factory.h"
+#include "data_model/HDL/factories/HDL_loops_factory.hpp"
 
 #include "data_model/HDL/HDL_instance.hpp"
 #include "data_model/HDL/HDL_Resource.hpp"
