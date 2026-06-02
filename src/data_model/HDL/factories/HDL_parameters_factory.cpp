@@ -55,7 +55,7 @@ void HDL_parameters_factory::add_component(const Expression_component &c, bool i
         // subsequent stop_expression so it doesn't underflow the outer expression level.
         expr_factory.increase_level();
         expr_factory.stop_expression();
-    } else if (index_factory.is_active() && !index_factory.is_range()) {
+    } else if (index_factory.is_active()) {
         index_factory.add_component(c);
     } else {
         expr_factory.add_component(c);
@@ -78,7 +78,6 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
         if (default_assignment){
            concat_factory.set_default_init();
         }
-        current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
         current_resource.add_item(concat_factory.get_concatenation());
         concat_factory.stop_concatenation();
         expr_factory.increase_level();
@@ -87,7 +86,7 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
 
 
 void HDL_parameters_factory::start_bit_selection() {
-    index_factory.start_index(false);
+    index_factory.start_index();
 }
 
 void HDL_parameters_factory::stop_bit_selection() {
@@ -112,9 +111,6 @@ void HDL_parameters_factory::stop_param_assignment() {
 }
 
 void HDL_parameters_factory::stop_unpacked_dimension_declaration() {
-    if (index_factory.is_active() && index_factory.is_range()) {
-        index_factory.stop_index();
-    }
 }
 
 void HDL_parameters_factory::stop_replication() {
@@ -137,14 +133,12 @@ void HDL_parameters_factory::start_replication_assignment() {
 }
 
 void HDL_parameters_factory::stop_replication_assignment() {
-    current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
     current_resource.add_item(repl_factory.finish());
     expr_factory.pop_level();
 }
 
 void HDL_parameters_factory::stop_packed_assignment() {
     if(in_packed_assignment && !concat_factory.in_concatenation()){
-        current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
         in_packed_assignment = false;
     }
 }
@@ -166,14 +160,11 @@ void HDL_parameters_factory::stop_expression_new() {
                 repl_factory.add_expression(expr.value());
             } else if (r_factory.active()) {
                 r_factory.add_expression(expr.value());
-            } else if (index_factory.is_range()){
-                index_factory.add_expression(expr.value());
             } else if(concat_factory.in_concatenation()) {
                 concat_factory.add_component(std::make_shared<Expression>(expr.value()));
             } else if(calls_factory.in_function_call()) {
                 calls_factory.add_argument(std::make_shared<Expression>(expr.value()));
             } else {
-                current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
                 current_resource.set_scalar(std::make_shared<Expression>(expr.value()));
             }
         }
@@ -218,21 +209,12 @@ void HDL_parameters_factory::start_replication() {
 
 void HDL_parameters_factory::start_unpacked_dimension_declaration() {
     r_factory.advance_stage();
-    if(in_param_assignment){
-        index_factory.start_index(true);
-    }
 }
 
 void HDL_parameters_factory::start_packed_dimension() {
-    index_factory.start_index(true);
-
 }
 
 void HDL_parameters_factory::stop_packed_dimension() {
-    if (index_factory.is_active()) {
-        index_factory.stop_index();
-        index_factory.set_packed(true);
-    }
 }
 
 
@@ -395,7 +377,6 @@ void HDL_parameters_factory::stop_function_assignment() {
         if (concat_factory.in_concatenation()) {
             concat_factory.add_component(calls_factory.get_function());
         } else {
-            current_resource.set_unpacked_dimensions(index_factory.get_dimensions());
             current_resource.set_scalar(calls_factory.get_function());
         }
     }

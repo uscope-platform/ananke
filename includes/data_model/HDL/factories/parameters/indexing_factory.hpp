@@ -17,27 +17,19 @@
 #define ANANKE_INDEXING_FACTORY_HPP
 
 #include "data_model/HDL/parameters/components/Expression.hpp"
-#include "data_model/HDL/parameters/common/dimension.hpp"
 
 class indexing_factory {
 public:
-    void start_index(bool r);
+    void start_index();
     Expression get_index() {return index;}
     void stop_index();
     [[nodiscard]] bool is_active() const {return active;}
-    [[nodiscard]] bool is_range() const {return active && range;}
-    void add_expression(const Expression &e);
     void add_component(const Expression_component &c){index.push_back(c);}
-    void set_packed(bool p);
-    std::vector<dimension_t> get_dimensions();
     void set_quantifier(bool q);
 private:
     bool quantifier = false;
     bool active = false;
-    bool range = false;
     Expression index;
-    bool first_bound = true;
-    std::vector<dimension_t> dim{};
 };
 
 
