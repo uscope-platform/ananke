@@ -179,7 +179,7 @@ TEST( end_to_end , directed_parsing_preprocessor_error) {
 
 
 TEST( end_to_end , sim_script_generation) {
-
+    e2e_setup_settings();
     ananke::CLI_opt opts;
     opts.no_cache = true;
     opts.generate_xilinx = true;
@@ -191,12 +191,6 @@ TEST( end_to_end , sim_script_generation) {
     auto test_dir = opts.cache_dir + "/PID";
 
 
-    std::ofstream ofs(opts.cache_dir + "/settings");
-    ofs << "{\"hdl_store\":\"" << opts.cache_dir << "\",\"amd_vivado_path\":\"/dev/zero\"}";
-    ofs.flush();
-    ofs.close();
-    std::error_code ec;
-    std::filesystem::resize_file(opts.cache_dir + "/settings", std::filesystem::file_size(opts.cache_dir + "/settings", ec), ec);
     auto wd = std::filesystem::current_path();
     const auto copyOptions = std::filesystem::copy_options::recursive |
                              std::filesystem::copy_options::overwrite_existing;
@@ -228,10 +222,11 @@ TEST( end_to_end , sim_script_generation) {
     ss << ifs.rdbuf();
     std::string result = ss.str();
 
-    std::string const placeholder = "/tmp/ananke_test_cache";
-    std::string expected = "FILES=( \n    /tmp/ananke_test_cache/PID/rtl/PID.sv\n    /tmp/ananke_test_cache/integrator/rtl/Integrator.v\n    /tmp/ananke_test_cache/simple_register_cu/rtl/axil_simple_register_cu.sv\n    /tmp/ananke_test_cache/skid_buffer/rtl/axil_skid_buffer.sv\n    /dev/zero/data/verilog/src/glbl.v\n    /tmp/ananke_test_cache/Common/interfaces.sv\n    /tmp/ananke_test_cache/PID/tb/PID_tb.sv\n)\n\nmkdir -p /tmp/ananke_test_cache/PID/sim\ncp sim.tcl /tmp/ananke_test_cache/PID/sim/sim.tcl\n\n\n(\n    cd /tmp/ananke_test_cache/PID/sim|| exit\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 1: XVLOG (Analysis) <<<\\033[0m\"\n    xvlog -sv \"${FILES[@]}\" -i /tmp/ananke_test_cache/public/Components/Common -i /dev/zero/data/rsb/busdef\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XVLOG FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 2: XELAB (Elaboration) <<<\\033[0m\"\n    xelab -debug typical --relax -top PID_tb -top glbl -L xil_defaultlib -L unisims_ver -L unimacro_ver -L xpm  -snapshot sim_snapshot  -timescale 10ns/1ps\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XELAB FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 3: XSIM (Simulation) <<<\\033[0m\"\n    xsim sim_snapshot -tclbatch sim.tcl\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XSIM FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n)\nif [ -f /tmp/ananke_test_cache/PID/sim/dump.vcd  ]; then\n    vcd2fst /tmp/ananke_test_cache/PID/sim/dump.vcd dump.fst\n    rm /tmp/ananke_test_cache/PID/sim/dump.vcd\nfi\nrm -r /tmp/ananke_test_cache/PID/sim\n";
+    std::string const placeholder = "/tmp/ananke_test_cache/PID/sim";
+    std::string replacement = std::filesystem::canonical("/tmp/ananke_test_cache").string() + "/PID/sim";
+    std::string expected = "FILES=( \n    /tmp/ananke_test_cache/PID/rtl/PID.sv\n    /tmp/ananke_test_cache/integrator/rtl/Integrator.v\n    /tmp/ananke_test_cache/simple_register_cu/rtl/axil_simple_register_cu.sv\n    /tmp/ananke_test_cache/skid_buffer/rtl/axil_skid_buffer.sv\n    /tmp/vivado/data/verilog/src/glbl.v\n    /tmp/ananke_test_cache/Common/interfaces.sv\n    /tmp/ananke_test_cache/PID/tb/PID_tb.sv\n)\n\nmkdir -p /tmp/ananke_test_cache/PID/sim\ncp sim.tcl /tmp/ananke_test_cache/PID/sim/sim.tcl\n\n\n(\n    cd /tmp/ananke_test_cache/PID/sim|| exit\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 1: XVLOG (Analysis) <<<\\033[0m\"\n    xvlog -sv \"${FILES[@]}\" -i /tmp/ananke_test_cache/public/Components/Common -i /tmp/vivado/data/rsb/busdef\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XVLOG FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 2: XELAB (Elaboration) <<<\\033[0m\"\n    xelab -debug typical --relax -top PID_tb -top glbl -L xil_defaultlib -L unisims_ver -L unimacro_ver -L xpm  -snapshot sim_snapshot  -timescale 10ns/1ps\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XELAB FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 3: XSIM (Simulation) <<<\\033[0m\"\n    xsim sim_snapshot -tclbatch sim.tcl\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XSIM FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n)\nif [ -f /tmp/ananke_test_cache/PID/sim/dump.vcd  ]; then\n    vcd2fst /tmp/ananke_test_cache/PID/sim/dump.vcd dump.fst\n    rm /tmp/ananke_test_cache/PID/sim/dump.vcd\nfi\nrm -r /tmp/ananke_test_cache/PID/sim\n";
     for (size_t pos = 0; (pos = expected.find(placeholder, pos)) != std::string::npos; pos += opts.cache_dir.size()) {
-        expected.replace(pos, placeholder.size(), opts.cache_dir);
+        expected.replace(pos, placeholder.size(), replacement);
     }
     EXPECT_EQ(result, expected);
 
@@ -242,8 +237,7 @@ TEST( end_to_end , sim_script_generation) {
     EXPECT_EQ(result, "\nopen_vcd dump.vcd\n\nlog_vcd [get_objects -recursive /*]\n\nrun 2ms\n\nflush_vcd\nclose_vcd\nexit\n");
 
     std::filesystem::current_path(wd);
-
-    std::filesystem::remove_all(opts.cache_dir);
+    e2e_clean_settings();
 }
 
 

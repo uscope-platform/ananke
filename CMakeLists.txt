@@ -27,16 +27,25 @@ include_directories(${inja_INCLUDE_DIRS})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DTEMPLATES_FOLDER="${CMAKE_SOURCE_DIR}/templates")
     add_definitions(-DSPECS_FOLDER="${CMAKE_SOURCE_DIR}/bus_specs")
-    add_compile_options(--coverage -fprofile-arcs -ftest-coverage)
+    add_compile_options(--coverage -ftest-coverage)
     add_link_options(--coverage)
+elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    add_definitions(-DTEMPLATES_FOLDER="${CMAKE_SOURCE_DIR}/templates")
+    add_definitions(-DSPECS_FOLDER="${CMAKE_SOURCE_DIR}/bus_specs")
 else()
     add_definitions(-DTEMPLATES_FOLDER="/usr/local/etc/ananke/templates")
     add_definitions(-DSPECS_FOLDER="/usr/local/etc/ananke/specs")
 endif(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
-
+option(ENABLE_PROFILING "Enable profiling" OFF)
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+
+if(ENABLE_PROFILING)
+    message(STATUS "Enabling Profiling support")
+    add_compile_options(-fprofile-arcs)
+endif()
+
 
 if(ENABLE_ASAN)
     message(STATUS "Enabling AddressSanitizer")
@@ -48,6 +57,8 @@ elseif(ENABLE_TSAN)
     add_compile_options(-fsanitize=thread -g -O1 -fno-omit-frame-pointer)
     add_link_options(-fsanitize=thread)
 endif()
+
+
 
 add_subdirectory(includes)
 add_subdirectory(src)
