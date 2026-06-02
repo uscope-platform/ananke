@@ -57,9 +57,13 @@ std::filesystem::path settings_store::get_tool_path(const std::string &tool) {
 }
 
 std::set<std::string> settings_store::get_default_includes() {
+
     std::set<std::string> raw_includes;
+
     if (settings_backend.contains("default_includes")) {
-        raw_includes = settings_backend["default_includes"];
+        for (const auto& item : settings_backend["default_includes"]) {
+            raw_includes.insert(std::filesystem::path(settings_backend["hdl_store"]) / item);
+        }
     }
     return  raw_includes;
 }
