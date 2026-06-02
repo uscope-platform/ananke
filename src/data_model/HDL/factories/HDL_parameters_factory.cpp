@@ -278,12 +278,10 @@ void HDL_parameters_factory::close_range() {
 
 
 void HDL_parameters_factory::start_type_declaration() {
-    in_typedef = true;
     r_factory.start();
 }
 
 HDL_type HDL_parameters_factory::stop_type_declaration(const std::string &name) {
-    in_typedef = false;
     r_factory.stop();
     HDL_type t;
     auto [packed, unpacked] = r_factory.get_dimensions();

@@ -144,12 +144,10 @@ private:
 
     bool in_param_override = false;
     bool in_param_assignment = false;
-    bool in_typedef = false;
     bool in_packed_assignment = false;
     bool paused = false;
     bool in_bit_selection = false;
     Expression bit_index;
-    bool skip_expression = false;
 
     std::string current_type;
 
