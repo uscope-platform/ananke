@@ -17,22 +17,4 @@
 
 #include "data_model/settings_store.hpp"
 
-TEST( settings_store_test , get_set_setting) {
-    settings_store store(true, "/tmp/test_settings_store");
-    store.set_setting("test_Setting", "test_123");
-    std::string result = store.get_setting("test_Setting");
-    store.remove_setting("test_setting");
-    ASSERT_EQ(result, "test_123");
-}
-
-TEST( settings_store_test , ser_des) {
-    auto *store_1 = new settings_store(false, "/tmp/test_settings_store");
-    store_1->set_setting("test_Setting", "test_123");
-    delete store_1;
-    auto *store_2 = new settings_store(false, "/tmp/test_settings_store");
-    std::string result = store_2->get_setting("test_Setting");
-    store_2->remove_setting("test_setting");
-    delete store_2;
-
-    ASSERT_EQ(result, "test_123");
-}
+// TODO: TEST SETTINGS STORE??

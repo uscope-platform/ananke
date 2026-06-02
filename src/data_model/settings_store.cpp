@@ -18,7 +18,7 @@
 
 settings_store::settings_store(bool e, std::string cache_dir_path) {
     store_path = std::move(cache_dir_path);
-    std::filesystem::create_directory(store_path);
+    if (!std::filesystem::exists(store_path)) std::filesystem::create_directory(store_path);
     ephemeral = e;
     settings_file = store_path + "/settings";
 

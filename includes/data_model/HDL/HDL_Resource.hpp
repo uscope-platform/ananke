@@ -36,7 +36,8 @@
 
 #include <spdlog/spdlog.h>
 #include "data_model/HDL/HDL_definitions.hpp"
-#include "parameters/HDL_function_def.hpp"
+#include "data_model/HDL/HDL_struct.hpp"
+#include "data_model/HDL/parameters/HDL_function_def.hpp"
 
 struct if_port_specs {
     std::string type;
@@ -134,7 +135,8 @@ class HDL_Resource {
 
         template<class Archive>
         void serialize( Archive & ar ) {
-            ar(name, path, hdl_type, dependencies, parameters_spec, port_specs, doc, processor_docs, functions, line_n, typedefs);
+            ar(name, path, hdl_type, dependencies, parameters_spec, port_specs, doc, processor_docs,
+                functions, line_n, typedefs, struct_defs);
         }
 
         bool is_empty();
@@ -157,6 +159,7 @@ private:
 
         std::vector<processor_instance> processor_docs;
         std::map<std::string, HDL_type> typedefs;
+        std::map<std::string, HDL_struct> struct_defs;
 
         // DOCUMENTATION``
         module_documentation doc;

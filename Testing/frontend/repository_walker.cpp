@@ -17,16 +17,36 @@
 #include <gtest/gtest.h>
 
 
+std::string repw_settings_path = "/tmp/test_settings_store";
+auto repw_settings_file = repw_settings_path + "/settings";
+
+std::shared_ptr<settings_store> repw_setup_settings() {
+    std::filesystem::create_directories(repw_settings_path);
+    std::ofstream ofs(repw_settings_file);
+    ofs << "{\"hdl_store\":\"repository_walker\"}";
+    ofs.flush();
+    ofs.close();
+    std::error_code ec;
+    std::filesystem::resize_file(repw_settings_file, std::filesystem::file_size(repw_settings_file, ec), ec);
+    return std::make_shared<settings_store>(false, repw_settings_path);
+}
+
+void repw_clean_settings() {
+    std::filesystem::remove_all(repw_settings_file);
+    std::filesystem::remove_all(repw_settings_path);
+}
 
 
 class repository_walker : public ::testing::Test {
 protected:
+
     void SetUp() {
+        s_store = repw_setup_settings();
         d_store = std::make_shared<data_store>(true,"/tmp/test_data_store");
-        s_store = std::make_shared<settings_store>(true,"/tmp/test_settings_store");
     }
 
     virtual void TearDown() {
+        repw_clean_settings();
     }
     std::shared_ptr<data_store> d_store;
     std::shared_ptr<settings_store> s_store;
@@ -36,7 +56,7 @@ protected:
 
 
 TEST_F(repository_walker , directory_analysis) {
-    s_store->set_setting("hdl_store", "repository_walker");
+
     Repository_walker walker(s_store,d_store, false,{"repository_walker/ignored_dir","repository_walker/ignored_dir_2" });
     auto hdl_results = d_store->get_hdl_cache();
     auto script_results = d_store->get_scripts_cache();
@@ -102,7 +122,6 @@ TEST_F(repository_walker , directory_analysis) {
     hdl_check["half_adder"] = vh_res;
 
     ASSERT_EQ(hdl_results, hdl_check);
-
 }
 
 

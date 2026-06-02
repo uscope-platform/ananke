@@ -18,6 +18,27 @@
 #include "Backend/Toolchain_manager.hpp"
 #include "Backend/Xilinx/Vivado_manager.hpp"
 
+
+std::string tcm_settings_path = "/tmp/test_settings_store";
+auto settings_file = tcm_settings_path + "/settings";
+
+std::shared_ptr<settings_store> tcm_setup_settings() {
+    std::filesystem::create_directories(tcm_settings_path);
+    std::ofstream ofs(settings_file);
+    ofs << "{\"amd_vivado_path\":\"/dev/null\"}";
+    ofs.flush();
+    ofs.close();
+    std::error_code ec;
+    std::filesystem::resize_file(settings_file, std::filesystem::file_size(settings_file, ec), ec);
+    return std::make_shared<settings_store>(false, tcm_settings_path);
+}
+
+void tcm_clean_settings() {
+    std::filesystem::remove_all(settings_file);
+    std::filesystem::remove_all(tcm_settings_path);
+}
+
+
 TEST(Toolchain_manager, str_vect_to_char_p){
 
     std::vector<std::string> test_vect = {"s1", "s2", "s3"};
@@ -31,11 +52,12 @@ TEST(Toolchain_manager, str_vect_to_char_p){
 }
 
 
+
 TEST(Toolchain_manager, vivado_manager){
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_settings_store");
-    s_store->set_setting("vivado_path", "/etc/passwd"); //USE A PATH THAT GUARANTEED TO EXIST
+    std::shared_ptr<settings_store> s_store = tcm_setup_settings();
     Vivado_manager v(s_store, true, "test");
     std::vector<std::string> result = v.prepare_call("test_project");
-    std::vector<std::string> check = {"/etc/passwd/bin/vivado", "-mode", "batch", "-nolog", "-nojournal", "-source", "test_project" };
-    ASSERT_EQ(result, check);
+    std::vector<std::string> check = {"/dev/null/bin/vivado", "-mode", "batch", "-nolog", "-nojournal", "-source", "test_project" };
+    EXPECT_EQ(result, check);
+    tcm_clean_settings();
 }

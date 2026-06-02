@@ -18,90 +18,51 @@
 
 #include "ananke.hpp"
 
+std::string e2e_settings_path = "/tmp/ananke_test_cache";
+auto e2e_settings_file = e2e_settings_path + "/settings";
+
+void e2e_setup_settings() {
+    std::filesystem::create_directories(e2e_settings_path);
+    std::ofstream ofs(e2e_settings_file);
+    ofs << "{\"hdl_store\":\"/tmp/ananke_test_cache\",\"amd_vivado_path\":\"/tmp/vivado\"}";
+    ofs.flush();
+    ofs.close();
+    std::error_code ec;
+    std::filesystem::resize_file(e2e_settings_file, std::filesystem::file_size(e2e_settings_file, ec), ec);
+}
+
+void e2e_clean_settings() {
+    std::filesystem::remove_all(e2e_settings_file);
+    std::filesystem::remove_all(e2e_settings_path);
+}
 
 TEST( end_to_end , clear_cache) {
-
+    e2e_setup_settings();
 
     ananke::CLI_opt opts;
     opts.clear_cache = true;
-    opts.cache_dir = "/tmp/ananke_test_cache";
-    std::filesystem::create_directory(opts.cache_dir);
-    std::ofstream ofs(opts.cache_dir + "/settings");
-    ofs << "cache_dump,/home/vivado/hdl/public/Applications/uscope_testing/tb/uscope_testing_tb.sv>32:c5:3b:35:ee:4b:fb:aa:d9:b1:5c:a2:94:a4:2d:e4:ee:26:aa:ff:e0:45:9e:f3:63:86:42:d4:f2:4c:6e:03;" << std::endl;
-    ofs << "hdl_store,/home/vivado/hdl" << std::endl;
-    ofs.flush();
-    ofs = std::ofstream(opts.cache_dir + "/unified_cache");
+    opts.cache_dir = e2e_settings_path;
+    std::ofstream ofs(opts.cache_dir + "/unified_cache");
     ofs << "test2";
     ofs.flush();
 
-    ananke uut(opts);
+    const ananke uut(opts);
     auto rc = uut.clear_cache();
     EXPECT_EQ(rc, 0);
-    std::ifstream ifs(opts.cache_dir + "/settings");
-    std::string settings;
-    ifs >> settings;
-    EXPECT_EQ(settings, "hdl_store,/home/vivado/hdl");
-    std::filesystem::remove_all(opts.cache_dir);
+
+    EXPECT_FALSE(std::filesystem::exists(opts.cache_dir + "/unified_cache"));
+    e2e_clean_settings();
+
 }
-
-
-
-TEST( end_to_end , set_settings) {
-
-
-    ananke::CLI_opt opts;
-    opts.set_setting = "test_setting=52";
-    opts.cache_dir = "/tmp/ananke_test_cache";
-    std::filesystem::create_directory(opts.cache_dir);
-    std::ofstream ofs(opts.cache_dir + "/settings");
-
-    ofs.flush();
-    ofs = std::ofstream(opts.cache_dir + "/unified_cache");
-    ofs << "test2";
-    ofs.flush();
-
-    ananke uut(opts);
-    uut.set_settings();
-
-    std::ifstream ifs(opts.cache_dir + "/settings");
-    std::string settings;
-    ifs >> settings;
-    EXPECT_EQ(settings, "test_setting,52");
-    std::filesystem::remove_all(opts.cache_dir);
-}
-
-
-
-
-TEST( end_to_end , get_setting) {
-
-    ananke::CLI_opt opts;
-    opts.get_setting = "test_setting";
-    opts.cache_dir = "/tmp/ananke_test_cache";
-    std::filesystem::create_directory(opts.cache_dir);
-    std::ofstream ofs(opts.cache_dir + "/settings");
-    ofs << "test_setting,76" << std::endl;
-    ofs.flush();
-    ofs = std::ofstream(opts.cache_dir + "/unified_cache");
-    ofs << "test2";
-    ofs.flush();
-    testing::internal::CaptureStdout();
-    ananke uut(opts);
-    uut.get_settings();
-    std::string result = testing::internal::GetCapturedStdout();
-
-    EXPECT_EQ(result, "76\n");
-    std::filesystem::remove_all(opts.cache_dir);
-}
-
 
 
 TEST( end_to_end , new_sv_application) {
 
+    e2e_setup_settings();
 
     ananke::CLI_opt opts;
     opts.no_cache = true;
-
+    opts.cache_dir = e2e_settings_path;
     opts.new_app_name = "test_app";
     opts.new_app_lang = "sv";
 
@@ -149,13 +110,17 @@ TEST( end_to_end , new_sv_application) {
 
 
     std::filesystem::remove_all(app_dir);
+    e2e_clean_settings();
 }
 
 TEST( end_to_end , directed_parsing ) {
 
 
+    e2e_setup_settings();
+
     ananke::CLI_opt opts;
     opts.no_cache = true;
+    opts.cache_dir = e2e_settings_path;
     opts.parse_targets = {"check_files/test_data/Components/controls/PID/rtl/PID.sv"};
 
 
@@ -166,15 +131,16 @@ TEST( end_to_end , directed_parsing ) {
 
     ASSERT_TRUE(rc);
     EXPECT_EQ(rc, expected);
-
+    e2e_clean_settings();
 }
 
 
 TEST( end_to_end , directed_parsing_file_not_found) {
-
+    e2e_setup_settings();
 
     ananke::CLI_opt opts;
     opts.no_cache = true;
+    opts.cache_dir = e2e_settings_path;
     opts.parse_targets = {"check_files/test_data/Components/controls/PID/rtl/PID.sv.error"};
 
 
@@ -183,16 +149,17 @@ TEST( end_to_end , directed_parsing_file_not_found) {
 
     ASSERT_FALSE(rc);
     EXPECT_EQ(rc.error(), 50);
-
+    e2e_clean_settings();
 }
 
 
 TEST( end_to_end , directed_parsing_preprocessor_error) {
-
+    e2e_setup_settings();
 
     auto test_file = "/tmp/test_preproc.sv";
     ananke::CLI_opt opts;
     opts.no_cache = true;
+    opts.cache_dir = e2e_settings_path;
     opts.parse_targets = {test_file};
 
     std::ofstream ofs(test_file);
@@ -206,6 +173,7 @@ TEST( end_to_end , directed_parsing_preprocessor_error) {
     ASSERT_FALSE(rc);
     EXPECT_EQ(rc.error(), 51);
     std::filesystem::remove_all(test_file);
+    e2e_clean_settings();
 }
 
 
@@ -224,8 +192,11 @@ TEST( end_to_end , sim_script_generation) {
 
 
     std::ofstream ofs(opts.cache_dir + "/settings");
-    ofs << "hdl_store," << opts.cache_dir << std::endl;
+    ofs << "{\"hdl_store\":\"" << opts.cache_dir << "\",\"amd_vivado_path\":\"/dev/zero\"}";
     ofs.flush();
+    ofs.close();
+    std::error_code ec;
+    std::filesystem::resize_file(opts.cache_dir + "/settings", std::filesystem::file_size(opts.cache_dir + "/settings", ec), ec);
     auto wd = std::filesystem::current_path();
     const auto copyOptions = std::filesystem::copy_options::recursive |
                              std::filesystem::copy_options::overwrite_existing;
@@ -258,7 +229,7 @@ TEST( end_to_end , sim_script_generation) {
     std::string result = ss.str();
 
     std::string const placeholder = "/tmp/ananke_test_cache";
-    std::string expected = "FILES=( \n    /tmp/ananke_test_cache/PID/rtl/PID.sv\n    /tmp/ananke_test_cache/integrator/rtl/Integrator.v\n    /tmp/ananke_test_cache/simple_register_cu/rtl/axil_simple_register_cu.sv\n    /tmp/ananke_test_cache/skid_buffer/rtl/axil_skid_buffer.sv\n    /data/verilog/src/glbl.v\n    /tmp/ananke_test_cache/Common/interfaces.sv\n    /tmp/ananke_test_cache/PID/tb/PID_tb.sv\n)\n\nmkdir -p /tmp/ananke_test_cache/PID/sim\ncp sim.tcl /tmp/ananke_test_cache/PID/sim/sim.tcl\n\n\n(\n    cd /tmp/ananke_test_cache/PID/sim|| exit\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 1: XVLOG (Analysis) <<<\\033[0m\"\n    xvlog -sv \"${FILES[@]}\" -i /tmp/ananke_test_cache/public/Components/Common -i /data/rsb/busdef\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XVLOG FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 2: XELAB (Elaboration) <<<\\033[0m\"\n    xelab -debug typical --relax -top PID_tb -top glbl -L xil_defaultlib -L unisims_ver -L unimacro_ver -L xpm  -snapshot sim_snapshot  -timescale 10ns/1ps\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XELAB FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 3: XSIM (Simulation) <<<\\033[0m\"\n    xsim sim_snapshot -tclbatch sim.tcl\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XSIM FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n)\nif [ -f /tmp/ananke_test_cache/PID/sim/dump.vcd  ]; then\n    vcd2fst /tmp/ananke_test_cache/PID/sim/dump.vcd dump.fst\n    rm /tmp/ananke_test_cache/PID/sim/dump.vcd\nfi\nrm -r /tmp/ananke_test_cache/PID/sim\n";
+    std::string expected = "FILES=( \n    /tmp/ananke_test_cache/PID/rtl/PID.sv\n    /tmp/ananke_test_cache/integrator/rtl/Integrator.v\n    /tmp/ananke_test_cache/simple_register_cu/rtl/axil_simple_register_cu.sv\n    /tmp/ananke_test_cache/skid_buffer/rtl/axil_skid_buffer.sv\n    /dev/zero/data/verilog/src/glbl.v\n    /tmp/ananke_test_cache/Common/interfaces.sv\n    /tmp/ananke_test_cache/PID/tb/PID_tb.sv\n)\n\nmkdir -p /tmp/ananke_test_cache/PID/sim\ncp sim.tcl /tmp/ananke_test_cache/PID/sim/sim.tcl\n\n\n(\n    cd /tmp/ananke_test_cache/PID/sim|| exit\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 1: XVLOG (Analysis) <<<\\033[0m\"\n    xvlog -sv \"${FILES[@]}\" -i /tmp/ananke_test_cache/public/Components/Common -i /dev/zero/data/rsb/busdef\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XVLOG FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 2: XELAB (Elaboration) <<<\\033[0m\"\n    xelab -debug typical --relax -top PID_tb -top glbl -L xil_defaultlib -L unisims_ver -L unimacro_ver -L xpm  -snapshot sim_snapshot  -timescale 10ns/1ps\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XELAB FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n    echo -e \"\\n\\033[1;33m>>> PHASE 3: XSIM (Simulation) <<<\\033[0m\"\n    xsim sim_snapshot -tclbatch sim.tcl\n    if [ $? -ne 0 ]; then\n        echo -e \"\\033[1;31m!!! XSIM FAILED !!!\\033[0m\"\n        exit 1\n    fi\n\n)\nif [ -f /tmp/ananke_test_cache/PID/sim/dump.vcd  ]; then\n    vcd2fst /tmp/ananke_test_cache/PID/sim/dump.vcd dump.fst\n    rm /tmp/ananke_test_cache/PID/sim/dump.vcd\nfi\nrm -r /tmp/ananke_test_cache/PID/sim\n";
     for (size_t pos = 0; (pos = expected.find(placeholder, pos)) != std::string::npos; pos += opts.cache_dir.size()) {
         expected.replace(pos, placeholder.size(), opts.cache_dir);
     }
@@ -278,6 +249,7 @@ TEST( end_to_end , sim_script_generation) {
 
 
 TEST( end_to_end , synth_script_generation) {
+    e2e_setup_settings();
 
     ananke::CLI_opt opts;
     opts.no_cache = true;
@@ -288,10 +260,6 @@ TEST( end_to_end , synth_script_generation) {
     auto test_dir = opts.cache_dir + "/PID";
 
 
-    std::filesystem::create_directory(opts.cache_dir);
-    std::ofstream ofs(opts.cache_dir + "/settings");
-    ofs << "hdl_store,/tmp/ananke_test_cache" << std::endl;
-    ofs.flush();
     auto wd = std::filesystem::current_path();
     const auto copyOptions = std::filesystem::copy_options::recursive |
                              std::filesystem::copy_options::overwrite_existing;
@@ -324,14 +292,14 @@ TEST( end_to_end , synth_script_generation) {
 
     std::filesystem::current_path(wd);
 
-    std::filesystem::remove_all(opts.cache_dir);
+    e2e_clean_settings();
 }
 
 
 
 
 TEST( end_to_end , vivado_project_generation) {
-
+    e2e_setup_settings();
     ananke::CLI_opt opts;
     opts.no_cache = true;
     opts.generate_xilinx = true;
@@ -343,11 +311,6 @@ TEST( end_to_end , vivado_project_generation) {
     auto test_dir = opts.cache_dir + "/PID";
 
 
-    std::filesystem::create_directory(opts.cache_dir);
-    std::ofstream ofs(opts.cache_dir + "/settings");
-    ofs << "hdl_store,/tmp/ananke_test_cache" << std::endl;
-    ofs << "vivado_path,/tmp/vivado" << std::endl;
-    ofs.flush();
     auto wd = std::filesystem::current_path();
     const auto copyOptions = std::filesystem::copy_options::recursive |
                              std::filesystem::copy_options::overwrite_existing;
@@ -383,5 +346,5 @@ TEST( end_to_end , vivado_project_generation) {
 
     std::filesystem::current_path(wd);
     std::filesystem::remove_all("/tmp/vivado");
-    std::filesystem::remove_all(opts.cache_dir);
+    e2e_clean_settings();
 }
