@@ -19,6 +19,28 @@ sv_visitor::sv_visitor(std::string p) {
     path = std::move(p);
 }
 
+void sv_visitor::route_expression_component(const std::string& text) {
+    Expression_component ec(text, Expression_component::get_type(text));
+    if(loops_factory.in_loop()) {
+        loops_factory.add_component(ec);
+    }
+    if(params_factory.is_component_relevant()){
+        params_factory.add_component(ec);
+    }
+    if(deps_factory.is_valid_dependency()){
+        deps_factory.add_connection_element(text);
+    }
+}
+
+void sv_visitor::route_expression_component(const Expression_component& ec) {
+    if(loops_factory.in_loop()) {
+        loops_factory.add_component(ec);
+    }
+    if(params_factory.is_component_relevant()){
+        params_factory.add_component(ec);
+    }
+}
+
 
 void sv_visitor::enterModule_declaration(sv2017::Module_declarationContext *ctx) {
     current_declaration_type = "module";
@@ -272,18 +294,10 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
 }
 
 void sv_visitor::exitPrimaryLit(sv2017::PrimaryLitContext *ctx) {
-    auto text  = ctx->getText();
-    if(params_factory.is_component_relevant()){
-        params_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-    if(loops_factory.in_loop()) {
-        loops_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-    if(deps_factory.is_valid_dependency()){
-        if(deps_factory.is_in_port()) {
-            deps_factory.start_scalar_net(ctx->getText());
-        }
-        deps_factory.add_connection_element(ctx->getText());
+    auto text = ctx->getText();
+    route_expression_component(text);
+    if(deps_factory.is_valid_dependency() && deps_factory.is_in_port()) {
+        deps_factory.start_scalar_net(text);
     }
 }
 
@@ -317,103 +331,34 @@ void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
         ec = Expression_component(ctx->getText(), Expression_component::get_type(ctx->getText()));
     }
 
-
-    if(loops_factory.in_loop()) {
-        loops_factory.add_component(ec);
-    }
-
-    if(params_factory.is_component_relevant()){
-        params_factory.add_component(ec);
-    }
+    route_expression_component(ec);
 }
 
 void sv_visitor::exitOperator_plus_minus(sv2017::Operator_plus_minusContext *ctx) {
-    auto text  = ctx->getText();
-    if(loops_factory.in_loop()) {
-        loops_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-    if(params_factory.is_component_relevant()){
-        params_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-    if(deps_factory.is_valid_dependency()){
-        deps_factory.add_connection_element(ctx->getText());
-    }
-
+    route_expression_component(ctx->getText());
 }
 
 void sv_visitor::exitOperator_mul_div_mod(sv2017::Operator_mul_div_modContext *ctx) {
-    auto text  = ctx->getText();
-    if(loops_factory.in_loop()) {
-        loops_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-    if(params_factory.is_component_relevant()){
-        params_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-
-    if(deps_factory.is_valid_dependency()){
-        deps_factory.add_connection_element(ctx->getText());
-    }
+    route_expression_component(ctx->getText());
 }
 
 
 void sv_visitor::exitOperator_shift(sv2017::Operator_shiftContext *ctx) {
-        auto text  = ctx->getText();
-    if(loops_factory.in_loop()) {
-        loops_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-    if(params_factory.is_component_relevant()){
-        params_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-
-    if(deps_factory.is_valid_dependency()){
-        deps_factory.add_connection_element(ctx->getText());
-    }
+    route_expression_component(ctx->getText());
 }
 
 void sv_visitor::exitUnary_operator(sv2017::Unary_operatorContext *ctx) {
-
     if(ctx->PLUS() || ctx->MINUS()){
-        auto text  = ctx->getText();
-        if(loops_factory.in_loop()) {
-            loops_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-        }
-
-        if(params_factory.is_component_relevant()){
-            params_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-        }
-
-        if(deps_factory.is_valid_dependency()){
-            deps_factory.add_connection_element(ctx->getText());
-        }
+        route_expression_component(ctx->getText());
     }
 }
 
 void sv_visitor::exitOperator_cmp(sv2017::Operator_cmpContext *ctx) {
-    auto text  = ctx->getText();
-    if(loops_factory.in_loop()) {
-        loops_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-    if(params_factory.is_component_relevant()){
-        params_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-
-    if(deps_factory.is_valid_dependency()){
-        deps_factory.add_connection_element(ctx->getText());
-    }
+    route_expression_component(ctx->getText());
 }
 
 void sv_visitor::exitOperator_eq_neq(sv2017::Operator_eq_neqContext *ctx) {
-    auto text  = ctx->getText();
-    if(loops_factory.in_loop()) {
-        loops_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-    if(params_factory.is_component_relevant()){
-        params_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
-    }
-
-    if(deps_factory.is_valid_dependency()){
-        deps_factory.add_connection_element(ctx->getText());
-    }
+    route_expression_component(ctx->getText());
 }
 
 
@@ -761,7 +706,7 @@ void sv_visitor::enterData_type_or_implicit(sv2017::Data_type_or_implicitContext
             is_packed = true;
         }
     }
-    if(is_packed & in_param_declaration){
+    if(is_packed && in_param_declaration){
         params_factory.start_packed_dimension();
     }
 
@@ -950,7 +895,7 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
 }
 
 void sv_visitor::exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
-    if(params_factory.function_declaration_active() & !loops_factory.in_loop()) {
+    if(params_factory.function_declaration_active() && !loops_factory.in_loop()) {
         params_factory.close_decl_lvalue();
     }
 }

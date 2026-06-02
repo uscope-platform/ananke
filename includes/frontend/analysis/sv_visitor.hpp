@@ -23,7 +23,6 @@
 #include "data_model/HDL/factories/HDL_modules_factory.hpp"
 #include "data_model/HDL/factories/HDL_interfaces_factory.hpp"
 #include "data_model/HDL/factories/HDL_instances_factory.hpp"
-#include "data_model/HDL/factories/HDL_functions_factory.hpp"
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"
 
 #include "data_model/HDL/HDL_instance.hpp"
@@ -205,6 +204,8 @@ public:
     void exitType_declaration(sv2017::Type_declarationContext *ctx) override;
 
 private:
+    void route_expression_component(const std::string& text);
+    void route_expression_component(const Expression_component& ec);
 
     bool in_param_declaration = false;
     bool in_class = false;
@@ -212,8 +213,6 @@ private:
     std::vector<HDL_Resource> entities;
 
     std::string current_parameter;
-    std::vector<std::string> current_operands;
-    std::vector<std::string> current_operators;
     std::string current_declaration_type;
 
     HDL_modules_factory modules_factory;
@@ -221,7 +220,6 @@ private:
     HDL_instances_factory deps_factory;
     HDL_parameters_factory params_factory;
     HDL_loops_factory loops_factory;
-    HDL_functions_factory functions_factory;
 
     std::string package_prefix;
     std::string instance_prefix;
