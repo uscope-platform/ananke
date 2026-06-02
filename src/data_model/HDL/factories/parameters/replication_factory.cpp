@@ -25,13 +25,13 @@ void replication_factory::start_replication(bool is_ass) {
     is_assignment = is_ass;
 }
 
-void replication_factory::add_expression(const Expression &expr) {
+void replication_factory::add_expression(const std::shared_ptr<Expression> &expr) {
     if (state == build_phase::size) {
         state = build_phase::item;
         new_replication.set_size(expr);
     }
     if (state== build_phase::item) {
-        new_replication.set_item(std::make_shared<Expression>(expr));
+        new_replication.set_item(expr);
     }
 }
 

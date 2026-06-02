@@ -161,7 +161,7 @@ void HDL_parameters_factory::stop_expression_new() {
             }else if (t_factory.active()) {
                 t_factory.consume(std::make_shared<Expression>(expr.value()));
             } else if(repl_factory.active()) {
-                repl_factory.add_expression(expr.value());
+                repl_factory.add_expression(std::make_shared<Expression>(expr.value()));
             } else if (r_factory.active()) {
                 r_factory.add_expression(expr.value());
             } else if(concat_factory.active()) {
@@ -400,7 +400,7 @@ void HDL_parameters_factory::stop_function_call() {
         } else if (concat_factory.active()) {
             concat_factory.consume(std::make_shared<Expression>(Expression({ec})));
         } else if (repl_factory.active()) {
-            repl_factory.add_expression(Expression({ec}));
+            repl_factory.add_expression(std::make_shared<Expression>(Expression({ec})));
         } else if (in_packed_assignment || in_param_assignment || in_param_override) {
             current_resource.set_scalar(call);
         }

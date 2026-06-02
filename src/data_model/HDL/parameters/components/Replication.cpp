@@ -23,7 +23,7 @@
 CEREAL_REGISTER_TYPE(Replication)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Replication)
 
-Replication::Replication(const Expression &size, std::shared_ptr<Parameter_value_base> item)  {
+Replication::Replication(const std::shared_ptr<Expression> &size, std::shared_ptr<Parameter_value_base> item)  {
     repeated_item = std::move(item);
     repetition_size = size;
     type = replication;
@@ -68,11 +68,11 @@ Replication & Replication::operator=(Replication &&other) noexcept {
     return *this;
 }
 
-void Replication::set_size(const Expression &size) { repetition_size = size;}
+void Replication::set_size(const std::shared_ptr<Expression> &size) { repetition_size = size;}
 
 std::set<qualified_identifier> Replication::get_dependencies()const {
     std::set<qualified_identifier> result, deps;
-    deps = repetition_size.get_dependencies();
+    deps = repetition_size->get_dependencies();
     result.insert(deps.begin(), deps.end());
     deps = repeated_item->get_dependencies();
     result.insert(deps.begin(), deps.end());
@@ -82,18 +82,18 @@ std::set<qualified_identifier> Replication::get_dependencies()const {
 
 void Replication::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {
-    repetition_size.propagate_expression(constant_id, value);
+    repetition_size->propagate_expression(constant_id, value);
     repeated_item->propagate_expression(constant_id, value);
 }
 
 void Replication::propagate_function(const HDL_function_def &def) {
-    repetition_size.propagate_function(def);
+    repetition_size->propagate_function(def);
     repeated_item->propagate_function(def);
 }
 
 std::optional<resolved_parameter> Replication::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     mdarray<hdl_integer> result;
-    auto raw_size = repetition_size.evaluate(context);
+    auto raw_size = repetition_size->evaluate(context);
     if (!raw_size.has_value()) return false;
     if (!raw_size.value().is_integer()) return false;
     auto size = raw_size.value().get_integer().get_value();
@@ -148,7 +148,7 @@ hdl_integer Replication::pack_repetition(hdl_integer value, int64_t width, int64
 
 std::string Replication::print() const {
     std::ostringstream oss;
-    oss << "{" << repetition_size.print()<<"{";
+    oss << "{" << repetition_size->print()<<"{";
     oss << repeated_item->print();
     oss << "}}";
     return oss.str();

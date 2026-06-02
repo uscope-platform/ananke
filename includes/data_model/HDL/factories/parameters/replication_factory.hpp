@@ -24,7 +24,7 @@ class replication_factory : public factory_base{
 public:
 
     void start_replication(bool is_ass = false);
-    void add_expression(const Expression& expr);
+    void add_expression(const std::shared_ptr<Expression>& expr);
     std::shared_ptr<Replication> finish();
 
     [[nodiscard]] bool is_assignment_context() const;

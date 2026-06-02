@@ -1367,7 +1367,8 @@ TEST(parameter_processing, init_list_override) {
     p.set_name("SLAVE_MASK");
     Replication r;
     r.set_item(std::make_shared<Expression>(Expression({Expression_component(64, 32)})));
-    r.set_size({Expression_component(2, 1)});
+    auto size = std::make_shared<Expression>(Expression({Expression_component(2, 1)}));
+    r.set_size(size);
     p.add_dimension({
     {Expression_component("NS", Expression_component::identifier),Expression_component("-", Expression_component::operation),Expression_component("1", Expression_component::number),},
     {Expression_component("0", Expression_component::number)},

@@ -1916,7 +1916,7 @@ TEST(parameter_extraction, simple_repetition_initialization) {
 
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Replication rep;
-    rep.set_size({Expression_component("repetition_size", Expression_component::identifier)});
+    rep.set_size(std::make_shared<Expression>(Expression({Expression_component("repetition_size", Expression_component::identifier)})));
     rep.set_item(std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)})));
     p->add_item(std::make_shared<Replication>(rep));
     p->set_declared_type("int");
@@ -1981,7 +1981,8 @@ TEST(parameter_extraction, packed_repetition_initialization) {
     p->set_declared_type("int");
 
     Replication rep;
-    rep.set_size({Expression_component("repetition_size", Expression_component::identifier)});
+    auto size = std::make_shared<Expression>(Expression({Expression_component("repetition_size", Expression_component::identifier)}));
+    rep.set_size(size);
     rep.set_item(std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)})));
     p->add_item(std::make_shared<Replication>(rep));
 
@@ -2046,7 +2047,9 @@ TEST(parameter_extraction, repetition_initialization) {
 
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Replication r;
-    r.set_size({Expression_component("repetition_size", Expression_component::identifier)});
+    auto size = std::make_shared<Expression>(Expression({Expression_component("repetition_size", Expression_component::identifier)}));
+
+    r.set_size(size);
     r.set_item(std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)})));
     p->add_item(std::make_shared<Replication>(r));
 
@@ -2059,7 +2062,8 @@ TEST(parameter_extraction, repetition_initialization) {
 
 
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
-    r.set_size({Expression_component("repetition_size", Expression_component::identifier)});
+    size = std::make_shared<Expression>(Expression({Expression_component("repetition_size", Expression_component::identifier)}));
+    r.set_size(size);
     r.set_item(std::make_shared<Expression>(Expression({Expression_component("4", Expression_component::number)})));
     p->add_item(std::make_shared<Replication>(r));
 
@@ -2651,11 +2655,13 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
 
     Replication r;
-    r.set_size({Expression_component("8", Expression_component::number)});
+    auto size = std::make_shared<Expression>(Expression({Expression_component("8", Expression_component::number)}));
+    r.set_size(size);
     r.set_item(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
     c2.add_component(std::make_shared<Replication>(r));
     r = Replication();
-    r.set_size({Expression_component("8", Expression_component::number)});
+    size = std::make_shared<Expression>(Expression({Expression_component("8", Expression_component::number)}));
+    r.set_size(size);
     r.set_item(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
     c2.add_component(std::make_shared<Replication>(r));
     p->add_item(std::make_shared<Concatenation>(c2));
@@ -2982,7 +2988,8 @@ TEST(parameter_extraction, packed_replication_init) {
 
     p->add_dimension({{Expression_component("4", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     Replication r;
-    r.set_size({Expression_component("5", Expression_component::number)});
+    auto size = std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)}));
+    r.set_size(size);
     r.set_item(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
     p->add_item(std::make_shared<Replication>(r));
 
@@ -3220,7 +3227,8 @@ TEST(parameter_extraction, replication_in_function) {
         Expression_component("8", Expression_component::number)
     })));
     Replication repl;
-    repl.set_size({Expression_component("4", Expression_component::number)});
+    auto size = std::make_shared<Expression>(Expression({Expression_component("4", Expression_component::number)}));
+    repl.set_size(size);
     repl.set_item(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
     a.set_value(std::make_shared<Replication>(repl));
     call.add_body({a},std::nullopt);
