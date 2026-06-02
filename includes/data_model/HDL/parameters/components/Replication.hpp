@@ -43,7 +43,7 @@ public:
 
     void set_item(std::shared_ptr<Parameter_value_base> item){ repeated_item = std::move(item);}
     std::shared_ptr<Parameter_value_base> get_item()const { return repeated_item;}
-    void set_size(const std::shared_ptr<Expression> &expr);
+    void set_size(const std::shared_ptr<Parameter_value_base> &expr);
 
     std::set<qualified_identifier> get_dependencies()const override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
@@ -87,7 +87,7 @@ public:
     }
 private:
     bool packing = false;
-    std::shared_ptr<Expression>  repetition_size;
+    std::shared_ptr<Parameter_value_base>  repetition_size;
     std::shared_ptr<Parameter_value_base> repeated_item;
 };
 

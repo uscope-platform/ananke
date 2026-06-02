@@ -68,7 +68,7 @@ Replication & Replication::operator=(Replication &&other) noexcept {
     return *this;
 }
 
-void Replication::set_size(const std::shared_ptr<Expression> &size) { repetition_size = size;}
+void Replication::set_size(const std::shared_ptr<Parameter_value_base> &size) { repetition_size = size;}
 
 std::set<qualified_identifier> Replication::get_dependencies()const {
     std::set<qualified_identifier> result, deps;
