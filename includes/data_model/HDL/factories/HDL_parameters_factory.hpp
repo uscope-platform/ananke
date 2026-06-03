@@ -51,7 +51,6 @@ public:
     void stop_bit_selection();
 
     void start_unpacked_dimension_declaration();
-    void stop_unpacked_dimension_declaration();
 
     void close_array_index();
 

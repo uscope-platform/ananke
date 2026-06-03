@@ -22,6 +22,7 @@
 #include "data_model/HDL/parameters/components/Expression_component.hpp"
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
+#include "parameters/concatenation_factory.hpp"
 #include "parameters/replication_factory.hpp"
 
 class HDL_functions_factory {
@@ -42,14 +43,19 @@ public:
     void add_loop(const HDL_loop_metadata &md){f.add_loop_metadata(md);}
     HDL_function_def get_function();
     bool is_active()const{return active;}
-    bool is_raw_body()const{return !r_factory.active();}
+    bool is_raw_body()const{return !r_factory.active() && !c_factory.active();}
 
     void start_replication();
     void stop_replication();
 
+
+    void start_concat();
+    void stop_concat();
+
 private:
     bool active = false;
     replication_factory r_factory;
+    concatenation_factory c_factory;
     HDL_function_def f;
 
     enum{

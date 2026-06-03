@@ -649,7 +649,6 @@ void sv_visitor::enterUnpacked_dimension(sv2017::Unpacked_dimensionContext *ctx)
 }
 
 void sv_visitor::exitUnpacked_dimension(sv2017::Unpacked_dimensionContext *ctx) {
-    params_factory.stop_unpacked_dimension_declaration();
 }
 
 void sv_visitor::exitConcatenation_item(sv2017::Concatenation_itemContext *ctx) {

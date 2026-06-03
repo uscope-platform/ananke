@@ -46,7 +46,7 @@ void HDL_parameters_factory::set_value(const std::string &s) {
 }
 
 void HDL_parameters_factory::add_component(const Expression_component &c, bool is_call_argument) {
-    if (f_factory.is_active() && f_factory.is_raw_body() && !concat_factory.active()) {
+    if (f_factory.is_active() && f_factory.is_raw_body()) {
         f_factory.add_component(c);
     }else if (is_call_argument) {
         calls_factory.consume(std::make_shared<Expression>(Expression({c})));
@@ -63,7 +63,7 @@ void HDL_parameters_factory::add_component(const Expression_component &c, bool i
 }
 
 void HDL_parameters_factory::start_initialization_list() {
-    if (in_param_assignment || in_packed_assignment ||f_factory.is_active() || in_param_override) {
+    if (in_param_assignment || in_packed_assignment || in_param_override) {
         concat_factory.start_concatenation();
         expr_factory.decrease_level(); // This is needed because in the grammar there is an expression before the list initialization;
     }
@@ -112,9 +112,6 @@ void HDL_parameters_factory::start_param_assignment() {
 
 void HDL_parameters_factory::stop_param_assignment() {
     in_param_assignment = false;
-}
-
-void HDL_parameters_factory::stop_unpacked_dimension_declaration() {
 }
 
 void HDL_parameters_factory::stop_replication() {
@@ -186,7 +183,11 @@ void HDL_parameters_factory::start_packed_assignment() {
 }
 
 void HDL_parameters_factory::start_concatenation() {
-    if(in_param_assignment || in_packed_assignment || f_factory.is_active()){
+    if (f_factory.is_active()) {
+        f_factory.start_concat();
+        expr_factory.push_level();
+    }
+    if(in_param_assignment || in_packed_assignment){
         expr_factory.push_level();
         concat_factory.start_concatenation();
     }
@@ -194,16 +195,13 @@ void HDL_parameters_factory::start_concatenation() {
 }
 
 void HDL_parameters_factory::stop_concatenation() {
+    if(f_factory.is_active()){
+        f_factory.stop_concat();
+        expr_factory.pop_level();
+    }
     if(concat_factory.active()){
         expr_factory.pop_level();
-        if (!concat_factory.in_nested()) {
-            if (f_factory.is_active()) {
-                f_factory.add_value(concat_factory.get_concatenation());
-            } else {
-                current_resource.add_item(concat_factory.get_concatenation());
-            }
-
-        }
+        if (!concat_factory.in_nested()) current_resource.add_item(concat_factory.get_concatenation());
         concat_factory.stop_concatenation();
     }
 }
@@ -350,6 +348,8 @@ void HDL_parameters_factory::stop_cast() {
             c_factory.consume(cast_value);
         } else if (concat_factory.active()) {
             concat_factory.consume(cast_value);
+        } else if (f_factory.is_active()){
+            f_factory.add_value(cast_value);
         } else {
             current_resource.set_scalar(cast_value);
         }

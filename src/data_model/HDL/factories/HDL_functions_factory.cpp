@@ -26,7 +26,9 @@ void HDL_functions_factory::add_component(const Expression_component &c) {
 }
 
 void HDL_functions_factory::add_value(const std::shared_ptr<Parameter_value_base> &v) {
-    if (r_factory.active()) {
+    if (c_factory.active()) {
+        c_factory.consume(v);
+    }else if (r_factory.active()) {
         r_factory.consume(v);
     } else {
         assignment_value = v;
@@ -69,4 +71,13 @@ void HDL_functions_factory::start_replication() {
 
 void HDL_functions_factory::stop_replication() {
     assignment_value = r_factory.finish();
+}
+
+void HDL_functions_factory::start_concat() {
+    c_factory.start_concatenation();
+}
+
+void HDL_functions_factory::stop_concat() {
+    c_factory.stop_concatenation();
+    assignment_value = c_factory.get_concatenation();
 }
