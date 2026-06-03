@@ -21,7 +21,11 @@ void HDL_functions_factory::add_argument(const std::string &a) {
 
 void HDL_functions_factory::add_component(const Expression_component &c) {
     if (phase == body) {
-        new_expression.push_back(c);
+        if (is_raw_body()) {
+            new_expression.push_back(c);
+        } else {
+            expr_factory_.add_component(c);
+        }
     }
 }
 
@@ -107,4 +111,48 @@ void HDL_functions_factory::set_cast_type(const std::string &t) {
 
 void HDL_functions_factory::advance_cast() {
     cast_factory_.advance_cast();
+}
+
+void HDL_functions_factory::start_expression() {
+    expr_factory_.start_expression();
+}
+
+void HDL_functions_factory::stop_expression() {
+    expr_factory_.stop_expression();
+    if (expr_factory_.get_level() == 0) {
+        auto expr = expr_factory_.get_expression();
+        if (expr.has_value()) {
+            add_value(std::make_shared<Expression>(expr.value()));
+        }
+        expr_factory_.clear_expression();
+    }
+}
+
+void HDL_functions_factory::push_level() {
+    expr_factory_.push_level();
+}
+
+void HDL_functions_factory::pop_level() {
+    expr_factory_.pop_level();
+}
+
+void HDL_functions_factory::increase_level() {
+    expr_factory_.increase_level();
+}
+
+void HDL_functions_factory::decrease_level() {
+    expr_factory_.decrease_level();
+}
+
+void HDL_functions_factory::clear_expression() {
+    expr_factory_.clear_expression();
+}
+
+std::optional<Expression> HDL_functions_factory::get_expression() {
+    return expr_factory_.get_expression();
+}
+
+bool HDL_functions_factory::is_component_relevant() const {
+    if (paused) return false;
+    return expr_factory_.active() || c_factory.active() || r_factory.active() || cast_factory_.active();
 }

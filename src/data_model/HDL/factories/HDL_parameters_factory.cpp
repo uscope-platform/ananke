@@ -46,7 +46,7 @@ void HDL_parameters_factory::set_value(const std::string &s) {
 }
 
 void HDL_parameters_factory::add_component(const Expression_component &c, bool is_call_argument) {
-    if (f_factory.is_active() && f_factory.is_raw_body()) {
+    if (f_factory.is_active()) {
         f_factory.add_component(c);
     }else if (is_call_argument) {
         calls_factory.consume(std::make_shared<Expression>(Expression({c})));
@@ -117,7 +117,7 @@ void HDL_parameters_factory::stop_param_assignment() {
 void HDL_parameters_factory::stop_replication() {
     if (f_factory.is_active()) {
         f_factory.stop_replication();
-        expr_factory.increase_level();
+        f_factory.increase_level();
     }
     if(repl_factory.active()){
         if (concat_factory.active()){
@@ -147,33 +147,39 @@ void HDL_parameters_factory::stop_packed_assignment() {
 }
 
 void HDL_parameters_factory::start_expression_new() {
-    expr_factory.start_expression();
+    if (f_factory.is_active()) {
+        f_factory.start_expression();
+    } else {
+        expr_factory.start_expression();
+    }
 }
 
 void HDL_parameters_factory::stop_expression_new() {
-    expr_factory.stop_expression();
-    if(expr_factory.get_level() == 0){
-        auto expr = expr_factory.get_expression();
-        if (expr.has_value()) {
-            if (c_factory.active()){
-                c_factory.consume(std::make_shared<Expression>(expr.value()));
-            }else if (t_factory.active()) {
-                t_factory.consume(std::make_shared<Expression>(expr.value()));
-            } else if(repl_factory.active()) {
-                repl_factory.consume(std::make_shared<Expression>(expr.value()));
-            } else if (r_factory.active()) {
-                r_factory.add_expression(expr.value());
-            } else if(concat_factory.active()) {
-                concat_factory.consume(std::make_shared<Expression>(expr.value()));
-            } else if (f_factory.is_active()) {
-                f_factory.add_value(std::make_shared<Expression>(expr.value()));
-            } else if(calls_factory.active()) {
-                calls_factory.consume(std::make_shared<Expression>(expr.value()));
-            } else {
-                current_resource.set_scalar(std::make_shared<Expression>(expr.value()));
+    if (f_factory.is_active()) {
+        f_factory.stop_expression();
+    } else {
+        expr_factory.stop_expression();
+        if(expr_factory.get_level() == 0){
+            auto expr = expr_factory.get_expression();
+            if (expr.has_value()) {
+                if (c_factory.active()){
+                    c_factory.consume(std::make_shared<Expression>(expr.value()));
+                }else if (t_factory.active()) {
+                    t_factory.consume(std::make_shared<Expression>(expr.value()));
+                } else if(repl_factory.active()) {
+                    repl_factory.consume(std::make_shared<Expression>(expr.value()));
+                } else if (r_factory.active()) {
+                    r_factory.add_expression(expr.value());
+                } else if(concat_factory.active()) {
+                    concat_factory.consume(std::make_shared<Expression>(expr.value()));
+                } else if(calls_factory.active()) {
+                    calls_factory.consume(std::make_shared<Expression>(expr.value()));
+                } else {
+                    current_resource.set_scalar(std::make_shared<Expression>(expr.value()));
+                }
             }
+            expr_factory.clear_expression();
         }
-        expr_factory.clear_expression();
     }
 }
 
@@ -185,7 +191,7 @@ void HDL_parameters_factory::start_packed_assignment() {
 void HDL_parameters_factory::start_concatenation() {
     if (f_factory.is_active()) {
         f_factory.start_concat();
-        expr_factory.push_level();
+        f_factory.push_level();
     }
     if(in_param_assignment || in_packed_assignment){
         expr_factory.push_level();
@@ -197,7 +203,7 @@ void HDL_parameters_factory::start_concatenation() {
 void HDL_parameters_factory::stop_concatenation() {
     if(f_factory.is_active()){
         f_factory.stop_concat();
-        expr_factory.pop_level();
+        f_factory.pop_level();
     }
     if(concat_factory.active()){
         expr_factory.pop_level();
@@ -209,7 +215,7 @@ void HDL_parameters_factory::stop_concatenation() {
 void HDL_parameters_factory::start_replication() {
     if (f_factory.is_active()) {
         f_factory.start_replication();
-        expr_factory.decrease_level();
+        f_factory.decrease_level();
     }
     if(in_param_assignment || in_packed_assignment || concat_factory.active()){
         repl_factory.start_replication(true);
@@ -321,9 +327,9 @@ void HDL_parameters_factory::start_cast(bool expression_size) {
     if (f_factory.is_active()) {
         f_factory.start_cast();
         if (expression_size) {
-            expr_factory.start_expression();
+            f_factory.start_expression();
         } else {
-            expr_factory.decrease_level();
+            f_factory.decrease_level();
         }
         return;
     }
@@ -347,13 +353,13 @@ void HDL_parameters_factory::set_cast_type(const std::string &t) {
 
 void HDL_parameters_factory::stop_cast() {
     if (f_factory.is_active()) {
-        auto expr = expr_factory.get_expression();
-        expr_factory.clear_expression();
+        auto expr = f_factory.get_expression();
+        f_factory.clear_expression();
         if (expr.has_value()) {
             f_factory.add_value(std::make_shared<Expression>(expr.value()));
         }
         f_factory.stop_cast();
-        expr_factory.increase_level();
+        f_factory.increase_level();
         return;
     }
     if(c_factory.active()){
@@ -379,10 +385,10 @@ void HDL_parameters_factory::stop_cast() {
 
 void HDL_parameters_factory::advance_cast() {
     if (f_factory.is_active()) {
-        auto expr = expr_factory.get_expression();
+        auto expr = f_factory.get_expression();
         if (expr.has_value()) {
             f_factory.add_value(std::make_shared<Expression>(expr.value()));
-            expr_factory.clear_expression();
+            f_factory.clear_expression();
         }
         f_factory.advance_cast();
         return;
