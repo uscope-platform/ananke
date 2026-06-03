@@ -215,6 +215,7 @@ private:
     std::string current_parameter;
     std::string current_declaration_type;
 
+    HDL_functions_factory f_factory;
     HDL_modules_factory modules_factory;
     HDL_interfaces_factory interfaces_factory;
     HDL_instances_factory deps_factory;

@@ -27,6 +27,9 @@ void sv_visitor::route_expression_component(const std::string& text) {
     if(params_factory.is_component_relevant()){
         params_factory.add_component(ec);
     }
+    if (f_factory.is_active()) {
+        f_factory.add_component(ec);
+    }
     if(deps_factory.is_valid_dependency()){
         deps_factory.add_connection_element(text);
     }
@@ -35,6 +38,9 @@ void sv_visitor::route_expression_component(const std::string& text) {
 void sv_visitor::route_expression_component(const Expression_component& ec) {
     if(loops_factory.in_loop()) {
         loops_factory.add_component(ec);
+    }
+    if (f_factory.is_active()) {
+        f_factory.add_component(ec);
     }
     if(params_factory.is_component_relevant()){
         params_factory.add_component(ec);
@@ -98,12 +104,11 @@ void sv_visitor::exitName_of_instance(sv2017::Name_of_instanceContext *ctx) {
 }
 
 void sv_visitor::enterTf_port_item(sv2017::Tf_port_itemContext *ctx) {
-    auto identifier = ctx->identifier();
-    if (identifier) {
-        params_factory.add_decl_argument(identifier->getText());
+    if (ctx->identifier()) {
+        f_factory.add_argument(ctx->identifier()->getText());
     } else if (ctx->data_type_or_implicit()) {
         auto name = ctx->data_type_or_implicit()->getText();
-        params_factory.add_decl_argument(name);
+        f_factory.add_argument(name);
     } else {
         int i =0;
     }
@@ -111,7 +116,7 @@ void sv_visitor::enterTf_port_item(sv2017::Tf_port_itemContext *ctx) {
 }
 
 void sv_visitor::exitTf_port_list(sv2017::Tf_port_listContext *ctx) {
-    params_factory.start_function_body();
+    f_factory.start_body();
 }
 
 void sv_visitor::enterVariable_dimension(sv2017::Variable_dimensionContext *ctx) {
@@ -149,19 +154,32 @@ std::vector<HDL_Resource> sv_visitor::get_entities() {
 }
 
 void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
-    if(params_factory.is_component_relevant()){
+    if(params_factory.is_component_relevant() || f_factory.is_active()){
         std::string call_name = ctx->any_system_tf_identifier()->getText();
-        params_factory.start_function_call(call_name);
+        if (f_factory.is_active()) {
+            // TODO: sort out calls in functions
+        } else {
+            params_factory.start_function_call(call_name);
+        }
         if(ctx->data_type()){
             if(!package_prefix.empty()){
                 Expression_component ec(package_item, Expression_component::get_type(package_item));
                 ec.set_package_prefix(package_prefix);
-                params_factory.add_component(ec);
+                if (f_factory.is_active()) {
+                    f_factory.add_component(ec);
+                }else {
+                    params_factory.add_component(ec);
+                }
                 package_prefix.clear();
                 package_item.clear();
             } else{
                 auto text = ctx->data_type()->getText();
-                params_factory.add_component(Expression_component(text, Expression_component::get_type(text)), true);
+                if (f_factory.is_active()) {
+                    f_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
+                } else {
+                    params_factory.add_component(Expression_component(text, Expression_component::get_type(text)), true);
+                }
+
             }
 
         }
@@ -169,31 +187,58 @@ void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
 }
 
 void sv_visitor::enterCast_separator(sv2017::Cast_separatorContext *ctx) {
-    params_factory.advance_cast();
+    if (f_factory.is_active()) {
+        f_factory.advance_cast();
+    } else {
+        params_factory.advance_cast();
+    }
 }
 
 void sv_visitor::enterPrimaryCast2(sv2017::PrimaryCast2Context *ctx) {
     auto expression_size = ctx->primary()->getText().starts_with("(");
-    params_factory.start_cast(expression_size);
+    if (f_factory.is_active()) {
+        f_factory.start_cast(expression_size);
+    } else {
+        params_factory.start_cast(expression_size);
+    }
 }
 
 void sv_visitor::exitPrimaryCast2(sv2017::PrimaryCast2Context *ctx) {
-    params_factory.stop_cast();
+    if (f_factory.is_active()) {
+        f_factory.stop_cast();
+    } else {
+        params_factory.stop_cast();
+    }
 }
 
 void sv_visitor::enterPrimaryCast(sv2017::PrimaryCastContext *ctx) {
-    params_factory.start_cast(false);
+    if (f_factory.is_active()) {
+        f_factory.start_cast(false);
+    } else {
+        params_factory.start_cast(false);
+    }
+    std::string cast_type;
+
     if (ctx->signing()) {
-        params_factory.set_cast_type(ctx->signing()->getText());
+        cast_type = ctx->signing()->getText();
     }else if (ctx->integer_type()) {
-        params_factory.set_cast_type(ctx->integer_type()->getText());
+        cast_type = ctx->integer_type()->getText();
     } else if (ctx->non_integer_type()) {
-        params_factory.set_cast_type(ctx->non_integer_type()->getText());
+        cast_type = ctx->non_integer_type()->getText();
+    }
+    if (f_factory.is_active()) {
+        f_factory.set_cast_type(cast_type);
+    } else {
+        params_factory.set_cast_type(cast_type);
     }
 }
 
 void sv_visitor::exitPrimaryCast(sv2017::PrimaryCastContext *ctx) {
-    params_factory.stop_cast();
+    if (f_factory.is_active()) {
+        f_factory.stop_cast();
+    } else {
+        params_factory.stop_cast();
+    }
 }
 
 void sv_visitor::enterClass_declaration(sv2017::Class_declarationContext *ctx) {
@@ -275,6 +320,8 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
         if(ctx->QUESTIONMARK()){
             params_factory.start_ternary_operator();
         }
+    } else if (f_factory.is_active()) {
+            f_factory.start_expression();
     }
 
 }
@@ -286,8 +333,9 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
             params_factory.stop_ternary();
         }
         params_factory.stop_expression_new();
+    }else if (f_factory.is_active()) {
+        f_factory.stop_expression();
     }
-
 
 }
 
@@ -549,7 +597,7 @@ void sv_visitor::enterPrimaryDot(sv2017::PrimaryDotContext *ctx) {
             }
         }
     }
-    if(params_factory.is_component_relevant()) {
+    if(params_factory.is_component_relevant()|| f_factory.is_active()) {
         instance_prefix = ctx->primary()->getText();
         instance_item = ctx->identifier()->getText();
     }
@@ -659,7 +707,11 @@ void sv_visitor::exitConcatenation_item(sv2017::Concatenation_itemContext *ctx) 
 
 
 void sv_visitor::enterReplication(sv2017::ReplicationContext *ctx) {
-    params_factory.start_replication();
+    if (f_factory.is_active()) {
+        f_factory.start_replication();
+    } else {
+        params_factory.start_replication();
+    }
     if(deps_factory.is_valid_dependency()) {
         deps_factory.start_replication();
     }
@@ -668,7 +720,11 @@ void sv_visitor::enterReplication(sv2017::ReplicationContext *ctx) {
 
 
 void sv_visitor::exitReplication(sv2017::ReplicationContext *ctx) {
-    params_factory.stop_replication();
+    if (f_factory.is_active()) {
+        f_factory.stop_replication();
+    } else {
+        params_factory.stop_replication();
+    }
     if(deps_factory.is_valid_dependency()) {
         deps_factory.stop_replication();
     }
@@ -683,11 +739,19 @@ void sv_visitor::exitReplication_assignment(sv2017::Replication_assignmentContex
 }
 
 void sv_visitor::enterConcatenation(sv2017::ConcatenationContext *ctx) {
-    params_factory.start_concatenation();
+    if (f_factory.is_active()) {
+        f_factory.start_concat();
+    } else {
+        params_factory.start_concatenation();
+    }
 }
 
 void sv_visitor::exitConcatenation(sv2017::ConcatenationContext *ctx) {
-    params_factory.stop_concatenation();
+    if(f_factory.is_active()){
+        f_factory.stop_concat();
+    } else {
+        params_factory.stop_concatenation();
+    }
 }
 
 
@@ -780,45 +844,45 @@ void sv_visitor::exitGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
 
 void sv_visitor::enterUntyped_function_declaration(sv2017::Untyped_function_declarationContext *ctx) {
     auto name = ctx->task_and_function_declaration_common()->identifier()[0]->getText();
-    params_factory.start_function_decl(name);
+    f_factory.set_name(name);
 }
 
 void sv_visitor::exitFunction_declaration(sv2017::Function_declarationContext *ctx) {
-    modules_factory.add_function(params_factory.stop_function_decl());
+    modules_factory.add_function( f_factory.get_function());
 }
 
 void sv_visitor::enterLoop_statement(sv2017::Loop_statementContext *ctx) {
-    if(params_factory.function_declaration_active()) {
-        params_factory.pause_activity();
+    if(f_factory.is_active()) {
+        f_factory.pause();
         loops_factory.new_loop();
     }
 }
 
 
 void sv_visitor::exitLoop_statement(sv2017::Loop_statementContext *ctx) {
-    if(params_factory.function_declaration_active()) {
+    if(f_factory.is_active()) {
         auto spec = loops_factory.get_loop_specs();
-        params_factory.add_decl_loop(spec);
+        f_factory.add_loop(spec);
         loops_factory.clear();
-        params_factory.resume_activity();
+        f_factory.resume();
     }
 }
 
 void sv_visitor::exitStatement_item(sv2017::Statement_itemContext *ctx) {
-    if(params_factory.function_declaration_active() && loops_factory.in_loop()) {
+    if(f_factory.is_active() && loops_factory.in_loop()) {
         loops_factory.close_expression();
     }
 }
 
 void sv_visitor::exitAssignment_operator(sv2017::Assignment_operatorContext *ctx) {
-    if(params_factory.function_declaration_active() && loops_factory.in_loop()) {
+    if(f_factory.is_active() && loops_factory.in_loop()) {
         loops_factory.advance_expression();
     }
 }
 
 
 void sv_visitor::enterFor_initialization(sv2017::For_initializationContext *ctx) {
-    if(params_factory.function_declaration_active()) {
+    if(f_factory.is_active()) {
         loops_factory.set_phase(HDL_loops_factory::init);
         if(!ctx->for_variable_declaration().empty()) {
             auto decl = ctx->for_variable_declaration()[0]->for_variable_declaration_var_assign();
@@ -832,7 +896,7 @@ void sv_visitor::exitFor_initialization(sv2017::For_initializationContext *ctx) 
 }
 
 void sv_visitor::enterFor_end_expression(sv2017::For_end_expressionContext *ctx) {
-    if(params_factory.function_declaration_active()) {
+    if(f_factory.is_active()) {
         loops_factory.set_phase(HDL_loops_factory::end);
     }
 }
@@ -842,19 +906,19 @@ void sv_visitor::exitFor_end_expression(sv2017::For_end_expressionContext *ctx) 
 }
 
 void sv_visitor::enterFor_step(sv2017::For_stepContext *ctx) {
-    if(params_factory.function_declaration_active()) {
+    if(f_factory.is_active()) {
         loops_factory.set_phase(HDL_loops_factory::step);
     }
 }
 
 void sv_visitor::exitFor_step(sv2017::For_stepContext *ctx) {
-    if(params_factory.function_declaration_active()) {
+    if(f_factory.is_active()) {
         loops_factory.set_phase(HDL_loops_factory::body);
     }
 }
 
 void sv_visitor::enterInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPostContext *ctx) {
-    if(params_factory.function_declaration_active()) {
+    if(f_factory.is_active()) {
         if(loops_factory.in_definition()) {
             auto name = ctx->variable_lvalue()->getText();
             Expression e;
@@ -871,29 +935,27 @@ void sv_visitor::enterInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPos
 }
 
 void sv_visitor::exitBlocking_assignment(sv2017::Blocking_assignmentContext *ctx) {
-    if(!loops_factory.in_loop()) {
-        if(params_factory.function_declaration_active()) {
-            params_factory.close_decl_assignment();
-        }
+    if(!loops_factory.in_loop() && f_factory.is_active()) {
+        f_factory.close_assignment();
     }
 
 }
 
 void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
-    if(params_factory.function_declaration_active()) {
+    if(f_factory.is_active()) {
         auto var_name = ctx->package_or_class_scoped_hier_id_with_select()->package_or_class_scoped_path()->getText();
         if(loops_factory.in_loop()) {
             loops_factory.start_assignment(var_name);
         } else {
-            params_factory.start_function_decl_assignment(var_name);
+            f_factory.start_assignment(var_name);
         }
 
     }
 }
 
 void sv_visitor::exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
-    if(params_factory.function_declaration_active() && !loops_factory.in_loop()) {
-        params_factory.close_decl_lvalue();
+    if(f_factory.is_active() && !loops_factory.in_loop()) {
+        f_factory.close_lvalue();
     }
 }
 

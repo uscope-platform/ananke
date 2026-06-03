@@ -42,7 +42,6 @@ public:
     void add_component(const Expression_component &c){add_component(c, false);}
     void add_component(const Expression_component &c, bool is_call_argument);
 
-    void start_function_body(){f_factory.start_body();}
 
     void start_initialization_list();
     void stop_initialization_list(bool default_assignment);
@@ -93,7 +92,7 @@ public:
         if (paused) return false;
         return expr_factory.active() ||
             c_factory.active() || in_packed_assignment || calls_factory.active() || concat_factory.active() ||
-            t_factory.active() || f_factory.is_active() || r_factory.active();
+            t_factory.active() || r_factory.active();
     }
 
     void advance_range();
@@ -119,19 +118,10 @@ public:
     void close_packed_dimensions();
     void close_dimension();
 
-    void start_function_decl(const std::string &name);
-    void start_function_decl_assignment(const std::string &name){f_factory.start_assignment(name);}
-    void close_decl_assignment() {f_factory.close_assignment();}
-    void close_decl_lvalue() {f_factory.close_lvalue();}
-    HDL_function_def stop_function_decl();
-    bool function_declaration_active()const{return f_factory.is_active();}
-    void add_decl_loop(HDL_loop_metadata &m) {f_factory.add_loop(m);}
-    void add_decl_argument(const std::string &a) {f_factory.add_argument(a);}
 
     void pause_activity() { paused = true; }
     void resume_activity() { paused = false; }
 private:
-    HDL_functions_factory f_factory;
     cast_factory c_factory;
     replication_factory repl_factory;
     concatenation_factory concat_factory;
