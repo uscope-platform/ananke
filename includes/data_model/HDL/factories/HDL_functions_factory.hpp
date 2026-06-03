@@ -22,6 +22,7 @@
 #include "data_model/HDL/parameters/components/Expression_component.hpp"
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
+#include "parameters/cast_factory.hpp"
 #include "parameters/concatenation_factory.hpp"
 #include "parameters/replication_factory.hpp"
 
@@ -43,17 +44,22 @@ public:
     void add_loop(const HDL_loop_metadata &md){f.add_loop_metadata(md);}
     HDL_function_def get_function();
     bool is_active()const{return active;}
-    bool is_raw_body()const{return !r_factory.active() && !c_factory.active();}
+    bool is_raw_body()const{return !r_factory.active() && !c_factory.active() && !cast_factory_.active();}
 
     void start_replication();
     void stop_replication();
 
-
     void start_concat();
     void stop_concat();
 
+    void start_cast();
+    void stop_cast();
+    void set_cast_type(const std::string &t);
+    void advance_cast();
+
 private:
     bool active = false;
+    cast_factory cast_factory_;
     replication_factory r_factory;
     concatenation_factory c_factory;
     HDL_function_def f;

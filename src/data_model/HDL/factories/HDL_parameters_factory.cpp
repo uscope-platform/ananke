@@ -318,7 +318,16 @@ HDL_function_def HDL_parameters_factory::stop_function_decl() {
 }
 
 void HDL_parameters_factory::start_cast(bool expression_size) {
-    if (in_param_assignment || in_param_override || in_packed_assignment|| f_factory.is_active()|| concat_factory.active()) {
+    if (f_factory.is_active()) {
+        f_factory.start_cast();
+        if (expression_size) {
+            expr_factory.start_expression();
+        } else {
+            expr_factory.decrease_level();
+        }
+        return;
+    }
+    if (in_param_assignment || in_param_override || in_packed_assignment || concat_factory.active()) {
         if (concat_factory.active() || expression_size) {
             expr_factory.start_expression();
         } else {
@@ -329,10 +338,24 @@ void HDL_parameters_factory::start_cast(bool expression_size) {
 }
 
 void HDL_parameters_factory::set_cast_type(const std::string &t) {
+    if (f_factory.is_active()) {
+        f_factory.set_cast_type(t);
+        return;
+    }
     c_factory.set_type(t);
 }
 
 void HDL_parameters_factory::stop_cast() {
+    if (f_factory.is_active()) {
+        auto expr = expr_factory.get_expression();
+        expr_factory.clear_expression();
+        if (expr.has_value()) {
+            f_factory.add_value(std::make_shared<Expression>(expr.value()));
+        }
+        f_factory.stop_cast();
+        expr_factory.increase_level();
+        return;
+    }
     if(c_factory.active()){
         auto expr = expr_factory.get_expression();
         expr_factory.clear_expression();
@@ -348,8 +371,6 @@ void HDL_parameters_factory::stop_cast() {
             c_factory.consume(cast_value);
         } else if (concat_factory.active()) {
             concat_factory.consume(cast_value);
-        } else if (f_factory.is_active()){
-            f_factory.add_value(cast_value);
         } else {
             current_resource.set_scalar(cast_value);
         }
@@ -357,7 +378,16 @@ void HDL_parameters_factory::stop_cast() {
 }
 
 void HDL_parameters_factory::advance_cast() {
-if (c_factory.active()) {
+    if (f_factory.is_active()) {
+        auto expr = expr_factory.get_expression();
+        if (expr.has_value()) {
+            f_factory.add_value(std::make_shared<Expression>(expr.value()));
+            expr_factory.clear_expression();
+        }
+        f_factory.advance_cast();
+        return;
+    }
+    if (c_factory.active()) {
         auto expr = expr_factory.get_expression();
         if (expr.has_value()) {
             c_factory.consume(std::make_shared<Expression>(expr.value()));

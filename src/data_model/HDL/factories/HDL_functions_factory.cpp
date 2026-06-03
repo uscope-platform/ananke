@@ -26,9 +26,11 @@ void HDL_functions_factory::add_component(const Expression_component &c) {
 }
 
 void HDL_functions_factory::add_value(const std::shared_ptr<Parameter_value_base> &v) {
-    if (c_factory.active()) {
+    if (cast_factory_.active()) {
+        cast_factory_.consume(v);
+    } else if (c_factory.active()) {
         c_factory.consume(v);
-    }else if (r_factory.active()) {
+    } else if (r_factory.active()) {
         r_factory.consume(v);
     } else {
         assignment_value = v;
@@ -80,4 +82,29 @@ void HDL_functions_factory::start_concat() {
 void HDL_functions_factory::stop_concat() {
     c_factory.stop_concatenation();
     assignment_value = c_factory.get_concatenation();
+}
+
+void HDL_functions_factory::start_cast() {
+    cast_factory_.start();
+}
+
+void HDL_functions_factory::stop_cast() {
+    auto cast_value = cast_factory_.get_cast();
+    if (cast_factory_.active()) {
+        cast_factory_.consume(cast_value);
+    } else if (c_factory.active()) {
+        c_factory.consume(cast_value);
+    } else if (r_factory.active()) {
+        r_factory.consume(cast_value);
+    } else {
+        assignment_value = cast_value;
+    }
+}
+
+void HDL_functions_factory::set_cast_type(const std::string &t) {
+    cast_factory_.set_type(t);
+}
+
+void HDL_functions_factory::advance_cast() {
+    cast_factory_.advance_cast();
 }
