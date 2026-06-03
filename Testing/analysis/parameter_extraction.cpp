@@ -770,7 +770,7 @@ TEST(parameter_extraction, system_task_propagation) {
     auto test_pattern = R"(
 
     module test_mod #(
-        parameter PARAMETER_1 = 5;
+        parameter PARAMETER_1 = 5
     )();
 
         localparam CAST = $rtoi(11.8 + PARAMETER_1);
