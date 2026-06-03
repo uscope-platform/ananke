@@ -3243,7 +3243,7 @@ TEST(parameter_extraction, replication_in_function) {
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
-        ASSERT_EQ(value, defaults.at(name));
+        EXPECT_EQ(value, defaults.at(name));
     }
 }
 

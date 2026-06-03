@@ -46,7 +46,7 @@ void HDL_parameters_factory::set_value(const std::string &s) {
 }
 
 void HDL_parameters_factory::add_component(const Expression_component &c, bool is_call_argument) {
-    if (f_factory.is_active() && !concat_factory.active() && !repl_factory.active()) {
+    if (f_factory.is_active() && f_factory.is_raw_body() && !concat_factory.active()) {
         f_factory.add_component(c);
     }else if (is_call_argument) {
         calls_factory.consume(std::make_shared<Expression>(Expression({c})));
@@ -118,10 +118,12 @@ void HDL_parameters_factory::stop_unpacked_dimension_declaration() {
 }
 
 void HDL_parameters_factory::stop_replication() {
+    if (f_factory.is_active()) {
+        f_factory.stop_replication();
+        expr_factory.increase_level();
+    }
     if(repl_factory.active()){
-        if (f_factory.is_active()) {
-            f_factory.add_value(repl_factory.finish());
-        } else if (concat_factory.active()){
+        if (concat_factory.active()){
             concat_factory.consume(repl_factory.finish());
         } else {
             current_resource.add_item(repl_factory.finish());
@@ -166,6 +168,8 @@ void HDL_parameters_factory::stop_expression_new() {
                 r_factory.add_expression(expr.value());
             } else if(concat_factory.active()) {
                 concat_factory.consume(std::make_shared<Expression>(expr.value()));
+            } else if (f_factory.is_active()) {
+                f_factory.add_value(std::make_shared<Expression>(expr.value()));
             } else if(calls_factory.active()) {
                 calls_factory.consume(std::make_shared<Expression>(expr.value()));
             } else {
@@ -205,7 +209,11 @@ void HDL_parameters_factory::stop_concatenation() {
 }
 
 void HDL_parameters_factory::start_replication() {
-    if(in_param_assignment || in_packed_assignment || f_factory.is_active() || concat_factory.active()){
+    if (f_factory.is_active()) {
+        f_factory.start_replication();
+        expr_factory.decrease_level();
+    }
+    if(in_param_assignment || in_packed_assignment || concat_factory.active()){
         repl_factory.start_replication(true);
         expr_factory.decrease_level();
     }

@@ -22,6 +22,7 @@
 #include "data_model/HDL/parameters/components/Expression_component.hpp"
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
+#include "parameters/replication_factory.hpp"
 
 class HDL_functions_factory {
 public:
@@ -34,15 +35,21 @@ public:
     void start_assignment(const std::string &n) {current_assigned_variable = n;}
     void add_argument(const std::string &a);
     void add_component(const Expression_component &c);
-    void add_value(const std::shared_ptr<Parameter_value_base> &v){assignment_value = v;}
+    void add_value(const std::shared_ptr<Parameter_value_base> &v);
     void close_lvalue();
     void start_body(){phase = body;}
     void close_assignment();
     void add_loop(const HDL_loop_metadata &md){f.add_loop_metadata(md);}
     HDL_function_def get_function();
     bool is_active()const{return active;}
+    bool is_raw_body()const{return !r_factory.active();}
+
+    void start_replication();
+    void stop_replication();
+
 private:
     bool active = false;
+    replication_factory r_factory;
     HDL_function_def f;
 
     enum{

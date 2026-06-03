@@ -25,6 +25,14 @@ void HDL_functions_factory::add_component(const Expression_component &c) {
     }
 }
 
+void HDL_functions_factory::add_value(const std::shared_ptr<Parameter_value_base> &v) {
+    if (r_factory.active()) {
+        r_factory.consume(v);
+    } else {
+        assignment_value = v;
+    }
+}
+
 void HDL_functions_factory::close_lvalue() {
     if(current_assigned_variable == f.name) {
         f.start_assignment(current_assigned_variable, new_expression);
@@ -53,4 +61,12 @@ HDL_function_def HDL_functions_factory::get_function() {
     new_expression.clear();
     active = false;
     return current_function;
+}
+
+void HDL_functions_factory::start_replication() {
+    r_factory.start_replication(true);
+}
+
+void HDL_functions_factory::stop_replication() {
+    assignment_value = r_factory.finish();
 }
