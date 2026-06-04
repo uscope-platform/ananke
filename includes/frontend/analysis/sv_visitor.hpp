@@ -126,7 +126,6 @@ public:
     void exitArray_range_expression(sv2017::Array_range_expressionContext *ctx) override;
 
     void enterUnpacked_dimension(sv2017::Unpacked_dimensionContext *ctx) override;
-    void exitUnpacked_dimension(sv2017::Unpacked_dimensionContext *ctx) override;
 
     void exitConcatenation_item(sv2017::Concatenation_itemContext *ctx) override;
 
@@ -146,7 +145,6 @@ public:
     static uint32_t parse_number(const std::string& s);
     std::vector<HDL_Resource> get_entities();
 
-    void enterData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) override;
     void exitData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) override;
 
     void exitData_type(sv2017::Data_typeContext *ctx) override;
@@ -196,9 +194,6 @@ public:
 
     void enterTf_port_item(sv2017::Tf_port_itemContext *ctx) override;
     void exitTf_port_list(sv2017::Tf_port_listContext *ctx) override;
-
-    void enterVariable_dimension(sv2017::Variable_dimensionContext *ctx) override;
-    void exitVariable_dimension(sv2017::Variable_dimensionContext *ctx) override;
 
     void enterType_declaration(sv2017::Type_declarationContext *ctx) override;
     void exitType_declaration(sv2017::Type_declarationContext *ctx) override;

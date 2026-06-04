@@ -119,13 +119,6 @@ void sv_visitor::exitTf_port_list(sv2017::Tf_port_listContext *ctx) {
     f_factory.start_body();
 }
 
-void sv_visitor::enterVariable_dimension(sv2017::Variable_dimensionContext *ctx) {
-
-}
-
-void sv_visitor::exitVariable_dimension(sv2017::Variable_dimensionContext *ctx) {
-}
-
 void sv_visitor::enterType_declaration(sv2017::Type_declarationContext *ctx) {
     params_factory.start_type_declaration();
 }
@@ -705,8 +698,6 @@ void sv_visitor::enterUnpacked_dimension(sv2017::Unpacked_dimensionContext *ctx)
     params_factory.start_unpacked_dimension_declaration();
 }
 
-void sv_visitor::exitUnpacked_dimension(sv2017::Unpacked_dimensionContext *ctx) {
-}
 
 void sv_visitor::exitConcatenation_item(sv2017::Concatenation_itemContext *ctx) {
     if(deps_factory.is_valid_dependency()) {
@@ -763,10 +754,6 @@ void sv_visitor::exitConcatenation(sv2017::ConcatenationContext *ctx) {
     }
 }
 
-
-
-void sv_visitor::enterData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) {
-}
 
 void sv_visitor::exitData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) {
     if(!in_param_declaration) {
