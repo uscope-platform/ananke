@@ -638,12 +638,22 @@ void sv_visitor::enterConstant_param_expression(sv2017::Constant_param_expressio
 }
 
 void sv_visitor::enterBit_select(sv2017::Bit_selectContext *ctx) {
-    params_factory.start_bit_selection();
+    if (f_factory.is_active()) {
+        f_factory.start_bit_selection();
+    } else {
+        params_factory.start_bit_selection();
+    }
+
     deps_factory.start_bit_selection();
 }
 
 void sv_visitor::exitBit_select(sv2017::Bit_selectContext *ctx) {
-    params_factory.stop_bit_selection();
+    if (f_factory.is_active()) {
+        f_factory.stop_bit_selection();
+    } else {
+        params_factory.stop_bit_selection();
+    }
+
     deps_factory.stop_bit_selection();
 }
 

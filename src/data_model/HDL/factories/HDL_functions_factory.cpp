@@ -21,7 +21,9 @@ void HDL_functions_factory::add_argument(const std::string &a) {
 
 void HDL_functions_factory::add_component(const Expression_component &c) {
     if (phase == body) {
-        if (is_raw_body()) {
+        if (in_bit_selection) {
+            bit_index.push_back(c);
+        } else if (is_raw_body()) {
             new_expression.push_back(c);
         } else {
             expr_factory_.add_component(c);
@@ -43,11 +45,12 @@ void HDL_functions_factory::add_value(const std::shared_ptr<Parameter_value_base
 
 void HDL_functions_factory::close_lvalue() {
     if(current_assigned_variable == f.name) {
-        f.start_assignment(current_assigned_variable, new_expression);
+        f.start_assignment(current_assigned_variable, bit_index);
     } else {
         ignore_assignment = true;
     }
-        new_expression.clear();
+    new_expression.clear();
+    bit_index = Expression();
 }
 
 void HDL_functions_factory::close_assignment() {
@@ -153,4 +156,18 @@ void HDL_functions_factory::stop_expression() {
 bool HDL_functions_factory::is_component_relevant() const {
     if (paused) return false;
     return expr_factory_.active() || c_factory.active() || r_factory.active() || cast_factory_.active();
+}
+
+void HDL_functions_factory::start_bit_selection() {
+    if (!r_factory.active()) {
+        in_bit_selection = true;
+        bit_index = Expression();
+    }
+}
+
+void HDL_functions_factory::stop_bit_selection() {
+    if (in_bit_selection) {
+        expr_factory_.add_index(bit_index);
+        in_bit_selection = false;
+    }
 }

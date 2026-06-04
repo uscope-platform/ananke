@@ -65,14 +65,20 @@ public:
     bool is_paused() const { return paused; }
     bool is_component_relevant() const;
 
+    void start_bit_selection();
+
+    void stop_bit_selection();
+
 private:
     expressions_factory expr_factory_;
     bool paused = false;
     bool active = false;
+    bool in_bit_selection = false;
     cast_factory cast_factory_;
     replication_factory r_factory;
     concatenation_factory c_factory;
     HDL_function_def f;
+    Expression bit_index;
 
     enum{
         arguments,
