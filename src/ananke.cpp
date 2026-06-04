@@ -96,6 +96,7 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
 
 std::optional<int> ananke::load_data_cache() {
 
+    if (opts.refresh_cache) data_store::clear_cache(opts.cache_dir);
     d_store = std::make_shared<data_store>(opts.no_cache, opts.cache_dir);
 
     // analyze repository content and update cache
