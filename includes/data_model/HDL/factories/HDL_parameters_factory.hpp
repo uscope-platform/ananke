@@ -24,6 +24,7 @@
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
+#include "../../../frontend/analysis/type_engine.hpp"
 
 
 class  HDL_parameters_factory : protected resources_factory_base<HDL_parameter> {
@@ -77,11 +78,13 @@ public:
     void start_function_call(const std::string &f_name);
     void stop_function_call();
 
+    void set_type_engine(Type_engine &te) {type_engine = &te;}
+
     bool in_packed_context() const {return ctx == param_context::packed_dim; }
     bool is_param_assignment() const {return ctx == param_context::declaration;}
     bool is_param_override() const {return ctx == param_context::override;}
     bool is_component_relevant() const {
-        return expr_factory.active() || !consumer_stack.empty() || ctx == param_context::packed_dim || r_factory.active();
+        return expr_factory.active() || !consumer_stack.empty() || ctx == param_context::packed_dim || r_factory.active() || (type_engine && type_engine->active());
     }
 
     void advance_range();
@@ -102,8 +105,6 @@ public:
     void open_range();
     void close_range();
 
-    void start_type_declaration();
-    HDL_type stop_type_declaration(const std::string &name);
     void close_packed_dimensions();
 
 private:
@@ -132,7 +133,7 @@ private:
 
     std::string current_type;
 
-    std::map<std::string, HDL_type> typedefs;
+    Type_engine* type_engine = nullptr;
 };
 
 

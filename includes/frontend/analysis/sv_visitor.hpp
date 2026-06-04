@@ -21,6 +21,7 @@
 
 #include "data_model/HDL/factories/HDL_parameters_factory.hpp"
 #include "data_model/HDL/factories/HDL_modules_factory.hpp"
+#include "type_engine.hpp"
 #include "data_model/HDL/factories/HDL_interfaces_factory.hpp"
 #include "data_model/HDL/factories/HDL_instances_factory.hpp"
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"
@@ -147,6 +148,7 @@ public:
 
     void exitData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) override;
 
+
     void exitData_type(sv2017::Data_typeContext *ctx) override;
 
     void enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) override;
@@ -210,6 +212,7 @@ private:
     std::string current_parameter;
     std::string current_declaration_type;
 
+    Type_engine type_engine;
     HDL_functions_factory f_factory;
     HDL_modules_factory modules_factory;
     HDL_interfaces_factory interfaces_factory;

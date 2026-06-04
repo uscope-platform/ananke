@@ -17,6 +17,7 @@
 
 sv_visitor::sv_visitor(std::string p) {
     path = std::move(p);
+    params_factory.set_type_engine(type_engine);
 }
 
 void sv_visitor::route_expression_component(const std::string& text) {
@@ -120,12 +121,12 @@ void sv_visitor::exitTf_port_list(sv2017::Tf_port_listContext *ctx) {
 }
 
 void sv_visitor::enterType_declaration(sv2017::Type_declarationContext *ctx) {
-    params_factory.start_type_declaration();
+    type_engine.start_type_declaration();
 }
 
 void sv_visitor::exitType_declaration(sv2017::Type_declarationContext *ctx) {
     auto name = ctx->identifier(0)->getText();
-    modules_factory.add_typedef(name,  params_factory.stop_type_declaration(name));
+    modules_factory.add_typedef(name, type_engine.stop_type_declaration(name));
 }
 
 void sv_visitor::exitData_type(sv2017::Data_typeContext *ctx) {

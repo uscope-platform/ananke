@@ -28,10 +28,10 @@ void HDL_parameters_factory::new_parameter(const std::string &name) {
 
 std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
     auto resource = get_resource();
-    if (typedefs.contains(current_type)) {
-        auto dims = typedefs.at(current_type).get_packed_dimensions();
+    if (type_engine && type_engine->has_type(current_type)) {
+        auto dims = type_engine->get_type(current_type).get_packed_dimensions();
         resource.set_packed_dimensions(dims);
-        dims = typedefs.at(current_type).get_unpacked_dimensions();
+        dims = type_engine->get_type(current_type).get_unpacked_dimensions();
         resource.set_unpacked_dimensions(dims);
     } else {
         auto [packed, unpacked] = r_factory.get_dimensions();
@@ -159,7 +159,9 @@ void HDL_parameters_factory::stop_expression_new() {
     if (expr_factory.get_level() == 0) {
         auto expr = expr_factory.get_expression();
         if (expr.has_value()) {
-            if (r_factory.active()) {
+            if (type_engine && type_engine->active()) {
+                type_engine->add_expression(expr.value());
+            } else if (r_factory.active()) {
                 r_factory.add_expression(expr.value());
             } else if (!consumer_stack.empty()) {
                 consumer_stack.top()->consume(std::make_shared<Expression>(expr.value()));
@@ -209,11 +211,17 @@ void HDL_parameters_factory::start_replication() {
 }
 
 void HDL_parameters_factory::start_unpacked_dimension_declaration() {
-    r_factory.advance_stage();
+    if (type_engine && type_engine->active())
+        type_engine->start_unpacked_dimension_declaration();
+    else
+        r_factory.advance_stage();
 }
 
 void HDL_parameters_factory::advance_range() {
-    r_factory.advance_range();
+    if (type_engine && type_engine->active())
+        type_engine->advance_range();
+    else
+        r_factory.advance_range();
 }
 
 void HDL_parameters_factory::start_instance_parameter_assignment(const std::string& parameter_name) {
@@ -253,41 +261,41 @@ void HDL_parameters_factory::stop_param_override() {
 }
 
 void HDL_parameters_factory::start_range() {
-    r_factory.start();
+    if (type_engine && type_engine->active())
+        type_engine->start_range();
+    else
+        r_factory.start();
 }
 
 void HDL_parameters_factory::stop_range() {
-    r_factory.stop();
+    if (type_engine && type_engine->active())
+        type_engine->stop_range();
+    else
+        r_factory.stop();
 }
 
 void HDL_parameters_factory::open_range() {
-    r_factory.open_range();
+    if (type_engine && type_engine->active())
+        type_engine->open_range();
+    else
+        r_factory.open_range();
 }
 
 void HDL_parameters_factory::close_range() {
-    r_factory.close_range();
+    if (type_engine && type_engine->active())
+        type_engine->close_range();
+    else
+        r_factory.close_range();
 }
 
-
-void HDL_parameters_factory::start_type_declaration() {
-    r_factory.start();
-}
-
-HDL_type HDL_parameters_factory::stop_type_declaration(const std::string &name) {
-    r_factory.stop();
-    HDL_type t;
-    auto [packed, unpacked] = r_factory.get_dimensions();
-    t.set_packed_dimensions(packed);
-    t.set_unpacked_dimensions(unpacked);
-    r_factory.clear();
-    typedefs[name] = t;
-    return t;
-}
 
 
 
 void HDL_parameters_factory::close_packed_dimensions() {
-    r_factory.advance_stage();
+    if (type_engine && type_engine->active())
+        type_engine->close_packed_dimensions();
+    else
+        r_factory.advance_stage();
 }
 
 void HDL_parameters_factory::start_cast(bool expression_size) {
