@@ -21,7 +21,7 @@
 
 #include "data_model/HDL/factories/HDL_parameters_factory.hpp"
 #include "data_model/HDL/factories/HDL_modules_factory.hpp"
-#include "type_engine.hpp"
+#include "frontend/analysis/type_engine.hpp"
 #include "data_model/HDL/factories/HDL_interfaces_factory.hpp"
 #include "data_model/HDL/factories/HDL_instances_factory.hpp"
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"
@@ -210,6 +210,7 @@ private:
     std::vector<HDL_Resource> entities;
 
     std::string current_parameter;
+    std::string current_param_type;
     std::string current_declaration_type;
 
     Type_engine type_engine;

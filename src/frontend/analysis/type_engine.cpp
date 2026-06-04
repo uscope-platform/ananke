@@ -58,8 +58,23 @@ void Type_engine::advance_range() {
     r_factory.advance_range();
 }
 
-void Type_engine::add_expression(const Expression &e) {
-    r_factory.add_expression(e);
+void Type_engine::start_expression() {
+    expr_factory.start_expression();
+}
+
+void Type_engine::add_component(const Expression_component &c) {
+    expr_factory.add_component(c);
+}
+
+void Type_engine::stop_expression() {
+    expr_factory.stop_expression();
+    if (expr_factory.get_level() == 0) {
+        auto expr = expr_factory.get_expression();
+        if (expr.has_value()) {
+            r_factory.add_expression(expr.value());
+        }
+        expr_factory.clear_expression();
+    }
 }
 
 bool Type_engine::active() const {

@@ -24,8 +24,6 @@
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
-#include "../../../frontend/analysis/type_engine.hpp"
-
 
 class  HDL_parameters_factory : protected resources_factory_base<HDL_parameter> {
 
@@ -78,13 +76,11 @@ public:
     void start_function_call(const std::string &f_name);
     void stop_function_call();
 
-    void set_type_engine(Type_engine &te) {type_engine = &te;}
-
     bool in_packed_context() const {return ctx == param_context::packed_dim; }
     bool is_param_assignment() const {return ctx == param_context::declaration;}
     bool is_param_override() const {return ctx == param_context::override;}
     bool is_component_relevant() const {
-        return expr_factory.active() || !consumer_stack.empty() || ctx == param_context::packed_dim || r_factory.active() || (type_engine && type_engine->active());
+        return expr_factory.active() || !consumer_stack.empty() || ctx == param_context::packed_dim || r_factory.active();
     }
 
     void advance_range();
@@ -132,8 +128,6 @@ private:
     Expression bit_index;
 
     std::string current_type;
-
-    Type_engine* type_engine = nullptr;
 };
 
 

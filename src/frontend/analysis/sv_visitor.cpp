@@ -17,7 +17,6 @@
 
 sv_visitor::sv_visitor(std::string p) {
     path = std::move(p);
-    params_factory.set_type_engine(type_engine);
 }
 
 void sv_visitor::route_expression_component(const std::string& text) {
@@ -25,7 +24,9 @@ void sv_visitor::route_expression_component(const std::string& text) {
     if(loops_factory.in_loop()) {
         loops_factory.add_component(ec);
     }
-    if(params_factory.is_component_relevant()){
+    if(type_engine.active()){
+        type_engine.add_component(ec);
+    } else if(params_factory.is_component_relevant()){
         params_factory.add_component(ec);
     }
     if (f_factory.is_active()) {
@@ -43,7 +44,9 @@ void sv_visitor::route_expression_component(const Expression_component& ec) {
     if (f_factory.is_active()) {
         f_factory.add_component(ec);
     }
-    if(params_factory.is_component_relevant()){
+    if(type_engine.active()){
+        type_engine.add_component(ec);
+    } else if(params_factory.is_component_relevant()){
         params_factory.add_component(ec);
     }
 }
@@ -130,7 +133,10 @@ void sv_visitor::exitType_declaration(sv2017::Type_declarationContext *ctx) {
 }
 
 void sv_visitor::exitData_type(sv2017::Data_typeContext *ctx) {
-    params_factory.close_packed_dimensions();
+    if (type_engine.active())
+        type_engine.close_packed_dimensions();
+    else
+        params_factory.close_packed_dimensions();
 }
 
 void sv_visitor::exitInterface_header(sv2017::Interface_headerContext *ctx) {
@@ -286,6 +292,7 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
     if (!ctx->list_of_param_assignments()) {
         throw std::runtime_error("Encountered non existent list of parameter declarations");
     }
+    current_param_type.clear();
     if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type()) {
         std::string type;
         if (ctx->data_type_or_implicit()->data_type()->data_type_primitive())
@@ -293,9 +300,11 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
         if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path())
             type = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->getText();
         params_factory.set_type(type);
+        current_param_type = type;
     }
     if (!ctx->data_type_or_implicit()) {
         params_factory.set_type("implicit");
+        current_param_type = "implicit";
     }
     params_factory.start_range();
     current_parameter = ctx->list_of_param_assignments()[0].param_assignment()[0]->identifier()->getText();
@@ -304,11 +313,14 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
 void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
 
     params_factory.set_type("");
+    current_param_type.clear();
     in_param_declaration = false;
 }
 
 void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
-    if(params_factory.is_component_relevant()|| params_factory.is_param_assignment() || params_factory.is_param_override()) {
+    if(type_engine.active()){
+        type_engine.start_expression();
+    } else if(params_factory.is_component_relevant()|| params_factory.is_param_assignment() || params_factory.is_param_override()) {
         params_factory.start_expression_new();
         if(ctx->QUESTIONMARK()){
             params_factory.start_ternary_operator();
@@ -320,7 +332,9 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
 }
 
 void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
-    if (params_factory.is_component_relevant() || params_factory.is_param_assignment() || params_factory.is_param_override()) {
+    if (type_engine.active()) {
+        type_engine.stop_expression();
+    } else if (params_factory.is_component_relevant() || params_factory.is_param_assignment() || params_factory.is_param_override()) {
         std::string type;
         if(ctx->QUESTIONMARK()){
             params_factory.stop_ternary();
@@ -534,9 +548,20 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
     if (!in_class) {
         if(modules_factory.is_current_valid()){
             auto param = params_factory.get_parameter();
+            if (type_engine.has_type(current_param_type)) {
+                auto type = type_engine.get_type(current_param_type);
+                param->set_packed_dimensions(type.get_packed_dimensions());
+                param->set_unpacked_dimensions(type.get_unpacked_dimensions());
+            }
             modules_factory.add_parameter(param);
         } else if(interfaces_factory.is_current_valid()){
-            interfaces_factory.add_parameter(params_factory.get_parameter());
+            auto intf_param = params_factory.get_parameter();
+            if (type_engine.has_type(current_param_type)) {
+                auto type = type_engine.get_type(current_param_type);
+                intf_param->set_packed_dimensions(type.get_packed_dimensions());
+                intf_param->set_unpacked_dimensions(type.get_unpacked_dimensions());
+            }
+            interfaces_factory.add_parameter(intf_param);
         }
     }
 
@@ -624,7 +649,10 @@ void sv_visitor::exitPrimaryCall(sv2017::PrimaryCallContext *ctx) {
 }
 
 void sv_visitor::enterConstant_param_expression(sv2017::Constant_param_expressionContext *ctx) {
-    params_factory.stop_range();
+    if (type_engine.active())
+        type_engine.stop_range();
+    else
+        params_factory.stop_range();
     if(ctx->concatenation()){
         params_factory.start_packed_assignment();
     }
@@ -651,7 +679,9 @@ void sv_visitor::exitBit_select(sv2017::Bit_selectContext *ctx) {
 }
 
 void sv_visitor::exitFirst_range_identifier(sv2017::First_range_identifierContext *ctx) {
-    if (params_factory.is_component_relevant()) {
+    if (type_engine.active()) {
+        type_engine.advance_range();
+    } else if (params_factory.is_component_relevant()) {
         params_factory.advance_range();
     }
 }
@@ -667,36 +697,55 @@ void sv_visitor::exitRange_separator(sv2017::Range_separatorContext *ctx) {
             deps_factory.advance_array_range_phase("");
         }
     }
-    if (params_factory.is_component_relevant()) {
+    if (type_engine.active()) {
+        type_engine.advance_range();
+    } else if (params_factory.is_component_relevant()) {
         params_factory.advance_range();
     }
 }
 
 void sv_visitor::enterRange_expression(sv2017::Range_expressionContext *ctx) {
-    params_factory.open_range();
+    if (type_engine.active())
+        type_engine.open_range();
+    else
+        params_factory.open_range();
 }
 
 void sv_visitor::exitRange_expression(sv2017::Range_expressionContext *ctx) {
-   params_factory.close_range();
+   if (type_engine.active())
+       type_engine.close_range();
+   else
+       params_factory.close_range();
 }
 
 void sv_visitor::enterArray_range_expression(sv2017::Array_range_expressionContext *ctx) {
-    params_factory.open_range();
+    if (type_engine.active())
+        type_engine.open_range();
+    else
+        params_factory.open_range();
     if(deps_factory.is_valid_dependency()) {
         deps_factory.start_array_range();
     }
 }
 
 void sv_visitor::exitArray_range_expression(sv2017::Array_range_expressionContext *ctx) {
-    params_factory.close_range();
+    if (type_engine.active())
+        type_engine.close_range();
+    else
+        params_factory.close_range();
     if(deps_factory.is_valid_dependency()) {
         deps_factory.stop_array_range();
     }
 }
 
 void sv_visitor::enterUnpacked_dimension(sv2017::Unpacked_dimensionContext *ctx) {
-    params_factory.close_packed_dimensions();
-    params_factory.start_unpacked_dimension_declaration();
+    if (type_engine.active()) {
+        type_engine.close_packed_dimensions();
+        type_engine.start_unpacked_dimension_declaration();
+    } else {
+        params_factory.close_packed_dimensions();
+        params_factory.start_unpacked_dimension_declaration();
+    }
 }
 
 
@@ -764,6 +813,7 @@ void sv_visitor::exitData_type_or_implicit(sv2017::Data_type_or_implicitContext 
 
 void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
     in_param_declaration = true;
+    current_param_type.clear();
     if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type()) {
         std::string type;
         if (ctx->data_type_or_implicit()->data_type()->data_type_primitive())
@@ -771,18 +821,21 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
         if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path())
             type = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->getText();
         params_factory.set_type(type);
+        current_param_type = type;
     }
 
 
     params_factory.start_range();
     if (!ctx->data_type_or_implicit()) {
         params_factory.set_type("implicit");
+        current_param_type = "implicit";
     }
 }
 
 void sv_visitor::exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
     in_param_declaration = false;
     params_factory.set_type("");
+    current_param_type.clear();
 }
 
 void sv_visitor::enterLoop_generate_construct(sv2017::Loop_generate_constructContext *) {

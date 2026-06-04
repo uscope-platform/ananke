@@ -22,6 +22,7 @@
 
 #include "data_model/HDL/parameters/common/HDL_type.hpp"
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
+#include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 
 class Type_engine {
 public:
@@ -38,13 +39,17 @@ public:
     void open_range();
     void close_range();
     void advance_range();
-    void add_expression(const Expression &e);
+
+    void start_expression();
+    void add_component(const Expression_component &c);
+    void stop_expression();
 
     [[nodiscard]] bool active() const;
     [[nodiscard]] bool has_type(const std::string &name) const;
     [[nodiscard]] HDL_type get_type(const std::string &name) const;
 
 private:
+    expressions_factory expr_factory;
     ranges_factory r_factory;
     std::map<std::string, HDL_type> type_registry;
 };

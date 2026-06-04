@@ -28,17 +28,10 @@ void HDL_parameters_factory::new_parameter(const std::string &name) {
 
 std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
     auto resource = get_resource();
-    if (type_engine && type_engine->has_type(current_type)) {
-        auto dims = type_engine->get_type(current_type).get_packed_dimensions();
-        resource.set_packed_dimensions(dims);
-        dims = type_engine->get_type(current_type).get_unpacked_dimensions();
-        resource.set_unpacked_dimensions(dims);
-    } else {
-        auto [packed, unpacked] = r_factory.get_dimensions();
-        resource.set_packed_dimensions(packed);
-        resource.set_unpacked_dimensions(unpacked);
-        r_factory.clear();
-    }
+    auto [packed, unpacked] = r_factory.get_dimensions();
+    resource.set_packed_dimensions(packed);
+    resource.set_unpacked_dimensions(unpacked);
+    r_factory.clear();
     return std::make_shared<HDL_parameter>(resource);
 }
 
@@ -159,9 +152,7 @@ void HDL_parameters_factory::stop_expression_new() {
     if (expr_factory.get_level() == 0) {
         auto expr = expr_factory.get_expression();
         if (expr.has_value()) {
-            if (type_engine && type_engine->active()) {
-                type_engine->add_expression(expr.value());
-            } else if (r_factory.active()) {
+            if (r_factory.active()) {
                 r_factory.add_expression(expr.value());
             } else if (!consumer_stack.empty()) {
                 consumer_stack.top()->consume(std::make_shared<Expression>(expr.value()));
@@ -211,17 +202,11 @@ void HDL_parameters_factory::start_replication() {
 }
 
 void HDL_parameters_factory::start_unpacked_dimension_declaration() {
-    if (type_engine && type_engine->active())
-        type_engine->start_unpacked_dimension_declaration();
-    else
-        r_factory.advance_stage();
+    r_factory.advance_stage();
 }
 
 void HDL_parameters_factory::advance_range() {
-    if (type_engine && type_engine->active())
-        type_engine->advance_range();
-    else
-        r_factory.advance_range();
+    r_factory.advance_range();
 }
 
 void HDL_parameters_factory::start_instance_parameter_assignment(const std::string& parameter_name) {
@@ -261,41 +246,24 @@ void HDL_parameters_factory::stop_param_override() {
 }
 
 void HDL_parameters_factory::start_range() {
-    if (type_engine && type_engine->active())
-        type_engine->start_range();
-    else
-        r_factory.start();
+    r_factory.start();
 }
 
 void HDL_parameters_factory::stop_range() {
-    if (type_engine && type_engine->active())
-        type_engine->stop_range();
-    else
-        r_factory.stop();
+    r_factory.stop();
 }
 
 void HDL_parameters_factory::open_range() {
-    if (type_engine && type_engine->active())
-        type_engine->open_range();
-    else
-        r_factory.open_range();
+    r_factory.open_range();
 }
 
 void HDL_parameters_factory::close_range() {
-    if (type_engine && type_engine->active())
-        type_engine->close_range();
-    else
-        r_factory.close_range();
+    r_factory.close_range();
 }
 
 
-
-
 void HDL_parameters_factory::close_packed_dimensions() {
-    if (type_engine && type_engine->active())
-        type_engine->close_packed_dimensions();
-    else
-        r_factory.advance_stage();
+    r_factory.advance_stage();
 }
 
 void HDL_parameters_factory::start_cast(bool expression_size) {
