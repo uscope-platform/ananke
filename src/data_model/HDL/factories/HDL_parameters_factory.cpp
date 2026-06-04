@@ -14,6 +14,11 @@
 //  limitations under the License.
 
 #include "data_model/HDL/factories/HDL_parameters_factory.hpp"
+#include "data_model/HDL/factories/parameters/replication_factory.hpp"
+#include "data_model/HDL/factories/parameters/concatenation_factory.hpp"
+#include "data_model/HDL/factories/parameters/function_calls_factory.hpp"
+#include "data_model/HDL/factories/parameters/ternary_factory.hpp"
+#include "data_model/HDL/factories/parameters/cast_factory.hpp"
 
 
 void HDL_parameters_factory::new_parameter(const std::string &name) {

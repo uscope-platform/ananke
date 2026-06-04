@@ -20,15 +20,9 @@
 #include <stack>
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
-#include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "resource_factory_base.hpp"
-#include "data_model/HDL/factories/parameters/replication_factory.hpp"
-#include "data_model/HDL/factories/parameters/concatenation_factory.hpp"
-#include "data_model/HDL/factories/parameters/function_calls_factory.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
-#include "data_model/HDL/factories/parameters/ternary_factory.hpp"
-#include "parameters/cast_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
 
 

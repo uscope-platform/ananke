@@ -17,22 +17,8 @@
 #include "data_model/HDL/factories/parameters/concatenation_factory.hpp"
 
 void concatenation_factory::start_concatenation() {
-    if (factory_active) {
-        concatenations_stack.push(new_concatenation);
-    }
     new_concatenation = Concatenation();
     factory_active = true;
-}
-
-void concatenation_factory::stop_concatenation() {
-    if (concatenations_stack.empty()) {
-        factory_active = false;
-    } else {
-       auto current = new_concatenation;
-        new_concatenation = concatenations_stack.top();
-        concatenations_stack.pop();
-        new_concatenation.add_component(std::make_shared<Concatenation>(current));
-    }
 }
 
 void concatenation_factory::set_default_init() {

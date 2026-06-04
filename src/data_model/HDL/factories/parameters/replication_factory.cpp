@@ -16,26 +16,15 @@
 #include "data_model/HDL/factories/parameters/replication_factory.hpp"
 
 void replication_factory::start_replication(bool is_ass) {
-    if (state == build_phase::inactive) {
-        state = build_phase::size;
-    } else {
-        replication_stack.emplace(new_replication, is_assignment);
-    }
     new_replication = Replication();
     is_assignment = is_ass;
+    state = build_phase::size;
 }
 
 
 std::shared_ptr<Parameter_value_base> replication_factory::result() {
     auto ret_val = std::make_shared<Replication>(new_replication);
-    if (replication_stack.empty()) {
-        state = build_phase::inactive;
-    } else {
-        auto r = replication_stack.top();
-        new_replication = r.first;
-        is_assignment = r.second;
-        replication_stack.pop();
-    }
+    state = build_phase::inactive;
     return ret_val;
 }
 

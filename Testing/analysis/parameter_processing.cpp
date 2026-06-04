@@ -21,6 +21,8 @@
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "analysis/parameter_solver.hpp"
+#include "data_model/HDL/parameters/components/Replication.hpp"
+#include "data_model/HDL/parameters/components/Concatenation.hpp"
 
 
 TEST(parameter_processing, override_after_fatal) {

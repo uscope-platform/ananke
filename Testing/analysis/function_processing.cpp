@@ -19,6 +19,7 @@
 
 #include "frontend/analysis/sv_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 
 
 TEST(function_processing, simple_function_scalar) {

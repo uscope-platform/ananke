@@ -19,6 +19,11 @@
 #include "frontend/analysis/sv_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "analysis/parameter_solver.hpp"
+#include "data_model/HDL/parameters/components/Replication.hpp"
+#include "data_model/HDL/parameters/components/Concatenation.hpp"
+#include "data_model/HDL/parameters/components/Cast.hpp"
+#include "data_model/HDL/parameters/components/HDL_function_call.hpp"
+#include "data_model/HDL/parameters/components/Ternary.hpp"
 
 using namespace std::string_literals;
 

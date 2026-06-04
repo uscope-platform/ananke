@@ -17,8 +17,6 @@
 #ifndef ANANKE_CAST_FACTORY_HPP
 #define ANANKE_CAST_FACTORY_HPP
 
-#include <memory>
-
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/components/Cast.hpp"
 #include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
@@ -40,9 +38,6 @@ private:
         size,
         content
     };
-
-    std::stack<Cast> cast_stack;
-    std::stack<build_phase> phases_stack;
 
     Cast new_cast;
 

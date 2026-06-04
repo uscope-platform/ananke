@@ -17,7 +17,6 @@
 #ifndef ANANKE_CONCATENATION_FACTORY_HPP
 #define ANANKE_CONCATENATION_FACTORY_HPP
 
-#include <stack>
 #include <vector>
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
@@ -25,9 +24,7 @@
 class concatenation_factory : public factory_base{
 public:
     void start_concatenation();
-    void stop_concatenation();
     void set_default_init();
-    [[nodiscard]] bool in_nested() const {return !concatenations_stack.empty();}
 
     void consume(const std::shared_ptr<Parameter_value_base>& expr) override;
     bool active() const override;
@@ -35,7 +32,6 @@ public:
 
 private:
     bool factory_active = false;
-    std::stack<Concatenation> concatenations_stack;
     std::vector<Parameter_value_base> concat_components;
     Concatenation new_concatenation;
 };

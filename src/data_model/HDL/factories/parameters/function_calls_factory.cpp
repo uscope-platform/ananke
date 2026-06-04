@@ -16,24 +16,9 @@
 #include "data_model/HDL/factories/parameters/function_calls_factory.hpp"
 
 void function_calls_factory::start_function(const std::string &name) {
-    if (state != build_phase::inactive) {
-        calls_stack.push(new_call);
-        new_call = HDL_function_call();
-    }
+    new_call = HDL_function_call();
     new_call.set_name(name);
     state = build_phase::arguments;
-}
-
-
-void function_calls_factory::finish() {
-    if (!calls_stack.empty()) {
-        auto inner_call = new_call;
-        new_call = calls_stack.top();
-        calls_stack.pop();
-        new_call.add_argument(std::make_shared<HDL_function_call>(inner_call));
-    } else {
-        state = build_phase::inactive;
-    }
 }
 
 

@@ -20,6 +20,7 @@
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "frontend/analysis/sv_analyzer.hpp"
 #include "analysis/parameter_solver.hpp"
+#include "data_model/HDL/parameters/components/Concatenation.hpp"
 
 
 TEST(Initialization_list, get_values_1d_unpacked)  {

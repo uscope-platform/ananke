@@ -17,10 +17,6 @@
 #include "data_model/HDL/factories/parameters/cast_factory.hpp"
 
 void cast_factory::start() {
-    if (state != build_phase::inactive) {
-        phases_stack.push(state);
-        cast_stack.push(new_cast);
-    }
     new_cast = Cast();
     state = build_phase::size;
 }
@@ -51,13 +47,6 @@ bool cast_factory::active() const {
 
 std::shared_ptr<Parameter_value_base> cast_factory::result() {
     auto cast = new_cast;
-    if (!cast_stack.empty()) {
-        new_cast = cast_stack.top();
-        state = phases_stack.top();
-        cast_stack.pop();
-        phases_stack.pop();
-    }else {
-        state = build_phase::inactive;
-    }
+    state = build_phase::inactive;
     return std::make_shared<Cast>(cast);
 }

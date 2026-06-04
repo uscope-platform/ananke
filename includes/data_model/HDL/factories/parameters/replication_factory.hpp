@@ -18,7 +18,6 @@
 
 #include "data_model/HDL/parameters/components/Replication.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
-#include <stack>
 
 class replication_factory : public factory_base{
 public:
@@ -32,7 +31,6 @@ public:
     std::shared_ptr<Parameter_value_base> result() override;
 
 private:
-    std::stack<std::pair<Replication, bool>> replication_stack;
     Replication new_replication;
     bool is_assignment = false;
     enum class build_phase {
