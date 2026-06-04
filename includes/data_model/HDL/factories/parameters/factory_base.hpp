@@ -22,8 +22,8 @@ class factory_base {
 public:
     virtual ~factory_base() = default;
     virtual void consume(const std::shared_ptr<Parameter_value_base>& v) = 0;
-    virtual bool active() const = 0;
-
+    [[nodiscard]] virtual bool active() const = 0;
+    virtual std::shared_ptr<Parameter_value_base> result() = 0;
 
 };
 

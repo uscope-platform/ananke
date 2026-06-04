@@ -26,7 +26,7 @@ void replication_factory::start_replication(bool is_ass) {
 }
 
 
-std::shared_ptr<Replication> replication_factory::finish() {
+std::shared_ptr<Parameter_value_base> replication_factory::result() {
     auto ret_val = std::make_shared<Replication>(new_replication);
     if (replication_stack.empty()) {
         state = build_phase::inactive;
@@ -38,6 +38,7 @@ std::shared_ptr<Replication> replication_factory::finish() {
     }
     return ret_val;
 }
+
 
 bool replication_factory::is_assignment_context() const {
     return is_assignment;

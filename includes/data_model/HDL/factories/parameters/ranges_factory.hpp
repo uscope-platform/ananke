@@ -34,6 +34,8 @@ public:
     std::pair<std::vector<dimension_t>,std::vector<dimension_t>> get_dimensions();
 
     void consume(const std::shared_ptr<Parameter_value_base>& v) override;
+    std::shared_ptr<Parameter_value_base> result() override {return nullptr;}
+
 private:
     enum dimensions_stage{
         packed,

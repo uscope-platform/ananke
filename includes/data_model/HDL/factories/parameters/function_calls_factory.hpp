@@ -26,11 +26,11 @@ class function_calls_factory : public factory_base{
 public:
     void start_function(const std::string& name);
     void finish();
-    std::shared_ptr<HDL_function_call> get_function();
     bool is_nested() const {return !calls_stack.empty();}
 
     void consume(const std::shared_ptr<Parameter_value_base> &arg) override;
     bool active() const override;
+    std::shared_ptr<Parameter_value_base> result() override;
 
 private:
     std::stack<HDL_function_call> calls_stack;

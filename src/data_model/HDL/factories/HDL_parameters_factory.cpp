@@ -72,7 +72,7 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
         if (default_assignment){
            concat_factory.set_default_init();
         }
-        current_resource.add_item(concat_factory.get_concatenation());
+        current_resource.add_item(concat_factory.result());
         concat_factory.stop_concatenation();
         expr_factory.increase_level();
     }
@@ -111,9 +111,9 @@ void HDL_parameters_factory::stop_param_assignment() {
 void HDL_parameters_factory::stop_replication() {
     if(repl_factory.active()){
         if (concat_factory.active()){
-            concat_factory.consume(repl_factory.finish());
+            concat_factory.consume(repl_factory.result());
         } else {
-            current_resource.add_item(repl_factory.finish());
+            current_resource.add_item(repl_factory.result());
         }
         expr_factory.increase_level();
     }
@@ -126,7 +126,7 @@ void HDL_parameters_factory::start_replication_assignment() {
 }
 
 void HDL_parameters_factory::stop_replication_assignment() {
-    current_resource.add_item(repl_factory.finish());
+    current_resource.add_item(repl_factory.result());
     expr_factory.pop_level();
 }
 
@@ -181,7 +181,7 @@ void HDL_parameters_factory::start_concatenation() {
 void HDL_parameters_factory::stop_concatenation() {
     if(concat_factory.active()){
         expr_factory.pop_level();
-        if (!concat_factory.in_nested()) current_resource.add_item(concat_factory.get_concatenation());
+        if (!concat_factory.in_nested()) current_resource.add_item(concat_factory.result());
         concat_factory.stop_concatenation();
     }
 }
@@ -218,12 +218,12 @@ void HDL_parameters_factory::stop_ternary(){
     expr_factory.pop_level();
     if (!t_factory.is_nested()) {
         if (concat_factory.active()) {
-            concat_factory.consume(t_factory.finish());
+            concat_factory.consume(t_factory.result());
         } else {
-            current_resource.set_scalar(t_factory.finish());
+            current_resource.set_scalar(t_factory.result());
         }
     }else {
-        t_factory.consume(t_factory.finish());
+        t_factory.consume(t_factory.result());
     }
 }
 
@@ -296,7 +296,7 @@ void HDL_parameters_factory::stop_cast() {
             c_factory.consume(std::make_shared<Expression>(expr.value()));
         }
 
-        auto cast_value = c_factory.get_cast(); // This restores the outer cast context
+        auto cast_value = c_factory.result(); // This restores the outer cast context
         expr_factory.increase_level();
 
         if (c_factory.active()) {
@@ -332,9 +332,9 @@ void HDL_parameters_factory::start_function_assignment(const std::string &f_name
 void HDL_parameters_factory::stop_function_assignment() {
     if (!calls_factory.is_nested()) {
         if (concat_factory.active()) {
-            concat_factory.consume(calls_factory.get_function());
+            concat_factory.consume(calls_factory.result());
         } else {
-            current_resource.set_scalar(calls_factory.get_function());
+            current_resource.set_scalar(calls_factory.result());
         }
     }
 
@@ -352,7 +352,7 @@ void HDL_parameters_factory::stop_function_call() {
     calls_factory.finish();
     expr_factory.pop_level();
     if (!nested) {
-        auto call = calls_factory.get_function();
+        auto call = calls_factory.result();
         Expression_component ec(call);
         if(t_factory.active()) {
             t_factory.consume(call);

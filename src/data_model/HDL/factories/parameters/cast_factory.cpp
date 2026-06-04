@@ -33,19 +33,6 @@ void cast_factory::set_type(const std::string &t) {
 }
 
 
-std::shared_ptr<Cast> cast_factory::get_cast() {
-    auto cast = new_cast;
-    if (!cast_stack.empty()) {
-        new_cast = cast_stack.top();
-        state = phases_stack.top();
-        cast_stack.pop();
-        phases_stack.pop();
-    }else {
-        state = build_phase::inactive;
-    }
-    return std::make_shared<Cast>(cast);
-}
-
 void cast_factory::consume(const std::shared_ptr<Parameter_value_base> &c) {
     if (state == build_phase::size) {
         if (c->is_expression()) {
@@ -60,4 +47,17 @@ void cast_factory::consume(const std::shared_ptr<Parameter_value_base> &c) {
 
 bool cast_factory::active() const {
     return state != build_phase::inactive;
+}
+
+std::shared_ptr<Parameter_value_base> cast_factory::result() {
+    auto cast = new_cast;
+    if (!cast_stack.empty()) {
+        new_cast = cast_stack.top();
+        state = phases_stack.top();
+        cast_stack.pop();
+        phases_stack.pop();
+    }else {
+        state = build_phase::inactive;
+    }
+    return std::make_shared<Cast>(cast);
 }

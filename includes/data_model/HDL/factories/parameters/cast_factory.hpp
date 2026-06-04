@@ -29,11 +29,10 @@ public:
     void start();
     void set_type(const std::string &t);
     void advance_cast() {state = build_phase::content;}
-    std::shared_ptr<Cast> get_cast();
     bool in_size() const {return state == build_phase::size;}
     void consume(const std::shared_ptr<Parameter_value_base>& v) override;
     bool active() const override;
-
+    std::shared_ptr<Parameter_value_base> result() override;
 private:
 
     enum class build_phase {

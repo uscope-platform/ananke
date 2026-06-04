@@ -47,3 +47,7 @@ bool concatenation_factory::active() const {
  return factory_active;
 }
 
+std::shared_ptr<Parameter_value_base> concatenation_factory::result() {
+    return std::make_shared<Concatenation>(new_concatenation);
+}
+

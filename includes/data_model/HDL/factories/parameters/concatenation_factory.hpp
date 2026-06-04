@@ -27,11 +27,11 @@ public:
     void start_concatenation();
     void stop_concatenation();
     void set_default_init();
-    std::shared_ptr<Concatenation> get_concatenation() {return  std::make_shared<Concatenation>(new_concatenation);}
     [[nodiscard]] bool in_nested() const {return !concatenations_stack.empty();}
 
     void consume(const std::shared_ptr<Parameter_value_base>& expr) override;
     bool active() const override;
+    std::shared_ptr<Parameter_value_base> result() override;
 
 private:
     bool factory_active = false;

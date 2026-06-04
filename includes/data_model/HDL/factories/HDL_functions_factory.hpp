@@ -45,7 +45,7 @@ public:
     void add_loop(const HDL_loop_metadata &md){f.add_loop_metadata(md);}
     HDL_function_def get_function();
     bool is_active()const{return active;}
-    bool is_raw_body()const{return !r_factory.active() && !c_factory.active() && !cast_factory_.active();}
+    bool is_raw_body()const{return !r_factory.active() && !c_factory.active() && !cast_factory.active();}
 
     void start_replication();
     void stop_replication();
@@ -70,11 +70,11 @@ public:
     void stop_bit_selection();
 
 private:
-    expressions_factory expr_factory_;
+    expressions_factory expr_factory;
     bool paused = false;
     bool active = false;
     bool in_bit_selection = false;
-    cast_factory cast_factory_;
+    cast_factory cast_factory;
     replication_factory r_factory;
     concatenation_factory c_factory;
     HDL_function_def f;

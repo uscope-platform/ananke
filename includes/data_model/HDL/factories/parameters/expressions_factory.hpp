@@ -20,7 +20,7 @@
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
 
-class expressions_factory : public factory_base{
+class expressions_factory {
 public:
     void increase_level() {expression_level++;}
     void decrease_level() {expression_level--;}
@@ -36,8 +36,8 @@ public:
     void pause();
     void add_index(const Expression &idx);
 
-    void consume(const std::shared_ptr<Parameter_value_base>& v) override;
-    bool active() const override;
+    void consume(const std::shared_ptr<Parameter_value_base>& v);
+    bool active() const;
 
 private:
     bool factory_active = false;

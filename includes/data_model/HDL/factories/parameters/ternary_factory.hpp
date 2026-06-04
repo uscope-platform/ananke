@@ -24,12 +24,12 @@ class ternary_factory : public factory_base{
 public:
     void start_conditional();
 
-    std::shared_ptr<Ternary> finish();
 
     bool is_nested() {return !ternary_stack.empty();}
 
     void consume(const std::shared_ptr<Parameter_value_base>& v) override;
     bool active() const override;
+    std::shared_ptr<Parameter_value_base> result() override;
 
 private:
     enum class build_phase {

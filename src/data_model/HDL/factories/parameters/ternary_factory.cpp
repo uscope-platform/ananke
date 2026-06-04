@@ -24,20 +24,6 @@ void ternary_factory::start_conditional() {
     state = build_phase::condition;
 }
 
-std::shared_ptr<Ternary> ternary_factory::finish() {
-    auto ret = std::make_shared<Ternary>(current);
-    if (!ternary_stack.empty()) {
-        auto top = ternary_stack.top();
-        ternary_stack.pop();
-        state = top.second;
-        current = top.first;
-    } else {
-        current = Ternary();
-        state = build_phase::inactive;
-    }
-        return ret;
-}
-
 void ternary_factory::consume(const std::shared_ptr<Parameter_value_base> &component) {
     if (state == build_phase::condition) {
         if (!component->is_expression()) throw std::invalid_argument("Only valid expressions can be the condition of a ternary assignments");
@@ -53,4 +39,18 @@ void ternary_factory::consume(const std::shared_ptr<Parameter_value_base> &compo
 
 bool ternary_factory::active() const {
     return state != build_phase::inactive;
+}
+
+std::shared_ptr<Parameter_value_base> ternary_factory::result() {
+    auto ret = std::make_shared<Ternary>(current);
+    if (!ternary_stack.empty()) {
+        auto top = ternary_stack.top();
+        ternary_stack.pop();
+        state = top.second;
+        current = top.first;
+    } else {
+        current = Ternary();
+        state = build_phase::inactive;
+    }
+    return ret;
 }
