@@ -28,7 +28,7 @@ class Type_engine {
 public:
     Type_engine() = default;
 
-    void start_type_declaration();
+    void start_type_declaration(bool is_struct);
     HDL_type stop_type_declaration(const std::string &name);
 
     void close_packed_dimensions();

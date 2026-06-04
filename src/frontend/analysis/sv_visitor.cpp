@@ -123,13 +123,22 @@ void sv_visitor::exitTf_port_list(sv2017::Tf_port_listContext *ctx) {
     f_factory.start_body();
 }
 
-void sv_visitor::enterType_declaration(sv2017::Type_declarationContext *ctx) {
-    type_engine.start_type_declaration();
+void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
+    if (ctx->type_declaration()) {
+        type_engine.start_type_declaration(ctx->type_declaration()->KW_STRUCT());
+        
+    } else {
+
+    }
 }
 
-void sv_visitor::exitType_declaration(sv2017::Type_declarationContext *ctx) {
-    auto name = ctx->identifier(0)->getText();
-    modules_factory.add_typedef(name, type_engine.stop_type_declaration(name));
+void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
+    if (ctx->type_declaration()) {
+        auto name = ctx->type_declaration()->identifier(0)->getText();
+        modules_factory.add_typedef(name, type_engine.stop_type_declaration(name));
+    } else {
+
+    }
 }
 
 void sv_visitor::exitData_type(sv2017::Data_typeContext *ctx) {

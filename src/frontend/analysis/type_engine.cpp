@@ -15,7 +15,7 @@
 
 #include "frontend/analysis/type_engine.hpp"
 
-void Type_engine::start_type_declaration() {
+void Type_engine::start_type_declaration(bool is_struct) {
     r_factory.start();
 }
 

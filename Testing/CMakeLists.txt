@@ -37,13 +37,14 @@ set(ANANKE_TESTS
         Backend/Peripheral_definition_generator.cpp
         Backend/toolchain_manager.cpp
         frontend/sv_preprocessor.cpp
+        frontend/typedef_parsing.cpp
+        frontend/source_mapping.cpp
         frontend/repository_walker.cpp
         Backend/python_script_runner.cpp
         Backend/auxiliary_resolver.cpp
         Backend/project_generator.cpp
         Backend/dependency_resolver.cpp
         end_to_end/full_application.cpp
-        frontend/source_mapping.cpp
 )
 
 

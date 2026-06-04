@@ -197,8 +197,8 @@ public:
     void enterTf_port_item(sv2017::Tf_port_itemContext *ctx) override;
     void exitTf_port_list(sv2017::Tf_port_listContext *ctx) override;
 
-    void enterType_declaration(sv2017::Type_declarationContext *ctx) override;
-    void exitType_declaration(sv2017::Type_declarationContext *ctx) override;
+    void enterData_declaration(sv2017::Data_declarationContext *ctx) override;
+    void exitData_declaration(sv2017::Data_declarationContext *ctx) override;
 
 private:
     void route_expression_component(const std::string& text);

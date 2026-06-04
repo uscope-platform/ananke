@@ -3951,24 +3951,6 @@ TEST(parameter_extraction, typedef_parameter) {
     sv_analyzer analyzer;
 
     auto resource = analyzer.analyze("", test_pattern)[0];
-    auto typedefs = resource.get_typedefs();
-    EXPECT_TRUE(typedefs.contains("ctrl_addr_init_t"));
-
-    EXPECT_EQ(typedefs["ctrl_addr_init_t"].get_packed_dimensions().size(), 1);
-    EXPECT_EQ(typedefs["ctrl_addr_init_t"].get_unpacked_dimensions().size(), 1);
-
-    dimension_t check_d;
-    check_d.first_bound = {Expression_component("31", Expression_component::number)};
-    check_d.second_bound = {Expression_component("0", Expression_component::number)};
-    check_d.packed = true;
-    auto packed_dim = typedefs["ctrl_addr_init_t"].get_packed_dimensions()[0];
-    EXPECT_EQ(packed_dim, check_d);
-
-    check_d.first_bound = {Expression_component("1", Expression_component::number)};
-    check_d.second_bound = {Expression_component("0", Expression_component::number)};
-    check_d.packed = false;
-    auto unpacked_dim = typedefs["ctrl_addr_init_t"].get_unpacked_dimensions()[0];
-    EXPECT_EQ(unpacked_dim, check_d);
 
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
