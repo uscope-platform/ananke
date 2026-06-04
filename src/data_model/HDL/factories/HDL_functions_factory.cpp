@@ -14,6 +14,9 @@
 //  limitations under the License.
 
 #include "data_model/HDL/factories/HDL_functions_factory.hpp"
+#include "data_model/HDL/factories/parameters/cast_factory.hpp"
+#include "data_model/HDL/factories/parameters/concatenation_factory.hpp"
+#include "data_model/HDL/factories/parameters/replication_factory.hpp"
 
 void HDL_functions_factory::add_argument(const std::string &a) {
     f.add_argument(a);
@@ -26,18 +29,14 @@ void HDL_functions_factory::add_component(const Expression_component &c) {
         } else if (is_raw_body()) {
             new_expression.push_back(c);
         } else {
-            expr_factory.add_component(c);
+            expr_factory_.add_component(c);
         }
     }
 }
 
 void HDL_functions_factory::add_value(const std::shared_ptr<Parameter_value_base> &v) {
-    if (cast_factory.active()) {
-        cast_factory.consume(v);
-    } else if (c_factory.active()) {
-        c_factory.consume(v);
-    } else if (r_factory.active()) {
-        r_factory.consume(v);
+    if (!consumer_stack.empty()) {
+        consumer_stack.top()->consume(v);
     } else {
         assignment_value = v;
     }
@@ -75,91 +74,116 @@ HDL_function_def HDL_functions_factory::get_function() {
 }
 
 void HDL_functions_factory::start_replication() {
-    r_factory.start_replication(true);
-    expr_factory.decrease_level();
+    auto repl = std::make_unique<replication_factory>();
+    repl->start_replication(true);
+    consumer_stack.push(std::move(repl));
+    expr_factory_.decrease_level();
 }
 
 void HDL_functions_factory::stop_replication() {
-    assignment_value = r_factory.result();
-    expr_factory.increase_level();
+    if (top_as<replication_factory>()) {
+        auto result = consumer_stack.top()->result();
+        consumer_stack.pop();
+        if (!consumer_stack.empty()) {
+            consumer_stack.top()->consume(result);
+        } else {
+            assignment_value = result;
+        }
+        expr_factory_.increase_level();
+    }
 }
 
 void HDL_functions_factory::start_concat() {
-    c_factory.start_concatenation();
-    expr_factory.push_level();
+    auto concat = std::make_unique<concatenation_factory>();
+    concat->start_concatenation();
+    consumer_stack.push(std::move(concat));
+    expr_factory_.push_level();
 }
 
 void HDL_functions_factory::stop_concat() {
-    c_factory.stop_concatenation();
-    assignment_value = c_factory.result();
-    expr_factory.pop_level();
+    if (top_as<concatenation_factory>()) {
+        auto result = consumer_stack.top()->result();
+        consumer_stack.pop();
+        if (!consumer_stack.empty()) {
+            consumer_stack.top()->consume(result);
+        } else {
+            assignment_value = result;
+        }
+        expr_factory_.pop_level();
+    }
 }
 
 void HDL_functions_factory::start_cast(bool expression_size) {
-    cast_factory.start();
+    auto cast = std::make_unique<cast_factory>();
+    cast->start();
+    consumer_stack.push(std::move(cast));
     if (expression_size) {
         start_expression();
     } else {
-        expr_factory.decrease_level();
+        expr_factory_.decrease_level();
     }
 }
 
 void HDL_functions_factory::stop_cast() {
-    auto expr = expr_factory.get_expression();
-    expr_factory.clear_expression();
-    if (expr.has_value()) {
-        cast_factory.consume(std::make_shared<Expression>(expr.value()));
-    }
-    expr_factory.increase_level();
+    if (top_as<cast_factory>()) {
+        auto expr = expr_factory_.get_expression();
+        expr_factory_.clear_expression();
+        if (expr.has_value()) {
+            consumer_stack.top()->consume(std::make_shared<Expression>(expr.value()));
+        }
+        expr_factory_.increase_level();
 
-
-    auto cast_value = cast_factory.result();
-    if (cast_factory.active()) {
-        cast_factory.consume(cast_value);
-    } else if (c_factory.active()) {
-        c_factory.consume(cast_value);
-    } else if (r_factory.active()) {
-        r_factory.consume(cast_value);
-    } else {
-        assignment_value = cast_value;
+        auto cast_value = consumer_stack.top()->result();
+        consumer_stack.pop();
+        if (!consumer_stack.empty()) {
+            consumer_stack.top()->consume(cast_value);
+        } else {
+            assignment_value = cast_value;
+        }
     }
 }
 
 void HDL_functions_factory::set_cast_type(const std::string &t) {
-    cast_factory.set_type(t);
+    auto* cast = top_as<cast_factory>();
+    if (cast) {
+        cast->set_type(t);
+    }
 }
 
 void HDL_functions_factory::advance_cast() {
-    auto expr = expr_factory.get_expression();
-    if (expr.has_value()) {
-        cast_factory.consume(std::make_shared<Expression>(expr.value()));
-        expr_factory.clear_expression();
+    auto* cast = top_as<cast_factory>();
+    if (cast) {
+        auto expr = expr_factory_.get_expression();
+        if (expr.has_value()) {
+            cast->consume(std::make_shared<Expression>(expr.value()));
+            expr_factory_.clear_expression();
+        }
+        cast->advance_cast();
     }
-    cast_factory.advance_cast();
 }
 
 void HDL_functions_factory::start_expression() {
-    expr_factory.start_expression();
+    expr_factory_.start_expression();
 }
 
 void HDL_functions_factory::stop_expression() {
-    expr_factory.stop_expression();
-    if (expr_factory.get_level() == 0) {
-        auto expr = expr_factory.get_expression();
+    expr_factory_.stop_expression();
+    if (expr_factory_.get_level() == 0) {
+        auto expr = expr_factory_.get_expression();
         if (expr.has_value()) {
             add_value(std::make_shared<Expression>(expr.value()));
         }
-        expr_factory.clear_expression();
+        expr_factory_.clear_expression();
     }
 }
 
 bool HDL_functions_factory::is_component_relevant() const {
     if (paused) return false;
-    return expr_factory.active() || c_factory.active() || r_factory.active() || cast_factory.active();
+    return expr_factory_.active() || !consumer_stack.empty();
 }
 
 void HDL_functions_factory::start_bit_selection() {
-    if (!r_factory.active()) {
+    if (!top_as<replication_factory>()) {
         in_bit_selection = true;
         bit_index = Expression();
     }
@@ -167,7 +191,7 @@ void HDL_functions_factory::start_bit_selection() {
 
 void HDL_functions_factory::stop_bit_selection() {
     if (in_bit_selection) {
-        expr_factory.add_index(bit_index);
+        expr_factory_.add_index(bit_index);
         in_bit_selection = false;
     }
 }

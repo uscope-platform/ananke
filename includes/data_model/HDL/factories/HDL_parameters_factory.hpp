@@ -16,6 +16,9 @@
 #ifndef ANANKE_HDL_PARAMETERS_FACTORY_HPP
 #define ANANKE_HDL_PARAMETERS_FACTORY_HPP
 
+#include <memory>
+#include <stack>
+
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "resource_factory_base.hpp"
@@ -26,6 +29,7 @@
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 #include "data_model/HDL/factories/parameters/ternary_factory.hpp"
 #include "parameters/cast_factory.hpp"
+#include "data_model/HDL/factories/parameters/factory_base.hpp"
 
 
 class  HDL_parameters_factory : protected resources_factory_base<HDL_parameter> {
@@ -79,14 +83,11 @@ public:
     void start_function_call(const std::string &f_name);
     void stop_function_call();
 
-    bool in_packed_context() const {return in_packed_assignment && !paused; }
-    bool is_param_assignment() const {return in_param_assignment && !paused;}
-    bool is_param_override() const {return in_param_override && !paused;}
+    bool in_packed_context() const {return ctx == param_context::packed_dim; }
+    bool is_param_assignment() const {return ctx == param_context::declaration;}
+    bool is_param_override() const {return ctx == param_context::override;}
     bool is_component_relevant() const {
-        if (paused) return false;
-        return expr_factory.active() ||
-            c_factory.active() || in_packed_assignment || calls_factory.active() || concat_factory.active() ||
-            t_factory.active() || r_factory.active();
+        return expr_factory.active() || !consumer_stack.empty() || ctx == param_context::packed_dim || r_factory.active();
     }
 
     void advance_range();
@@ -112,19 +113,26 @@ public:
     void close_packed_dimensions();
 
 private:
-    cast_factory c_factory;
-    replication_factory repl_factory;
-    concatenation_factory concat_factory;
-    function_calls_factory calls_factory;
-    ranges_factory r_factory;
+    enum class param_context {
+        idle,
+        declaration,
+        override,
+        packed_dim
+    };
+
+    template<typename T>
+    T* top_as() {
+        if (consumer_stack.empty()) return nullptr;
+        return dynamic_cast<T*>(consumer_stack.top().get());
+    }
 
     expressions_factory expr_factory;
-    ternary_factory t_factory;
+    ranges_factory r_factory;
 
-    bool in_param_override = false;
-    bool in_param_assignment = false;
-    bool in_packed_assignment = false;
-    bool paused = false;
+    std::stack<std::unique_ptr<factory_base>> consumer_stack;
+
+    param_context ctx = param_context::idle;
+
     bool in_bit_selection = false;
     Expression bit_index;
 

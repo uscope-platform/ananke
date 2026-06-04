@@ -16,16 +16,17 @@
 
 #ifndef ANANKE_HDL_FUNCTIONS_FACTORY_HPP
 #define ANANKE_HDL_FUNCTIONS_FACTORY_HPP
+
+#include <memory>
+#include <stack>
 #include <string>
 
 #include "data_model/HDL/HDL_loop.hpp"
 #include "data_model/HDL/parameters/components/Expression_component.hpp"
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
-#include "parameters/cast_factory.hpp"
-#include "parameters/concatenation_factory.hpp"
-#include "parameters/replication_factory.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
+#include "data_model/HDL/factories/parameters/factory_base.hpp"
 
 class HDL_functions_factory {
 public:
@@ -45,7 +46,7 @@ public:
     void add_loop(const HDL_loop_metadata &md){f.add_loop_metadata(md);}
     HDL_function_def get_function();
     bool is_active()const{return active;}
-    bool is_raw_body()const{return !r_factory.active() && !c_factory.active() && !cast_factory.active();}
+    bool is_raw_body()const{return consumer_stack.empty();}
 
     void start_replication();
     void stop_replication();
@@ -70,13 +71,17 @@ public:
     void stop_bit_selection();
 
 private:
-    expressions_factory expr_factory;
+    template<typename T>
+    T* top_as() {
+        if (consumer_stack.empty()) return nullptr;
+        return dynamic_cast<T*>(consumer_stack.top().get());
+    }
+
+    expressions_factory expr_factory_;
     bool paused = false;
     bool active = false;
     bool in_bit_selection = false;
-    cast_factory cast_factory;
-    replication_factory r_factory;
-    concatenation_factory c_factory;
+    std::stack<std::unique_ptr<factory_base>> consumer_stack;
     HDL_function_def f;
     Expression bit_index;
 
