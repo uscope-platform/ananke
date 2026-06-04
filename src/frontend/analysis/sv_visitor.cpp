@@ -124,7 +124,6 @@ void sv_visitor::enterVariable_dimension(sv2017::Variable_dimensionContext *ctx)
 }
 
 void sv_visitor::exitVariable_dimension(sv2017::Variable_dimensionContext *ctx) {
-    params_factory.close_dimension();
 }
 
 void sv_visitor::enterType_declaration(sv2017::Type_declarationContext *ctx) {
@@ -767,26 +766,10 @@ void sv_visitor::exitConcatenation(sv2017::ConcatenationContext *ctx) {
 
 
 void sv_visitor::enterData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) {
-    bool is_packed = false;
-    if(ctx->implicit_data_type()){
-        if(!ctx->implicit_data_type()->packed_dimension().empty()){
-            is_packed = true;
-        }
-    } else{
-        if(!ctx->data_type()->variable_dimension().empty()){
-            is_packed = true;
-        }
-    }
-    if(is_packed && in_param_declaration){
-        params_factory.start_packed_dimension();
-    }
-
 }
 
 void sv_visitor::exitData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) {
-    if(in_param_declaration) {
-        params_factory.stop_packed_dimension();
-    } else{
+    if(!in_param_declaration) {
         params_factory.clear_expression();
     }
 }
@@ -969,9 +952,6 @@ void sv_visitor::exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
     }
 }
 
-void sv_visitor::enterGenvar_iteration(sv2017::Genvar_iterationContext *ctx) {
-    sv2017BaseListener::enterGenvar_iteration(ctx);
-}
 
 void sv_visitor::exitGenvar_iteration(sv2017::Genvar_iterationContext *ctx) {
    if(ctx->inc_or_dec_operator()) {

@@ -18,7 +18,6 @@
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
-#include "data_model/HDL/factories/HDL_functions_factory.hpp"
 #include "resource_factory_base.hpp"
 #include "data_model/HDL/factories/parameters/replication_factory.hpp"
 #include "data_model/HDL/factories/parameters/concatenation_factory.hpp"
@@ -37,7 +36,6 @@ public:
     std::shared_ptr<HDL_parameter> get_parameter();
 
     void set_type(const std::string &type);
-    void set_value(const std::string &s);
 
     void add_component(const Expression_component &c){add_component(c, false);}
     void add_component(const Expression_component &c, bool is_call_argument);
@@ -70,9 +68,6 @@ public:
     void start_concatenation();
     void stop_concatenation();
 
-    void start_packed_dimension();
-    void stop_packed_dimension();
-
     void start_cast(bool expression_size);
     void set_cast_type(const std::string &t);
     void stop_cast();
@@ -84,7 +79,6 @@ public:
     void start_function_call(const std::string &f_name);
     void stop_function_call();
 
-    bool in_replication_assignment_context() const {return repl_factory.is_assignment_context();}
     bool in_packed_context() const {return in_packed_assignment && !paused; }
     bool is_param_assignment() const {return in_param_assignment && !paused;}
     bool is_param_override() const {return in_param_override && !paused;}
@@ -116,11 +110,7 @@ public:
     void start_type_declaration();
     HDL_type stop_type_declaration(const std::string &name);
     void close_packed_dimensions();
-    void close_dimension();
 
-
-    void pause_activity() { paused = true; }
-    void resume_activity() { paused = false; }
 private:
     cast_factory c_factory;
     replication_factory repl_factory;

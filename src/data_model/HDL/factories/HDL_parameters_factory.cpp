@@ -41,10 +41,6 @@ void HDL_parameters_factory::set_type(const std::string &type) {
     current_type = type;
 }
 
-void HDL_parameters_factory::set_value(const std::string &s) {
-    current_resource.set_value(s);
-}
-
 void HDL_parameters_factory::add_component(const Expression_component &c, bool is_call_argument) {
     if (is_call_argument) {
         calls_factory.consume(std::make_shared<Expression>(Expression({c})));
@@ -201,13 +197,6 @@ void HDL_parameters_factory::start_unpacked_dimension_declaration() {
     r_factory.advance_stage();
 }
 
-void HDL_parameters_factory::start_packed_dimension() {
-}
-
-void HDL_parameters_factory::stop_packed_dimension() {
-}
-
-
 void HDL_parameters_factory::advance_range() {
     r_factory.advance_range();
 }
@@ -282,10 +271,6 @@ HDL_type HDL_parameters_factory::stop_type_declaration(const std::string &name) 
 
 void HDL_parameters_factory::close_packed_dimensions() {
     r_factory.advance_stage();
-}
-
-void HDL_parameters_factory::close_dimension() {
-
 }
 
 void HDL_parameters_factory::start_cast(bool expression_size) {

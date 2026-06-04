@@ -24,6 +24,7 @@
 #include "data_model/HDL/factories/HDL_interfaces_factory.hpp"
 #include "data_model/HDL/factories/HDL_instances_factory.hpp"
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"
+#include "data_model/HDL/factories/HDL_functions_factory.hpp"
 
 #include "data_model/HDL/HDL_instance.hpp"
 #include "data_model/HDL/HDL_Resource.hpp"
@@ -188,7 +189,6 @@ public:
     void enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) override;
     void exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) override;
 
-    void enterGenvar_iteration(sv2017::Genvar_iterationContext *ctx) override;
     void exitGenvar_iteration(sv2017::Genvar_iterationContext *ctx) override;
 
     void enterName_of_instance(sv2017::Name_of_instanceContext *ctx) override;
