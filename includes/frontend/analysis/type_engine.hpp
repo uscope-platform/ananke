@@ -20,6 +20,7 @@
 #include <string>
 #include <map>
 
+#include "data_model/HDL/HDL_struct.hpp"
 #include "data_model/HDL/parameters/common/HDL_type.hpp"
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
@@ -28,7 +29,19 @@ class Type_engine {
 public:
     Type_engine() = default;
 
-    void start_type_declaration(bool is_struct);
+    enum type_kind{
+        simple_type,
+        struct_type,
+        union_type,
+        enum_type
+    };
+
+    void start_composite_type_declaration(type_kind kind);
+    void open_composite_member();
+    void close_composite_member(const std::string &name);
+    HDL_struct stop_composite_type_declaration();
+
+    void start_simple_type_declaration();
     HDL_type stop_type_declaration(const std::string &name);
 
     void close_packed_dimensions();
@@ -47,11 +60,18 @@ public:
     [[nodiscard]] bool active() const;
     [[nodiscard]] bool has_type(const std::string &name) const;
     [[nodiscard]] HDL_type get_type(const std::string &name) const;
+    [[nodiscard]] bool is_simple_type()const{ return kind == simple_type;}
+
+    void set_type(const std::string & string);
+    void set_packed();
 
 private:
     expressions_factory expr_factory;
     ranges_factory r_factory;
     std::map<std::string, HDL_type> type_registry;
+    type_kind kind = simple_type;
+    HDL_struct current_struct;
+
 };
 
 #endif //ANANKE_TYPE_ENGINE_HPP

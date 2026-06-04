@@ -15,20 +15,59 @@
 
 #include "frontend/analysis/type_engine.hpp"
 
-void Type_engine::start_type_declaration(bool is_struct) {
+void Type_engine::start_composite_type_declaration(type_kind k) {
+    kind = k;
+    if (k==struct_type) {
+        current_struct = {};
+    }
+}
+
+void Type_engine::open_composite_member() {
+    r_factory.start();
+    current_struct.member.emplace_back();
+}
+
+void Type_engine::close_composite_member(const std::string &name) {
+    r_factory.stop();
+    auto  [packed, unpacked] = r_factory.get_dimensions();
+    r_factory.clear();
+    current_struct.member.back().name = name;
+    current_struct.member.back().type.set_packed_dimensions(packed);
+    current_struct.member.back().type.set_unpacked_dimensions(unpacked);
+}
+
+HDL_struct Type_engine::stop_composite_type_declaration() {
+    kind = simple_type;
+    return current_struct;
+}
+
+void Type_engine::set_type(const std::string &type) {
+    if (kind != simple_type) {
+        current_struct.member.back().type.set_declared_type(type);
+    }
+}
+
+void Type_engine::set_packed() {
+    if (kind != simple_type) {
+        current_struct.packed = true;
+    }
+}
+
+void Type_engine::start_simple_type_declaration() {
     r_factory.start();
 }
 
 HDL_type Type_engine::stop_type_declaration(const std::string &name) {
     r_factory.stop();
     HDL_type t;
-    auto [packed, unpacked] = r_factory.get_dimensions();
+    auto  [packed, unpacked] = r_factory.get_dimensions();
     t.set_packed_dimensions(packed);
     t.set_unpacked_dimensions(unpacked);
     r_factory.clear();
     type_registry[name] = t;
     return t;
 }
+
 
 void Type_engine::close_packed_dimensions() {
     r_factory.advance_stage();
@@ -78,7 +117,10 @@ void Type_engine::stop_expression() {
 }
 
 bool Type_engine::active() const {
-    return r_factory.active();
+    if (kind == simple_type) {
+        return r_factory.active();
+    }
+    else return true;
 }
 
 bool Type_engine::has_type(const std::string &name) const {

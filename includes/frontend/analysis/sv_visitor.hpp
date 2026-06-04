@@ -149,6 +149,7 @@ public:
     void exitData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) override;
 
 
+    void enterData_type(sv2017::Data_typeContext *ctx) override;
     void exitData_type(sv2017::Data_typeContext *ctx) override;
 
     void enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) override;
@@ -199,6 +200,12 @@ public:
 
     void enterData_declaration(sv2017::Data_declarationContext *ctx) override;
     void exitData_declaration(sv2017::Data_declarationContext *ctx) override;
+
+    void enterStruct_union_member(sv2017::Struct_union_memberContext *ctx) override;
+    void exitStruct_union_member(sv2017::Struct_union_memberContext *ctx) override;
+    void enterData_type_primitive(sv2017::Data_type_primitiveContext *ctx) override;
+
+
 
 private:
     void route_expression_component(const std::string& text);

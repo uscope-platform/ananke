@@ -125,19 +125,56 @@ void sv_visitor::exitTf_port_list(sv2017::Tf_port_listContext *ctx) {
 
 void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
     if (ctx->type_declaration()) {
-        type_engine.start_type_declaration(ctx->type_declaration()->KW_STRUCT());
-        
+        if (
+            ctx->type_declaration()->data_type() &&
+            ctx->type_declaration()->data_type()->struct_union()
+        ) {
+            if (ctx->type_declaration()->data_type()->struct_union()->KW_STRUCT())
+                type_engine.start_composite_type_declaration(Type_engine::struct_type);
+        } else {
+            type_engine.start_simple_type_declaration();
+        }
+
     } else {
 
     }
 }
 
+
 void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
     if (ctx->type_declaration()) {
-        auto name = ctx->type_declaration()->identifier(0)->getText();
-        modules_factory.add_typedef(name, type_engine.stop_type_declaration(name));
+            auto name = ctx->type_declaration()->identifier(0)->getText();
+        if (type_engine.is_simple_type()) {
+            modules_factory.add_typedef(name, type_engine.stop_type_declaration(name));
+        } else {
+            auto s = type_engine.stop_composite_type_declaration();
+            modules_factory.add_struct_def(name, type_engine.stop_composite_type_declaration());
+        }
+
     } else {
 
+    }
+}
+
+void sv_visitor::enterStruct_union_member(sv2017::Struct_union_memberContext *ctx) {
+    type_engine.open_composite_member();
+}
+
+void sv_visitor::exitStruct_union_member(sv2017::Struct_union_memberContext *ctx) {
+    auto name = ctx->list_of_variable_decl_assignments()->variable_decl_assignment(0)->identifier()->getText();
+    type_engine.close_composite_member(name);
+}
+
+void sv_visitor::enterData_type_primitive(sv2017::Data_type_primitiveContext *ctx) {
+    if (ctx->integer_type()) {
+        type_engine.set_type(ctx->integer_type()->getText());
+    }
+}
+
+void sv_visitor::enterData_type(sv2017::Data_typeContext *ctx) {
+    auto packed =  ctx->KW_PACKED() != nullptr;
+    if (type_engine.active() && packed) {
+        type_engine.set_packed();
     }
 }
 

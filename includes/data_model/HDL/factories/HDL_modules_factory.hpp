@@ -30,11 +30,13 @@ public:
 
     void add_instance(const HDL_instance &i);
     void add_typedef(const std::string &name, const HDL_type &type);
+    void add_struct_def(const std::string & name, const HDL_struct & hdl_struct);
 
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);
     void add_function(const HDL_function_def &f);
     void add_port(const std::string &p_n, HDL_port p);
-    bool is_current_valid() {return valid_resource;};
+    bool is_current_valid() {return valid_resource;}
+
 };
 
 

@@ -24,7 +24,12 @@ struct struct_member {
     std::string name;
     HDL_type type;
 
-    friend bool operator==(const struct_member &lhs, const struct_member &rhs)  = default;
+    friend bool operator==(const struct_member &lhs, const struct_member &rhs) {
+        bool ret = true;
+        ret &= lhs.type == rhs.type;
+        ret &= lhs.name == rhs.name;
+        return ret;
+    }
 
     template<class Archive>
     void serialize( Archive & ar ) {
@@ -37,7 +42,12 @@ public:
     bool packed = false;
     std::vector<struct_member> member;
 
-    friend bool operator==(const HDL_struct &lhs, const HDL_struct &rhs)  = default;
+    friend bool operator==(const HDL_struct &lhs, const HDL_struct &rhs)  {
+        bool ret = true;
+        ret &= lhs.packed == rhs.packed;
+        ret &= lhs.member == rhs.member;
+        return ret;
+    }
 
 
     template<class Archive>

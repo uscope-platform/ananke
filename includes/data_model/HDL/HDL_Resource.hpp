@@ -79,6 +79,10 @@ class HDL_Resource {
 
         void add_typedef(const std::string &name, const HDL_type &type){typedefs.insert({name, type});}
         std::map<std::string, HDL_type> get_typedefs(){return typedefs;}
+
+        void add_struct_def(const std::string & name, const HDL_struct & hdl_struct){struct_defs.insert({name, hdl_struct});}
+        std::map<std::string, HDL_struct> get_struct_defs() {return struct_defs;}
+
         std::unordered_map<std::string, HDL_Resource>::mapped_type clone();
 
         void add_dependencies(std::vector<HDL_instance> deps);
@@ -89,11 +93,11 @@ class HDL_Resource {
         }
 
         [[nodiscard]] std::unordered_map<std::string, HDL_port> get_port_specs() const {return  port_specs;}
-        const std::string &getName() const {return name;};
+        const std::string &getName() const {return name;}
 
         void set_path(const std::string &p) {
             path  = p;
-        };
+        }
         std::string get_path() {return path;}
         void set_type(const dependency_class t) {
             hdl_type  = t;

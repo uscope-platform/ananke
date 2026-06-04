@@ -57,7 +57,6 @@ TEST(typedef_parsing, struct_definition) {
             typedef struct packed {
                 int unsigned field_1;
                 int unsigned field_2;
-
             } test_struct;
         endpackage
     )";
@@ -65,5 +64,18 @@ TEST(typedef_parsing, struct_definition) {
     sv_analyzer analyzer;
 
     auto resource = analyzer.analyze("", test_pattern)[0];
-    EXPECT_FALSE(true);
+
+    auto structs = resource.get_struct_defs();
+    EXPECT_TRUE(structs.contains("test_struct"));
+    HDL_struct check_struct;
+    check_struct.packed = true;
+    struct_member m;
+    m.name = "field_1";
+    m.type.set_declared_type("int");
+    check_struct.member.emplace_back(m);
+    m.name = "field_2";
+    check_struct.member.emplace_back(m);
+    auto result_struct = structs.at("test_struct");
+    EXPECT_EQ(check_struct,result_struct);
+
 }

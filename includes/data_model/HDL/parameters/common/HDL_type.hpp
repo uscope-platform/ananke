@@ -113,7 +113,6 @@ private:
     bool is_implicit = false;
     std::vector<dimension_t> unpacked_dimensions;
     std::vector<dimension_t> packed_dimensions;
-
 };
 
 
