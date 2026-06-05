@@ -271,13 +271,13 @@ TEST(parameter_processing, array_instance_parameter_override) {
     av.set_1d_slice({0,0}, {9,8});
     auto ec = Expression_component(0, 0);
     ec.set_value(av);
-    p->set_scalar(std::make_shared<Expression>(Expression({ec})));
+    p->set_scalar(std::make_shared<Expression>(Expression(ec)));
     p->set_name("param_2");
     HDL_type t;
     t.set_declared_type("implicit");
     t.add_dimension({
-        Expression({Expression_component("1", Expression_component::number)}),
-        Expression({Expression_component("0", Expression_component::number)}),
+        Expression(Expression_component("1", Expression_component::number)),
+        Expression(Expression_component("0", Expression_component::number)),
         false
     });
     p->set_type(t);
@@ -1336,7 +1336,7 @@ TEST(parameter_processing, init_list_override) {
     HDL_parameter p;
     p.set_name("NS");
     p.set_declared_type("implicit");
-    p.set_scalar(std::make_shared<Expression>(Expression({Expression_component("2", Expression_component::number)})));
+    p.set_scalar(std::make_shared<Expression>(Expression(Expression_component("2", Expression_component::number))));
     p.set_value(2);
     check_params.insert(std::make_shared<HDL_parameter>(p));
     p = HDL_parameter();
@@ -1352,12 +1352,8 @@ TEST(parameter_processing, init_list_override) {
     true});
     Concatenation c;
 
-    c.add_component(std::make_shared<Expression>(Expression({
-        Expression_component(1136656384, 0)
-    })));
-    c.add_component(std::make_shared<Expression>(Expression({
-          Expression_component(1136656448, 0)
-      })));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component(1136656384, 0))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component(1136656448, 0))));
     p.add_item(std::make_shared<Concatenation>(c));
 
     mdarray<hdl_integer> av;
@@ -1368,8 +1364,8 @@ TEST(parameter_processing, init_list_override) {
     p = HDL_parameter();
     p.set_name("SLAVE_MASK");
     Replication r;
-    r.set_item(std::make_shared<Expression>(Expression({Expression_component(64, 32)})));
-    auto size = std::make_shared<Expression>(Expression({Expression_component(2, 1)}));
+    r.set_item(std::make_shared<Expression>(Expression(Expression_component(64, 32))));
+    auto size = std::make_shared<Expression>(Expression(Expression_component(2, 1)));
     r.set_size(size);
     p.add_dimension({
     {Expression_component("NS", Expression_component::identifier),Expression_component("-", Expression_component::operation),Expression_component("1", Expression_component::number),},

@@ -102,8 +102,8 @@ TEST(parameter_extraction, size_cast) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     Cast c;
-    c.set_size(Expression({Expression_component("4", Expression_component::number)}));
-    c.set_content(std::make_shared<Expression>(Expression({Expression_component("31'h100003", Expression_component::number)})));
+    c.set_size(Expression(Expression_component("4", Expression_component::number)));
+    c.set_content(std::make_shared<Expression>(Expression(Expression_component("31'h100003", Expression_component::number))));
     p->set_scalar(std::make_shared<Cast>(c));
     p->set_declared_type("integer");
     check_params.insert(p);
@@ -329,9 +329,7 @@ TEST(parameter_extraction, multiple_type_cast) {
     c = Cast();
     c.set_type_cast();
     c.set_target_type("int");
-    c.set_content(std::make_shared<Expression>(Expression({
-        Expression_component("2.5", Expression_component::number)
-    })));
+    c.set_content(std::make_shared<Expression>(Expression(Expression_component("2.5", Expression_component::number))));
     p->set_scalar(std::make_shared<Cast>(c));
 
     check_params.insert(p);
@@ -407,12 +405,12 @@ TEST(parameter_extraction, cast_in_concat) {
     p->set_name("TEST_PARAM");
 
     Concatenation concat;
-    concat.add_component(std::make_shared<Expression>(Expression({Expression_component("10'h0", Expression_component::number)})));
-    concat.add_component(std::make_shared<Expression>(Expression({Expression_component("1'h1", Expression_component::number)})));
-    concat.add_component(std::make_shared<Expression>(Expression({Expression_component("1'h0", Expression_component::number)})));
+    concat.add_component(std::make_shared<Expression>(Expression(Expression_component("10'h0", Expression_component::number))));
+    concat.add_component(std::make_shared<Expression>(Expression(Expression_component("1'h1", Expression_component::number))));
+    concat.add_component(std::make_shared<Expression>(Expression(Expression_component("1'h0", Expression_component::number))));
     Cast c;
-    c.set_size(Expression({Expression_component("4", Expression_component::number)}));
-    c.set_content(std::make_shared<Expression>(Expression({Expression_component("31'h100003", Expression_component::number)})));
+    c.set_size(Expression(Expression_component("4", Expression_component::number)));
+    c.set_content(std::make_shared<Expression>(Expression(Expression_component("31'h100003", Expression_component::number))));
     concat.add_component(std::make_shared<Cast>(c));
     p->add_item(std::make_shared<Concatenation>(concat));
     p->set_declared_type("integer");
@@ -465,7 +463,7 @@ TEST(parameter_extraction, strings_dafault_init) {
     p->add_dimension({{Expression_component("3", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
     c.set_default_init();
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("\"FILE\"", Expression_component::string)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("\"FILE\"", Expression_component::string))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -518,7 +516,7 @@ TEST(parameter_extraction, string_array_selection) {
     p->add_dimension({{Expression_component("3", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
     c.set_default_init();
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("\"FILE\"", Expression_component::string)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("\"FILE\"", Expression_component::string))));
     p->add_item(std::make_shared<Concatenation>(c));
 
     check_params.insert(p);
@@ -580,17 +578,17 @@ TEST(parameter_extraction, strings_array) {
     p->set_name("TRANSLATION_TABLE_INIT");
 
     p->add_dimension({
-    {Expression({
+    Expression({
         Expression_component("N_CORES", Expression_component::identifier),
         Expression_component("-", Expression_component::operation),
         Expression_component("1", Expression_component::number),
-    })},
-    {Expression({Expression_component("0", Expression_component::number)})},
+    }),
+    Expression(Expression_component("0", Expression_component::number)),
         false
     });
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("\"FILE\"", Expression_component::string)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("\"FILE\"", Expression_component::string)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("\"FILE\"", Expression_component::string)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("\"FILE\"", Expression_component::string))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("\"FILE\"", Expression_component::string))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("\"FILE\"", Expression_component::string))));
     p->add_item(std::make_shared<Concatenation>(c));
     check_params.insert(p);
 
@@ -687,7 +685,7 @@ TEST(parameter_extraction, simple_system_task) {
     p->set_name("CAST");
     p->set_declared_type("implicit");
     HDL_function_call call("$rtoi");
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("16.8", Expression_component::number)})));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("16.8", Expression_component::number))));
 
     p->set_scalar(std::make_shared<HDL_function_call>(call));
 
@@ -748,7 +746,7 @@ TEST(parameter_extraction, multiple_system_task) {
     p->set_name("CAST_2");
     p->set_declared_type("implicit");
     call = HDL_function_call("$rtoi");
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("12.2", Expression_component::number)})));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("12.2", Expression_component::number))));
     p->set_scalar(std::make_shared<HDL_function_call>(call));
 
     check_params.insert(p);
@@ -1170,9 +1168,7 @@ TEST(parameter_extraction, simple_expressions) {
     p->set_name("simple_log_expr_p");
     p->set_declared_type("implicit");
     call = HDL_function_call("$clog2");
-    call.add_argument(std::make_shared<Expression>(Expression({
-        Expression_component("add_expr_p", Expression_component::identifier),
-    })));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("add_expr_p", Expression_component::identifier))));
     p->set_scalar(std::make_shared<HDL_function_call>(call));
 
     check_params.insert(p);
@@ -1257,8 +1253,8 @@ TEST(parameter_extraction, assay_assignment) {
     p->add_dimension({{Expression_component("31", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("simple_numeric_p", Expression_component::identifier)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("sv_numeric_p", Expression_component::identifier)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("simple_numeric_p", Expression_component::identifier))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("sv_numeric_p", Expression_component::identifier))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -1317,7 +1313,7 @@ TEST(parameter_extraction, default_assign) {
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
     c.set_default_init();
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("5", Expression_component::number))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -1388,8 +1384,8 @@ TEST(parameter_extraction, array_concatenation) {
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
 
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("simple_numeric_p", Expression_component::identifier)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("sv_numeric_p", Expression_component::identifier)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("simple_numeric_p", Expression_component::identifier))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("sv_numeric_p", Expression_component::identifier))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -1453,8 +1449,8 @@ TEST(parameter_extraction, array_parameter) {
     d.packed = false;
     p->add_dimension(d);
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("32", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("32", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("5", Expression_component::number))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -1565,8 +1561,8 @@ TEST(parameter_extraction, simple_array_propagation) {
     d.packed = false;
     p->add_dimension(d);
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("32", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("32", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("5", Expression_component::number))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -1579,13 +1575,13 @@ TEST(parameter_extraction, simple_array_propagation) {
     p->set_declared_type("implicit");
     Expression_component e = Expression_component("array_parameter", Expression_component::identifier);
     std::vector<Expression> ai;
-    ai.push_back(Expression({Expression_component("0", Expression_component::number)}));
+    ai.push_back(Expression(Expression_component("0", Expression_component::number)));
     e.set_array_index(ai);
     p->add_component(e);
     p->add_component(Expression_component("+", Expression_component::operation));
     e = Expression_component("array_parameter", Expression_component::identifier);
     ai.clear();
-    ai.push_back(Expression({Expression_component("1", Expression_component::number)}));
+    ai.push_back(Expression(Expression_component("1", Expression_component::number)));
     e.set_array_index(ai);
     p->add_component(e);
     check_params.insert(p);
@@ -1645,8 +1641,8 @@ TEST(parameter_extraction, array_expression) {
     d.packed = false;
     p->add_dimension(d);
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("32", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("32", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("5", Expression_component::number))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -1665,7 +1661,7 @@ TEST(parameter_extraction, array_expression) {
     p->add_component(Expression_component("+", Expression_component::operation));
     e = Expression_component("array_parameter", Expression_component::identifier);
     ai.clear();
-    ai.push_back(Expression({Expression_component("1", Expression_component::number)}));
+    ai.push_back(Expression(Expression_component("1", Expression_component::number)));
     e.set_array_index(ai);
     p->add_component(e);
     check_params.insert(p);
@@ -1732,12 +1728,12 @@ TEST(parameter_extraction, multidimensional_array_expression) {
     p->add_dimension({{Expression_component("repetition_size", Expression_component::identifier),Expression_component("-", Expression_component::operation), Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({{Expression_component("32", Expression_component::number)}})));
-    c.add_component(std::make_shared<Expression>(Expression({{Expression_component("32", Expression_component::number)}})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("32", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("32", Expression_component::number))));
     p->add_item(std::make_shared<Concatenation>(c));
     c = Concatenation();
-    c.add_component(std::make_shared<Expression>(Expression({{Expression_component("5", Expression_component::number)}})));
-    c.add_component(std::make_shared<Expression>(Expression({{Expression_component("6", Expression_component::number)}})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("5", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("6", Expression_component::number))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -1809,9 +1805,9 @@ TEST(parameter_extraction, int_concat_initialization) {
     p->set_name("test_parameter");
 
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     p->add_item(std::make_shared<Concatenation>(c));
     p->set_declared_type("int");
 
@@ -1859,9 +1855,9 @@ TEST(parameter_extraction, implicit_type_concatenation) {
     p->set_name("test_parameter");
 
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     p->add_item(std::make_shared<Concatenation>(c));
     p->set_declared_type("implicit");
 
@@ -1921,8 +1917,8 @@ TEST(parameter_extraction, simple_repetition_initialization) {
 
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Replication rep;
-    rep.set_size(std::make_shared<Expression>(Expression({Expression_component("repetition_size", Expression_component::identifier)})));
-    rep.set_item(std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)})));
+    rep.set_size(std::make_shared<Expression>(Expression(Expression_component("repetition_size", Expression_component::identifier))));
+    rep.set_item(std::make_shared<Expression>(Expression(Expression_component("1", Expression_component::number))));
     p->add_item(std::make_shared<Replication>(rep));
     p->set_declared_type("int");
 
@@ -1986,9 +1982,9 @@ TEST(parameter_extraction, packed_repetition_initialization) {
     p->set_declared_type("int");
 
     Replication rep;
-    auto size = std::make_shared<Expression>(Expression({Expression_component("repetition_size", Expression_component::identifier)}));
+    auto size = std::make_shared<Expression>(Expression(Expression_component("repetition_size", Expression_component::identifier)));
     rep.set_size(size);
-    rep.set_item(std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)})));
+    rep.set_item(std::make_shared<Expression>(Expression(Expression_component("1", Expression_component::number))));
     p->add_item(std::make_shared<Replication>(rep));
 
 
@@ -2052,10 +2048,10 @@ TEST(parameter_extraction, repetition_initialization) {
 
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Replication r;
-    auto size = std::make_shared<Expression>(Expression({Expression_component("repetition_size", Expression_component::identifier)}));
+    auto size = std::make_shared<Expression>(Expression(Expression_component("repetition_size", Expression_component::identifier)));
 
     r.set_size(size);
-    r.set_item(std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)})));
+    r.set_item(std::make_shared<Expression>(Expression(Expression_component("1", Expression_component::number))));
     p->add_item(std::make_shared<Replication>(r));
 
 
@@ -2067,9 +2063,9 @@ TEST(parameter_extraction, repetition_initialization) {
 
 
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
-    size = std::make_shared<Expression>(Expression({Expression_component("repetition_size", Expression_component::identifier)}));
+    size = std::make_shared<Expression>(Expression(Expression_component("repetition_size", Expression_component::identifier)));
     r.set_size(size);
-    r.set_item(std::make_shared<Expression>(Expression({Expression_component("4", Expression_component::number)})));
+    r.set_item(std::make_shared<Expression>(Expression(Expression_component("4", Expression_component::number))));
     p->add_item(std::make_shared<Replication>(r));
 
 
@@ -2087,8 +2083,8 @@ TEST(parameter_extraction, repetition_initialization) {
     false
     });
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("repetition_parameter_1", Expression_component::identifier)})));
-    c.add_component( std::make_shared<Expression>(Expression({Expression_component("repetition_parameter_2", Expression_component::identifier)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("repetition_parameter_1", Expression_component::identifier))));
+    c.add_component( std::make_shared<Expression>(Expression(Expression_component("repetition_parameter_2", Expression_component::identifier))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -2105,9 +2101,9 @@ TEST(parameter_extraction, repetition_initialization) {
     false
     });
     c = Concatenation();
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)})));
-    c.add_component( std::make_shared<Expression>(Expression({Expression_component("2", Expression_component::number)})));
-    c.add_component( std::make_shared<Expression>(Expression({Expression_component("repetition_parameter_2", Expression_component::identifier)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1", Expression_component::number))));
+    c.add_component( std::make_shared<Expression>(Expression(Expression_component("2", Expression_component::number))));
+    c.add_component( std::make_shared<Expression>(Expression(Expression_component("repetition_parameter_2", Expression_component::identifier))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -2169,14 +2165,14 @@ TEST(parameter_extraction, packed_array) {
 
     p->add_dimension(d);
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -2231,24 +2227,24 @@ TEST(parameter_extraction, multpidim_packed_array) {
 
     Concatenation c2;
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     c2.add_component(std::make_shared<Concatenation>(c));
     c = Concatenation({});
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     c2.add_component(std::make_shared<Concatenation>(c));
     p->add_item(std::make_shared<Concatenation>(c2));
 
@@ -2455,7 +2451,7 @@ TEST(parameter_extraction, packed_bit_access) {
 });
     Expression_component ec("param_a", Expression_component::identifier);
     ec.add_array_index({Expression_component("3", Expression_component::number)});
-    p->set_scalar(std::make_shared<Expression>(Expression({ec})));
+    p->set_scalar(std::make_shared<Expression>(Expression(ec)));
 
     check_params.insert(p);
 
@@ -2505,7 +2501,7 @@ TEST(parameter_extraction, negative_number_array_init) {
 
     Concatenation c;
     c.add_component(std::make_shared<Expression>(Expression({Expression_component("-", Expression_component::operation),Expression_component("16'sd32767", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("16'sd32767", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("16'sd32767", Expression_component::number))));
     p->add_item(std::make_shared<Concatenation>(c));
 
 
@@ -2623,24 +2619,24 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
 
     Concatenation c2;
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
     c2.add_component(std::make_shared<Concatenation>(c));
     c = Concatenation();
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     c2.add_component(std::make_shared<Concatenation>(c));
     p->add_item(std::make_shared<Concatenation>(c2));
 
@@ -2660,14 +2656,14 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
     p->add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
 
     Replication r;
-    auto size = std::make_shared<Expression>(Expression({Expression_component("8", Expression_component::number)}));
+    auto size = std::make_shared<Expression>(Expression(Expression_component("8", Expression_component::number)));
     r.set_size(size);
-    r.set_item(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    r.set_item(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     c2.add_component(std::make_shared<Replication>(r));
     r = Replication();
-    size = std::make_shared<Expression>(Expression({Expression_component("8", Expression_component::number)}));
+    size = std::make_shared<Expression>(Expression(Expression_component("8", Expression_component::number)));
     r.set_size(size);
-    r.set_item(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
+    r.set_item(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
     c2.add_component(std::make_shared<Replication>(r));
     p->add_item(std::make_shared<Concatenation>(c2));
 
@@ -2821,23 +2817,23 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
     p->add_dimension({{Expression_component("31", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     p->add_dimension({{Expression_component("4", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation outer_c;
-    outer_c.add_component(std::make_shared<Expression>(Expression({Expression_component("3", Expression_component::number)})));
-    outer_c.add_component(std::make_shared<Expression>(Expression({Expression_component("3", Expression_component::number)})));
-    outer_c.add_component(std::make_shared<Expression>(Expression({Expression_component("3", Expression_component::number)})));
+    outer_c.add_component(std::make_shared<Expression>(Expression(Expression_component("3", Expression_component::number))));
+    outer_c.add_component(std::make_shared<Expression>(Expression(Expression_component("3", Expression_component::number))));
+    outer_c.add_component(std::make_shared<Expression>(Expression(Expression_component("3", Expression_component::number))));
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("SS_POLARITY_DEFAULT", Expression_component::identifier)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("3'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("SS_POLARITY_DEFAULT", Expression_component::identifier)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("5'b0", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("4'hE", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("4'b0", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("SS_POLARITY_DEFAULT", Expression_component::identifier))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("3'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("SS_POLARITY_DEFAULT", Expression_component::identifier))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("5'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("4'hE", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("4'b0", Expression_component::number))));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     c = Concatenation();
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("2'h2", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("2'b1", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("2'h3", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("4'hE", Expression_component::number)})));
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("4'b0", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("2'h2", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("2'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("2'h3", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("4'hE", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("4'b0", Expression_component::number))));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     p->add_item(std::make_shared<Concatenation>(outer_c));
     check_params.insert(p);
@@ -2923,24 +2919,24 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     Concatenation top_c, outer_c, inner_c;
 
     for(const auto& item:v1.components){
-        inner_c.add_component(std::make_shared<Expression>(Expression({item})));
+        inner_c.add_component(std::make_shared<Expression>(Expression(item)));
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c  = Concatenation();
     for(const auto& item:v2.components){
-        inner_c.add_component(std::make_shared<Expression>(Expression({item})));
+        inner_c.add_component(std::make_shared<Expression>(Expression(item)));
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     top_c.add_component(std::make_shared<Concatenation>(outer_c));
     outer_c = Concatenation();
     inner_c  = Concatenation();
     for(const auto& item:v2.components){
-        inner_c.add_component(std::make_shared<Expression>(Expression({item})));
+        inner_c.add_component(std::make_shared<Expression>(Expression(item)));
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c  = Concatenation();
     for(const auto& item:v1.components){
-        inner_c.add_component(std::make_shared<Expression>(Expression({item})));
+        inner_c.add_component(std::make_shared<Expression>(Expression(item)));
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     top_c.add_component(std::make_shared<Concatenation>(outer_c));
@@ -2993,9 +2989,9 @@ TEST(parameter_extraction, packed_replication_init) {
 
     p->add_dimension({{Expression_component("4", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
     Replication r;
-    auto size = std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::number)}));
+    auto size = std::make_shared<Expression>(Expression(Expression_component("5", Expression_component::number)));
     r.set_size(size);
-    r.set_item(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    r.set_item(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     p->add_item(std::make_shared<Replication>(r));
 
 
@@ -3057,7 +3053,7 @@ TEST(parameter_extraction, array_initialization_default) {
     d.packed = false;
     p->add_dimension(d);
     c.set_default_init();
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("3", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("3", Expression_component::number))));
 
     p->add_item(std::make_shared<Concatenation>(c));
     check_params.insert(p);
@@ -3118,9 +3114,9 @@ TEST(parameter_extraction, simple_function_parameter) {
         {Expression_component("0", Expression_component::number)},
         true
     });
-    p.set_scalar(std::make_shared<Expression>(Expression({Expression_component("CTRL_ADDR_CALC", Expression_component::identifier)})));
+    p.set_scalar(std::make_shared<Expression>(Expression(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier))));
     HDL_function_call call("CTRL_ADDR_CALC");
-    assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number)})));
+    assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Expression>(Expression(Expression_component("100", Expression_component::number))));
     call.add_body({a},std::nullopt);
     p.set_scalar(std::make_shared<HDL_function_call>(call));
 
@@ -3163,16 +3159,16 @@ TEST(parameter_extraction, concat_in_function) {
     p.set_declared_type("integer");
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("get_axis_metadata");
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("11", Expression_component::number)})));
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("11", Expression_component::number))));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
     assignment a("get_axis_metadata", std::nullopt, nullptr);
 
     Concatenation concat;
-    concat.add_component(std::make_shared<Expression>(Expression({Expression_component("10'h0", Expression_component::number)})));
-    concat.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    concat.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    concat.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    concat.add_component(std::make_shared<Expression>(Expression(Expression_component("10'h0", Expression_component::number))));
+    concat.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    concat.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    concat.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
 
     a.set_value(std::make_shared<Concatenation>(concat));
     call.add_body({a},std::nullopt);
@@ -3220,21 +3216,21 @@ TEST(parameter_extraction, replication_in_function) {
     p.set_declared_type("integer");
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("get_axis_metadata");
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("11", Expression_component::number)})));
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("11", Expression_component::number))));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
     assignment a("get_axis_metadata", std::nullopt, nullptr);
     Cast c;
-    c.set_size(Expression({Expression_component("4", Expression_component::number)}));
+    c.set_size(Expression(Expression_component("4", Expression_component::number)));
     c.set_content(std::make_shared<Expression>(Expression({
         Expression_component("11", Expression_component::number),
         Expression_component("-", Expression_component::operation),
         Expression_component("8", Expression_component::number)
     })));
     Replication repl;
-    auto size = std::make_shared<Expression>(Expression({Expression_component("4", Expression_component::number)}));
+    auto size = std::make_shared<Expression>(Expression(Expression_component("4", Expression_component::number)));
     repl.set_size(size);
-    repl.set_item(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    repl.set_item(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     a.set_value(std::make_shared<Replication>(repl));
     call.add_body({a},std::nullopt);
     p.set_scalar(std::make_shared<HDL_function_call>(call));
@@ -3280,21 +3276,21 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     p.set_declared_type("integer");
     p.add_component(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier));
     HDL_function_call call("get_axis_metadata");
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("11", Expression_component::number)})));
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("11", Expression_component::number))));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
     assignment a("get_axis_metadata", std::nullopt, nullptr);
     Cast c;
-    c.set_size(Expression({Expression_component("4", Expression_component::number)}));
+    c.set_size(Expression(Expression_component("4", Expression_component::number)));
     c.set_content(std::make_shared<Expression>(Expression({
         Expression_component("11", Expression_component::number),
         Expression_component("-", Expression_component::operation),
         Expression_component("8", Expression_component::number)
     })));
     Concatenation concat;
-    concat.add_component(std::make_shared<Expression>(Expression({Expression_component("10'h0", Expression_component::number)})));
-    concat.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b0", Expression_component::number)})));
-    concat.add_component(std::make_shared<Expression>(Expression({Expression_component("1'b1", Expression_component::number)})));
+    concat.add_component(std::make_shared<Expression>(Expression(Expression_component("10'h0", Expression_component::number))));
+    concat.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    concat.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     concat.add_component(std::make_shared<Cast>(c));
 
     a.set_value(std::make_shared<Concatenation>(concat));
@@ -3389,7 +3385,7 @@ TEST(parameter_extraction, loop_function_parameter) {
         {Expression_component("0", Expression_component::number)},
         false
     });
-    p.set_scalar(std::make_shared<Expression>(Expression({Expression_component("CTRL_ADDR_CALC", Expression_component::identifier)})));
+    p.set_scalar(std::make_shared<Expression>(Expression(Expression_component("CTRL_ADDR_CALC", Expression_component::identifier))));
     HDL_function_call call("CTRL_ADDR_CALC");
     HDL_loop_metadata loop;
     HDL_parameter idx;
@@ -3408,13 +3404,13 @@ TEST(parameter_extraction, loop_function_parameter) {
     });
     assignment a(
     "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression({Expression_component("i", Expression_component::identifier)})),
+        std::make_shared<Expression>(Expression(Expression_component("i", Expression_component::identifier))),
         std::make_shared<Expression>(Expression({
             Expression_component("100", Expression_component::number),
             Expression_component("*", Expression_component::operation),
             Expression_component("i", Expression_component::identifier)
-        }))
-        );
+        }
+        )));
     loop.add_assignment(a);
     call.add_body({},loop);
     p.set_scalar(std::make_shared<HDL_function_call>(call));
@@ -3487,13 +3483,13 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     });
     assignment a(
     "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression({Expression_component("i", Expression_component::identifier)})),
+        std::make_shared<Expression>(Expression(Expression_component("i", Expression_component::identifier))),
         std::make_shared<Expression>(Expression({
             Expression_component("OFFSET", Expression_component::identifier),
             Expression_component("*", Expression_component::operation),
             Expression_component("i", Expression_component::identifier)
-        }))
-        );
+        })
+        ));
     loop.add_assignment(a);
     call.add_body({},loop);
     p.add_dimension({
@@ -3555,8 +3551,8 @@ TEST(parameter_extraction, function_with_arguments) {
     p.set_name("TEST_PARAM");
 
     HDL_function_call call("add");
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("5", Expression_component::component_type::number)})));
-    call.add_argument(std::make_shared<Expression>(Expression({Expression_component("7", Expression_component::component_type::number)})));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("5", Expression_component::component_type::number))));
+    call.add_argument(std::make_shared<Expression>(Expression(Expression_component("7", Expression_component::component_type::number))));
     call.add_assignment({"add",std::nullopt, std::make_shared<Expression>(Expression({
         Expression_component(5, 3),
         Expression_component("+", Expression_component::operation),
@@ -3747,12 +3743,10 @@ TEST(parameter_extraction, param_ternary_conditional) {
         Expression_component("1", Expression_component::number),
     }));
     t.set_true_value(
-        std::make_shared<Expression>(Expression({Expression_component("12", Expression_component::number)}))
-        );
+        std::make_shared<Expression>(Expression(Expression_component("12", Expression_component::number))));
 
     t.set_false_value(
-        std::make_shared<Expression>(Expression({Expression_component("34", Expression_component::number)}))
-        );
+        std::make_shared<Expression>(Expression(Expression_component("34", Expression_component::number))));
     p->set_scalar(std::make_shared<Ternary>(t));
     check_params.insert(p);
 
@@ -3767,11 +3761,11 @@ TEST(parameter_extraction, param_ternary_conditional) {
         Expression_component("65", Expression_component::number),
     }));
     t.set_true_value(
-        std::make_shared<Expression>(Expression({Expression_component("12", Expression_component::number)}))
+        std::make_shared<Expression>(Expression(Expression_component("12", Expression_component::number)))
         );
 
     t.set_false_value(
-        std::make_shared<Expression>(Expression({Expression_component("34", Expression_component::number)}))
+        std::make_shared<Expression>(Expression(Expression_component("34", Expression_component::number)))
         );
     p->set_scalar(std::make_shared<Ternary>(t));
     check_params.insert(p);
@@ -3832,7 +3826,7 @@ TEST(parameter_extraction, nested_ternary_conditional) {
         Expression_component("1", Expression_component::number),
     }));
     t.set_false_value(
-        std::make_shared<Expression>(Expression({Expression_component("34", Expression_component::number)}))
+        std::make_shared<Expression>(Expression(Expression_component("34", Expression_component::number)))
         );
 
     Ternary inner_t;
@@ -3842,11 +3836,11 @@ TEST(parameter_extraction, nested_ternary_conditional) {
         Expression_component("65", Expression_component::number),
     }));
     inner_t.set_true_value(
-        std::make_shared<Expression>(Expression({Expression_component("12", Expression_component::number)}))
+        std::make_shared<Expression>(Expression(Expression_component("12", Expression_component::number)))
         );
 
     inner_t.set_false_value(
-        std::make_shared<Expression>(Expression({Expression_component("96", Expression_component::number)}))
+        std::make_shared<Expression>(Expression(Expression_component("96", Expression_component::number)))
         );
     t.set_true_value(std::make_shared<Ternary>(inner_t));
     p->set_scalar(std::make_shared<Ternary>(t));
@@ -3908,10 +3902,10 @@ TEST(parameter_extraction, complex_ternary_conditional) {
         Expression_component("1", Expression_component::number),
     }));
     HDL_function_call c("$clog2");
-    c.add_argument(std::make_shared<Expression>(Expression({Expression_component("NM", Expression_component::identifier)})));
+    c.add_argument(std::make_shared<Expression>(Expression(Expression_component("NM", Expression_component::identifier))));
     t.set_true_value(std::make_shared<HDL_function_call>(c));
     t.set_false_value(
-        std::make_shared<Expression>(Expression({Expression_component("1", Expression_component::number)}))
+        std::make_shared<Expression>(Expression(Expression_component("1", Expression_component::number)))
         );
 
     p->set_scalar(std::make_shared<Ternary>(t));

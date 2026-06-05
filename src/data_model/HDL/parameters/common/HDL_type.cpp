@@ -33,24 +33,24 @@ void HDL_type::set_declared_type(const std::string &type) {
     if (type == "implicit") {
         is_implicit = true;
         packed_dimensions.push_back({
-            Expression({Expression_component("31", Expression_component::number)}),
-            Expression({Expression_component("0", Expression_component::number)}),
+            Expression(Expression_component("31", Expression_component::number)),
+            Expression(Expression_component("0", Expression_component::number)),
             true
         });
     }
     if (type == "shortint") {
         is_signed = true;
         packed_dimensions.push_back({
-            Expression({Expression_component("15", Expression_component::number)}),
-            Expression({Expression_component("0", Expression_component::number)}),
+            Expression(Expression_component("15", Expression_component::number)),
+            Expression(Expression_component("0", Expression_component::number)),
             true
         });
     }
     if (type == "int" || type == "integer") {
         is_signed = true;
         packed_dimensions.push_back({
-            Expression({Expression_component("31", Expression_component::number)}),
-            Expression({Expression_component("0", Expression_component::number)}),
+            Expression(Expression_component("31", Expression_component::number)),
+            Expression(Expression_component("0", Expression_component::number)),
             true
         });
     }
@@ -58,15 +58,15 @@ void HDL_type::set_declared_type(const std::string &type) {
         is_signed = true;
         packed_dimensions.push_back({
             Expression({Expression_component("63", Expression_component::number)}),
-            Expression({Expression_component("0", Expression_component::number)}),
+            Expression(Expression_component("0", Expression_component::number)),
             true
         });
     }
     if (type == "time") {
         is_signed = false;
         packed_dimensions.push_back({
-            Expression({Expression_component("63", Expression_component::number)}),
-            Expression({Expression_component("0", Expression_component::number)}),
+            Expression(Expression_component("63", Expression_component::number)),
+            Expression(Expression_component("0", Expression_component::number)),
             true
         });
     }
@@ -74,16 +74,16 @@ void HDL_type::set_declared_type(const std::string &type) {
     if (type == "real" || type == "realtime") {
         is_real = true;
         packed_dimensions.push_back({
-            Expression({Expression_component("63", Expression_component::number)}),
-            Expression({Expression_component("0", Expression_component::number)}),
+            Expression(Expression_component("63", Expression_component::number)),
+            Expression(Expression_component("0", Expression_component::number)),
             true
         });
     }
     if (type == "shortreal") {
         is_real = true;
         packed_dimensions.push_back({
-            Expression({Expression_component("31", Expression_component::number)}),
-            Expression({Expression_component("0", Expression_component::number)}),
+            Expression(Expression_component("31", Expression_component::number)),
+            Expression(Expression_component("0", Expression_component::number)),
             true
         });
     }
