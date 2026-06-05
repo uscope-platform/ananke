@@ -87,7 +87,6 @@ void HDL_type::set_declared_type(const std::string &type) {
             true
         });
     }
-
 }
 
 std::set<qualified_identifier> HDL_type::get_dependencies() {

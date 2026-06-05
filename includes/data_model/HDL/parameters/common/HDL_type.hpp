@@ -29,7 +29,8 @@ public:
     HDL_type(const HDL_type &other) = default;
 
     HDL_type(HDL_type &&other) noexcept
-        : scalar(other.scalar),
+        : scalar(other
+            .scalar),
           is_signed(other.is_signed),
           is_real(other.is_real),
           is_implicit(other.is_implicit),
@@ -101,6 +102,27 @@ public:
 
 
     std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context);
+
+    friend void PrintTo(const HDL_type& t, std::ostream* os) {
+        *os << "HDL_type { scalar: " << (t.scalar ? "true" : "false");
+        if (!t.packed_dimensions.empty()) {
+            *os << ", packed: [";
+            for (size_t i = 0; i < t.packed_dimensions.size(); ++i) {
+                if (i > 0) *os << ", ";
+                *os << t.packed_dimensions[i];
+            }
+            *os << "]";
+        }
+        if (!t.unpacked_dimensions.empty()) {
+            *os << ", unpacked: [";
+            for (size_t i = 0; i < t.unpacked_dimensions.size(); ++i) {
+                if (i > 0) *os << ", ";
+                *os << t.unpacked_dimensions[i];
+            }
+            *os << "]";
+        }
+        *os << " }";
+    }
 
     template<class Archive>
     void serialize( Archive & ar ) {

@@ -50,13 +50,13 @@ TEST(typedef_parsing, mixed_packing_array) {
 }
 
 
-TEST(typedef_parsing, struct_definition) {
+TEST(typedef_parsing, basic_struct_definition) {
     auto test_pattern = R"(
         package test_package;
 
             typedef struct packed {
                 int unsigned field_1;
-                int unsigned field_2;
+                int field_2;
             } test_struct;
         endpackage
     )";
@@ -74,6 +74,73 @@ TEST(typedef_parsing, struct_definition) {
     m.type.set_declared_type("int");
     check_struct.member.emplace_back(m);
     m.name = "field_2";
+    check_struct.member.emplace_back(m);
+    auto result_struct = structs.at("test_struct");
+    EXPECT_EQ(check_struct,result_struct);
+
+}
+
+
+TEST(typedef_parsing, bits_in_struct_definition) {
+    auto test_pattern = R"(
+        package test_package;
+
+            typedef struct packed {
+                int unsigned field_1;
+                bit field_2;
+            } test_struct;
+        endpackage
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto structs = resource.get_struct_defs();
+    EXPECT_TRUE(structs.contains("test_struct"));
+    HDL_struct check_struct;
+    check_struct.packed = true;
+    struct_member m;
+    m.name = "field_1";
+    m.type.set_declared_type("int");
+    check_struct.member.emplace_back(m);
+    m = {};
+    m.name = "field_2";
+    check_struct.member.emplace_back(m);
+    auto result_struct = structs.at("test_struct");
+    EXPECT_EQ(check_struct,result_struct);
+
+}
+
+
+
+
+TEST(typedef_parsing, unpacked_array_of_packed_struct_definition) {
+    auto test_pattern = R"(
+        package test_package;
+
+            typedef struct packed {
+                bit [3:0] field_1 [1:0];
+            } test_struct;
+        endpackage
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto structs = resource.get_struct_defs();
+    EXPECT_TRUE(structs.contains("test_struct"));
+    HDL_struct check_struct;
+    check_struct.packed = true;
+    struct_member m;
+    m.name = "field_1";
+    m.type.set_packed_dimensions({
+        {Expression(Expression_component(3, 2)), Expression(Expression_component(0, 1)), true}
+    });
+    m.type.set_unpacked_dimensions({
+    {Expression(Expression_component(1, 1)), Expression(Expression_component(0, 1)), false}
+});
     check_struct.member.emplace_back(m);
     auto result_struct = structs.at("test_struct");
     EXPECT_EQ(check_struct,result_struct);

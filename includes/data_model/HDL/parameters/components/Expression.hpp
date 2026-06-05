@@ -36,7 +36,10 @@ public:
     Expression & operator=(Expression &&other) noexcept = default;
 
     Expression() = default;
-    Expression(std::initializer_list<Expression_component> list)
+
+    Expression(const Expression_component &ec)
+            : components({ec}) {}
+    Expression(const std::initializer_list<Expression_component> &list)
             : components(list) {}
     void clear() {components.clear(); rpn = false;}
     bool empty() const {return components.empty();}

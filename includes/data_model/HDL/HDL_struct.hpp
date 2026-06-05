@@ -31,6 +31,30 @@ struct struct_member {
         return ret;
     }
 
+    friend void PrintTo(const struct_member& m, std::ostream* os) {
+        *os << "struct_member { name: " << m.name
+            << ", type: { scalar: " << (m.type.is_scalar() ? "true" : "false");
+        auto packed = m.type.get_packed_dimensions();
+        if (!packed.empty()) {
+            *os << ", packed: [";
+            for (size_t i = 0; i < packed.size(); ++i) {
+                if (i > 0) *os << ", ";
+                *os << packed[i];
+            }
+            *os << "]";
+        }
+        auto unpacked = m.type.get_unpacked_dimensions();
+        if (!unpacked.empty()) {
+            *os << ", unpacked: [";
+            for (size_t i = 0; i < unpacked.size(); ++i) {
+                if (i > 0) *os << ", ";
+                *os << unpacked[i];
+            }
+            *os << "]";
+        }
+        *os << " } }";
+    }
+
     template<class Archive>
     void serialize( Archive & ar ) {
         ar(name, type);
@@ -49,6 +73,15 @@ public:
         return ret;
     }
 
+    friend void PrintTo(const HDL_struct& s, std::ostream* os) {
+        *os << "HDL_struct { packed: " << (s.packed ? "true" : "false")
+            << ", members: [";
+        for (size_t i = 0; i < s.member.size(); ++i) {
+            if (i > 0) *os << ", ";
+            PrintTo(s.member[i], os);
+        }
+        *os << "] }";
+    }
 
     template<class Archive>
     void serialize( Archive & ar ) {
