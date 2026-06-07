@@ -21,7 +21,7 @@
 #include <map>
 
 #include "data_model/HDL/types/HDL_struct.hpp"
-#include "data_model/HDL/types/HDL_type.hpp"
+#include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 
@@ -39,10 +39,10 @@ public:
     void start_composite_type_declaration(type_kind kind);
     void open_composite_member();
     void close_composite_member(const std::string &name);
-    std::shared_ptr<hdl_type_base> stop_composite_type_declaration();
+    std::shared_ptr<hdl_type> stop_composite_type_declaration();
 
     void start_simple_type_declaration();
-    std::shared_ptr<hdl_type_base> stop_type_declaration(const std::string &name);
+    std::shared_ptr<hdl_type> stop_type_declaration(const std::string &name);
 
     void close_packed_dimensions();
     void start_unpacked_dimension_declaration();
@@ -59,7 +59,7 @@ public:
 
     [[nodiscard]] bool active() const;
     [[nodiscard]] bool has_type(const std::string &name) const;
-    [[nodiscard]] HDL_type get_type(const std::string &name) const;
+    [[nodiscard]] HDL_simple_type get_type(const std::string &name) const;
     [[nodiscard]] bool is_simple_type()const{ return kind == simple_type;}
 
     void set_type(const std::string & string);
@@ -68,7 +68,7 @@ public:
 private:
     expressions_factory expr_factory;
     ranges_factory r_factory;
-    std::map<std::string, HDL_type> type_registry;
+    std::map<std::string, HDL_simple_type> type_registry;
     type_kind kind = simple_type;
     HDL_struct current_struct;
 

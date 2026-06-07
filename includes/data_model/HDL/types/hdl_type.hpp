@@ -24,9 +24,9 @@
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 
-class hdl_type_base {
+class hdl_type {
 public:
-    virtual ~hdl_type_base() = default;
+    virtual ~hdl_type() = default;
     template<typename T>
       T& as() { return static_cast<T&>(*this); }
 

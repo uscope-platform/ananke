@@ -77,8 +77,8 @@ class HDL_Resource {
             dependencies = d;
         }
 
-        void add_typedef(const std::string &name, const std::shared_ptr<hdl_type_base> &type){typedefs.insert({name, type});}
-        std::map<std::string, std::shared_ptr<hdl_type_base>> get_typedefs(){return typedefs;}
+        void add_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type){typedefs.insert({name, type});}
+        std::map<std::string, std::shared_ptr<hdl_type>> get_typedefs(){return typedefs;}
 
 
         std::unordered_map<std::string, HDL_Resource>::mapped_type clone();
@@ -98,12 +98,12 @@ class HDL_Resource {
         }
         std::string get_path() {return path;}
         void set_type(const dependency_class t) {
-            hdl_type  = t;
+            hdl_dependency_type  = t;
         };
         void set_line_n(unsigned int n){ line_n = n;}
         [[nodiscard]] unsigned int get_line_n()const{return  line_n;}
 
-        dependency_class get_type() {return hdl_type;};
+        dependency_class get_type() {return hdl_dependency_type;};
         bool is_interface();
 
         void set_ports(std::unordered_map<std::string, HDL_port> p_s) {
@@ -137,7 +137,7 @@ class HDL_Resource {
 
         template<class Archive>
         void serialize( Archive & ar ) {
-            ar(name, path, hdl_type, dependencies, parameters_spec, port_specs, doc, processor_docs,
+            ar(name, path, hdl_dependency_type, dependencies, parameters_spec, port_specs, doc, processor_docs,
                 functions, line_n, typedefs);
         }
 
@@ -152,7 +152,7 @@ private:
         std::string name;
         std::string path;
         unsigned int line_n = 0;
-        dependency_class hdl_type = module;
+        dependency_class hdl_dependency_type = module;
         std::vector<HDL_instance> dependencies;
         std::unordered_map<std::string, HDL_port> port_specs;
 
@@ -160,7 +160,7 @@ private:
         std::unordered_map<std::string, HDL_function_def> functions;
 
         std::vector<processor_instance> processor_docs;
-        std::map<std::string, std::shared_ptr<hdl_type_base>> typedefs;
+        std::map<std::string, std::shared_ptr<hdl_type>> typedefs;
 
         // DOCUMENTATION``
         module_documentation doc;

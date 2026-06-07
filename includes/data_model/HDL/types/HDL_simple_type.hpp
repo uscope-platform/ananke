@@ -19,17 +19,17 @@
 
 #include <vector>
 
-#include "data_model/HDL/types/hdl_type_base.hpp"
+#include "data_model/HDL/types/hdl_type.hpp"
 #include "data_model/HDL/parameters/common/dimension.hpp"
 #include "data_model/HDL/types/resolved_type.hpp"
 
 
-class HDL_type : public hdl_type_base {
+class HDL_simple_type : public hdl_type {
 public:
-    HDL_type() = default;
-    HDL_type(const HDL_type &other) = default;
+    HDL_simple_type() = default;
+    HDL_simple_type(const HDL_simple_type &other) = default;
 
-    HDL_type(HDL_type &&other) noexcept
+    HDL_simple_type(HDL_simple_type &&other) noexcept
         : scalar(other
             .scalar),
           is_signed(other.is_signed),
@@ -39,7 +39,7 @@ public:
           packed_dimensions(std::move(other.packed_dimensions)) {
     }
 
-    HDL_type & operator=(const HDL_type &other) {
+    HDL_simple_type & operator=(const HDL_simple_type &other) {
         if (this == &other)
             return *this;
         scalar = other.scalar;
@@ -51,7 +51,7 @@ public:
         return *this;
     }
 
-    HDL_type & operator=(HDL_type &&other) noexcept {
+    HDL_simple_type & operator=(HDL_simple_type &&other) noexcept {
         if (this == &other)
             return *this;
         scalar = other.scalar;
@@ -63,7 +63,7 @@ public:
         return *this;
     }
 
-    friend bool operator==(const HDL_type &lhs, const HDL_type &rhs) {
+    friend bool operator==(const HDL_simple_type &lhs, const HDL_simple_type &rhs) {
         bool ret = true;
 
         ret &= lhs.scalar == rhs.scalar;
@@ -104,7 +104,7 @@ public:
 
     std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context);
 
-    friend void PrintTo(const HDL_type& t, std::ostream* os) {
+    friend void PrintTo(const HDL_simple_type& t, std::ostream* os) {
         *os << "HDL_type { scalar: " << (t.scalar ? "true" : "false");
         if (!t.packed_dimensions.empty()) {
             *os << ", packed: [";

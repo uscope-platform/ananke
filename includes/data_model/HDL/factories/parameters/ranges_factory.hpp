@@ -17,7 +17,7 @@
 #define ANANKE_RANGES_FACTORY_HPP
 
 #include "data_model/HDL/parameters/common/dimension.hpp"
-#include "data_model/HDL/types/HDL_type.hpp"
+#include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
 
 class ranges_factory : public factory_base{

@@ -14,9 +14,9 @@
 //  limitations under the License.
 
 
-#include "data_model/HDL/types/HDL_type.hpp"
+#include "data_model/HDL/types/HDL_simple_type.hpp"
 
-void HDL_type::add_dimension(const dimension_t &d) {
+void HDL_simple_type::add_dimension(const dimension_t &d) {
     scalar = false;
     if(d.packed){
         packed_dimensions.push_back(d);
@@ -25,11 +25,11 @@ void HDL_type::add_dimension(const dimension_t &d) {
     }
 }
 
-void HDL_type::set_packed_dimensions(const std::vector<dimension_t> &d) {
+void HDL_simple_type::set_packed_dimensions(const std::vector<dimension_t> &d) {
     packed_dimensions.insert(packed_dimensions.end(), d.begin(), d.end());
 }
 
-void HDL_type::set_declared_type(const std::string &type) {
+void HDL_simple_type::set_declared_type(const std::string &type) {
     if (type == "implicit") {
         is_implicit = true;
         packed_dimensions.push_back({
@@ -89,7 +89,7 @@ void HDL_type::set_declared_type(const std::string &type) {
     }
 }
 
-std::set<qualified_identifier> HDL_type::get_dependencies() {
+std::set<qualified_identifier> HDL_simple_type::get_dependencies() {
     std::set<qualified_identifier> result;
     for (auto &dim:unpacked_dimensions) {
         auto deps = dim.first_bound.get_dependencies();
@@ -107,7 +107,7 @@ std::set<qualified_identifier> HDL_type::get_dependencies() {
     return result;
 }
 
-std::optional<resolved_type> HDL_type::evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) {
+std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) {
     resolved_type result;
     for (auto &dim: unpacked_dimensions) {
         auto f_b = dim.first_bound.evaluate(context);

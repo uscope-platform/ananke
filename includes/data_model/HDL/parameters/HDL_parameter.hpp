@@ -22,7 +22,7 @@
 #include <spdlog/spdlog.h>
 
 #include "components/Expression.hpp"
-#include "data_model/HDL/types/HDL_type.hpp"
+#include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "common/dimension.hpp"
 
 class HDL_function_def;
@@ -97,8 +97,8 @@ public:
     std::string get_name() const {return name;}
     qualified_identifier get_identifier(){return {"", "", name};}
 
-    HDL_type get_type()const {return type;}
-    void set_type(const HDL_type &t){type = t;}
+    HDL_simple_type get_type()const {return type;}
+    void set_type(const HDL_simple_type &t){type = t;}
     void set_packed_dimensions(const std::vector<dimension_t>  &d) {type.set_packed_dimensions(d);}
     void set_unpacked_dimensions(const std::vector<dimension_t>  &d) {type.set_unpacked_dimensions(d);}
     std::vector<dimension_t> get_packed_dimensions(){return type.get_packed_dimensions();}
@@ -139,7 +139,7 @@ private:
 
     std::string name;
 
-    HDL_type type;
+    HDL_simple_type type;
 
     std::shared_ptr<Parameter_value_base> raw_value;
     std::optional<resolved_parameter> solved_value;

@@ -18,11 +18,11 @@
 
 #include <string>
 
-#include "data_model/HDL/types/HDL_type.hpp"
+#include "data_model/HDL/types/HDL_simple_type.hpp"
 
 struct struct_member {
     std::string name;
-    HDL_type type;
+    HDL_simple_type type;
 
     friend bool operator==(const struct_member &lhs, const struct_member &rhs) {
         bool ret = true;
@@ -61,7 +61,7 @@ struct struct_member {
     }
 };
 
-class HDL_struct : public hdl_type_base{
+class HDL_struct : public hdl_type{
 public:
     bool packed = false;
     std::vector<struct_member> member;

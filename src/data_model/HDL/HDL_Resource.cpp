@@ -17,7 +17,7 @@
 
 
 HDL_Resource::HDL_Resource() {
-    hdl_type = module;
+    hdl_dependency_type = module;
     name = "";
     path = "";
 }
@@ -26,7 +26,7 @@ HDL_Resource::HDL_Resource(const HDL_Resource &c) {
     name = c.name;
     path = c.path;
     line_n = c.line_n;
-    hdl_type = c.hdl_type;
+    hdl_dependency_type = c.hdl_dependency_type;
     dependencies = c.dependencies;
     functions = c.functions;
     parameters_spec = c.parameters_spec;
@@ -37,7 +37,7 @@ HDL_Resource::HDL_Resource(const HDL_Resource &c) {
 }
 
 bool HDL_Resource::is_interface() {
-    return hdl_type == interface;
+    return hdl_dependency_type == interface;
 }
 
 void HDL_Resource::process_calls() {
@@ -54,7 +54,7 @@ bool HDL_Resource::is_empty() {
 
     ret &= name.empty();
     ret &= path.empty();
-    ret &= hdl_type == module;
+    ret &= hdl_dependency_type == module;
     ret &= processor_docs.empty();
     ret &= dependencies.empty();
     ret &= port_specs.empty();
@@ -75,7 +75,7 @@ std::unordered_map<std::string, HDL_Resource>::mapped_type HDL_Resource::clone()
     ret.name = name;
     ret.path = path;
     ret.line_n = line_n;
-    ret.hdl_type = hdl_type;
+    ret.hdl_dependency_type = hdl_dependency_type;
     ret.port_specs = port_specs;
     ret.processor_docs = processor_docs;
     ret.doc = doc;
@@ -106,7 +106,7 @@ bool operator==(const HDL_Resource &lhs, const HDL_Resource &rhs) {
     ret &= lhs.name == rhs.name;
     ret &= lhs.line_n == rhs.line_n;
     ret &= lhs.path == rhs.path;
-    ret &= lhs.hdl_type == rhs.hdl_type;
+    ret &= lhs.hdl_dependency_type == rhs.hdl_dependency_type;
     ret &= lhs.dependencies == rhs.dependencies;
     ret &= lhs.processor_docs == rhs.processor_docs;
     ret &= lhs.port_specs == rhs.port_specs;

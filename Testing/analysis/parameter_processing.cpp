@@ -273,7 +273,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     ec.set_value(av);
     p->set_scalar(std::make_shared<Expression>(Expression(ec)));
     p->set_name("param_2");
-    HDL_type t;
+    HDL_simple_type t;
     t.set_declared_type("implicit");
     t.add_dimension({
         Expression(Expression_component("1", Expression_component::number)),
