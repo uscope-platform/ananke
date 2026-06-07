@@ -61,7 +61,7 @@ struct struct_member {
     }
 };
 
-struct HDL_struct {
+class HDL_struct : public hdl_type_base{
 public:
     bool packed = false;
     std::vector<struct_member> member;

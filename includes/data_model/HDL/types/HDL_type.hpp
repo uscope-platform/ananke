@@ -19,11 +19,12 @@
 
 #include <vector>
 
+#include "data_model/HDL/types/hdl_type_base.hpp"
 #include "data_model/HDL/parameters/common/dimension.hpp"
 #include "data_model/HDL/types/resolved_type.hpp"
 
 
-class HDL_type {
+class HDL_type : public hdl_type_base {
 public:
     HDL_type() = default;
     HDL_type(const HDL_type &other) = default;
