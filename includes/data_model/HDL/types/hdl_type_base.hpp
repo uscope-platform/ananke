@@ -17,10 +17,20 @@
 #ifndef ANANKE_HDL_TYPE_BASE_HPP
 #define ANANKE_HDL_TYPE_BASE_HPP
 
+#include <optional>
+#include <map>
+
+#include "data_model/HDL/types/resolved_type.hpp"
+#include "data_model/HDL/parameters/common/resolved_parameter.hpp"
+#include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 
 class hdl_type_base {
 public:
     virtual ~hdl_type_base() = default;
+    template<typename T>
+      T& as() { return static_cast<T&>(*this); }
+
+     virtual std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) = 0;
 };
 
 #endif //ANANKE_HDL_TYPE_BASE_HPP

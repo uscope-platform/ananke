@@ -28,12 +28,12 @@ void HDL_modules_factory::add_instance(const HDL_instance &i) {
 }
 
 
-void HDL_modules_factory::add_typedef(const std::string &name, const HDL_type &type) {
+void HDL_modules_factory::add_typedef(const std::string &name, const std::shared_ptr<hdl_type_base> &type) {
     current_resource.add_typedef(name, type);
 }
 
-void HDL_modules_factory::add_struct_def(const std::string &name, const HDL_struct &hdl_struct) {
-    current_resource.add_struct_def(name, hdl_struct);
+void HDL_modules_factory::add_struct_def(const std::string &name, const std::shared_ptr<hdl_type_base> &hdl_struct) {
+    current_resource.add_typedef(name, hdl_struct);
 }
 
 void HDL_modules_factory::add_port(const std::string &p_n, HDL_port p) {

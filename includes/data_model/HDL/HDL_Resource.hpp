@@ -77,11 +77,9 @@ class HDL_Resource {
             dependencies = d;
         }
 
-        void add_typedef(const std::string &name, const HDL_type &type){typedefs.insert({name, type});}
-        std::map<std::string, HDL_type> get_typedefs(){return typedefs;}
+        void add_typedef(const std::string &name, const std::shared_ptr<hdl_type_base> &type){typedefs.insert({name, type});}
+        std::map<std::string, std::shared_ptr<hdl_type_base>> get_typedefs(){return typedefs;}
 
-        void add_struct_def(const std::string & name, const HDL_struct & hdl_struct){struct_defs.insert({name, hdl_struct});}
-        std::map<std::string, HDL_struct> get_struct_defs() {return struct_defs;}
 
         std::unordered_map<std::string, HDL_Resource>::mapped_type clone();
 
@@ -140,7 +138,7 @@ class HDL_Resource {
         template<class Archive>
         void serialize( Archive & ar ) {
             ar(name, path, hdl_type, dependencies, parameters_spec, port_specs, doc, processor_docs,
-                functions, line_n, typedefs, struct_defs);
+                functions, line_n, typedefs);
         }
 
         bool is_empty();
@@ -162,8 +160,7 @@ private:
         std::unordered_map<std::string, HDL_function_def> functions;
 
         std::vector<processor_instance> processor_docs;
-        std::map<std::string, HDL_type> typedefs;
-        std::map<std::string, HDL_struct> struct_defs;
+        std::map<std::string, std::shared_ptr<hdl_type_base>> typedefs;
 
         // DOCUMENTATION``
         module_documentation doc;

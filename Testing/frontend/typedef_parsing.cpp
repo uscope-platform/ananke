@@ -31,20 +31,20 @@ TEST(typedef_parsing, mixed_packing_array) {
     auto typedefs = resource.get_typedefs();
     EXPECT_TRUE(typedefs.contains("ctrl_addr_init_t"));
 
-    EXPECT_EQ(typedefs["ctrl_addr_init_t"].get_packed_dimensions().size(), 1);
-    EXPECT_EQ(typedefs["ctrl_addr_init_t"].get_unpacked_dimensions().size(), 1);
+    EXPECT_EQ(typedefs["ctrl_addr_init_t"]->as<HDL_type>().get_packed_dimensions().size(), 1);
+    EXPECT_EQ(typedefs["ctrl_addr_init_t"]->as<HDL_type>().get_unpacked_dimensions().size(), 1);
 
     dimension_t check_d;
     check_d.first_bound = {Expression_component("31", Expression_component::number)};
     check_d.second_bound = {Expression_component("0", Expression_component::number)};
     check_d.packed = true;
-    auto packed_dim = typedefs["ctrl_addr_init_t"].get_packed_dimensions()[0];
+    auto packed_dim = typedefs["ctrl_addr_init_t"]->as<HDL_type>().get_packed_dimensions()[0];
     EXPECT_EQ(packed_dim, check_d);
 
     check_d.first_bound = {Expression_component("1", Expression_component::number)};
     check_d.second_bound = {Expression_component("0", Expression_component::number)};
     check_d.packed = false;
-    auto unpacked_dim = typedefs["ctrl_addr_init_t"].get_unpacked_dimensions()[0];
+    auto unpacked_dim = typedefs["ctrl_addr_init_t"]->as<HDL_type>().get_unpacked_dimensions()[0];
     EXPECT_EQ(unpacked_dim, check_d);
 
 }
@@ -65,7 +65,7 @@ TEST(typedef_parsing, basic_struct_definition) {
 
     auto resource = analyzer.analyze("", test_pattern)[0];
 
-    auto structs = resource.get_struct_defs();
+    auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
     HDL_struct check_struct;
     check_struct.packed = true;
@@ -76,7 +76,7 @@ TEST(typedef_parsing, basic_struct_definition) {
     m.name = "field_2";
     check_struct.member.emplace_back(m);
     auto result_struct = structs.at("test_struct");
-    EXPECT_EQ(check_struct,result_struct);
+    EXPECT_EQ(check_struct,result_struct->as<HDL_struct>());
 
 }
 
@@ -96,7 +96,7 @@ TEST(typedef_parsing, bits_in_struct_definition) {
 
     auto resource = analyzer.analyze("", test_pattern)[0];
 
-    auto structs = resource.get_struct_defs();
+    auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
     HDL_struct check_struct;
     check_struct.packed = true;
@@ -108,7 +108,7 @@ TEST(typedef_parsing, bits_in_struct_definition) {
     m.name = "field_2";
     check_struct.member.emplace_back(m);
     auto result_struct = structs.at("test_struct");
-    EXPECT_EQ(check_struct,result_struct);
+    EXPECT_EQ(check_struct,result_struct->as<HDL_struct>());
 
 }
 
@@ -129,7 +129,7 @@ TEST(typedef_parsing, unpacked_array_of_packed_struct_definition) {
 
     auto resource = analyzer.analyze("", test_pattern)[0];
 
-    auto structs = resource.get_struct_defs();
+    auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
     HDL_struct check_struct;
     check_struct.packed = true;
@@ -143,6 +143,6 @@ TEST(typedef_parsing, unpacked_array_of_packed_struct_definition) {
 });
     check_struct.member.emplace_back(m);
     auto result_struct = structs.at("test_struct");
-    EXPECT_EQ(check_struct,result_struct);
+    EXPECT_EQ(check_struct,result_struct->as<HDL_struct>());
 
 }

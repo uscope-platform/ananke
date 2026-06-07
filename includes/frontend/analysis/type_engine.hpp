@@ -39,10 +39,10 @@ public:
     void start_composite_type_declaration(type_kind kind);
     void open_composite_member();
     void close_composite_member(const std::string &name);
-    HDL_struct stop_composite_type_declaration();
+    std::shared_ptr<hdl_type_base> stop_composite_type_declaration();
 
     void start_simple_type_declaration();
-    HDL_type stop_type_declaration(const std::string &name);
+    std::shared_ptr<hdl_type_base> stop_type_declaration(const std::string &name);
 
     void close_packed_dimensions();
     void start_unpacked_dimension_declaration();

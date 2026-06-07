@@ -66,6 +66,11 @@ public:
     bool packed = false;
     std::vector<struct_member> member;
 
+
+    std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) {
+        return std::nullopt;
+    };
+
     friend bool operator==(const HDL_struct &lhs, const HDL_struct &rhs)  {
         bool ret = true;
         ret &= lhs.packed == rhs.packed;

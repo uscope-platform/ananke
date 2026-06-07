@@ -36,9 +36,9 @@ void Type_engine::close_composite_member(const std::string &name) {
     current_struct.member.back().type.set_unpacked_dimensions(unpacked);
 }
 
-HDL_struct Type_engine::stop_composite_type_declaration() {
+std::shared_ptr<hdl_type_base> Type_engine::stop_composite_type_declaration() {
     kind = simple_type;
-    return current_struct;
+    return std::make_shared<HDL_struct>(current_struct);
 }
 
 void Type_engine::set_type(const std::string &type) {
@@ -57,7 +57,7 @@ void Type_engine::start_simple_type_declaration() {
     r_factory.start();
 }
 
-HDL_type Type_engine::stop_type_declaration(const std::string &name) {
+std::shared_ptr<hdl_type_base> Type_engine::stop_type_declaration(const std::string &name) {
     r_factory.stop();
     HDL_type t;
     auto  [packed, unpacked] = r_factory.get_dimensions();
@@ -65,7 +65,7 @@ HDL_type Type_engine::stop_type_declaration(const std::string &name) {
     t.set_unpacked_dimensions(unpacked);
     r_factory.clear();
     type_registry[name] = t;
-    return t;
+    return std::make_shared<HDL_type>(t);
 }
 
 
