@@ -14,7 +14,7 @@
 //  limitations under the License.
 
 
-#include "data_model/HDL/parameters/common/HDL_type.hpp"
+#include "data_model/HDL/types/HDL_type.hpp"
 
 void HDL_type::add_dimension(const dimension_t &d) {
     scalar = false;

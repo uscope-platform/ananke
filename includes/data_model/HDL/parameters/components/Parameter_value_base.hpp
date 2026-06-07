@@ -23,7 +23,7 @@
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"
 #include "data_model/mdarray.hpp"
-#include "data_model/HDL/parameters/common/resolved_type.hpp"
+#include "data_model/HDL/types/resolved_type.hpp"
 
 class HDL_function_def;
 

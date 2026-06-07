@@ -20,8 +20,8 @@
 #include <string>
 #include <map>
 
-#include "data_model/HDL/HDL_struct.hpp"
-#include "data_model/HDL/parameters/common/HDL_type.hpp"
+#include "data_model/HDL/types/HDL_struct.hpp"
+#include "data_model/HDL/types/HDL_type.hpp"
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 

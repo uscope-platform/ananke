@@ -13,4 +13,4 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "data_model/HDL/HDL_struct.hpp"
+#include "data_model/HDL/types/HDL_struct.hpp"

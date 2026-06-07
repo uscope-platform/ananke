@@ -22,7 +22,7 @@
 #include <spdlog/spdlog.h>
 
 #include "components/Expression.hpp"
-#include "common/HDL_type.hpp"
+#include "data_model/HDL/types/HDL_type.hpp"
 #include "common/dimension.hpp"
 
 class HDL_function_def;

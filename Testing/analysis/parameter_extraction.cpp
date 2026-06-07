@@ -3958,3 +3958,24 @@ TEST(parameter_extraction, typedef_parameter) {
         ASSERT_EQ(value, defaults.at(name));
     }
 }
+
+TEST(parameter_extraction, struct_typed_parameter) {
+    auto test_pattern = R"(
+        module test_mod #()();
+            typedef struct packed {
+                int unsigned field_a;
+                int field_b;
+            } my_struct_t;
+            parameter my_struct_t struct_param = '{42, 17};
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto parameters = resource.get_parameters();
+    ASSERT_TRUE(parameters.contains("struct_param"));
+
+    auto p = parameters.get("struct_param");
+    EXPECT_TRUE(false);
+}

@@ -18,7 +18,7 @@
 
 #include <string>
 
-#include "data_model/HDL/parameters/common/HDL_type.hpp"
+#include "data_model/HDL/types/HDL_type.hpp"
 
 struct struct_member {
     std::string name;
