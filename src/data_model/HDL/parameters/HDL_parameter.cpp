@@ -116,42 +116,38 @@ void HDL_parameter::add_item(const std::shared_ptr<Parameter_value_base> &e) {
 }
 
 std::string HDL_parameter::to_string() const {
-    std::string result = "\nHDL parameter:\n  NAME: " + name +
-                         "\n  TYPE: ";
+    std::string result = name;
 
-    if (!solved_value.has_value()) result += "unknown parameter type";
-    else if (solved_value.value().is_string()) result += "string_parameter";
-    else if (solved_value.value().is_integer()) {
-        result += "numeric_parameter";
-        auto val = solved_value.value().get_integer();
-        result += "\n  VALUE: " + std::to_string(val);
+    if (type.get_implicit() || type.get_signed() || type.get_real() || !type.is_scalar()) {
+        result += " (";
+        bool first = true;
+        if (type.get_implicit()) { result += "implicit"; first = false; }
+        if (type.get_signed()) { if (!first) result += ","; result += "signed"; first = false; }
+        if (type.get_real()) { if (!first) result += ","; result += "real"; first = false; }
+        if (!type.is_scalar()) { if (!first) result += ","; result += "nonscalar"; }
+        result += ")";
     }
-    else if (solved_value.value().is_int_array()) result += "array_parameter";
 
-    result += "\n  INITIALIZATION LIST:\n    ";
-
-    std::ostringstream s;
-
-    if (type.is_scalar()) {
-        if (!raw_value) result += "!!EMPTY SCALAR!!";
-        else  result += raw_value->print();
-    }
-    result += "-----------------------------\n";
-    result += "-----------------------------\n";
-    result += "UNPACKED DIMENSIONS\n";
-    for(const auto &item:type.get_unpacked_dimensions()){
-        result +="[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
-    }
-    result += "PACKED DIMENSIONS\n";
     for(const auto &item:type.get_packed_dimensions()){
-        result +="[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
+        result += "[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
+    }
+    for(const auto &item:type.get_unpacked_dimensions()){
+        result += "[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
     }
 
-    result += "EXPRESSION\n";
-    result +=  "  " + raw_value->print() + "\n";
+    if (raw_value) {
+        result += " = " + raw_value->print();
+    } else {
+        result += " = !!no expression!!";
+    }
 
-    result += "-----------------------------\n";
-    result += "-----------------------------\n";
+    if (solved_value.has_value()) {
+        result += "  [solved: ";
+        std::ostringstream ss;
+        ss << solved_value.value();
+        result += ss.str();
+        result += "]";
+    }
 
     return result;
 }
