@@ -63,8 +63,9 @@ public:
     [[nodiscard]] HDL_simple_type get_type(const std::string &name) const;
     [[nodiscard]] bool is_simple_type()const{ return kind == simple_type;}
 
-    [[nodiscard]] std::pair<std::vector<dimension_t>, std::vector<dimension_t>> get_dimensions() const;
-    void clear_ranges();
+    void set_base_type(const HDL_simple_type &t);
+    HDL_simple_type finalize_type();
+    HDL_simple_type finalize_dimensions();
 
     void set_type(const std::string & string);
     void set_packed();
@@ -78,6 +79,7 @@ private:
     std::map<std::string, HDL_simple_type> type_registry;
     type_kind kind = simple_type;
     HDL_struct current_struct;
+    HDL_simple_type current_type;
 
 };
 

@@ -99,8 +99,11 @@ public:
     [[nodiscard]] std::vector<dimension_t> get_unpacked_dimensions() const {return  unpacked_dimensions;};
 
     void set_signed(bool s) {is_signed = s;}
+    [[nodiscard]] bool get_signed() const {return is_signed;}
     void set_real(bool r) {is_real = r;}
+    [[nodiscard]] bool get_real() const {return is_real;}
     void set_implicit(bool i) {is_implicit = i;}
+    [[nodiscard]] bool get_implicit() const {return is_implicit;}
     std::set<qualified_identifier> get_dependencies();
 
 

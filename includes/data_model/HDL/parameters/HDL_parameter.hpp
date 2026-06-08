@@ -97,9 +97,6 @@ public:
 
     HDL_simple_type get_type()const {return type;}
     void set_type(const HDL_simple_type &t){type = t;}
-    void set_packed_dimensions(const std::vector<dimension_t>  &d) {type.set_packed_dimensions(d);}
-    void set_unpacked_dimensions(const std::vector<dimension_t>  &d) {type.set_unpacked_dimensions(d);}
-
 
     void add_component(const Expression_component &component);
     void set_scalar(const std::shared_ptr<Parameter_value_base>  &e);

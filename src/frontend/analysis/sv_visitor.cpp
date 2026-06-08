@@ -332,6 +332,7 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
 void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
     if (ctx->list_of_type_assignments() ) return;
     in_param_declaration = true;
+    type_engine.set_base_type(HDL_simple_type{});
     if (!ctx->list_of_param_assignments()) {
         throw std::runtime_error("Encountered non existent list of parameter declarations");
     }
@@ -341,10 +342,14 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
             type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
         if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path())
             type = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->getText();
-        params_factory.set_type(type_engine.resolve_type(type));
+        auto resolved = type_engine.resolve_type(type);
+        params_factory.set_type(resolved);
+        type_engine.set_base_type(resolved);
     }
     if (!ctx->data_type_or_implicit()) {
-        params_factory.set_type(Type_engine::create_primitive_type("implicit"));
+        auto implicit = Type_engine::create_primitive_type("implicit");
+        params_factory.set_type(implicit);
+        type_engine.set_base_type(implicit);
     }
     type_engine.start_range();
     current_parameter = ctx->list_of_param_assignments()[0].param_assignment()[0]->identifier()->getText();
@@ -546,10 +551,11 @@ void sv_visitor::enterNamed_parameter_assignment(sv2017::Named_parameter_assignm
 
 void sv_visitor::exitNamed_parameter_assignment(sv2017::Named_parameter_assignmentContext *ctx) {
     params_factory.stop_param_override();
-    auto [packed, unpacked] = type_engine.get_dimensions();
     auto param = params_factory.get_parameter();
-    param->set_packed_dimensions(packed);
-    param->set_unpacked_dimensions(unpacked);
+    bool scalar_flag = param->get_type().is_scalar();
+    auto t = type_engine.finalize_dimensions();
+    t.set_scalar(scalar_flag);
+    param->set_type(t);
     if(deps_factory.is_valid_dependency()){
         deps_factory.add_parameter(param);
     }
@@ -587,11 +593,11 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
         }
     }
     if (!in_class) {
-        auto [packed, unpacked] = type_engine.get_dimensions();
-        type_engine.clear_ranges();
         auto param = params_factory.get_parameter();
-        param->set_packed_dimensions(packed);
-        param->set_unpacked_dimensions(unpacked);
+        bool scalar_flag = param->get_type().is_scalar();
+        auto t = type_engine.finalize_type();
+        t.set_scalar(scalar_flag);
+        param->set_type(t);
         if(modules_factory.is_current_valid()){
             modules_factory.add_parameter(param);
         } else if(interfaces_factory.is_current_valid()){
@@ -826,19 +832,24 @@ void sv_visitor::exitData_type_or_implicit(sv2017::Data_type_or_implicitContext 
 
 void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
     in_param_declaration = true;
+    type_engine.set_base_type(HDL_simple_type{});
     if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type()) {
         std::string type;
         if (ctx->data_type_or_implicit()->data_type()->data_type_primitive())
             type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
         if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path())
             type = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->getText();
-        params_factory.set_type(type_engine.resolve_type(type));
+        auto resolved = type_engine.resolve_type(type);
+        params_factory.set_type(resolved);
+        type_engine.set_base_type(resolved);
     }
 
 
     type_engine.start_range();
     if (!ctx->data_type_or_implicit()) {
-        params_factory.set_type(Type_engine::create_primitive_type("implicit"));
+        auto implicit = Type_engine::create_primitive_type("implicit");
+        params_factory.set_type(implicit);
+        type_engine.set_base_type(implicit);
     }
 }
 

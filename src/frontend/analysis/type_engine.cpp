@@ -116,12 +116,26 @@ void Type_engine::stop_expression() {
     }
 }
 
-std::pair<std::vector<dimension_t>, std::vector<dimension_t>> Type_engine::get_dimensions() const {
-    return r_factory.get_dimensions();
+void Type_engine::set_base_type(const HDL_simple_type &t) {
+    current_type = t;
 }
 
-void Type_engine::clear_ranges() {
+HDL_simple_type Type_engine::finalize_type() {
+    auto [packed, unpacked] = r_factory.get_dimensions();
+    auto result = current_type;
+    result.set_packed_dimensions(packed);
+    result.set_unpacked_dimensions(unpacked);
     r_factory.clear();
+    return result;
+}
+
+HDL_simple_type Type_engine::finalize_dimensions() {
+    auto [packed, unpacked] = r_factory.get_dimensions();
+    HDL_simple_type result;
+    result.set_packed_dimensions(packed);
+    result.set_unpacked_dimensions(unpacked);
+    r_factory.clear();
+    return result;
 }
 
 bool Type_engine::has_type(const std::string &name) const {
