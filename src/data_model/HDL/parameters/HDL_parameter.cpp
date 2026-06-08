@@ -56,10 +56,6 @@ std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
 }
 
 
-void HDL_parameter::add_dimension(const dimension_t &d) {
-    type.add_dimension(d);
-}
-
 std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     auto container_size = type.evaluate_type(context);
     if (!container_size) return std::nullopt;
@@ -103,16 +99,6 @@ void HDL_parameter::add_component(const Expression_component &component) {
         auto expr = static_cast<Expression *>(raw_value.get());
         expr->push_back(component);
     }
-}
-
-void HDL_parameter::set_scalar(const std::shared_ptr<Parameter_value_base> &expr) {
-    type.set_scalar(true);
-    raw_value  = {expr};
-}
-
-void HDL_parameter::add_item(const std::shared_ptr<Parameter_value_base> &e) {
-    type.set_scalar(false);
-    raw_value = e;
 }
 
 std::string HDL_parameter::to_string() const {

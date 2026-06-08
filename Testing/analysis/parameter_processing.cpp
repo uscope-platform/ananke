@@ -262,16 +262,11 @@ TEST(parameter_processing, array_instance_parameter_override) {
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
-    p->add_dimension({
-        {Expression_component("1", Expression_component::number)},
-        {Expression_component("0", Expression_component::number)},
-        false
-    });
     mdarray<hdl_integer> av;
     av.set_1d_slice({0,0}, {9,8});
     auto ec = Expression_component(0, 0);
     ec.set_value(av);
-    p->set_scalar(std::make_shared<Expression>(Expression(ec)));
+    p->set_raw_value(std::make_shared<Expression>(Expression(ec)));
     p->set_name("param_2");
     HDL_simple_type t;
     t = Type_engine::create_primitive_type("implicit");
@@ -1332,17 +1327,17 @@ TEST(parameter_processing, init_list_override) {
     HDL_parameter p;
     p.set_name("NS");
     p.set_type(Type_engine::create_primitive_type("implicit"));
-    p.set_scalar(std::make_shared<Expression>(Expression(Expression_component("2", Expression_component::number))));
+    p.set_raw_value(std::make_shared<Expression>(Expression(Expression_component("2", Expression_component::number))));
     p.set_value(2);
     check_params.insert(std::make_shared<HDL_parameter>(p));
     p = HDL_parameter();
     p.set_name("SLAVE_ADDR");
-
-    p.add_dimension({
+    auto param_type = HDL_simple_type();
+    param_type.add_dimension({
         {Expression_component("NS", Expression_component::identifier),Expression_component("-", Expression_component::operation),Expression_component("1", Expression_component::number),},
         {Expression_component("0", Expression_component::number)},
         false});
-    p.add_dimension({
+    param_type.add_dimension({
     {Expression_component("31", Expression_component::number),},
     {Expression_component("0", Expression_component::number)},
     true});
@@ -1350,7 +1345,9 @@ TEST(parameter_processing, init_list_override) {
 
     c.add_component(std::make_shared<Expression>(Expression(Expression_component(1136656384, 0))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component(1136656448, 0))));
-    p.add_item(std::make_shared<Concatenation>(c));
+    param_type.set_scalar(false);
+    p.set_type(param_type);
+    p.set_raw_value(std::make_shared<Concatenation>(c));
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0,0}, {1136656448,1136656384});
@@ -1363,15 +1360,18 @@ TEST(parameter_processing, init_list_override) {
     r.set_item(std::make_shared<Expression>(Expression(Expression_component(64, 32))));
     auto size = std::make_shared<Expression>(Expression(Expression_component(2, 1)));
     r.set_size(size);
-    p.add_dimension({
+    HDL_simple_type param_type_2;
+    param_type_2.add_dimension({
     {Expression_component("NS", Expression_component::identifier),Expression_component("-", Expression_component::operation),Expression_component("1", Expression_component::number),},
     {Expression_component("0", Expression_component::number)},
     false});
-    p.add_dimension({
+    param_type_2.add_dimension({
     {Expression_component("31", Expression_component::number),},
     {Expression_component("0", Expression_component::number)},
     true});
-    p.add_item(std::make_shared<Replication>(r));
+    param_type_2.set_scalar(false);
+    p.set_type(param_type_2);
+    p.set_raw_value(std::make_shared<Replication>(r));
 
     av.set_1d_slice({0,0}, {64,64});
     p.set_value(av);

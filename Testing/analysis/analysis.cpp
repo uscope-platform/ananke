@@ -37,14 +37,14 @@ TEST( analysis_test , package) {
     p->set_name("bus_base");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     Expression e = {Expression_component("32'h43c00000", Expression_component::number)};
-    p->set_scalar(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("timebase");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     e = { Expression_component("bus_base", Expression_component::identifier)};
-    p->set_scalar(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -57,21 +57,21 @@ TEST( analysis_test , package) {
         Expression_component("2", Expression_component::number), Expression_component("+", Expression_component::operation),
         Expression_component("1", Expression_component::number)
     };
-    p->set_scalar(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("scope_mux");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     e = { Expression_component("gpio", Expression_component::identifier)};
-    p->set_scalar(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("out_of_order");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     e = { Expression_component("scope_mux", Expression_component::identifier)};
-    p->set_scalar(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -80,7 +80,7 @@ TEST( analysis_test , package) {
     e = {
         Expression_component("3", Expression_component::number),Expression_component("%", Expression_component::operation),Expression_component("2", Expression_component::number)
     };
-    p->set_scalar(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -89,7 +89,7 @@ TEST( analysis_test , package) {
     e = {
         Expression_component("'o4", Expression_component::number),Expression_component("-", Expression_component::operation),Expression_component("'b10", Expression_component::number)
     };
-    p->set_scalar(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     ASSERT_EQ(check_map, parameters);
@@ -150,7 +150,7 @@ TEST( analysis_test , sv_module) {
     Expression_component ec("param", Expression_component::identifier);
     ec.set_package_prefix("test_package");
     Expression e = {ec};
-    p->set_scalar(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Expression>(e));
     d3.add_parameter(p);
 
     HDL_instance d2("param", "test_package", package);
@@ -159,7 +159,7 @@ TEST( analysis_test , sv_module) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("instance_array_qualifier");
     e = {Expression_component("module_parameter_2", Expression_component::identifier),Expression_component("+", Expression_component::operation),Expression_component("1", Expression_component::number)};
-    p->set_scalar(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Expression>(e));
     d0.add_array_quantifier(p);
     std::vector deps = {d0, d1, d2, d3};
 
@@ -305,7 +305,7 @@ TEST(analysis_test, parameter_array_assignment) {
     Expression_component ec("TEST_ARRAY", Expression_component::identifier);
     ec.add_array_index({Expression_component("2", Expression_component::number)});
     auto e = {ec};
-    reference_param.set_scalar(std::make_shared<Expression>(e));
+    reference_param.set_raw_value(std::make_shared<Expression>(e));
 
     ASSERT_EQ(reference_param, *param);
 }

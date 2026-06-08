@@ -21,14 +21,16 @@
 #include "frontend/analysis/sv_analyzer.hpp"
 #include "analysis/parameter_solver.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
+#include "data_model/HDL/types/HDL_simple_type.hpp"
 
 
 TEST(Initialization_list, get_values_1d_unpacked)  {
 
 
     HDL_parameter p("param");
+    HDL_simple_type param_type;
 
-    p.add_dimension({
+    param_type.add_dimension({
         Expression(Expression_component("4", Expression_component::number)),
         Expression(Expression_component("0", Expression_component::number)),
     false});
@@ -38,7 +40,9 @@ TEST(Initialization_list, get_values_1d_unpacked)  {
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("4", Expression_component::number))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("6", Expression_component::number))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("69", Expression_component::number))));
-    p.add_item(std::make_shared<Concatenation>(c));
+    param_type.set_scalar(false);
+    p.set_type(param_type);
+    p.set_raw_value(std::make_shared<Concatenation>(c));
 
     mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {69, 6, 4 , 3, 5});
@@ -54,13 +58,14 @@ TEST(Initialization_list, get_values_2d_unpacked) {
 
 
     HDL_parameter p("param");
+    HDL_simple_type param_type;
 
-    p.add_dimension({
+    param_type.add_dimension({
         Expression(Expression_component("2", Expression_component::number)),
         Expression(Expression_component("0", Expression_component::number)),
         false
     });
-    p.add_dimension({
+    param_type.add_dimension({
         Expression(Expression_component("1", Expression_component::number)),
         Expression(Expression_component("0", Expression_component::number)),
         false
@@ -76,7 +81,9 @@ TEST(Initialization_list, get_values_2d_unpacked) {
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("69", Expression_component::number))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("54", Expression_component::number))));
     outer_c.add_component(std::make_shared<Concatenation>(c));
-    p.add_item(std::make_shared<Concatenation>(outer_c));
+    param_type.set_scalar(false);
+    p.set_type(param_type);
+    p.set_raw_value(std::make_shared<Concatenation>(outer_c));
 
 
     mdarray<hdl_integer> check_array;
@@ -93,18 +100,19 @@ TEST(Initialization_list, get_values_2d_unpacked) {
 TEST(Initialization_list, get_values_3d_unpacked) {
 
     HDL_parameter p("param");
+    HDL_simple_type param_type;
 
-    p.add_dimension({
+    param_type.add_dimension({
         Expression(Expression_component("2", Expression_component::number)),
         Expression(Expression_component("0", Expression_component::number)),
             false
     });
-    p.add_dimension({
+    param_type.add_dimension({
         Expression(Expression_component("1", Expression_component::number)),
         Expression(Expression_component("0", Expression_component::number)),
         false
     });
-    p.add_dimension({
+    param_type.add_dimension({
         Expression(Expression_component("1", Expression_component::number)),
         Expression(Expression_component("0", Expression_component::number)),
         false
@@ -133,7 +141,9 @@ TEST(Initialization_list, get_values_3d_unpacked) {
     c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("11", Expression_component::number))));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
-    p.add_item(std::make_shared<Concatenation>(c_top));
+    param_type.set_scalar(false);
+    p.set_type(param_type);
+    p.set_raw_value(std::make_shared<Concatenation>(c_top));
 
 
 
@@ -150,8 +160,9 @@ TEST(Initialization_list, get_values_3d_unpacked) {
 TEST(Initialization_list, packed_concatenation) {
 
     HDL_parameter p("param");
+    HDL_simple_type param_type;
 
-    p.add_dimension({
+    param_type.add_dimension({
         Expression_component("7", Expression_component::number),
         Expression_component("0", Expression_component::number),
         true
@@ -166,7 +177,9 @@ TEST(Initialization_list, packed_concatenation) {
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
 
-    p.add_item(std::make_shared<Concatenation>(c));
+    param_type.set_scalar(false);
+    p.set_type(param_type);
+    p.set_raw_value(std::make_shared<Concatenation>(c));
     auto res = p.evaluate({});
 
 
@@ -181,13 +194,14 @@ TEST(Initialization_list, get_values_1d_packed) {
 
 
     HDL_parameter p("param");
-    p.add_dimension({
+    HDL_simple_type param_type;
+    param_type.add_dimension({
         Expression_component("2", Expression_component::number),
         Expression_component("0", Expression_component::number),
         true
     });
 
-    p.add_dimension({
+    param_type.add_dimension({
         Expression_component("4", Expression_component::number),
         Expression_component("0", Expression_component::number),
         false
@@ -218,7 +232,9 @@ TEST(Initialization_list, get_values_1d_packed) {
     inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
     inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
-    p.add_item(std::make_shared<Concatenation>(outer_c));
+    param_type.set_scalar(false);
+    p.set_type(param_type);
+    p.set_raw_value(std::make_shared<Concatenation>(outer_c));
 
 
     mdarray<hdl_integer> check_array;
@@ -236,20 +252,21 @@ TEST(Initialization_list, get_values_2d_packed) {
 
 
     HDL_parameter p("param");
-    p.add_dimension({
+    HDL_simple_type param_type;
+    param_type.add_dimension({
         Expression_component("2", Expression_component::number),
         Expression_component("0", Expression_component::number),
         true
     });
 
-    p.add_dimension({
+    param_type.add_dimension({
         Expression_component("1", Expression_component::number),
         Expression_component("0", Expression_component::number),
         false
     });
 
 
-    p.add_dimension({
+    param_type.add_dimension({
         Expression_component("1", Expression_component::number),
         Expression_component("0", Expression_component::number),
         false
@@ -280,7 +297,9 @@ TEST(Initialization_list, get_values_2d_packed) {
     c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
-    p.add_item(std::make_shared<Concatenation>(c_top));
+    param_type.set_scalar(false);
+    p.set_type(param_type);
+    p.set_raw_value(std::make_shared<Concatenation>(c_top));
 
 
     mdarray<hdl_integer> check_array;
@@ -298,25 +317,26 @@ TEST(Initialization_list, get_values_3d_packed) {
 
 
     HDL_parameter p("param");
-    p.add_dimension({
+    HDL_simple_type param_type;
+    param_type.add_dimension({
         Expression_component("1", Expression_component::number),
         Expression_component("0", Expression_component::number), true
         });
 
-    p.add_dimension({
+    param_type.add_dimension({
         Expression_component("1", Expression_component::number),
         Expression_component("0", Expression_component::number),
         false
     });
 
 
-    p.add_dimension({
+    param_type.add_dimension({
         Expression_component("1", Expression_component::number),
         Expression_component("0", Expression_component::number),
         false
     });
 
-    p.add_dimension({
+    param_type.add_dimension({
         Expression_component("1", Expression_component::number),
         Expression_component("0", Expression_component::number),
         false
@@ -365,7 +385,9 @@ TEST(Initialization_list, get_values_3d_packed) {
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
-    p.add_item(std::make_shared<Concatenation>(c_top));
+    param_type.set_scalar(false);
+    p.set_type(param_type);
+    p.set_raw_value(std::make_shared<Concatenation>(c_top));
 
 
 
@@ -397,12 +419,13 @@ TEST(Initialization_list, get_values_concatenation_initialization) {
 
 
     HDL_parameter p("param");
-    p.add_dimension({
+    HDL_simple_type param_type;
+    param_type.add_dimension({
         Expression_component("31", Expression_component::number),
         Expression_component("0", Expression_component::number),
         true
     });
-    p.add_dimension({
+    param_type.add_dimension({
         Expression_component("1", Expression_component::number),
         Expression_component("0", Expression_component::number),
         false
@@ -411,7 +434,9 @@ TEST(Initialization_list, get_values_concatenation_initialization) {
     Concatenation c;
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("31", Expression_component::number))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("43", Expression_component::number))));
-    p.set_scalar(std::make_shared<Concatenation>(c));
+    param_type.set_scalar(false);
+    p.set_type(param_type);
+    p.set_raw_value(std::make_shared<Concatenation>(c));
 
     mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {43, 31});
@@ -426,13 +451,14 @@ TEST(Initialization_list, get_values_concatenation_initialization) {
 
 TEST(Initialization_list, get_values_1d_mixed_packed_unpacked) {
     HDL_parameter p("param");
+    HDL_simple_type param_type;
     Concatenation outer_c;
-    p.add_dimension({
+    param_type.add_dimension({
         Expression_component("31", Expression_component::number),
         Expression_component("0", Expression_component::number),
         true
     });
-    p.add_dimension({
+    param_type.add_dimension({
         Expression_component("4", Expression_component::number),
         Expression_component("0", Expression_component::number),
         false
@@ -456,7 +482,9 @@ TEST(Initialization_list, get_values_1d_mixed_packed_unpacked) {
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("4'hE", Expression_component::number))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("4'b0", Expression_component::number))));
     outer_c.add_component(std::make_shared<Concatenation>(c));
-    p.add_item(std::make_shared<Concatenation>(outer_c));
+    param_type.set_scalar(false);
+    p.set_type(param_type);
+    p.set_raw_value(std::make_shared<Concatenation>(outer_c));
 
     mdarray<hdl_integer> check_array;
     check_array.set_1d_slice({0, 0}, {0x27e0, 0x220e0, 3 , 3, 3});

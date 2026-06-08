@@ -69,7 +69,9 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
         }
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
-        current_resource.add_item(result);
+        current_type.set_scalar(false);
+        current_resource.set_type(current_type);
+        current_resource.set_raw_value(result);
         expr_factory.increase_level();
     }
 }
@@ -109,7 +111,9 @@ void HDL_parameters_factory::stop_replication() {
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
         } else {
-            current_resource.add_item(result);
+            current_type.set_scalar(false);
+            current_resource.set_type(current_type);
+            current_resource.set_raw_value(result);
         }
         expr_factory.increase_level();
     }
@@ -124,7 +128,9 @@ void HDL_parameters_factory::start_replication_assignment() {
 
 void HDL_parameters_factory::stop_replication_assignment() {
     if (top_as<replication_factory>()) {
-        current_resource.add_item(consumer_stack.top()->result());
+        current_type.set_scalar(false);
+        current_resource.set_type(current_type);
+        current_resource.set_raw_value(consumer_stack.top()->result());
         consumer_stack.pop();
         expr_factory.pop_level();
     }
@@ -148,7 +154,9 @@ void HDL_parameters_factory::stop_expression_new() {
             if (!consumer_stack.empty()) {
                 consumer_stack.top()->consume(std::make_shared<Expression>(expr.value()));
             } else {
-                current_resource.set_scalar(std::make_shared<Expression>(expr.value()));
+                current_type.set_scalar(true);
+                current_resource.set_type(current_type);
+                current_resource.set_raw_value(std::make_shared<Expression>(expr.value()));
             }
         }
         expr_factory.clear_expression();
@@ -177,7 +185,9 @@ void HDL_parameters_factory::stop_concatenation() {
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
         } else {
-            current_resource.add_item(result);
+            current_type.set_scalar(false);
+            current_resource.set_type(current_type);
+            current_resource.set_raw_value(result);
         }
     }
 }
@@ -214,7 +224,9 @@ void HDL_parameters_factory::stop_ternary(){
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
         } else {
-            current_resource.set_scalar(result);
+            current_type.set_scalar(true);
+            current_resource.set_type(current_type);
+            current_resource.set_raw_value(result);
         }
     }
 }
@@ -263,7 +275,9 @@ void HDL_parameters_factory::stop_cast() {
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(cast_value);
         } else {
-            current_resource.set_scalar(cast_value);
+            current_type.set_scalar(true);
+            current_resource.set_type(current_type);
+            current_resource.set_raw_value(cast_value);
         }
     }
 }
@@ -296,7 +310,9 @@ void HDL_parameters_factory::stop_function_assignment() {
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
         } else {
-            current_resource.set_scalar(result);
+            current_type.set_scalar(true);
+            current_resource.set_type(current_type);
+            current_resource.set_raw_value(result);
         }
     }
     expr_factory.pop_level();
@@ -328,7 +344,9 @@ void HDL_parameters_factory::stop_function_call() {
         } else if (top_as<replication_factory>()) {
             consumer_stack.top()->consume(std::make_shared<Expression>(Expression({ec})));
         } else if (ctx == param_context::packed_dim || ctx == param_context::declaration || ctx == param_context::override) {
-            current_resource.set_scalar(call);
+            current_type.set_scalar(true);
+            current_resource.set_type(current_type);
+            current_resource.set_raw_value(call);
         }
     }
 }

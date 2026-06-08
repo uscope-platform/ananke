@@ -82,8 +82,6 @@ public:
 
     [[nodiscard]] std::optional<resolved_parameter> get_value() const {return solved_value;}
 
-    void add_dimension(const dimension_t &d);
-
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context);
 
     void propagate_function(const HDL_function_def &def);
@@ -97,8 +95,8 @@ public:
     HDL_simple_type get_type()const {return type;}
     void set_type(const HDL_simple_type &t){type = t;}
 
+    void set_raw_value(const std::shared_ptr<Parameter_value_base> &e) { raw_value = e; }
     void add_component(const Expression_component &component);
-    void set_scalar(const std::shared_ptr<Parameter_value_base>  &e);
     std::shared_ptr<Parameter_value_base> get_expression() {
         if (type.is_scalar()) return raw_value;
         throw std::runtime_error("A scalar parameter has been initialized with an array");
@@ -106,8 +104,6 @@ public:
     void clear_expression() {
         if (type.is_scalar()) raw_value = std::make_shared<Expression>();
     }
-
-    void add_item(const std::shared_ptr<Parameter_value_base> &e);
 
     std::string to_string() const;
 
