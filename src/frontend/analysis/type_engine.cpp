@@ -43,7 +43,7 @@ std::shared_ptr<hdl_type> Type_engine::stop_composite_type_declaration() {
 
 void Type_engine::set_type(const std::string &type) {
     if (kind != simple_type) {
-        current_struct.member.back().type.set_declared_type(type);
+        current_struct.member.back().type = create_primitive_type(type);
     }
 }
 
@@ -129,4 +129,86 @@ bool Type_engine::has_type(const std::string &name) const {
 
 HDL_simple_type Type_engine::get_type(const std::string &name) const {
     return type_registry.at(name);
+}
+
+HDL_simple_type Type_engine::create_primitive_type(const std::string &type_name) {
+    HDL_simple_type t;
+    if (type_name == "implicit") {
+        t.set_implicit(true);
+        t.set_packed_dimensions({
+            {
+                Expression(Expression_component("31", Expression_component::number)),
+                Expression(Expression_component("0", Expression_component::number)),
+                true
+            }
+        });
+    }
+    if (type_name == "shortint") {
+        t.set_signed(true);
+        t.set_packed_dimensions({
+            {
+                Expression(Expression_component("15", Expression_component::number)),
+                Expression(Expression_component("0", Expression_component::number)),
+                true
+            }
+        });
+    }
+    if (type_name == "int" || type_name == "integer") {
+        t.set_signed(true);
+        t.set_packed_dimensions({
+            {
+                Expression(Expression_component("31", Expression_component::number)),
+                Expression(Expression_component("0", Expression_component::number)),
+                true
+            }
+        });
+    }
+    if (type_name == "longint") {
+        t.set_signed(true);
+        t.set_packed_dimensions({
+            {
+                Expression({Expression_component("63", Expression_component::number)}),
+                Expression(Expression_component("0", Expression_component::number)),
+                true
+            }
+        });
+    }
+    if (type_name == "time") {
+        t.set_signed(false);
+        t.set_packed_dimensions({
+            {
+                Expression(Expression_component("63", Expression_component::number)),
+                Expression(Expression_component("0", Expression_component::number)),
+                true
+            }
+        });
+    }
+    if (type_name == "real" || type_name == "realtime") {
+        t.set_real(true);
+        t.set_packed_dimensions({
+            {
+                Expression(Expression_component("63", Expression_component::number)),
+                Expression(Expression_component("0", Expression_component::number)),
+                true
+            }
+        });
+    }
+    if (type_name == "shortreal") {
+        t.set_real(true);
+        t.set_packed_dimensions({
+            {
+                Expression(Expression_component("31", Expression_component::number)),
+                Expression(Expression_component("0", Expression_component::number)),
+                true
+            }
+        });
+    }
+    return t;
+}
+
+HDL_simple_type Type_engine::resolve_type(const std::string &type_name) {
+    if (has_type(type_name)) {
+        return get_type(type_name);
+    }
+    return create_primitive_type(type_name);
 }

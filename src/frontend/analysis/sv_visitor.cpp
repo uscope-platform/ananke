@@ -338,28 +338,23 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
     if (!ctx->list_of_param_assignments()) {
         throw std::runtime_error("Encountered non existent list of parameter declarations");
     }
-    current_param_type.clear();
     if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type()) {
         std::string type;
         if (ctx->data_type_or_implicit()->data_type()->data_type_primitive())
             type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
         if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path())
             type = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->getText();
-        params_factory.set_type(type);
-        current_param_type = type;
+        params_factory.set_type(type_engine.resolve_type(type));
     }
     if (!ctx->data_type_or_implicit()) {
-        params_factory.set_type("implicit");
-        current_param_type = "implicit";
+        params_factory.set_type(Type_engine::create_primitive_type("implicit"));
     }
     params_factory.start_range();
     current_parameter = ctx->list_of_param_assignments()[0].param_assignment()[0]->identifier()->getText();
 }
 
 void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
-
-    params_factory.set_type("");
-    current_param_type.clear();
+    params_factory.set_type(HDL_simple_type{});
     in_param_declaration = false;
 }
 
@@ -592,26 +587,13 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
         }
     }
     if (!in_class) {
+        auto param = params_factory.get_parameter();
         if(modules_factory.is_current_valid()){
-            auto param = params_factory.get_parameter();
-            if (type_engine.has_type(current_param_type)) {
-                auto type = type_engine.get_type(current_param_type);
-                param->set_packed_dimensions(type.get_packed_dimensions());
-                param->set_unpacked_dimensions(type.get_unpacked_dimensions());
-            }
             modules_factory.add_parameter(param);
         } else if(interfaces_factory.is_current_valid()){
-            auto intf_param = params_factory.get_parameter();
-            if (type_engine.has_type(current_param_type)) {
-                auto type = type_engine.get_type(current_param_type);
-                intf_param->set_packed_dimensions(type.get_packed_dimensions());
-                intf_param->set_unpacked_dimensions(type.get_unpacked_dimensions());
-            }
-            interfaces_factory.add_parameter(intf_param);
+            interfaces_factory.add_parameter(param);
         }
     }
-
-
 }
 
 
@@ -859,29 +841,25 @@ void sv_visitor::exitData_type_or_implicit(sv2017::Data_type_or_implicitContext 
 
 void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
     in_param_declaration = true;
-    current_param_type.clear();
     if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type()) {
         std::string type;
         if (ctx->data_type_or_implicit()->data_type()->data_type_primitive())
             type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
         if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path())
             type = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->getText();
-        params_factory.set_type(type);
-        current_param_type = type;
+        params_factory.set_type(type_engine.resolve_type(type));
     }
 
 
     params_factory.start_range();
     if (!ctx->data_type_or_implicit()) {
-        params_factory.set_type("implicit");
-        current_param_type = "implicit";
+        params_factory.set_type(Type_engine::create_primitive_type("implicit"));
     }
 }
 
 void sv_visitor::exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
+    params_factory.set_type(HDL_simple_type{});
     in_param_declaration = false;
-    params_factory.set_type("");
-    current_param_type.clear();
 }
 
 void sv_visitor::enterLoop_generate_construct(sv2017::Loop_generate_constructContext *) {

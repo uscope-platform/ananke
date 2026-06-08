@@ -32,7 +32,7 @@ public:
 
     std::shared_ptr<HDL_parameter> get_parameter();
 
-    void set_type(const std::string &type);
+    void set_type(const HDL_simple_type &type);
 
     void add_component(const Expression_component &c){add_component(c, false);}
     void add_component(const Expression_component &c, bool is_call_argument);
@@ -127,7 +127,7 @@ private:
     bool in_bit_selection = false;
     Expression bit_index;
 
-    std::string current_type;
+    HDL_simple_type current_type;
 };
 
 

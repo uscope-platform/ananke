@@ -255,7 +255,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("param_1");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component(4, 0));
     p->set_value(4);
 
@@ -274,7 +274,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p->set_scalar(std::make_shared<Expression>(Expression(ec)));
     p->set_name("param_2");
     HDL_simple_type t;
-    t.set_declared_type("implicit");
+    t = Type_engine::create_primitive_type("implicit");
     t.add_dimension({
         Expression(Expression_component("1", Expression_component::number)),
         Expression(Expression_component("0", Expression_component::number)),
@@ -286,7 +286,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("param_3");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("(", Expression_component::parenthesis));
     p->add_component(Expression_component(4, 0));
     p->add_component(Expression_component("+", Expression_component::operation));
@@ -299,7 +299,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("p1_t");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     ec = Expression_component("param_2", Expression_component::identifier);
     ec.add_array_index({Expression_component(0, 1)});
     p->add_component(ec);
@@ -309,7 +309,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("p2_t");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     ec = Expression_component("param_2", Expression_component::identifier);
     ec.add_array_index({Expression_component(1, 1)});
     p->add_component(ec);
@@ -963,13 +963,11 @@ TEST(parameter_processing, override_with_package_parameter) {
         if (name == "param_1") {
             auto override_param = std::make_shared<HDL_parameter>();
             override_param->set_name("param_1");
-            override_param->set_declared_type("implicit");
+            override_param->set_type(Type_engine::create_primitive_type("implicit"));
             Expression_component ec("base", Expression_component::identifier);
             ec.set_package_prefix("test_package");
             override_param->add_component(ec);
             override_param->set_type(param->get_type());
-            override_param->set_packed_dimensions(param->get_packed_dimensions());
-            override_param->set_unpacked_dimensions(param->get_unpacked_dimensions());
             to_solve.insert(override_param);
         } else {
             to_solve.insert(param);
@@ -1105,13 +1103,11 @@ TEST(parameter_processing, override_package_function) {
         if (name == "param_1") {
             auto override_param = std::make_shared<HDL_parameter>();
             override_param->set_name("param_1");
-            override_param->set_declared_type("implicit");
+            override_param->set_type(Type_engine::create_primitive_type("implicit"));
             Expression_component ec("test_param", Expression_component::identifier);
             ec.set_package_prefix("test_pack");
             override_param->add_component(ec);
             override_param->set_type(param->get_type());
-            override_param->set_packed_dimensions(param->get_packed_dimensions());
-            override_param->set_unpacked_dimensions(param->get_unpacked_dimensions());
             to_solve.insert(override_param);
         } else {
             to_solve.insert(param);
@@ -1335,7 +1331,7 @@ TEST(parameter_processing, init_list_override) {
     Parameters_map check_params;
     HDL_parameter p;
     p.set_name("NS");
-    p.set_declared_type("implicit");
+    p.set_type(Type_engine::create_primitive_type("implicit"));
     p.set_scalar(std::make_shared<Expression>(Expression(Expression_component("2", Expression_component::number))));
     p.set_value(2);
     check_params.insert(std::make_shared<HDL_parameter>(p));

@@ -80,8 +80,6 @@ public:
         return solved_value.value().get_int_array();
     }
 
-    void set_declared_type(const std::string & type);
-
     [[nodiscard]] std::optional<resolved_parameter> get_value() const {return solved_value;}
 
     void add_dimension(const dimension_t &d);

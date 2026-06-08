@@ -98,7 +98,9 @@ public:
     [[nodiscard]] std::vector<dimension_t> get_packed_dimensions() const {return  packed_dimensions;};
     [[nodiscard]] std::vector<dimension_t> get_unpacked_dimensions() const {return  unpacked_dimensions;};
 
-    void set_declared_type(const std::string &type);
+    void set_signed(bool s) {is_signed = s;}
+    void set_real(bool r) {is_real = r;}
+    void set_implicit(bool i) {is_implicit = i;}
     std::set<qualified_identifier> get_dependencies();
 
 

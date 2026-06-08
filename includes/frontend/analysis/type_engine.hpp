@@ -65,6 +65,9 @@ public:
     void set_type(const std::string & string);
     void set_packed();
 
+    static HDL_simple_type create_primitive_type(const std::string &type_name);
+    HDL_simple_type resolve_type(const std::string &type_name);
+
 private:
     expressions_factory expr_factory;
     ranges_factory r_factory;

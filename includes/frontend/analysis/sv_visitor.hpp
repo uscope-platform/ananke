@@ -217,7 +217,6 @@ private:
     std::vector<HDL_Resource> entities;
 
     std::string current_parameter;
-    std::string current_param_type;
     std::string current_declaration_type;
 
     Type_engine type_engine;

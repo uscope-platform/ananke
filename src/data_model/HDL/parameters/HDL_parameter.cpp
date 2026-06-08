@@ -56,10 +56,6 @@ std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
 }
 
 
-void HDL_parameter::set_declared_type(const std::string &t) {
-    type.set_declared_type(t);
-}
-
 void HDL_parameter::add_dimension(const dimension_t &d) {
     type.add_dimension(d);
 }

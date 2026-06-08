@@ -71,7 +71,7 @@ TEST(typedef_parsing, basic_struct_definition) {
     check_struct.packed = true;
     struct_member m;
     m.name = "field_1";
-    m.type.set_declared_type("int");
+    m.type = Type_engine::create_primitive_type("int");
     check_struct.member.emplace_back(m);
     m.name = "field_2";
     check_struct.member.emplace_back(m);
@@ -102,7 +102,7 @@ TEST(typedef_parsing, bits_in_struct_definition) {
     check_struct.packed = true;
     struct_member m;
     m.name = "field_1";
-    m.type.set_declared_type("int");
+    m.type = Type_engine::create_primitive_type("int");
     check_struct.member.emplace_back(m);
     m = {};
     m.name = "field_2";

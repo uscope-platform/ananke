@@ -35,21 +35,21 @@ TEST( analysis_test , package) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("bus_base");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     Expression e = {Expression_component("32'h43c00000", Expression_component::number)};
     p->set_scalar(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("timebase");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     e = { Expression_component("bus_base", Expression_component::identifier)};
     p->set_scalar(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("gpio");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     e = {
         Expression_component("timebase", Expression_component::identifier), Expression_component("+", Expression_component::operation),
         Expression_component("32'h1000", Expression_component::number), Expression_component("*", Expression_component::operation),
@@ -62,21 +62,21 @@ TEST( analysis_test , package) {
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("scope_mux");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     e = { Expression_component("gpio", Expression_component::identifier)};
     p->set_scalar(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("out_of_order");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     e = { Expression_component("scope_mux", Expression_component::identifier)};
     p->set_scalar(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("modulo_parameter");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     e = {
         Expression_component("3", Expression_component::number),Expression_component("%", Expression_component::operation),Expression_component("2", Expression_component::number)
     };
@@ -85,7 +85,7 @@ TEST( analysis_test , package) {
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("subtraction_parameter");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     e = {
         Expression_component("'o4", Expression_component::number),Expression_component("-", Expression_component::operation),Expression_component("'b10", Expression_component::number)
     };
@@ -181,14 +181,14 @@ TEST( analysis_test , sv_module) {
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("module_parameter_1");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("56", Expression_component::number));
     check_res.add_parameter(p);
 
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("module_parameter_2");
-    p->set_declared_type("implicit");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("74", Expression_component::number));
     check_res.add_parameter(p);
     ASSERT_EQ(resource, check_res);
