@@ -90,7 +90,6 @@ public:
     explicit operator std::string();
 
     bool is_array() const{return !type.is_scalar();}
-    bool is_packed_array() const {return type.is_packed_array();}
 
     std::string get_name() const {return name;}
     qualified_identifier get_identifier(){return {"", "", name};}

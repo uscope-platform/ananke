@@ -91,7 +91,6 @@ public:
     void set_scalar(bool s){scalar = s;}
 
     [[nodiscard]] bool is_scalar()const {return scalar;}
-    [[nodiscard]] bool is_packed_array()const {return unpacked_dimensions.empty() && !packed_dimensions.empty();}
 
     void set_packed_dimensions(const std::vector<dimension_t>  &d);
     void set_unpacked_dimensions(const std::vector<dimension_t>  &d);

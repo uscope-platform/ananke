@@ -30,6 +30,7 @@ public:
     template<typename T>
       T& as() { return static_cast<T&>(*this); }
 
+    [[nodiscard]] virtual bool is_scalar()const = 0;
      virtual std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) = 0;
 };
 

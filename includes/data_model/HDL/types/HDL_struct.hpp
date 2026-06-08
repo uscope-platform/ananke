@@ -70,6 +70,7 @@ public:
     std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) {
         return std::nullopt;
     };
+    [[nodiscard]] bool is_scalar()const {return packed;}
 
     friend bool operator==(const HDL_struct &lhs, const HDL_struct &rhs)  {
         bool ret = true;
