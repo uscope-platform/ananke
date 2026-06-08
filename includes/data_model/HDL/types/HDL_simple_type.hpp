@@ -94,7 +94,7 @@ public:
     [[nodiscard]] bool is_packed_array()const {return unpacked_dimensions.empty() && !packed_dimensions.empty();}
 
     void set_packed_dimensions(const std::vector<dimension_t>  &d);
-    void set_unpacked_dimensions(const std::vector<dimension_t>  &d) {unpacked_dimensions = d;};
+    void set_unpacked_dimensions(const std::vector<dimension_t>  &d);
     [[nodiscard]] std::vector<dimension_t> get_packed_dimensions() const {return  packed_dimensions;};
     [[nodiscard]] std::vector<dimension_t> get_unpacked_dimensions() const {return  unpacked_dimensions;};
 

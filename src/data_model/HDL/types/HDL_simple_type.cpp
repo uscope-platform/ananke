@@ -29,6 +29,10 @@ void HDL_simple_type::set_packed_dimensions(const std::vector<dimension_t> &d) {
     packed_dimensions.insert(packed_dimensions.end(), d.begin(), d.end());
 }
 
+void HDL_simple_type::set_unpacked_dimensions(const std::vector<dimension_t> &d) {
+    unpacked_dimensions.insert(unpacked_dimensions.end(), d.begin(), d.end());
+}
+
 std::set<qualified_identifier> HDL_simple_type::get_dependencies() {
     std::set<qualified_identifier> result;
     for (auto &dim:unpacked_dimensions) {

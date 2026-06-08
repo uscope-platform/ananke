@@ -99,8 +99,6 @@ public:
     void set_type(const HDL_simple_type &t){type = t;}
     void set_packed_dimensions(const std::vector<dimension_t>  &d) {type.set_packed_dimensions(d);}
     void set_unpacked_dimensions(const std::vector<dimension_t>  &d) {type.set_unpacked_dimensions(d);}
-    std::vector<dimension_t> get_packed_dimensions(){return type.get_packed_dimensions();}
-    std::vector<dimension_t> get_unpacked_dimensions(){return type.get_unpacked_dimensions();}
 
 
     void add_component(const Expression_component &component);
