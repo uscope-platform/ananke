@@ -31,7 +31,7 @@ public:
     void advance_range();
     void clear();
     [[nodiscard]] bool active()const override {return is_active;}
-    std::pair<std::vector<dimension_t>,std::vector<dimension_t>> get_dimensions();
+    [[nodiscard]] std::pair<std::vector<dimension_t>,std::vector<dimension_t>> get_dimensions() const;
 
     void consume(const std::shared_ptr<Parameter_value_base>& v) override;
     std::shared_ptr<Parameter_value_base> result() override {return nullptr;}

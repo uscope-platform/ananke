@@ -37,7 +37,7 @@ void ranges_factory::clear() {
     current_dim = dimension_t();
 }
 
-std::pair<std::vector<dimension_t>, std::vector<dimension_t>> ranges_factory::get_dimensions() {
+std::pair<std::vector<dimension_t>, std::vector<dimension_t>> ranges_factory::get_dimensions() const {
     return {packed_dimensions, unpacked_dimensions};
 }
 

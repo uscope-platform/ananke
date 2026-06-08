@@ -57,10 +57,14 @@ public:
     void add_component(const Expression_component &c);
     void stop_expression();
 
-    [[nodiscard]] bool active() const;
+    [[nodiscard]] bool active() const { return kind != simple_type; }
+    [[nodiscard]] bool is_ranging() const { return r_factory.active(); }
     [[nodiscard]] bool has_type(const std::string &name) const;
     [[nodiscard]] HDL_simple_type get_type(const std::string &name) const;
     [[nodiscard]] bool is_simple_type()const{ return kind == simple_type;}
+
+    [[nodiscard]] std::pair<std::vector<dimension_t>, std::vector<dimension_t>> get_dimensions() const;
+    void clear_ranges();
 
     void set_type(const std::string & string);
     void set_packed();

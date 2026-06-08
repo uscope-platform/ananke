@@ -116,11 +116,12 @@ void Type_engine::stop_expression() {
     }
 }
 
-bool Type_engine::active() const {
-    if (kind == simple_type) {
-        return r_factory.active();
-    }
-    else return true;
+std::pair<std::vector<dimension_t>, std::vector<dimension_t>> Type_engine::get_dimensions() const {
+    return r_factory.get_dimensions();
+}
+
+void Type_engine::clear_ranges() {
+    r_factory.clear();
 }
 
 bool Type_engine::has_type(const std::string &name) const {

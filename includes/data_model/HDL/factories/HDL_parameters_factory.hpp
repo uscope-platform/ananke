@@ -22,7 +22,6 @@
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "resource_factory_base.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
-#include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
 
 class  HDL_parameters_factory : protected resources_factory_base<HDL_parameter> {
@@ -43,8 +42,6 @@ public:
 
     void start_bit_selection();
     void stop_bit_selection();
-
-    void start_unpacked_dimension_declaration();
 
     void close_array_index();
 
@@ -80,10 +77,8 @@ public:
     bool is_param_assignment() const {return ctx == param_context::declaration;}
     bool is_param_override() const {return ctx == param_context::override;}
     bool is_component_relevant() const {
-        return expr_factory.active() || !consumer_stack.empty() || ctx == param_context::packed_dim || r_factory.active();
+        return expr_factory.active() || !consumer_stack.empty() || ctx == param_context::packed_dim;
     }
-
-    void advance_range();
 
     void start_instance_parameter_assignment(const std::string& parameter_name);
 
@@ -94,14 +89,6 @@ public:
 
     void start_param_override();
     void stop_param_override();
-
-    void start_range();
-    void stop_range();
-
-    void open_range();
-    void close_range();
-
-    void close_packed_dimensions();
 
 private:
     enum class param_context {
@@ -118,7 +105,6 @@ private:
     }
 
     expressions_factory expr_factory;
-    ranges_factory r_factory;
 
     std::stack<std::unique_ptr<factory_base>> consumer_stack;
 
