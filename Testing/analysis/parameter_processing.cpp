@@ -1345,7 +1345,7 @@ TEST(parameter_processing, init_list_override) {
 
     c.add_component(std::make_shared<Expression>(Expression(Expression_component(1136656384, 0))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component(1136656448, 0))));
-    param_type.set_scalar(false);
+
     p.set_type(param_type);
     p.set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -1369,7 +1369,6 @@ TEST(parameter_processing, init_list_override) {
     {Expression_component("31", Expression_component::number),},
     {Expression_component("0", Expression_component::number)},
     true});
-    param_type_2.set_scalar(false);
     p.set_type(param_type_2);
     p.set_raw_value(std::make_shared<Replication>(r));
 

@@ -30,9 +30,7 @@ public:
     HDL_simple_type(const HDL_simple_type &other) = default;
 
     HDL_simple_type(HDL_simple_type &&other) noexcept
-        : scalar(other
-            .scalar),
-          is_signed(other.is_signed),
+        : is_signed(other.is_signed),
           is_real(other.is_real),
           is_implicit(other.is_implicit),
           unpacked_dimensions(std::move(other.unpacked_dimensions)),
@@ -42,7 +40,6 @@ public:
     HDL_simple_type & operator=(const HDL_simple_type &other) {
         if (this == &other)
             return *this;
-        scalar = other.scalar;
         is_signed = other.is_signed;
         is_real = other.is_real;
         is_implicit = other.is_implicit;
@@ -54,7 +51,6 @@ public:
     HDL_simple_type & operator=(HDL_simple_type &&other) noexcept {
         if (this == &other)
             return *this;
-        scalar = other.scalar;
         is_signed = other.is_signed;
         is_real = other.is_real;
         is_implicit = other.is_implicit;
@@ -66,7 +62,6 @@ public:
     friend bool operator==(const HDL_simple_type &lhs, const HDL_simple_type &rhs) {
         bool ret = true;
 
-        ret &= lhs.scalar == rhs.scalar;
         ret &= lhs.is_signed == rhs.is_signed;
         ret &= lhs.is_implicit == rhs.is_implicit;
         ret &= lhs.is_real == rhs.is_real;
@@ -88,9 +83,8 @@ public:
 
 
     void add_dimension(const dimension_t &d);
-    void set_scalar(bool s){scalar = s;}
 
-    [[nodiscard]] bool is_scalar()const {return scalar;}
+    [[nodiscard]] bool is_scalar()const {return unpacked_dimensions.empty() && packed_dimensions.empty();}
 
     void set_packed_dimensions(const std::vector<dimension_t>  &d);
     void set_unpacked_dimensions(const std::vector<dimension_t>  &d);
@@ -109,7 +103,6 @@ public:
     std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context);
 
     friend void PrintTo(const HDL_simple_type& t, std::ostream* os) {
-        *os << "HDL_type { scalar: " << (t.scalar ? "true" : "false");
         if (!t.packed_dimensions.empty()) {
             *os << ", packed: [";
             for (size_t i = 0; i < t.packed_dimensions.size(); ++i) {
@@ -131,10 +124,9 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(scalar, unpacked_dimensions, packed_dimensions);
+        ar(unpacked_dimensions, packed_dimensions);
     }
 private:
-    bool scalar = true;
     bool is_signed = false;
     bool is_real = false;
     bool is_implicit = false;

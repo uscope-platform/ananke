@@ -554,7 +554,6 @@ void sv_visitor::exitNamed_parameter_assignment(sv2017::Named_parameter_assignme
     auto param = params_factory.get_parameter();
     bool scalar_flag = param->get_type().is_scalar();
     auto t = type_engine.finalize_dimensions();
-    t.set_scalar(scalar_flag);
     param->set_type(t);
     if(deps_factory.is_valid_dependency()){
         deps_factory.add_parameter(param);
@@ -596,7 +595,6 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
         auto param = params_factory.get_parameter();
         bool scalar_flag = param->get_type().is_scalar();
         auto t = type_engine.finalize_type();
-        t.set_scalar(scalar_flag);
         param->set_type(t);
         if(modules_factory.is_current_valid()){
             modules_factory.add_parameter(param);

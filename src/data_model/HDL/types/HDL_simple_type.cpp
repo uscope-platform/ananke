@@ -17,7 +17,6 @@
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 
 void HDL_simple_type::add_dimension(const dimension_t &d) {
-    scalar = false;
     if(d.packed){
         packed_dimensions.push_back(d);
     } else{
