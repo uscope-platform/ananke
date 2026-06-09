@@ -4058,4 +4058,7 @@ TEST(parameter_extraction, struct_typed_parameter) {
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("17", Expression_component::number))));
     EXPECT_TRUE(p->get_expression()->is_concatenation());
     EXPECT_EQ(p->get_expression()->as<Concatenation>(), c);
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    EXPECT_TRUE(false);
 }

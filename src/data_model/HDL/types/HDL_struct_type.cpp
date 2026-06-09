@@ -21,6 +21,20 @@
 CEREAL_REGISTER_TYPE(HDL_struct_type)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_type, HDL_struct_type)
 
+std::optional<resolved_type> HDL_struct_type::evaluate_type(
+    const std::map<qualified_identifier, resolved_parameter> &context) {
+    resolved_type result;
+    for (auto &m:member) {
+        if (m.type->is<HDL_struct_type>()) {
+            spdlog::warn("Nested structures are not supported yet");
+            return std::nullopt;
+        }
+        auto s = m.type->as<HDL_simple_type>().evaluate_type(context);
+        result.struct_sizes.push_back({s->unpacked_sizes, s->packed_sizes});
+    }
+    return result;
+}
+
 std::set<qualified_identifier> HDL_struct_type::get_dependencies() {
     std::set<qualified_identifier> result;
     for (auto &m: member) {
