@@ -50,7 +50,7 @@ TEST(typedef_parsing, mixed_packing_array) {
 }
 
 
-TEST(typedef_parsing, basic_struct_definition) {
+TEST(typedef_parsing, basic_packed_struct_definition) {
     auto test_pattern = R"(
         package test_package;
 
@@ -67,7 +67,7 @@ TEST(typedef_parsing, basic_struct_definition) {
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
-    HDL_struct check_struct;
+    HDL_struct_type check_struct;
     check_struct.packed = true;
     struct_member m;
     m.name = "field_1";
@@ -80,9 +80,45 @@ TEST(typedef_parsing, basic_struct_definition) {
     m.type = t2;
     check_struct.member.emplace_back(m);
     auto result_struct = structs.at("test_struct");
-    EXPECT_EQ(check_struct,result_struct->as<HDL_struct>());
+    EXPECT_EQ(check_struct,result_struct->as<HDL_struct_type>());
 
 }
+
+
+TEST(typedef_parsing, basic_unpacked_struct_definition) {
+    auto test_pattern = R"(
+        package test_package;
+
+            typedef struct {
+                int unsigned field_1;
+                int field_2;
+            } test_struct;
+        endpackage
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto structs = resource.get_typedefs();
+    EXPECT_TRUE(structs.contains("test_struct"));
+    HDL_struct_type check_struct;
+    check_struct.packed = false;
+    struct_member m;
+    m.name = "field_1";
+    auto t1 = Type_engine::create_primitive_type("int");
+    t1->as<HDL_simple_type>().set_signed(false);
+    m.type = t1;
+    check_struct.member.emplace_back(m);
+    m.name = "field_2";
+    auto t2 = Type_engine::create_primitive_type("int");
+    m.type = t2;
+    check_struct.member.emplace_back(m);
+    auto result_struct = structs.at("test_struct");
+    EXPECT_EQ(check_struct,result_struct->as<HDL_struct_type>());
+
+}
+
 
 
 TEST(typedef_parsing, bits_in_struct_definition) {
@@ -102,7 +138,7 @@ TEST(typedef_parsing, bits_in_struct_definition) {
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
-    HDL_struct check_struct;
+    HDL_struct_type check_struct;
     check_struct.packed = true;
     struct_member m;
     m.name = "field_1";
@@ -115,14 +151,14 @@ TEST(typedef_parsing, bits_in_struct_definition) {
     m.type = std::make_shared<HDL_simple_type>();
     check_struct.member.emplace_back(m);
     auto result_struct = structs.at("test_struct");
-    EXPECT_EQ(check_struct,result_struct->as<HDL_struct>());
+    EXPECT_EQ(check_struct,result_struct->as<HDL_struct_type>());
 
 }
 
 
 
 
-TEST(typedef_parsing, unpacked_array_of_packed_struct_definition) {
+TEST(typedef_parsing, struct_with_unpacked_array_of_packed) {
     auto test_pattern = R"(
         package test_package;
 
@@ -138,7 +174,7 @@ TEST(typedef_parsing, unpacked_array_of_packed_struct_definition) {
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
-    HDL_struct check_struct;
+    HDL_struct_type check_struct;
     check_struct.packed = true;
     struct_member m;
     m.name = "field_1";
@@ -152,6 +188,25 @@ TEST(typedef_parsing, unpacked_array_of_packed_struct_definition) {
     m.type = std::make_shared<HDL_simple_type>(t);
     check_struct.member.emplace_back(m);
     auto result_struct = structs.at("test_struct");
-    EXPECT_EQ(check_struct,result_struct->as<HDL_struct>());
+    EXPECT_EQ(check_struct,result_struct->as<HDL_struct_type>());
+
+}
+
+
+
+TEST(typedef_parsing, anonymous_simple_struct) {
+    auto test_pattern = R"(
+        package test_package;
+
+            struct {
+                int unsigned field_1;
+                int field_2;
+            } test_struct;
+        endpackage
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
 
 }

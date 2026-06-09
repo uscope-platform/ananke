@@ -57,9 +57,9 @@ struct struct_member {
     }
 };
 
-class HDL_struct : public hdl_type{
+class HDL_struct_type : public hdl_type{
 public:
-    virtual ~HDL_struct() = default;
+    virtual ~HDL_struct_type() = default;
     bool packed = false;
     std::vector<struct_member> member;
 
@@ -73,20 +73,20 @@ public:
     [[nodiscard]] std::string to_print() const override;
 
     [[nodiscard]] bool is_equal(const hdl_type &other) const override {
-        if (auto* o = dynamic_cast<const HDL_struct*>(&other)) {
+        if (auto* o = dynamic_cast<const HDL_struct_type*>(&other)) {
             return *this == *o;
         }
         return false;
     }
 
-    friend bool operator==(const HDL_struct &lhs, const HDL_struct &rhs)  {
+    friend bool operator==(const HDL_struct_type &lhs, const HDL_struct_type &rhs)  {
         bool ret = true;
         ret &= lhs.packed == rhs.packed;
         ret &= lhs.member == rhs.member;
         return ret;
     }
 
-    friend void PrintTo(const HDL_struct& s, std::ostream* os) {
+    friend void PrintTo(const HDL_struct_type& s, std::ostream* os) {
         *os << "HDL_struct { packed: " << (s.packed ? "true" : "false")
             << ", members: [";
         for (size_t i = 0; i < s.member.size(); ++i) {

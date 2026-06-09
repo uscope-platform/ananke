@@ -31,7 +31,7 @@ target_sources(ananke_lib
     Backend/python_script_runner.cpp
     data_model/HDL/HDL_Resource.cpp
     data_model/HDL/HDL_instance.cpp
-        data_model/HDL/types/HDL_struct.cpp
+        data_model/HDL/types/HDL_struct_type.cpp
     data_model/HDL/HDL_instance_AST.cpp
     data_model/mm_file.cpp
     data_model/HDL/factories/HDL_instances_factory.cpp

@@ -64,7 +64,7 @@ void Type_engine::set_member_signed(bool s) {
 
 std::shared_ptr<hdl_type> Type_engine::stop_composite_type_declaration() {
     kind = simple_type;
-    return std::make_shared<HDL_struct>(current_struct);
+    return std::make_shared<HDL_struct_type>(current_struct);
 }
 
 void Type_engine::set_type(const std::string &type) {

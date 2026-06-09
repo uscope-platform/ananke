@@ -13,15 +13,15 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "data_model/HDL/types/HDL_struct.hpp"
+#include "data_model/HDL/types/HDL_struct_type.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
 
-CEREAL_REGISTER_TYPE(HDL_struct)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_type, HDL_struct)
+CEREAL_REGISTER_TYPE(HDL_struct_type)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_type, HDL_struct_type)
 
-std::set<qualified_identifier> HDL_struct::get_dependencies() {
+std::set<qualified_identifier> HDL_struct_type::get_dependencies() {
     std::set<qualified_identifier> result;
     for (auto &m: member) {
         if (m.type) {
@@ -32,7 +32,7 @@ std::set<qualified_identifier> HDL_struct::get_dependencies() {
     return result;
 }
 
-std::string HDL_struct::to_print() const {
+std::string HDL_struct_type::to_print() const {
     std::string result;
     result += " (";
     result += packed ? "packed" : "unpacked";

@@ -20,7 +20,7 @@
 #include <string>
 #include <map>
 
-#include "data_model/HDL/types/HDL_struct.hpp"
+#include "data_model/HDL/types/HDL_struct_type.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
@@ -79,7 +79,7 @@ private:
     ranges_factory r_factory;
     std::map<std::string, HDL_simple_type> type_registry;
     type_kind kind = simple_type;
-    HDL_struct current_struct;
+    HDL_struct_type current_struct;
     std::shared_ptr<hdl_type> current_type;
 
 };

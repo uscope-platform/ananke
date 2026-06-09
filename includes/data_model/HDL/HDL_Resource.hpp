@@ -36,7 +36,7 @@
 
 #include <spdlog/spdlog.h>
 #include "data_model/HDL/HDL_definitions.hpp"
-#include "data_model/HDL/types/HDL_struct.hpp"
+#include "data_model/HDL/types/HDL_struct_type.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
 
 struct if_port_specs {
