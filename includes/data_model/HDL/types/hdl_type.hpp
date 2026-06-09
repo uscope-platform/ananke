@@ -19,6 +19,7 @@
 
 #include <optional>
 #include <string>
+#include <set>
 #include <map>
 
 #include "data_model/HDL/types/resolved_type.hpp"

@@ -15,6 +15,12 @@
 
 #include "data_model/HDL/types/HDL_struct.hpp"
 
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+
+CEREAL_REGISTER_TYPE(HDL_struct)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_type, HDL_struct)
+
 std::set<qualified_identifier> HDL_struct::get_dependencies() {
     std::set<qualified_identifier> result;
     for (auto &m: member) {

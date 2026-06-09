@@ -18,6 +18,12 @@
 
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+
+CEREAL_REGISTER_TYPE(HDL_simple_type)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_type, HDL_simple_type)
+
 void HDL_simple_type::add_dimension(const dimension_t &d) {
     if(d.packed){
         packed_dimensions.push_back(d);
