@@ -67,10 +67,11 @@ public:
     std::vector<struct_member> member;
 
 
-    std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) {
+    std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) override{
         return std::nullopt;
     };
-    [[nodiscard]] bool is_scalar()const {return packed;}
+    [[nodiscard]] bool is_scalar()const override {return packed;}
+    std::set<qualified_identifier> get_dependencies() override;
 
     friend bool operator==(const HDL_struct &lhs, const HDL_struct &rhs)  {
         bool ret = true;

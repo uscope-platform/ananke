@@ -30,6 +30,13 @@ public:
     template<typename T>
       T& as() { return static_cast<T&>(*this); }
 
+    template<typename T>
+        bool is() const {
+        // dynamic_cast with pointers returns nullptr if the cast fails
+        return dynamic_cast<const T*>(this) != nullptr;
+    }
+
+    virtual std::set<qualified_identifier> get_dependencies() = 0;
     [[nodiscard]] virtual bool is_scalar()const = 0;
      virtual std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) = 0;
 };

@@ -84,7 +84,7 @@ public:
 
     void add_dimension(const dimension_t &d);
 
-    [[nodiscard]] bool is_scalar()const {return unpacked_dimensions.empty() && packed_dimensions.empty();}
+    [[nodiscard]] bool is_scalar()const override {return unpacked_dimensions.empty() && packed_dimensions.empty();}
 
     void set_packed_dimensions(const std::vector<dimension_t>  &d);
     void set_unpacked_dimensions(const std::vector<dimension_t>  &d);
@@ -97,10 +97,10 @@ public:
     [[nodiscard]] bool get_real() const {return is_real;}
     void set_implicit(bool i) {is_implicit = i;}
     [[nodiscard]] bool get_implicit() const {return is_implicit;}
-    std::set<qualified_identifier> get_dependencies();
+    std::set<qualified_identifier> get_dependencies() override;
 
 
-    std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context);
+    std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) override;
 
     friend void PrintTo(const HDL_simple_type& t, std::ostream* os) {
         if (!t.packed_dimensions.empty()) {
