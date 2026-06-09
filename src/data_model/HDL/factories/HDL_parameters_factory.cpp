@@ -31,7 +31,7 @@ std::shared_ptr<HDL_parameter> HDL_parameters_factory::get_parameter() {
     return std::make_shared<HDL_parameter>(resource);
 }
 
-void HDL_parameters_factory::set_type(const HDL_simple_type &type) {
+void HDL_parameters_factory::set_type(const std::shared_ptr<hdl_type> &type) {
     current_type = type;
 }
 

@@ -87,22 +87,22 @@ public:
     void propagate_function(const HDL_function_def &def);
     explicit operator std::string();
 
-    bool is_array() const{return !type.is_scalar();}
+    bool is_array() const{return type && !type->is_scalar();}
 
     std::string get_name() const {return name;}
     qualified_identifier get_identifier(){return {"", "", name};}
 
-    HDL_simple_type get_type()const {return type;}
-    void set_type(const HDL_simple_type &t){type = t;}
+    std::shared_ptr<hdl_type> get_type()const {return type;}
+    void set_type(const std::shared_ptr<hdl_type> &t){type = t;}
 
     void set_raw_value(const std::shared_ptr<Parameter_value_base> &e) { raw_value = e; }
     void add_component(const Expression_component &component);
     std::shared_ptr<Parameter_value_base> get_expression() {
-        if (type.is_scalar()) return raw_value;
+        if (type && type->is_scalar()) return raw_value;
         throw std::runtime_error("A scalar parameter has been initialized with an array");
     }
     void clear_expression() {
-        if (type.is_scalar()) raw_value = std::make_shared<Expression>();
+        if (type && type->is_scalar()) raw_value = std::make_shared<Expression>();
     }
 
     std::string to_string() const;
@@ -127,7 +127,7 @@ private:
 
     std::string name;
 
-    HDL_simple_type type;
+    std::shared_ptr<hdl_type> type = std::make_shared<HDL_simple_type>();
 
     std::shared_ptr<Parameter_value_base> raw_value;
     std::optional<resolved_parameter> solved_value;

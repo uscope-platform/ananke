@@ -31,10 +31,18 @@ bool operator==(const HDL_parameter &lhs, const HDL_parameter &rhs) {
 
     ret &= lhs.name == rhs.name;
     if (!lhs.solved_value.has_value() || !rhs.solved_value.has_value()) {
-        ret &= *lhs.raw_value == *rhs.raw_value;
+        if (lhs.raw_value && rhs.raw_value) {
+            ret &= *lhs.raw_value == *rhs.raw_value;
+        } else {
+            ret &= lhs.raw_value == rhs.raw_value;
+        }
     }
 
-    ret &= lhs.type == rhs.type;
+    if (lhs.type && rhs.type) {
+        ret &= lhs.type->is_equal(*rhs.type);
+    } else {
+        ret &= lhs.type == rhs.type;
+    }
 
     ret &= lhs.solved_value == rhs.solved_value;
 
@@ -51,13 +59,14 @@ std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
     par.name = name;
     par.type = type;
     par.solved_value = solved_value;
-    par.raw_value = raw_value->clone_ptr();
+    if (raw_value) par.raw_value = raw_value->clone_ptr();
     return std::make_shared<HDL_parameter>(par);
 }
 
 
 std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
-    auto container_size = type.evaluate_type(context);
+    if (!type) return std::nullopt;
+    auto container_size = type->evaluate_type(context);
     if (!container_size) return std::nullopt;
     raw_value->set_container_sizes(container_size.value(), context);
 
@@ -66,7 +75,7 @@ std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualifi
 
 
 void HDL_parameter::propagate_function(const HDL_function_def &def) {
-    raw_value->propagate_function(def);
+    if (raw_value) raw_value->propagate_function(def);
 }
 
 HDL_parameter::operator std::string() {
@@ -104,22 +113,7 @@ void HDL_parameter::add_component(const Expression_component &component) {
 std::string HDL_parameter::to_string() const {
     std::string result = name;
 
-    if (type.get_implicit() || type.get_signed() || type.get_real() || !type.is_scalar()) {
-        result += " (";
-        bool first = true;
-        if (type.get_implicit()) { result += "implicit"; first = false; }
-        if (type.get_signed()) { if (!first) result += ","; result += "signed"; first = false; }
-        if (type.get_real()) { if (!first) result += ","; result += "real"; first = false; }
-        if (!type.is_scalar()) { if (!first) result += ","; result += "nonscalar"; }
-        result += ")";
-    }
-
-    for(const auto &item:type.get_packed_dimensions()){
-        result += "[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
-    }
-    for(const auto &item:type.get_unpacked_dimensions()){
-        result += "[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
-    }
+   if (type) result += type->to_print();
 
     if (raw_value) {
         result += " = " + raw_value->print();
@@ -139,10 +133,15 @@ std::string HDL_parameter::to_string() const {
 }
 
 std::set<qualified_identifier> HDL_parameter::get_dependencies() {
-    std::set<qualified_identifier> result = type.get_dependencies();
+    std::set<qualified_identifier> result;
+    if (type) {
+        result = type->get_dependencies();
+    }
 
-    std::set<qualified_identifier> deps = raw_value->get_dependencies();
-    result.insert(deps.begin(), deps.end());
+    if (raw_value) {
+        std::set<qualified_identifier> deps = raw_value->get_dependencies();
+        result.insert(deps.begin(), deps.end());
+    }
     return result;
 }
 

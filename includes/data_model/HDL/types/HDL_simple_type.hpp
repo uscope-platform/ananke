@@ -84,7 +84,7 @@ public:
 
     void add_dimension(const dimension_t &d);
 
-    [[nodiscard]] bool is_scalar()const override {return unpacked_dimensions.empty() && packed_dimensions.empty();}
+    [[nodiscard]] bool is_scalar()const override {return unpacked_dimensions.empty();}
 
     void set_packed_dimensions(const std::vector<dimension_t>  &d);
     void set_unpacked_dimensions(const std::vector<dimension_t>  &d);
@@ -101,6 +101,15 @@ public:
 
 
     std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) override;
+
+    [[nodiscard]] std::string to_print() const override;
+
+    [[nodiscard]] bool is_equal(const hdl_type &other) const override {
+        if (auto* o = dynamic_cast<const HDL_simple_type*>(&other)) {
+            return *this == *o;
+        }
+        return false;
+    }
 
     friend void PrintTo(const HDL_simple_type& t, std::ostream* os) {
         if (!t.packed_dimensions.empty()) {

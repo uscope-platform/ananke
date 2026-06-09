@@ -18,6 +18,7 @@
 #define ANANKE_HDL_TYPE_BASE_HPP
 
 #include <optional>
+#include <string>
 #include <map>
 
 #include "data_model/HDL/types/resolved_type.hpp"
@@ -39,6 +40,8 @@ public:
     virtual std::set<qualified_identifier> get_dependencies() = 0;
     [[nodiscard]] virtual bool is_scalar()const = 0;
      virtual std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) = 0;
+    [[nodiscard]] virtual std::string to_print() const = 0;
+    [[nodiscard]] virtual bool is_equal(const hdl_type &other) const = 0;
 };
 
 #endif //ANANKE_HDL_TYPE_BASE_HPP

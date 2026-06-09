@@ -70,9 +70,9 @@ bool operator==(const HDL_instance &lhs, const HDL_instance &rhs) {
     ret &= lhs.groups == rhs.groups;
     ret &= lhs.loop_specs == rhs.loop_specs;
 
-    if(lhs.array_quantifier != nullptr && lhs.array_quantifier != nullptr){
+    if(lhs.array_quantifier != nullptr && rhs.array_quantifier != nullptr){
         ret &= *lhs.array_quantifier == *rhs.array_quantifier;
-    } else if(lhs.array_quantifier == nullptr && lhs.array_quantifier == nullptr){
+    } else if(lhs.array_quantifier == nullptr && rhs.array_quantifier == nullptr){
         ret &= true;
     } else {
         ret = false;

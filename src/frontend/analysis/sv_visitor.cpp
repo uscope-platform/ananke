@@ -97,6 +97,7 @@ void sv_visitor::exitModule_or_interface_or_program_or_udp_instantiation(sv2017:
 void sv_visitor::enterName_of_instance(sv2017::Name_of_instanceContext *ctx) {
     if(!ctx->unpacked_dimension().empty()){
         params_factory.start_param_assignment();
+        params_factory.set_type(std::make_shared<HDL_simple_type>());
         params_factory.new_parameter("instance_array_qualifier");
     }
 }
@@ -167,7 +168,19 @@ void sv_visitor::exitStruct_union_member(sv2017::Struct_union_memberContext *ctx
 
 void sv_visitor::enterData_type_primitive(sv2017::Data_type_primitiveContext *ctx) {
     if (ctx->integer_type()) {
-        type_engine.set_type(ctx->integer_type()->getText());
+        auto it = ctx->integer_type();
+        std::string base_type;
+        if (it->integer_vector_type()) {
+            base_type = it->integer_vector_type()->getText();
+        } else if (it->integer_atom_type()) {
+            base_type = it->integer_atom_type()->getText();
+        } else {
+            base_type = it->getText();
+        }
+        type_engine.set_type(base_type);
+        if (ctx->signing()) {
+            type_engine.set_member_signed(ctx->signing()->getText() == "signed");
+        }
     }
 }
 
@@ -332,7 +345,7 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
 void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
     if (ctx->list_of_type_assignments() ) return;
     in_param_declaration = true;
-    type_engine.set_base_type(HDL_simple_type{});
+    type_engine.set_base_type(std::make_shared<HDL_simple_type>());
     if (!ctx->list_of_param_assignments()) {
         throw std::runtime_error("Encountered non existent list of parameter declarations");
     }
@@ -356,7 +369,7 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
 }
 
 void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
-    params_factory.set_type(HDL_simple_type{});
+    params_factory.set_type(std::make_shared<HDL_simple_type>() );
     in_param_declaration = false;
 }
 
@@ -552,7 +565,6 @@ void sv_visitor::enterNamed_parameter_assignment(sv2017::Named_parameter_assignm
 void sv_visitor::exitNamed_parameter_assignment(sv2017::Named_parameter_assignmentContext *ctx) {
     params_factory.stop_param_override();
     auto param = params_factory.get_parameter();
-    bool scalar_flag = param->get_type().is_scalar();
     auto t = type_engine.finalize_dimensions();
     param->set_type(t);
     if(deps_factory.is_valid_dependency()){
@@ -593,8 +605,10 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
     }
     if (!in_class) {
         auto param = params_factory.get_parameter();
-        bool scalar_flag = param->get_type().is_scalar();
         auto t = type_engine.finalize_type();
+        if (!t) {
+            t = Type_engine::create_primitive_type("implicit");
+        }
         param->set_type(t);
         if(modules_factory.is_current_valid()){
             modules_factory.add_parameter(param);
@@ -830,7 +844,7 @@ void sv_visitor::exitData_type_or_implicit(sv2017::Data_type_or_implicitContext 
 
 void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
     in_param_declaration = true;
-    type_engine.set_base_type(HDL_simple_type{});
+    type_engine.set_base_type(std::make_shared<HDL_simple_type>() );
     if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type()) {
         std::string type;
         if (ctx->data_type_or_implicit()->data_type()->data_type_primitive())
@@ -852,7 +866,7 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
 }
 
 void sv_visitor::exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
-    params_factory.set_type(HDL_simple_type{});
+    params_factory.set_type(std::make_shared<HDL_simple_type>() );
     in_param_declaration = false;
 }
 

@@ -17,40 +17,36 @@
 #define ANANKE_HDL_STRUCT_HPP
 
 #include <string>
+#include <sstream>
 
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 
 struct struct_member {
     std::string name;
-    HDL_simple_type type;
+    std::shared_ptr<hdl_type> type;
 
     friend bool operator==(const struct_member &lhs, const struct_member &rhs) {
         bool ret = true;
-        ret &= lhs.type == rhs.type;
+        if (lhs.type && rhs.type) {
+            ret &= lhs.type->is_equal(*rhs.type);
+        } else {
+            ret &= lhs.type == rhs.type;
+        }
         ret &= lhs.name == rhs.name;
         return ret;
     }
 
+    [[nodiscard]] std::string to_print() const{
+        std::stringstream ss;
+        PrintTo(*this, &ss);
+        return ss.str();
+    }
+
     friend void PrintTo(const struct_member& m, std::ostream* os) {
         *os << "struct_member { name: " << m.name
-            << ", type: { scalar: " << (m.type.is_scalar() ? "true" : "false");
-        auto packed = m.type.get_packed_dimensions();
-        if (!packed.empty()) {
-            *os << ", packed: [";
-            for (size_t i = 0; i < packed.size(); ++i) {
-                if (i > 0) *os << ", ";
-                *os << packed[i];
-            }
-            *os << "]";
-        }
-        auto unpacked = m.type.get_unpacked_dimensions();
-        if (!unpacked.empty()) {
-            *os << ", unpacked: [";
-            for (size_t i = 0; i < unpacked.size(); ++i) {
-                if (i > 0) *os << ", ";
-                *os << unpacked[i];
-            }
-            *os << "]";
+            << ", type: {";
+        if (m.type) {
+            *os << m.type->to_print();
         }
         *os << " } }";
     }
@@ -63,6 +59,7 @@ struct struct_member {
 
 class HDL_struct : public hdl_type{
 public:
+    virtual ~HDL_struct() = default;
     bool packed = false;
     std::vector<struct_member> member;
 
@@ -72,6 +69,15 @@ public:
     };
     [[nodiscard]] bool is_scalar()const override {return packed;}
     std::set<qualified_identifier> get_dependencies() override;
+
+    [[nodiscard]] std::string to_print() const override;
+
+    [[nodiscard]] bool is_equal(const hdl_type &other) const override {
+        if (auto* o = dynamic_cast<const HDL_struct*>(&other)) {
+            return *this == *o;
+        }
+        return false;
+    }
 
     friend bool operator==(const HDL_struct &lhs, const HDL_struct &rhs)  {
         bool ret = true;

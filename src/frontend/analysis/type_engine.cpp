@@ -32,8 +32,34 @@ void Type_engine::close_composite_member(const std::string &name) {
     auto  [packed, unpacked] = r_factory.get_dimensions();
     r_factory.clear();
     current_struct.member.back().name = name;
-    current_struct.member.back().type.set_packed_dimensions(packed);
-    current_struct.member.back().type.set_unpacked_dimensions(unpacked);
+    if (current_struct.member.back().type) {
+        auto &old = current_struct.member.back().type->as<HDL_simple_type>();
+        HDL_simple_type t;
+        t.set_signed(old.get_signed());
+        t.set_implicit(old.get_implicit());
+        t.set_real(old.get_real());
+        t.set_packed_dimensions(packed);
+        t.set_unpacked_dimensions(unpacked);
+        if (packed.empty()) {
+            t.set_packed_dimensions(old.get_packed_dimensions());
+        }
+        if (unpacked.empty()) {
+            t.set_unpacked_dimensions(old.get_unpacked_dimensions());
+        }
+        current_struct.member.back().type = std::make_shared<HDL_simple_type>(t);
+    } else {
+        HDL_simple_type t;
+        t.set_packed_dimensions(packed);
+        t.set_unpacked_dimensions(unpacked);
+        current_struct.member.back().type = std::make_shared<HDL_simple_type>(t);
+    }
+}
+
+void Type_engine::set_member_signed(bool s) {
+    if (kind != simple_type && !current_struct.member.empty() && current_struct.member.back().type) {
+        auto &t = current_struct.member.back().type->as<HDL_simple_type>();
+        t.set_signed(s);
+    }
 }
 
 std::shared_ptr<hdl_type> Type_engine::stop_composite_type_declaration() {
@@ -116,37 +142,38 @@ void Type_engine::stop_expression() {
     }
 }
 
-void Type_engine::set_base_type(const HDL_simple_type &t) {
+void Type_engine::set_base_type(const std::shared_ptr<hdl_type>  &t) {
     current_type = t;
 }
 
-HDL_simple_type Type_engine::finalize_type() {
+std::shared_ptr<hdl_type> Type_engine::finalize_type() {
+    if (!current_type) return nullptr;
+    auto result = current_type->as<HDL_simple_type>();
     auto [packed, unpacked] = r_factory.get_dimensions();
-    auto result = current_type;
     result.set_packed_dimensions(packed);
     result.set_unpacked_dimensions(unpacked);
     r_factory.clear();
-    return result;
+    return std::make_shared<HDL_simple_type>(result);
 }
 
-HDL_simple_type Type_engine::finalize_dimensions() {
+std::shared_ptr<hdl_type> Type_engine::finalize_dimensions() {
     auto [packed, unpacked] = r_factory.get_dimensions();
     HDL_simple_type result;
     result.set_packed_dimensions(packed);
     result.set_unpacked_dimensions(unpacked);
     r_factory.clear();
-    return result;
+    return std::make_shared<HDL_simple_type>(result);
 }
 
 bool Type_engine::has_type(const std::string &name) const {
     return type_registry.contains(name);
 }
 
-HDL_simple_type Type_engine::get_type(const std::string &name) const {
-    return type_registry.at(name);
+std::shared_ptr<hdl_type> Type_engine::get_type(const std::string &name) const {
+    return std::make_shared<HDL_simple_type>(type_registry.at(name));
 }
 
-HDL_simple_type Type_engine::create_primitive_type(const std::string &type_name) {
+std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &type_name) {
     HDL_simple_type t;
     if (type_name == "implicit") {
         t.set_implicit(true);
@@ -218,10 +245,10 @@ HDL_simple_type Type_engine::create_primitive_type(const std::string &type_name)
             }
         });
     }
-    return t;
+    return std::make_shared<HDL_simple_type>(t);
 }
 
-HDL_simple_type Type_engine::resolve_type(const std::string &type_name) {
+std::shared_ptr<hdl_type> Type_engine::resolve_type(const std::string &type_name) {
     if (has_type(type_name)) {
         return get_type(type_name);
     }

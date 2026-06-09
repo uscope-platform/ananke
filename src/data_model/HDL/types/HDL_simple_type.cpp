@@ -14,6 +14,8 @@
 //  limitations under the License.
 
 
+#include <sstream>
+
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 
 void HDL_simple_type::add_dimension(const dimension_t &d) {
@@ -67,5 +69,26 @@ std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<quali
         result.packed_sizes.push_back(diff.get_value());
     }
 
+    return result;
+}
+
+std::string HDL_simple_type::to_print() const {
+    std::string result;
+    if (is_implicit || is_signed || is_real || !is_scalar()) {
+        result += " (";
+        bool first = true;
+        if (is_implicit) { result += "implicit"; first = false; }
+        if (is_signed) { if (!first) result += ","; result += "signed"; first = false; }
+        if (is_real) { if (!first) result += ","; result += "real"; first = false; }
+        if (!is_scalar()) { if (!first) result += ","; result += "nonscalar"; }
+        result += ")";
+    }
+
+    for(const auto &item : packed_dimensions){
+        result += "[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
+    }
+    for(const auto &item : unpacked_dimensions){
+        result += "[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
+    }
     return result;
 }

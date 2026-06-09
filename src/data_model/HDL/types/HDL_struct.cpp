@@ -14,3 +14,30 @@
 //  limitations under the License.
 
 #include "data_model/HDL/types/HDL_struct.hpp"
+
+std::set<qualified_identifier> HDL_struct::get_dependencies() {
+    std::set<qualified_identifier> result;
+    for (auto &m: member) {
+        if (m.type) {
+            auto deps = m.type->get_dependencies();
+            result.insert(deps.begin(), deps.end());
+        }
+    }
+    return result;
+}
+
+std::string HDL_struct::to_print() const {
+    std::string result;
+    result += " (";
+    result += packed ? "packed" : "unpacked";
+    result += ") members: [";
+    for (size_t i = 0; i < member.size(); ++i) {
+        if (i > 0) result += ", ";
+        result += member[i].name + ": ";
+        if (member[i].type) {
+            result += member[i].type->to_print();
+        }
+    }
+    result += "]";
+    return result;
+}

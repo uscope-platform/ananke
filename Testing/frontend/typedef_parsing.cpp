@@ -71,9 +71,13 @@ TEST(typedef_parsing, basic_struct_definition) {
     check_struct.packed = true;
     struct_member m;
     m.name = "field_1";
-    m.type = Type_engine::create_primitive_type("int");
+    auto t1 = Type_engine::create_primitive_type("int");
+    t1->as<HDL_simple_type>().set_signed(false);
+    m.type = t1;
     check_struct.member.emplace_back(m);
     m.name = "field_2";
+    auto t2 = Type_engine::create_primitive_type("int");
+    m.type = t2;
     check_struct.member.emplace_back(m);
     auto result_struct = structs.at("test_struct");
     EXPECT_EQ(check_struct,result_struct->as<HDL_struct>());
@@ -102,10 +106,13 @@ TEST(typedef_parsing, bits_in_struct_definition) {
     check_struct.packed = true;
     struct_member m;
     m.name = "field_1";
-    m.type = Type_engine::create_primitive_type("int");
+    auto t1 = Type_engine::create_primitive_type("int");
+    t1->as<HDL_simple_type>().set_signed(false);
+    m.type = t1;
     check_struct.member.emplace_back(m);
     m = {};
     m.name = "field_2";
+    m.type = std::make_shared<HDL_simple_type>();
     check_struct.member.emplace_back(m);
     auto result_struct = structs.at("test_struct");
     EXPECT_EQ(check_struct,result_struct->as<HDL_struct>());
@@ -135,12 +142,14 @@ TEST(typedef_parsing, unpacked_array_of_packed_struct_definition) {
     check_struct.packed = true;
     struct_member m;
     m.name = "field_1";
-    m.type.set_packed_dimensions({
+    HDL_simple_type t;
+    t.set_packed_dimensions({
         {Expression(Expression_component(3, 2)), Expression(Expression_component(0, 1)), true}
     });
-    m.type.set_unpacked_dimensions({
-    {Expression(Expression_component(1, 1)), Expression(Expression_component(0, 1)), false}
-});
+    t.set_unpacked_dimensions({
+        {Expression(Expression_component(1, 1)), Expression(Expression_component(0, 1)), false}
+    });
+    m.type = std::make_shared<HDL_simple_type>(t);
     check_struct.member.emplace_back(m);
     auto result_struct = structs.at("test_struct");
     EXPECT_EQ(check_struct,result_struct->as<HDL_struct>());

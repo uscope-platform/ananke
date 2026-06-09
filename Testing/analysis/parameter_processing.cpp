@@ -269,13 +269,13 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p->set_raw_value(std::make_shared<Expression>(Expression(ec)));
     p->set_name("param_2");
     HDL_simple_type t;
-    t = Type_engine::create_primitive_type("implicit");
+    t = Type_engine::create_primitive_type("implicit")->as<HDL_simple_type>();
     t.add_dimension({
         Expression(Expression_component("1", Expression_component::number)),
         Expression(Expression_component("0", Expression_component::number)),
         false
     });
-    p->set_type(t);
+    p->set_type(std::make_shared<HDL_simple_type>(t));
     p->set_value(av);
     check_params.insert(p);
 
@@ -1346,7 +1346,7 @@ TEST(parameter_processing, init_list_override) {
     c.add_component(std::make_shared<Expression>(Expression(Expression_component(1136656384, 0))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component(1136656448, 0))));
 
-    p.set_type(param_type);
+    p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(c));
 
     mdarray<hdl_integer> av;
@@ -1369,7 +1369,7 @@ TEST(parameter_processing, init_list_override) {
     {Expression_component("31", Expression_component::number),},
     {Expression_component("0", Expression_component::number)},
     true});
-    p.set_type(param_type_2);
+    p.set_type(std::make_shared<HDL_simple_type>(param_type_2));
     p.set_raw_value(std::make_shared<Replication>(r));
 
     av.set_1d_slice({0,0}, {64,64});
