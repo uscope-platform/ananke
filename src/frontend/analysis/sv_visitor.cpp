@@ -147,11 +147,9 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
             auto name = ctx->type_declaration()->identifier(0)->getText();
         if (type_engine.is_simple_type()) {
             modules_factory.add_typedef(name, type_engine.stop_type_declaration(name));
-        } else {
-            auto s = type_engine.stop_composite_type_declaration();
-            modules_factory.add_struct_def(name, type_engine.stop_composite_type_declaration());
+        } else {;
+            modules_factory.add_struct_def(name, type_engine.stop_composite_type_declaration(name));
         }
-
     } else {
 
     }

@@ -580,7 +580,6 @@ TEST(parameter_extraction, strings_array) {
     auto parameters = resource.get_parameters();
 
     Parameters_map check_params;
-    Concatenation c;
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("N_CORES");
     p->set_type(Type_engine::create_primitive_type("implicit"));
@@ -600,6 +599,7 @@ TEST(parameter_extraction, strings_array) {
     Expression(Expression_component("0", Expression_component::number)),
         false
     });
+    Concatenation c;
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("\"FILE\"", Expression_component::string))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("\"FILE\"", Expression_component::string))));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("\"FILE\"", Expression_component::string))));
@@ -4024,7 +4024,7 @@ TEST(parameter_extraction, struct_typed_parameter) {
     auto test_pattern = R"(
         module test_mod #()();
             typedef struct packed {
-                int unsigned field_a;
+                int field_a;
                 int field_b;
             } my_struct_t;
             parameter my_struct_t struct_param = '{42, 17};
@@ -4038,5 +4038,24 @@ TEST(parameter_extraction, struct_typed_parameter) {
     ASSERT_TRUE(parameters.contains("struct_param"));
 
     auto p = parameters.get("struct_param");
-    EXPECT_TRUE(false);
+    HDL_struct_type check_struct;
+    check_struct.packed = true;
+    struct_member m;
+    m.name = "field_a";
+    auto t1 = Type_engine::create_primitive_type("int");
+    m.type = t1;
+    check_struct.member.emplace_back(m);
+    m.name = "field_b";
+    auto t2 = Type_engine::create_primitive_type("int");
+    m.type = t2;
+    check_struct.member.emplace_back(m);
+
+    ASSERT_TRUE(p->get_type()->is<HDL_struct_type>());
+    EXPECT_EQ(check_struct, p->get_type()->as<HDL_struct_type>());
+
+    Concatenation c;
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("42", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("17", Expression_component::number))));
+    EXPECT_TRUE(p->get_expression()->is_concatenation());
+    EXPECT_EQ(p->get_expression()->as<Concatenation>(), c);
 }

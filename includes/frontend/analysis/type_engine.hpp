@@ -39,7 +39,7 @@ public:
     void start_composite_type_declaration(type_kind kind);
     void open_composite_member();
     void close_composite_member(const std::string &name);
-    std::shared_ptr<hdl_type> stop_composite_type_declaration();
+    std::shared_ptr<hdl_type> stop_composite_type_declaration(const std::string &name);
 
     void start_simple_type_declaration();
     std::shared_ptr<hdl_type> stop_type_declaration(const std::string &name);
@@ -77,7 +77,7 @@ public:
 private:
     expressions_factory expr_factory;
     ranges_factory r_factory;
-    std::map<std::string, HDL_simple_type> type_registry;
+    std::map<std::string, std::shared_ptr<hdl_type>> type_registry;
     type_kind kind = simple_type;
     HDL_struct_type current_struct;
     std::shared_ptr<hdl_type> current_type;

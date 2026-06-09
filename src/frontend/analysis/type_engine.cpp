@@ -62,9 +62,10 @@ void Type_engine::set_member_signed(bool s) {
     }
 }
 
-std::shared_ptr<hdl_type> Type_engine::stop_composite_type_declaration() {
+std::shared_ptr<hdl_type> Type_engine::stop_composite_type_declaration(const std::string &name) {
     kind = simple_type;
-    return std::make_shared<HDL_struct_type>(current_struct);
+    type_registry[name] = std::make_shared<HDL_struct_type>(current_struct);
+    return type_registry.at(name);
 }
 
 void Type_engine::set_type(const std::string &type) {
@@ -90,8 +91,8 @@ std::shared_ptr<hdl_type> Type_engine::stop_type_declaration(const std::string &
     t.set_packed_dimensions(packed);
     t.set_unpacked_dimensions(unpacked);
     r_factory.clear();
-    type_registry[name] = t;
-    return std::make_shared<HDL_simple_type>(t);
+    type_registry[name] = std::make_shared<HDL_simple_type>(t);
+    return type_registry.at(name);
 }
 
 
@@ -148,12 +149,17 @@ void Type_engine::set_base_type(const std::shared_ptr<hdl_type>  &t) {
 
 std::shared_ptr<hdl_type> Type_engine::finalize_type() {
     if (!current_type) return nullptr;
-    auto result = current_type->as<HDL_simple_type>();
-    auto [packed, unpacked] = r_factory.get_dimensions();
-    result.set_packed_dimensions(packed);
-    result.set_unpacked_dimensions(unpacked);
-    r_factory.clear();
-    return std::make_shared<HDL_simple_type>(result);
+    if (current_type->is<HDL_simple_type>()) {
+        auto result = current_type->as<HDL_simple_type>();
+        auto [packed, unpacked] = r_factory.get_dimensions();
+        result.set_packed_dimensions(packed);
+        result.set_unpacked_dimensions(unpacked);
+        r_factory.clear();
+        return std::make_shared<HDL_simple_type>(result);
+    } else {
+        return current_type;
+    }
+
 }
 
 std::shared_ptr<hdl_type> Type_engine::finalize_dimensions() {
@@ -170,7 +176,7 @@ bool Type_engine::has_type(const std::string &name) const {
 }
 
 std::shared_ptr<hdl_type> Type_engine::get_type(const std::string &name) const {
-    return std::make_shared<HDL_simple_type>(type_registry.at(name));
+    return type_registry.at(name);
 }
 
 std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &type_name) {
