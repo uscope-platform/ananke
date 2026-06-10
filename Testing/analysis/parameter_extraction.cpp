@@ -4160,3 +4160,68 @@ TEST(parameter_extraction, unpacked_struct_access_initialization) {
 
 }
 
+TEST(parameter_extraction, packed_struct_parametrized_member_width) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter WIDTH = 8
+        )();
+            typedef struct packed {
+                int field_a;
+                logic [WIDTH-1:0] field_b;
+            } my_struct_t;
+            parameter my_struct_t s = '{42, 17};
+            parameter integer extracted = s.field_b;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+
+    qualified_identifier s_id = {"","", "s"};
+    ASSERT_TRUE(defaults.contains(s_id));
+    EXPECT_EQ(defaults[s_id], static_cast<uint64_t>(10769));
+
+    qualified_identifier ext_id = {"","", "extracted"};
+    ASSERT_TRUE(defaults.contains(ext_id));
+    EXPECT_EQ(defaults[ext_id], 17);
+}
+
+TEST(parameter_extraction, packed_struct_parametrized_member_width_wide) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter WIDTH = 16
+        )();
+            typedef struct packed {
+                logic [WIDTH-1:0] field_a;
+                logic [WIDTH-1:0] field_b;
+            } my_struct_t;
+            parameter my_struct_t s = '{1000, 50000};
+            parameter integer extracted = s.field_a;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+
+    qualified_identifier s_id = {"","", "s"};
+    ASSERT_TRUE(defaults.contains(s_id));
+    uint64_t expected = 65586000;
+    EXPECT_EQ(defaults[s_id], expected);
+
+    qualified_identifier ext_id = {"","", "extracted"};
+    ASSERT_TRUE(defaults.contains(ext_id));
+    EXPECT_EQ(defaults[ext_id], 1000);
+
+    // Verify struct field entries in solved parameters
+    qualified_identifier fa_id = {"","s", "field_a"};
+    ASSERT_TRUE(defaults.contains(fa_id));
+    EXPECT_EQ(defaults[fa_id], 1000);
+
+    qualified_identifier fb_id = {"","s", "field_b"};
+    ASSERT_TRUE(defaults.contains(fb_id));
+    EXPECT_EQ(defaults[fb_id], 50000);
+}
