@@ -23,6 +23,7 @@
 #include "analysis/parameter_solver.hpp"
 #include "data_model/HDL/parameters/components/Replication.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
+#include "data_model/HDL/types/HDL_struct_type.hpp"
 
 
 TEST(parameter_processing, override_after_fatal) {
@@ -1953,4 +1954,149 @@ TEST(parameter_processing, override_dep_on_local_param_chain) {
     EXPECT_TRUE(dependency_parameters.contains("P"));
     auto p_val = dependency_parameters.get("P")->get_numeric_value();
     EXPECT_EQ(p_val.value(), 10);
+}
+
+TEST(parameter_processing, packed_struct_override) {
+    auto test_pattern = R"(
+
+    module child #(
+        parameter integer W = 8
+    )();
+        typedef struct packed {
+            int field_a;
+            int field_b;
+        } my_struct_t;
+        parameter my_struct_t s = '{1, 2};
+    endmodule
+
+    module top #()();
+        child #(.s('{100, 200})) inst();
+    endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+
+    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
+    EXPECT_TRUE(dependency_parameters.contains("s"));
+    auto val = dependency_parameters.get("s")->get_numeric_value();
+    ASSERT_TRUE(val.has_value());
+    // packed '{100, 200} => field_a=100 (MSB), field_b=200 (LSB) => (100 << 32) | 200
+    EXPECT_EQ(val.value().get_value(), 429496729800ULL);
+}
+
+TEST(parameter_processing, packed_struct_field_override_child_param) {
+    auto test_pattern = R"(
+
+    module child #(
+        parameter integer field_val = 0
+    )();
+    endmodule
+
+    module top #()();
+        typedef struct packed {
+            int field_a;
+            int field_b;
+        } my_struct_t;
+        parameter my_struct_t s = '{42, 17};
+        child #(.field_val(s.field_b)) inst();
+    endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+
+    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
+    EXPECT_TRUE(dependency_parameters.contains("field_val"));
+    auto val = dependency_parameters.get("field_val")->get_numeric_value();
+    ASSERT_TRUE(val.has_value());
+    EXPECT_EQ(val.value().get_value(), 17);
+}
+
+TEST(parameter_processing, unpacked_struct_field_override_child_param) {
+    auto test_pattern = R"(
+
+    module child #(
+        parameter integer field_val = 0
+    )();
+    endmodule
+
+    module top #()();
+        typedef struct {
+            int field_a;
+            int field_b;
+        } my_struct_t;
+        parameter my_struct_t s = '{42, 17};
+        child #(.field_val(s.field_b)) inst();
+    endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+
+    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
+    EXPECT_TRUE(dependency_parameters.contains("field_val"));
+    auto val = dependency_parameters.get("field_val")->get_numeric_value();
+    ASSERT_TRUE(val.has_value());
+    EXPECT_EQ(val.value().get_value(), 17);
+}
+
+TEST(parameter_processing, unpacked_struct_override) {
+    auto test_pattern = R"(
+
+    module child ();
+        typedef struct {
+            int field_a;
+            int field_b;
+        } my_struct_t;
+        parameter my_struct_t s = '{1, 2};
+    endmodule
+
+    module top #()();
+        child #(.s('{100, 200})) inst();
+    endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+
+    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
+    EXPECT_TRUE(dependency_parameters.contains("s"));
+    auto val = dependency_parameters.get("s")->get_int_array_value();
+    ASSERT_TRUE(val.has_value());
+    // unpacked struct => array, last member at index 0
+    EXPECT_EQ(val->get_value({0}), hdl_integer(200));
+    EXPECT_EQ(val->get_value({1}), hdl_integer(100));
 }
