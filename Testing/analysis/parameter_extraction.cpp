@@ -4129,7 +4129,9 @@ TEST(parameter_extraction, struct_unpacked_parameter) {
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {17, 42});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "struct_param"}, array_value}
+        {{"","", "struct_param"}, array_value},
+        {{"","struct_param", "field_a"}, hdl_integer(42)},
+        {{"","struct_param", "field_b"}, hdl_integer(17)}
     };
     EXPECT_EQ(defaults, check_defaults);
 }

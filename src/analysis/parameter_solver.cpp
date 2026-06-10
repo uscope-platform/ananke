@@ -72,7 +72,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
             ctx[next.value()] = res.value();
             solved_parameters[next.value()] = res.value();
 
-            extract_struct_fields(param, res.value(), next.value(), ctx);
+            auto struct_fields = extract_struct_fields(param, res.value(), next.value(), ctx);
+            ctx.insert(struct_fields.begin(), struct_fields.end());
+            solved_parameters.insert(struct_fields.begin(), struct_fields.end());
         } else {
             spdlog::warn("The parameter {} can't be solved, defaulting to 0",  next.value().name);
             ctx[next.value()] = 0;
@@ -252,14 +254,15 @@ std::string parameter_solver::get_full_path(const std::shared_ptr<HDL_instance_A
     return res;
 }
 
-void parameter_solver::extract_struct_fields(
+std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_struct_fields(
     const std::shared_ptr<HDL_parameter> &param,
     const resolved_parameter &res,
     const qualified_identifier &id,
-    std::map<qualified_identifier, resolved_parameter> &ctx
+    const std::map<qualified_identifier, resolved_parameter> &ctx
 ) {
+    std::map<qualified_identifier, resolved_parameter> fields;
     auto type = param->get_type();
-    if (!type || !type->is<HDL_struct_type>()) return;
+    if (!type || !type->is<HDL_struct_type>()) return fields;
     auto &st = type->as<HDL_struct_type>();
 
     if (res.is_integer()) {
@@ -272,7 +275,7 @@ void parameter_solver::extract_struct_fields(
                 for (auto &ps : type_info->struct_sizes[i].packed_sizes) w *= ps;
                 uint64_t mask = (w >= 64) ? ~0ULL : (1ULL << w) - 1;
                 hdl_integer field_val = static_cast<uint64_t>((raw >> offset) & mask);
-                ctx[qualified_identifier{"", id.name, st.member[i].name}] = field_val;
+                fields[qualified_identifier{"", id.name, st.member[i].name}] = field_val;
                 offset += w;
             }
         }
@@ -282,8 +285,9 @@ void parameter_solver::extract_struct_fields(
             int arr_idx = st.member.size() - 1 - i;
             auto field_val = arr.get_value({static_cast<int64_t>(arr_idx)});
             if (field_val) {
-                ctx[qualified_identifier{"", id.name, st.member[i].name}] = field_val.value();
+                fields[qualified_identifier{"", id.name, st.member[i].name}] = field_val.value();
             }
         }
     }
+    return fields;
 }
