@@ -33,6 +33,10 @@ public:
         content = static_cast<hdl_integer>(init_val);
         undefined = false;
     }
+    resolved_parameter(uint64_t init_val) {
+        content = static_cast<hdl_integer>(init_val);
+        undefined = false;
+    }
     resolved_parameter(hdl_integer init_val) {
         content = init_val;
         undefined = false;

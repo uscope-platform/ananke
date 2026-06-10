@@ -86,7 +86,12 @@ std::optional<resolved_parameter> Concatenation::evaluate(const std::map<qualifi
         for (int i = 0;i<concat_size; i++) {
 
             auto value_opt = components[concat_size-i-1]->evaluate(context);
-            sizes[i] = components[concat_size-i-1]->get_size();
+            if (!fields_sizes.empty()) {
+                sizes[i] = 1;
+                for (auto &ps : fields_sizes[concat_size-i-1].packed_sizes) sizes[i] *= ps;
+            } else {
+                sizes[i] = components[concat_size-i-1]->get_size();
+            }
             if (!value_opt.has_value()) return std::nullopt;
             auto raw_value = value_opt.value();
             if (!raw_value.is_integer()) throw std::runtime_error("packing concatenations of arrays is unsupported");

@@ -181,7 +181,7 @@ TEST(Initialization_list, packed_concatenation) {
 
 
     ASSERT_TRUE(res.has_value());
-    ASSERT_EQ(169, res.value().get_integer());
+    ASSERT_EQ(169, res.value().get_integer().get_value());
 
 }
 

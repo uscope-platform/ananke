@@ -107,6 +107,7 @@ public:
     std::string print_index(const std::vector<Expression> &index)const;
 
     int64_t get_binary_size() const{return binary_size;}
+    void set_binary_size(int64_t s) {binary_size = s;}
 
     template<class Archive>
     void serialize( Archive & ar ) {

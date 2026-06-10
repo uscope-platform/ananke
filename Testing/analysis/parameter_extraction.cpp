@@ -4060,5 +4060,6 @@ TEST(parameter_extraction, struct_typed_parameter) {
     EXPECT_EQ(p->get_expression()->as<Concatenation>(), c);
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
-    EXPECT_TRUE(false);
+    qualified_identifier check_id = {"","", "struct_param"};
+    EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(180388626449));
 }
