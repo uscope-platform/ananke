@@ -72,33 +72,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
             ctx[next.value()] = res.value();
             solved_parameters[next.value()] = res.value();
 
-            auto type = param->get_type();
-            if (type && type->is<HDL_struct_type>() && res->is_integer()) {
-                auto &st = type->as<HDL_struct_type>();
-                auto type_info = st.evaluate_type(ctx);
-                if (type_info) {
-                    uint64_t raw = res->get_integer().get_value();
-                    uint64_t offset = 0;
-                    for (int i = st.member.size() - 1; i >= 0; i--) {
-                        uint64_t w = 1;
-                        for (auto &ps : type_info->struct_sizes[i].packed_sizes) w *= ps;
-                        uint64_t mask = (w >= 64) ? ~0ULL : (1ULL << w) - 1;
-                        hdl_integer field_val = static_cast<uint64_t>((raw >> offset) & mask);
-                        ctx[qualified_identifier{"", next.value().name, st.member[i].name}] = field_val;
-                        offset += w;
-                    }
-                }
-            } else if (type && type->is<HDL_struct_type>() && res->is_int_array()) {
-                auto &st = type->as<HDL_struct_type>();
-                auto arr = res->get_int_array();
-                for (size_t i = 0; i < st.member.size(); i++) {
-                    int arr_idx = st.member.size() - 1 - i;
-                    auto field_val = arr.get_value({static_cast<int64_t>(arr_idx)});
-                    if (field_val) {
-                        ctx[qualified_identifier{"", next.value().name, st.member[i].name}] = field_val.value();
-                    }
-                }
-            }
+            extract_struct_fields(param, res.value(), next.value(), ctx);
         } else {
             spdlog::warn("The parameter {} can't be solved, defaulting to 0",  next.value().name);
             ctx[next.value()] = 0;
@@ -276,4 +250,40 @@ std::string parameter_solver::get_full_path(const std::shared_ptr<HDL_instance_A
     res.pop_back();
 
     return res;
+}
+
+void parameter_solver::extract_struct_fields(
+    const std::shared_ptr<HDL_parameter> &param,
+    const resolved_parameter &res,
+    const qualified_identifier &id,
+    std::map<qualified_identifier, resolved_parameter> &ctx
+) {
+    auto type = param->get_type();
+    if (!type || !type->is<HDL_struct_type>()) return;
+    auto &st = type->as<HDL_struct_type>();
+
+    if (res.is_integer()) {
+        auto type_info = st.evaluate_type(ctx);
+        if (type_info) {
+            uint64_t raw = res.get_integer().get_value();
+            uint64_t offset = 0;
+            for (int i = st.member.size() - 1; i >= 0; i--) {
+                uint64_t w = 1;
+                for (auto &ps : type_info->struct_sizes[i].packed_sizes) w *= ps;
+                uint64_t mask = (w >= 64) ? ~0ULL : (1ULL << w) - 1;
+                hdl_integer field_val = static_cast<uint64_t>((raw >> offset) & mask);
+                ctx[qualified_identifier{"", id.name, st.member[i].name}] = field_val;
+                offset += w;
+            }
+        }
+    } else if (res.is_int_array()) {
+        auto arr = res.get_int_array();
+        for (size_t i = 0; i < st.member.size(); i++) {
+            int arr_idx = st.member.size() - 1 - i;
+            auto field_val = arr.get_value({static_cast<int64_t>(arr_idx)});
+            if (field_val) {
+                ctx[qualified_identifier{"", id.name, st.member[i].name}] = field_val.value();
+            }
+        }
+    }
 }

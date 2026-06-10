@@ -69,6 +69,12 @@ private:
         work_order &work,
         const std::shared_ptr<data_store> &d_store
     );
+    static void extract_struct_fields(
+        const std::shared_ptr<HDL_parameter> &param,
+        const resolved_parameter &res,
+        const qualified_identifier &id,
+        std::map<qualified_identifier, resolved_parameter> &ctx
+    );
 };
 
 
