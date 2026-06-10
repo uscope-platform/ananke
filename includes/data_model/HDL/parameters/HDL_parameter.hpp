@@ -98,8 +98,7 @@ public:
     void set_raw_value(const std::shared_ptr<Parameter_value_base> &e) { raw_value = e; }
     void add_component(const Expression_component &component);
     std::shared_ptr<Parameter_value_base> get_expression() {
-        if (type && type->is_scalar()) return raw_value;
-        throw std::runtime_error("A scalar parameter has been initialized with an array");
+        return raw_value;
     }
     void clear_expression() {
         if (type && type->is_scalar()) raw_value = std::make_shared<Expression>();

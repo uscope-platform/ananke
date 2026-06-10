@@ -4065,7 +4065,7 @@ TEST(parameter_extraction, struct_typed_parameter) {
 }
 
 
-TEST(parameter_extraction, struct_access_initialization) {
+TEST(parameter_extraction, packed_struct_access_initialization) {
     auto test_pattern = R"(
         module test_mod #()();
             typedef struct packed {
@@ -4126,7 +4126,35 @@ TEST(parameter_extraction, struct_unpacked_parameter) {
     EXPECT_EQ(p->get_expression()->as<Concatenation>(), c);
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
-    qualified_identifier check_id = {"","", "struct_param"};
-    EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(180388626449));
+    mdarray<hdl_integer> array_value;
+    array_value.set_1d_slice({0, 0}, {17, 42});
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {{"","", "struct_param"}, array_value}
+    };
+    EXPECT_EQ(defaults, check_defaults);
+}
+
+
+
+
+TEST(parameter_extraction, unpacked_struct_access_initialization) {
+    auto test_pattern = R"(
+        module test_mod #()();
+            typedef struct {
+                int field_a;
+                int field_b;
+            } my_struct_t;
+            parameter my_struct_t struct_param = '{12, 32};
+            parameter integer struct_access_param = struct_param.field_b;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    qualified_identifier check_id = {"","", "struct_access_param"};
+    EXPECT_EQ(defaults[check_id], 32);
+
 }
 

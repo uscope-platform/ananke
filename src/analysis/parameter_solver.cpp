@@ -73,7 +73,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
             solved_parameters[next.value()] = res.value();
 
             auto type = param->get_type();
-            if (type && type->is<HDL_struct_type>() && type->as<HDL_struct_type>().packed && res->is_integer()) {
+            if (type && type->is<HDL_struct_type>() && res->is_integer()) {
                 auto &st = type->as<HDL_struct_type>();
                 auto type_info = st.evaluate_type(ctx);
                 if (type_info) {
@@ -86,6 +86,16 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
                         hdl_integer field_val = static_cast<uint64_t>((raw >> offset) & mask);
                         ctx[qualified_identifier{"", next.value().name, st.member[i].name}] = field_val;
                         offset += w;
+                    }
+                }
+            } else if (type && type->is<HDL_struct_type>() && res->is_int_array()) {
+                auto &st = type->as<HDL_struct_type>();
+                auto arr = res->get_int_array();
+                for (size_t i = 0; i < st.member.size(); i++) {
+                    int arr_idx = st.member.size() - 1 - i;
+                    auto field_val = arr.get_value({static_cast<int64_t>(arr_idx)});
+                    if (field_val) {
+                        ctx[qualified_identifier{"", next.value().name, st.member[i].name}] = field_val.value();
                     }
                 }
             }
