@@ -15,6 +15,7 @@
 
 
 #include "analysis/topological_sorter.hpp"
+#include "data_model/HDL/types/HDL_struct_type.hpp"
 
 void topological_sorter::analyze(const Parameters_map &p, const std::map<qualified_identifier, resolved_parameter> & context) {
 
@@ -26,8 +27,15 @@ void topological_sorter::analyze(const Parameters_map &p, const std::map<qualifi
         for (auto &dep:deps_list) {
 
             if (!context.contains(dep)) {
-                topo_map[dep].dependents.insert({"", "", name});
-                topo_map[{"", "", name}].dependencies.insert(dep);
+                qualified_identifier effective_dep = dep;
+                if (!dep.instance.empty() && p.contains(dep.instance)) {
+                    auto sp = p.const_get(dep.instance);
+                    if (sp && sp->get_type() && sp->get_type()->is<HDL_struct_type>()) {
+                        effective_dep = {"", "", dep.instance};
+                    }
+                }
+                topo_map[effective_dep].dependents.insert({"", "", name});
+                topo_map[{"", "", name}].dependencies.insert(effective_dep);
             }
 
         }

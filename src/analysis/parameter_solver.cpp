@@ -71,6 +71,24 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
         if (res) {
             ctx[next.value()] = res.value();
             solved_parameters[next.value()] = res.value();
+
+            auto type = param->get_type();
+            if (type && type->is<HDL_struct_type>() && type->as<HDL_struct_type>().packed && res->is_integer()) {
+                auto &st = type->as<HDL_struct_type>();
+                auto type_info = st.evaluate_type(ctx);
+                if (type_info) {
+                    uint64_t raw = res->get_integer().get_value();
+                    uint64_t offset = 0;
+                    for (int i = st.member.size() - 1; i >= 0; i--) {
+                        uint64_t w = 1;
+                        for (auto &ps : type_info->struct_sizes[i].packed_sizes) w *= ps;
+                        uint64_t mask = (w >= 64) ? ~0ULL : (1ULL << w) - 1;
+                        hdl_integer field_val = static_cast<uint64_t>((raw >> offset) & mask);
+                        ctx[qualified_identifier{"", next.value().name, st.member[i].name}] = field_val;
+                        offset += w;
+                    }
+                }
+            }
         } else {
             spdlog::warn("The parameter {} can't be solved, defaulting to 0",  next.value().name);
             ctx[next.value()] = 0;

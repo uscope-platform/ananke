@@ -4063,3 +4063,70 @@ TEST(parameter_extraction, struct_typed_parameter) {
     qualified_identifier check_id = {"","", "struct_param"};
     EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(180388626449));
 }
+
+
+TEST(parameter_extraction, struct_access_initialization) {
+    auto test_pattern = R"(
+        module test_mod #()();
+            typedef struct packed {
+                int field_a;
+                int field_b;
+            } my_struct_t;
+            parameter my_struct_t struct_param = '{42, 17};
+            parameter integer struct_access_param = struct_param.field_b;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    qualified_identifier check_id = {"","", "struct_access_param"};
+    EXPECT_EQ(defaults[check_id], 17);
+}
+
+
+
+TEST(parameter_extraction, struct_unpacked_parameter) {
+    auto test_pattern = R"(
+        module test_mod #()();
+            typedef struct {
+                int field_a;
+                int field_b;
+            } my_struct_t;
+            parameter my_struct_t struct_param = '{42, 17};
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto parameters = resource.get_parameters();
+    ASSERT_TRUE(parameters.contains("struct_param"));
+
+    auto p = parameters.get("struct_param");
+    HDL_struct_type check_struct;
+    struct_member m;
+    m.name = "field_a";
+    auto t1 = Type_engine::create_primitive_type("int");
+    m.type = t1;
+    check_struct.member.emplace_back(m);
+    m.name = "field_b";
+    auto t2 = Type_engine::create_primitive_type("int");
+    m.type = t2;
+    check_struct.member.emplace_back(m);
+
+    ASSERT_TRUE(p->get_type()->is<HDL_struct_type>());
+    EXPECT_EQ(check_struct, p->get_type()->as<HDL_struct_type>());
+
+    Concatenation c;
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("42", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Expression_component("17", Expression_component::number))));
+    EXPECT_TRUE(p->get_expression()->is_concatenation());
+    EXPECT_EQ(p->get_expression()->as<Concatenation>(), c);
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    qualified_identifier check_id = {"","", "struct_param"};
+    EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(180388626449));
+}
+
