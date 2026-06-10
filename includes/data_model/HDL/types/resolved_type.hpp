@@ -29,6 +29,7 @@ struct resolved_type {
     std::vector<uint64_t> unpacked_sizes;
     std::vector<uint64_t> packed_sizes;
     std::vector<struct_member_resolved_type> struct_sizes;
+    bool packed_struct = false;
 };
 
 #endif //ANANKE_RESOLVED_TYPE_HPP

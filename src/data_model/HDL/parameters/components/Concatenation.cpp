@@ -161,24 +161,48 @@ std::string Concatenation::print()  const{
 
 
 void Concatenation::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
-    resolved_type content_sizes;
-    unpacked_dimension = s.unpacked_sizes;
-    if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) {
-        container_size = 32;
-        packing = true;
-        return;
-    };
-    if (!s.unpacked_sizes.empty()) {
-        if (s.unpacked_sizes.size()>1) content_sizes.unpacked_sizes.insert(content_sizes.unpacked_sizes.end(), s.unpacked_sizes.begin(), s.unpacked_sizes.end()-1);
-        content_sizes.packed_sizes = s.packed_sizes;
-        container_size = s.unpacked_sizes.back();
-        packing = false;
+
+    if (s.struct_sizes.empty()) {
+
+        resolved_type content_sizes;
+        unpacked_dimension = s.unpacked_sizes;
+        if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) {
+            container_size = 32;
+            packing = true;
+            return;
+        };
+        if (!s.unpacked_sizes.empty()) {
+            if (s.unpacked_sizes.size()>1) content_sizes.unpacked_sizes.insert(content_sizes.unpacked_sizes.end(), s.unpacked_sizes.begin(), s.unpacked_sizes.end()-1);
+            content_sizes.packed_sizes = s.packed_sizes;
+            container_size = s.unpacked_sizes.back();
+            packing = false;
+        } else {
+            container_size = s.packed_sizes.back();
+            packing = true;
+            content_sizes.packed_sizes.insert(content_sizes.packed_sizes.end(), s.packed_sizes.begin(), s.packed_sizes.end());
+        }
+        for (auto &item:components) {
+            item->set_container_sizes(content_sizes, context);
+        }
     } else {
-        container_size = s.packed_sizes.back();
-        packing = true;
-        content_sizes.packed_sizes.insert(content_sizes.packed_sizes.end(), s.packed_sizes.begin(), s.packed_sizes.end());
+        packing = s.packed_struct;
+        process_struct_size(s.struct_sizes, s.packed_sizes[0], context);
     }
-    for (auto &item:components) {
-        item->set_container_sizes(content_sizes, context);
+
+
+}
+
+void Concatenation::process_struct_size(
+    const std::vector<struct_member_resolved_type> &members,
+    uint64_t size,
+    const std::map<qualified_identifier, resolved_parameter> &context
+) {
+    container_size = size;
+    fields_sizes = members;
+    for (int i = 0; i<members.size(); i++) {
+        resolved_type rt;
+        rt.packed_sizes = members[i].packed_sizes;
+        rt.unpacked_sizes = members[i].unpacked_sizes;
+        components[i]->set_container_sizes(rt, context);
     }
 }

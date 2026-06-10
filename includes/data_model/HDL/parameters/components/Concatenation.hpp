@@ -107,9 +107,14 @@ public:
 
 private:
 
+    void process_struct_size(
+        const std::vector<struct_member_resolved_type> &members,
+        uint64_t size, const std::map<qualified_identifier, resolved_parameter> &context);
+
     bool packing = false;
     bool default_initialization = false;
     std::vector<uint64_t> unpacked_dimension  = {};
+    std::vector<struct_member_resolved_type> fields_sizes;
     int64_t container_size = 0;
 
     std::vector<std::shared_ptr<Parameter_value_base>> components;
