@@ -4225,3 +4225,71 @@ TEST(parameter_extraction, packed_struct_parametrized_member_width_wide) {
     ASSERT_TRUE(defaults.contains(fb_id));
     EXPECT_EQ(defaults[fb_id], 50000);
 }
+
+
+TEST(parameter_extraction, anonymous_packed_struct_typed_parameter) {
+    auto test_pattern = R"(
+        module test_mod #()();
+            struct packed {
+                int field_a;
+                int field_b;
+            } my_struct_t;
+            parameter my_struct_t struct_param = '{42, 17};
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto parameters = resource.get_parameters();
+    ASSERT_TRUE(parameters.contains("struct_param"));
+
+    auto p = parameters.get("struct_param");
+    ASSERT_TRUE(p->get_type()->is<HDL_struct_type>());
+    auto &st = p->get_type()->as<HDL_struct_type>();
+    EXPECT_TRUE(st.packed);
+    ASSERT_EQ(st.member.size(), 2);
+    EXPECT_EQ(st.member[0].name, "field_a");
+    ASSERT_TRUE(st.member[0].type != nullptr);
+    EXPECT_EQ(st.member[1].name, "field_b");
+    ASSERT_TRUE(st.member[1].type != nullptr);
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    qualified_identifier check_id = {"","", "struct_param"};
+    EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(180388626449));
+}
+
+TEST(parameter_extraction, anonymous_unpacked_struct_parameter) {
+    auto test_pattern = R"(
+        module test_mod #()();
+            struct {
+                int field_a;
+                int field_b;
+            } my_struct_t;
+            parameter my_struct_t struct_param = '{42, 17};
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto parameters = resource.get_parameters();
+    ASSERT_TRUE(parameters.contains("struct_param"));
+
+    auto p = parameters.get("struct_param");
+    ASSERT_TRUE(p->get_type()->is<HDL_struct_type>());
+    auto &st = p->get_type()->as<HDL_struct_type>();
+    EXPECT_FALSE(st.packed);
+    ASSERT_EQ(st.member.size(), 2);
+    EXPECT_EQ(st.member[0].name, "field_a");
+    ASSERT_TRUE(st.member[0].type != nullptr);
+    EXPECT_EQ(st.member[1].name, "field_b");
+    ASSERT_TRUE(st.member[1].type != nullptr);
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    mdarray<hdl_integer> array_value;
+    array_value.set_1d_slice({0, 0}, {17, 42});
+    qualified_identifier sid = {"","", "struct_param"};
+    EXPECT_EQ(defaults[sid], array_value);
+}
+
