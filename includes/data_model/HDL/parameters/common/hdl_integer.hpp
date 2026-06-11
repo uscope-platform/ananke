@@ -116,6 +116,9 @@ namespace std {
         }
         return s;
     }
+    inline hdl_integer pow(const hdl_integer &a, const hdl_integer &b) {
+        return static_cast<int64_t>(std::pow(a.get_value(), b.get_value()));
+    }
 }
 
 

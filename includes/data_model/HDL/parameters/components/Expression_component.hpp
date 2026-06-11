@@ -144,7 +144,7 @@ private:
     static constexpr bool is_string_operator(std::string_view op) {
         constexpr std::string_view operators[] = {
             "!", "~", "*", "/", "%", "+", "-", "<<", ">>",
-            ">", ">=", "<", "<=", "==", "!=", "&", "|", "^", "~^", "^~"
+            ">", ">=", "<", "<=", "==", "!=", "&", "|", "^", "~^", "^~", "**"
         };
 
         return std::ranges::any_of(operators, [op](std::string_view valid_op) {
@@ -182,6 +182,7 @@ private:
             {"$pow", binary_operator},
             {"!", unary_operator},
             {"~", unary_operator},
+            {"**", binary_operator},
             {"*", binary_operator},
             {"/", binary_operator},
             {"&", binary_operator},

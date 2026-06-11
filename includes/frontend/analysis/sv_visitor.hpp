@@ -88,6 +88,7 @@ public:
     void exitOperator_bitwise_and(sv2017::Operator_bitwise_andContext *ctx) override;
     void exitOperator_bitwise_or(sv2017::Operator_bitwise_orContext *ctx) override;
     void exitOperator_xor(sv2017::Operator_xorContext *ctx) override;
+    void exitOperator_power(sv2017::Operator_powerContext *ctx) override;
 
     void exitPrimaryLit(sv2017::PrimaryLitContext *ctx) override;
     void enterPrimaryPath(sv2017::PrimaryPathContext *ctx) override;

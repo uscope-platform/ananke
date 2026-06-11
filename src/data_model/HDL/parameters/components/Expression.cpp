@@ -211,6 +211,10 @@ std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolve
         if(int_exec) return i_a * i_b;
         return d_a * d_b;
     }
+    if(operation ==  "**"){
+        if(int_exec) return std::pow(i_a, i_b);
+        return std::pow(d_a, d_b);
+    }
     if(operation ==  "/"){
         if(int_exec) return i_a / i_b;
         return d_a / d_b;

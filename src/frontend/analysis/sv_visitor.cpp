@@ -500,6 +500,10 @@ void sv_visitor::exitOperator_xor(sv2017::Operator_xorContext *ctx) {
     route_expression_component(ctx->getText());
 }
 
+void sv_visitor::exitOperator_power(sv2017::Operator_powerContext *ctx) {
+    route_expression_component(ctx->getText());
+}
+
 uint32_t sv_visitor::parse_number(const std::string& s) {
     std::regex hex_number(R"(\d*'h([0-9a-fA-F]*))");
     std::regex dec_number(R"(^(?:\d*'d)?([0-9]*)$)");

@@ -1351,13 +1351,13 @@ TEST(parameter_extraction, power_expression) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Expression_component("9", Expression_component::number));
+    p->add_component(Expression_component("2", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Expression_component("12", Expression_component::number));
+    p->add_component(Expression_component("5", Expression_component::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
