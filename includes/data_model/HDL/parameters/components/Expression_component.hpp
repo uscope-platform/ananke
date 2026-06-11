@@ -144,7 +144,7 @@ private:
     static constexpr bool is_string_operator(std::string_view op) {
         constexpr std::string_view operators[] = {
             "!", "~", "*", "/", "%", "+", "-", "<<", ">>",
-            ">", ">=", "<", "<=", "==", "!="
+            ">", ">=", "<", "<=", "==", "!=", "&", "|", "^"
         };
 
         return std::ranges::any_of(operators, [op](std::string_view valid_op) {
@@ -184,6 +184,9 @@ private:
             {"~", unary_operator},
             {"*", binary_operator},
             {"/", binary_operator},
+            {"&", binary_operator},
+            {"|", binary_operator},
+            {"^", binary_operator},
             {"%", binary_operator},
             {"+", binary_operator},
             {"-", binary_operator},
@@ -219,7 +222,10 @@ private:
             {"<",      5},
             {"<=",     5},
             {"==",     5},
-            {"!=",     5}
+            {"!=",     5},
+            {"&",      6},
+            {"|",      8},
+            {"^",      7},
     };
 
     std::set<std::string> right_associative_set = {

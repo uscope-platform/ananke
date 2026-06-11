@@ -247,6 +247,15 @@ std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolve
         if(int_exec) return i_a <= i_b;
         return d_a <= d_b;
     }
+    if(operation ==  "&"){
+        return i_a & i_b;
+    }
+    if(operation ==  "|"){
+        return i_a | i_b;
+    }
+    if(operation ==  "^"){
+        return i_a ^ i_b;
+    }
     throw std::runtime_error("Error: Attempted evaluation of an unsupported binary expression expression " + operation);
 }
 

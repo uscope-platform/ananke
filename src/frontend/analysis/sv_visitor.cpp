@@ -403,10 +403,6 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
     } else if (f_factory.is_active()) {
             f_factory.start_expression();
     }
-    if (ctx->AMPERSAND()) {
-
-    }
-    if (ctx->BAR())
 }
 
 void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
@@ -492,6 +488,17 @@ void sv_visitor::exitOperator_eq_neq(sv2017::Operator_eq_neqContext *ctx) {
     route_expression_component(ctx->getText());
 }
 
+void sv_visitor::exitOperator_bitwise_and(sv2017::Operator_bitwise_andContext *ctx) {
+    route_expression_component(ctx->getText());
+}
+
+void sv_visitor::exitOperator_bitwise_or(sv2017::Operator_bitwise_orContext *ctx) {
+    route_expression_component(ctx->getText());
+}
+
+void sv_visitor::exitOperator_xor(sv2017::Operator_xorContext *ctx) {
+    route_expression_component(ctx->getText());
+}
 
 uint32_t sv_visitor::parse_number(const std::string& s) {
     std::regex hex_number(R"(\d*'h([0-9a-fA-F]*))");
