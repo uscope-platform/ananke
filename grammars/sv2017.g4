@@ -1313,14 +1313,23 @@ expression:
     | expression operator_cmp         ( attribute_instance )* expression
     | expression KW_INSIDE LBRACE open_range_list RBRACE
     | expression operator_eq_neq      ( attribute_instance )* expression
-    | expression AMPERSAND            ( attribute_instance )* expression
+    | expression operator_bitwise_and ( attribute_instance )* expression
     | expression operator_xor         ( attribute_instance )* expression
-    | expression BAR                  ( attribute_instance )* expression
+    | expression operator_bitwise_or  ( attribute_instance )* expression
     | expression AND_LOG              ( attribute_instance )* expression
     | expression OR_LOG               ( attribute_instance )* expression
     | expression ( KW_MATCHES pattern )? TRIPLE_AND expression ( KW_MATCHES pattern )?
     | <assoc=right> expression ( KW_MATCHES pattern )? QUESTIONMARK ( attribute_instance )* expression COLON expression
     | <assoc=right> expression operator_impl        ( attribute_instance )* expression
+;
+
+
+operator_bitwise_and :
+    AMPERSAND
+;
+
+operator_bitwise_or :
+    BAR
 ;
 
 replication: LBRACE replication_size LBRACE replication_value RBRACE RBRACE;

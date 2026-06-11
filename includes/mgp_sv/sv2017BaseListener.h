@@ -1,5 +1,5 @@
 
-// Generated from /home/vivado/makefile_gen/grammars/sv2017.g4 by ANTLR 4.13.1
+// Generated from /Users/filss/git/makefile_gen/grammars/sv2017.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -950,6 +950,12 @@ public:
 
   virtual void enterExpression(sv2017::ExpressionContext * /*ctx*/) override { }
   virtual void exitExpression(sv2017::ExpressionContext * /*ctx*/) override { }
+
+  virtual void enterOperator_bitwise_and(sv2017::Operator_bitwise_andContext * /*ctx*/) override { }
+  virtual void exitOperator_bitwise_and(sv2017::Operator_bitwise_andContext * /*ctx*/) override { }
+
+  virtual void enterOperator_bitwise_or(sv2017::Operator_bitwise_orContext * /*ctx*/) override { }
+  virtual void exitOperator_bitwise_or(sv2017::Operator_bitwise_orContext * /*ctx*/) override { }
 
   virtual void enterReplication(sv2017::ReplicationContext * /*ctx*/) override { }
   virtual void exitReplication(sv2017::ReplicationContext * /*ctx*/) override { }

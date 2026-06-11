@@ -1,5 +1,5 @@
 
-// Generated from /home/vivado/makefile_gen/grammars/sv2017.g4 by ANTLR 4.13.1
+// Generated from /Users/filss/git/makefile_gen/grammars/sv2017.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -1258,6 +1258,14 @@ public:
   }
 
   virtual std::any visitExpression(sv2017::ExpressionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitOperator_bitwise_and(sv2017::Operator_bitwise_andContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitOperator_bitwise_or(sv2017::Operator_bitwise_orContext *ctx) override {
     return visitChildren(ctx);
   }
 

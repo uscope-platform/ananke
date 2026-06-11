@@ -1,5 +1,5 @@
 
-// Generated from /home/vivado/makefile_gen/grammars/sv2017.g4 by ANTLR 4.13.1
+// Generated from /Users/filss/git/makefile_gen/grammars/sv2017.g4 by ANTLR 4.13.1
 
 #pragma once
 
@@ -641,6 +641,10 @@ public:
     virtual std::any visitInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPostContext *context) = 0;
 
     virtual std::any visitExpression(sv2017::ExpressionContext *context) = 0;
+
+    virtual std::any visitOperator_bitwise_and(sv2017::Operator_bitwise_andContext *context) = 0;
+
+    virtual std::any visitOperator_bitwise_or(sv2017::Operator_bitwise_orContext *context) = 0;
 
     virtual std::any visitReplication(sv2017::ReplicationContext *context) = 0;
 

@@ -403,7 +403,10 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
     } else if (f_factory.is_active()) {
             f_factory.start_expression();
     }
+    if (ctx->AMPERSAND()) {
 
+    }
+    if (ctx->BAR())
 }
 
 void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
