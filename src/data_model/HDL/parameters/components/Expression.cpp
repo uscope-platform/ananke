@@ -235,7 +235,9 @@ std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolve
             if(current_size > 0 && current_size < 64) {
                 u_a &= (1ULL << current_size) - 1;
             }
-            return hdl_integer(static_cast<int64_t>(u_a >> i_b.get_value()));
+            uint64_t shift = static_cast<uint64_t>(i_b.get_value());
+            if(shift >= 64) return hdl_integer(0);
+            return hdl_integer(static_cast<int64_t>(u_a >> shift));
         }
         spdlog::warn("The shift operator is only defined between integers");
         return 0;

@@ -17,12 +17,15 @@
 #include "data_model/HDL/parameters/common/hdl_integer.hpp"
 
 uint64_t hdl_integer::get_size() {
+    if(value == 0) return 1;
     auto n_bits = std::log2(value);
-    if(std::isinf(n_bits) || n_bits == 0) {
+    if(std::isinf(n_bits)) {
         return 1;
-    }else{
-        return  std::ceil(n_bits);
     }
+    if(n_bits == 0) {
+        return 1;
+    }
+    return static_cast<uint64_t>(std::ceil(n_bits));
 }
 
 hdl_integer hdl_integer::operator+(const hdl_integer &o) const {
@@ -38,10 +41,12 @@ hdl_integer hdl_integer::operator*(const hdl_integer &o) const {
 }
 
 hdl_integer hdl_integer::operator/(const hdl_integer &o) const {
+    if(o.value == 0) return 0;
     return value / o.value;
 }
 
 hdl_integer hdl_integer::operator%(const hdl_integer &o) const {
+    if(o.value == 0) return 0;
     return value % o.value;
 }
 
@@ -74,9 +79,11 @@ hdl_integer hdl_integer::operator!() const {
 }
 
 hdl_integer hdl_integer::operator<<(const hdl_integer &o) const {
-    return  value<<o.value;
+    if(o.value >= 64) return 0;
+    return value << o.value;
 }
 
 hdl_integer hdl_integer::operator>>(const hdl_integer &o) const {
+    if(o.value >= 64) return 0;
     return value >> o.value;
 }
