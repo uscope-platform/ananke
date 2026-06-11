@@ -1217,6 +1217,7 @@ TEST(parameter_extraction, simple_expressions) {
         {{"", "", "add_expr_p"}, 40},
         {{"", "", "sub_expr_p"}, 24},
         {{"", "", "mul_expr_p"}, 256},
+        {{"", "", "pow_expr_p"}, 256},
         {{"", "", "div_expr_p"}, 4},
         {{"", "", "chained_expression"}, 1320},
         {{"", "", "modulo_expr_p"}, 0},
@@ -1241,6 +1242,8 @@ TEST(parameter_extraction, bitwise_expressions) {
             parameter b_and_p = op_a & op_b;
             parameter b_or_p = op_a | op_b;
             parameter b_xor_p =  op_a ^ op_b;
+            parameter b_xnor_p = op_a ~^ op_b;
+            parameter b_xnor2_p = op_a ^~ op_b;
         endmodule
     )";
 
@@ -1287,6 +1290,22 @@ TEST(parameter_extraction, bitwise_expressions) {
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     check_params.insert(p);
 
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("b_xnor_p");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component("~^", Expression_component::operation));
+    p->add_component(Expression_component("op_b", Expression_component::identifier));
+    check_params.insert(p);
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("b_xnor2_p");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component("^~", Expression_component::operation));
+    p->add_component(Expression_component("op_b", Expression_component::identifier));
+    check_params.insert(p);
+
     ASSERT_EQ(check_params.size(), parameters.size());
 
     for(const auto& [name, item]:check_params){
@@ -1301,6 +1320,8 @@ TEST(parameter_extraction, bitwise_expressions) {
         {{"", "", "b_and_p"}, 8},
         {{"", "", "b_or_p"},13},
         {{"", "", "b_xor_p"}, 5},
+        {{"", "", "b_xnor_p"}, -6},
+        {{"", "", "b_xnor2_p"}, -6}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1309,8 +1330,62 @@ TEST(parameter_extraction, bitwise_expressions) {
 }
 
 
+TEST(parameter_extraction, power_expression) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter op_a = 2,
+            op_b = 5
+        )();
 
+            parameter pow_expr = op_a ** op_b;
+        endmodule
+    )";
 
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+    p->set_name("op_a");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("9", Expression_component::number));
+    check_params.insert(p);
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("op_b");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("12", Expression_component::number));
+    check_params.insert(p);
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("pow_expr");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component("**", Expression_component::operation));
+    p->add_component(Expression_component("op_b", Expression_component::identifier));
+    check_params.insert(p);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& [name, item]:check_params){
+        EXPECT_TRUE(parameters.contains(item->get_name()));
+        ASSERT_EQ(*item, *parameters.get(name));
+    }
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {{"", "", "op_a"}, 2},
+        {{"", "", "op_b"}, 5},
+        {{"", "", "pow_expr"},32},
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
 
 
 

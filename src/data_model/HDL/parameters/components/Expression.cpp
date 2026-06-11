@@ -256,6 +256,9 @@ std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolve
     if(operation ==  "^"){
         return i_a ^ i_b;
     }
+    if(operation ==  "~^" || operation ==  "^~"){
+        return ~(i_a ^ i_b);
+    }
     throw std::runtime_error("Error: Attempted evaluation of an unsupported binary expression expression " + operation);
 }
 

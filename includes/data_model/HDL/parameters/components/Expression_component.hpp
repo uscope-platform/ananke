@@ -144,7 +144,7 @@ private:
     static constexpr bool is_string_operator(std::string_view op) {
         constexpr std::string_view operators[] = {
             "!", "~", "*", "/", "%", "+", "-", "<<", ">>",
-            ">", ">=", "<", "<=", "==", "!=", "&", "|", "^"
+            ">", ">=", "<", "<=", "==", "!=", "&", "|", "^", "~^", "^~"
         };
 
         return std::ranges::any_of(operators, [op](std::string_view valid_op) {
@@ -187,6 +187,8 @@ private:
             {"&", binary_operator},
             {"|", binary_operator},
             {"^", binary_operator},
+            {"^~", binary_operator},
+            {"~^", binary_operator},
             {"%", binary_operator},
             {"+", binary_operator},
             {"-", binary_operator},
@@ -210,22 +212,25 @@ private:
             {"$pow",   0},
             {"!",      1},
             {"~",      1},
-            {"*",      2},
-            {"/",      2},
-            {"%",      2},
-            {"+",      3},
-            {"-",      3},
-            {"<<",     4},
-            {">>",     4},
-            {">",      5},
-            {">=",     5},
-            {"<",      5},
-            {"<=",     5},
-            {"==",     5},
-            {"!=",     5},
-            {"&",      6},
-            {"|",      8},
-            {"^",      7},
+            {"**",     2},
+            {"*",      3},
+            {"/",      3},
+            {"%",      3},
+            {"+",      4},
+            {"-",      4},
+            {"<<",     5},
+            {">>",     5},
+            {">",      6},
+            {">=",     6},
+            {"<",      6},
+            {"<=",     6},
+            {"==",     6},
+            {"!=",     6},
+            {"&",      7},
+            {"^",      8},
+            {"~^",      8},
+            {"^~",      8},
+            {"|",      9},
     };
 
     std::set<std::string> right_associative_set = {
