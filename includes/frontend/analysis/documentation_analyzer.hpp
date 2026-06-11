@@ -18,7 +18,6 @@
 
 #include <sstream>
 #include <utility>
-#include <regex>
 #include <spdlog/spdlog.h>
 #include <ctre.hpp>
 #include <nlohmann/json.hpp>

@@ -325,7 +325,7 @@ file_analysis_context<Script> analyze_script(
     }
 
     std::string ext = file.extension();
-    ext = std::regex_replace(ext, std::regex("\\."), "");
+    if (!ext.empty() && ext[0] == '.') ext = ext.substr(1);
     script_specs s;
     s.name = file.stem();
     s.type = ext;

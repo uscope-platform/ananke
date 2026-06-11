@@ -19,7 +19,6 @@
 #include <string>
 #include <sstream>
 #include <fstream>
-#include <regex>
 #include <vector>
 #include <nlohmann/json.hpp>
 

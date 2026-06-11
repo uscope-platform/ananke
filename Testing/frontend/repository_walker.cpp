@@ -23,12 +23,13 @@ auto repw_settings_file = repw_settings_path + "/settings";
 std::shared_ptr<settings_store> repw_setup_settings() {
     std::filesystem::create_directories(repw_settings_path);
     std::ofstream ofs(repw_settings_file);
-    ofs << "{\"hdl_store\":\"repository_walker\"}";
+
+    ofs << R"({"profiles": {"test_profile": {"hdl_store":"repository_walker"}}})";
     ofs.flush();
     ofs.close();
     std::error_code ec;
     std::filesystem::resize_file(repw_settings_file, std::filesystem::file_size(repw_settings_file, ec), ec);
-    return std::make_shared<settings_store>(false, repw_settings_path);
+    return std::make_shared<settings_store>(false, repw_settings_path, "test_profile");
 }
 
 void repw_clean_settings() {

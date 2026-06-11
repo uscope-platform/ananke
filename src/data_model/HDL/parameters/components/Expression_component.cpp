@@ -21,12 +21,6 @@
 
 using namespace std::string_literals;
 
-const std::regex Expression_component::sv_constant_regex(R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))");
-const std::regex Expression_component::number_regex(R"(^\d+$)");
-const std::regex Expression_component::float_regex(R"(^[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?$|^[+-]?\d+[eE][+-]?\d+$)");
-const std::regex Expression_component::size_regex(R"(^(\d*)'[0-9a-zA-Z]+)");
-const std::regex Expression_component::time_lit_regex(R"(\d+(\.\d+)?(s|ms|us|ns|ps|fs))");
-
 Expression_component::Expression_component(const Expression_component &c) {
     value = c.value;
     array_index = c.array_index;
@@ -125,59 +119,46 @@ std::pair<resolved_parameter, int64_t>  Expression_component::process_number(con
 
     int64_t ret_size;
     resolved_parameter ret_value;
-    if(test_parameter_type(float_regex, s)) {
+
+    if(ctre::match<R"(^[+\-]?(\d+\.\d*|\.\d+)([eE][+\-]?\d+)?$|^[+\-]?\d+[eE][+\-]?\d+$)">(s)) {
         ret_size = 64;
         ret_value = std::stod(s);
-    } else if(test_parameter_type(number_regex, s)) {
+    } else if(ctre::match<R"(^\d+$)">(s)) {
         ret_value = static_cast<hdl_integer>(std::stoul(s));
         ret_size = ret_value.get_integer().get_size();
-    } else if(test_parameter_type(sv_constant_regex, s)){
-        std::smatch base_match;
-        if(std::regex_search(s, base_match, sv_constant_regex)){
-            // Process value
-            std::string base;
-            std::string str_value;
-            switch (base_match.size()) {
-                case 3:
-                    base = base_match[1].str();
-                    str_value = base_match[2].str();
-                    break;
-                case 4:
-                    base = base_match[2].str();
-                    str_value = base_match[3].str();
-                    break;
-            }
-            if(base =="h"){
-                ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 16));
-            } else if(base =="d") {
-                ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 10));
-            } else if(base =="o") {
-                ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 8));
-            } else if(base =="b") {
-                ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 2));
-            }
-            // Process size
+    } else if(ctre::search<R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))">(s)){
+        auto sv_match = ctre::search<R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))">(s);
+        // Process value
+        std::string base;
+        std::string str_value;
+        if (sv_match.get<1>()) {
+            base = sv_match.get<2>().str();
+            str_value = sv_match.get<3>().str();
+        } else {
+            base = sv_match.get<2>().str();
+            str_value = sv_match.get<3>().str();
+        }
+        if(base =="h"){
+            ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 16));
+        } else if(base =="d") {
+            ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 10));
+        } else if(base =="o") {
+            ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 8));
+        } else if(base =="b") {
+            ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 2));
+        }
+        // Process size
 
-            if(std::regex_search(s, base_match, size_regex)){
-                if(!base_match[1].str().empty()) {
-                    ret_size = std::stoll(base_match[1].str());
-                } else {
-                    ret_size = ret_value.get_integer().get_size();
-                }
+        auto size_match = ctre::search<R"(^(\d*)'[0-9a-zA-Z]+)">(s);
+        if(size_match){
+            if(!size_match.get<1>().str().empty()) {
+                ret_size = std::stoll(size_match.get<1>().str());
+            } else {
+                ret_size = ret_value.get_integer().get_size();
             }
         }
     }
     return std::make_pair(ret_value, ret_size);
-}
-
-bool Expression_component::test_parameter_type(const std::regex &r, const std::string &s) {
-
-    std::smatch base_match;
-    if(std::regex_search(s, base_match, r)){
-        return true;
-    } else{
-        return false;
-    }
 }
 
 Expression_component::operator_type_t Expression_component::get_operator_type() {
@@ -273,10 +254,10 @@ std::vector<Expression> Expression_component::get_array_index() {
 }
 
 Expression_component::component_type Expression_component::get_type(const std::string &s) {
-    if(test_parameter_type(number_regex, s) || test_parameter_type(sv_constant_regex, s)|| test_parameter_type(float_regex, s)) return number;
+    if(ctre::match<R"(^\d+$)">(s) || ctre::search<R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))">(s)|| ctre::match<R"(^[+\-]?(\d+\.\d*|\.\d+)([eE][+\-]?\d+)?$|^[+\-]?\d+[eE][+\-]?\d+$)">(s)) return number;
     if(is_string_operator(s)) return operation;
     if(is_string_function(s)) return function;
     if(is_string_parenthesis(s)) return parenthesis;
-    if(s.starts_with("\"") | test_parameter_type(time_lit_regex, s)) return string;
+    if(s.starts_with("\"") | ctre::match<R"(\d+(\.\d+)?(s|ms|us|ns|ps|fs))">(s)) return string;
     return identifier;
 }

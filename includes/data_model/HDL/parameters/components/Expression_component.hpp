@@ -18,7 +18,7 @@
 
 #include <string>
 #include <utility>
-#include <regex>
+#include <ctre.hpp>
 #include <set>
 #include <nlohmann/json.hpp>
 #include <map>
@@ -120,7 +120,6 @@ public:
 
 private:
     static  std::pair<resolved_parameter, int64_t>  process_number(const std::string &s);
-    static bool test_parameter_type(const std::regex &r, const std::string &s);
 
     component_type type = number;
 
@@ -132,12 +131,6 @@ private:
     std::string instance_prefix;
 
     int64_t binary_size = 0;
-
-    static const std::regex sv_constant_regex;
-    static const std::regex number_regex;
-    static const std::regex float_regex;
-    static const std::regex size_regex;
-    static const std::regex time_lit_regex;
 
     std::vector<Expression> array_index;
 

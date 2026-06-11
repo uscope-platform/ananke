@@ -30,7 +30,7 @@ std::shared_ptr<settings_store> tcm_setup_settings() {
     ofs.close();
     std::error_code ec;
     std::filesystem::resize_file(settings_file, std::filesystem::file_size(settings_file, ec), ec);
-    return std::make_shared<settings_store>(false, tcm_settings_path);
+    return std::make_shared<settings_store>(false, tcm_settings_path, "test_profile");
 }
 
 void tcm_clean_settings() {

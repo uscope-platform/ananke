@@ -17,7 +17,6 @@
 #define ANANKE_HDL_PARAMETER_HPP
 
 #include <string>
-#include <regex>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 

@@ -22,7 +22,6 @@
 #include <filesystem>
 #include <set>
 #include <future>
-#include <regex>
 #include <utility>
 #include <gtest/gtest.h>
 #include <openssl/evp.h>

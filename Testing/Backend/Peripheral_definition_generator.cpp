@@ -27,7 +27,7 @@
 TEST( periph_def_generation , generate_periph_def) {
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile ");
 
     std::vector<std::string> paths = {
             "Components/controls/PID/rtl",

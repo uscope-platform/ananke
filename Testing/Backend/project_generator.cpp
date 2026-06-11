@@ -26,12 +26,14 @@ auto xpg_settings_file = xpg_settings_path + "/settings";
 std::shared_ptr<settings_store> xpg_setup_settings() {
     std::filesystem::create_directories(xpg_settings_path);
     std::ofstream ofs(xpg_settings_file);
-    ofs << "{\"hdl_store\":\"/tmp/rb\",\"amd_vivado_path\":\"/dev/zero\"}";
+
+
+    ofs << R"({"amd_vivado_path":"/dev/zero","profiles": {"test_profile": {"hdl_store":"/tmp/rb"}}})";
     ofs.flush();
     ofs.close();
     std::error_code ec;
     std::filesystem::resize_file(xpg_settings_file, std::filesystem::file_size(xpg_settings_file, ec), ec);
-    return std::make_shared<settings_store>(false, xpg_settings_path);
+    return std::make_shared<settings_store>(false, xpg_settings_path, "test_profile");
 }
 
 void xpg_clean_settings() {

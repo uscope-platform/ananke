@@ -65,7 +65,7 @@ protected:
 };
 
 TEST_F(dep_resolver , dependency_resolver) {
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     Depfile df;
     df.add_excluded_module("excluded_module");

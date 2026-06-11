@@ -24,7 +24,7 @@ auto e2e_settings_file = e2e_settings_path + "/settings";
 void e2e_setup_settings() {
     std::filesystem::create_directories(e2e_settings_path);
     std::ofstream ofs(e2e_settings_file);
-    ofs << "{\"hdl_store\":\"/tmp/ananke_test_cache\",\"amd_vivado_path\":\"/tmp/vivado\"}";
+    ofs << R"({"profiles":{"test_profile":{"hdl_store":"/tmp/ananke_test_cache"}},"amd_vivado_path":"/tmp/vivado", "default_profile":"test_profile"})";
     ofs.flush();
     ofs.close();
     std::error_code ec;

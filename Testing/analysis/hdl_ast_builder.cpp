@@ -26,7 +26,7 @@ TEST( hdl_ast_builder, pid_ast_build) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     std::vector<std::string> paths = {
             "Components/controls/PID/rtl",
@@ -70,7 +70,7 @@ TEST( hdl_ast_builder, spi_ast_build) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     std::vector<std::string> paths = {
             "Components/comms/SPI/rtl",
@@ -117,7 +117,7 @@ TEST( hdl_ast_builder, pwm_ast_build) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     std::vector<std::string> paths = {
             "Components/Common",
@@ -162,7 +162,7 @@ TEST( hdl_ast_builder, adc_ast_build) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     std::vector<std::string> paths = {
             "Components/Common",
@@ -211,7 +211,7 @@ TEST( hdl_ast_builder, interface_parameter) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     std::vector<std::string> paths = {
             "Components/Common"
@@ -271,7 +271,7 @@ TEST( hdl_ast_builder, package_dependency) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     auto test_pattern = R"(
 
@@ -305,7 +305,7 @@ TEST( hdl_ast_builder, memory_dependency) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     auto test_pattern = R"(
 

@@ -62,7 +62,7 @@ TEST(parameter_processing, override_after_fatal) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -104,7 +104,7 @@ TEST(parameter_processing, mixed_dep_override) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -242,7 +242,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -347,7 +347,7 @@ TEST(parameter_processing, packed_array_initialization_expression_override) {
 
 
     auto resources = analyzer.analyze("", test_pattern);
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     d_store->store_hdl_entity(resources, "", "");
 
@@ -392,7 +392,7 @@ TEST(parameter_processing, simple_for_array_parameter) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -443,7 +443,7 @@ TEST(parameter_processing, complex_for_array_parameter) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -486,7 +486,7 @@ TEST(parameter_processing, complex_vector_function_parameter) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -534,7 +534,7 @@ TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch)
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -684,7 +684,7 @@ TEST(parameter_processing, override_with_system_task) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -720,7 +720,7 @@ TEST(parameter_processing, interface_default_parameters) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -771,7 +771,7 @@ TEST(parameter_processing, override_with_interface_param) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -831,7 +831,7 @@ TEST(parameter_processing, nested_override_with_interface_param) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -897,7 +897,7 @@ TEST(parameter_processing, double_nested_override_with_interface_param) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -1015,7 +1015,7 @@ TEST(parameter_processing, override_with_function_parameter) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -1155,7 +1155,7 @@ TEST(parameter_processing, parameter_with_for_loop) {
 
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -1220,7 +1220,7 @@ TEST(parameter_processing, parent_parameter_collision) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -1263,7 +1263,7 @@ TEST(parameter_processing, override_after_function_localparam) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -1315,7 +1315,7 @@ TEST(parameter_processing, init_list_override) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -1419,7 +1419,7 @@ TEST(parameter_processing, override_as_dependency) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -1489,7 +1489,7 @@ endmodule
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
     d_store->store_hdl_entity(resources, "", "");
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -1560,7 +1560,7 @@ endmodule
     auto pkg_solved = parameter_solver::process_parameters(
         resources[0].get_parameters(), {});
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
     d_store->store_hdl_entity(resources, "", "");
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -1598,7 +1598,7 @@ TEST(parameter_processing, override_with_package_ref_in_array_init) {
     sv_analyzer analyzer;
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
     d_store->store_hdl_entity(resources, "", "");
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -1646,7 +1646,7 @@ TEST(parameter_processing, intermediate_interface_param) {
     )";
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -1695,7 +1695,7 @@ TEST(parameter_processing, intermediate_interface_in_override_param) {
     )";
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -1783,7 +1783,7 @@ TEST(parameter_processing, interface_param_same_name_as_child_param_with_loopbac
     )";
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -1858,7 +1858,7 @@ TEST(parameter_processing, interface_param_same_name_as_child_param_no_loopback)
     )";
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     sv_analyzer analyzer;
 
@@ -1905,7 +1905,7 @@ TEST(parameter_processing, ternary_with_package_override) {
     sv_analyzer analyzer;
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
     d_store->store_hdl_entity(resources, "", "");
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -1935,7 +1935,7 @@ TEST(parameter_processing, override_dep_on_local_param_chain) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -1978,7 +1978,7 @@ TEST(parameter_processing, packed_struct_override) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -2015,7 +2015,7 @@ TEST(parameter_processing, packed_struct_field_override_child_param) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -2051,7 +2051,7 @@ TEST(parameter_processing, unpacked_struct_field_override_child_param) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 
@@ -2085,7 +2085,7 @@ TEST(parameter_processing, unpacked_struct_override) {
 
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
     d_store->store_hdl_entity(resources, "", "");
 

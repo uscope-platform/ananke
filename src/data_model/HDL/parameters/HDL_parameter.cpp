@@ -157,7 +157,11 @@ nlohmann::json HDL_parameter::dump() {
         ret["type"] = "string_parameter";
         std::vector<std::string> values_s;
         auto value = solved_value.value();
-        values_s.push_back(std::regex_replace(solved_value.value().get_string(), std::regex(R"ctrl(^"(.*)"$)ctrl"), "$1"));
+        std::string str_val = solved_value.value().get_string();
+        if (str_val.size() >= 2 && str_val.front() == '"' && str_val.back() == '"') {
+            str_val = str_val.substr(1, str_val.size() - 2);
+        }
+        values_s.push_back(str_val);
         ret["value"] = values_s;
     }
     else if (solved_value.value().is_integer()) {

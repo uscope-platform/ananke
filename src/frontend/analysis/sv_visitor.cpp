@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
+#include <ctre.hpp>
+
 #include "frontend/analysis/sv_visitor.hpp"
 
 sv_visitor::sv_visitor(std::string p) {
@@ -328,7 +331,8 @@ void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
     std::string call_name = ctx->any_system_tf_identifier()->getText();
     if(call_name=="$readmemh" || call_name=="$readmemb"){
         std::string data_file = ctx->list_of_arguments()->expression()[0]->getText();
-        data_file = std::regex_replace(data_file, std::regex("\\\""), "");
+        data_file.erase(std::remove(data_file.begin(), data_file.end(), '\\'), data_file.end());
+        data_file.erase(std::remove(data_file.begin(), data_file.end(), '"'), data_file.end());
         std::filesystem::path p = data_file;
         auto ext = p.extension().string();
         if(ext == ".dat"|| ext == ".mem"){
@@ -509,20 +513,14 @@ void sv_visitor::exitOperator_power(sv2017::Operator_powerContext *ctx) {
 }
 
 uint32_t sv_visitor::parse_number(const std::string& s) {
-    std::regex hex_number(R"(\d*'h([0-9a-fA-F]*))");
-    std::regex dec_number(R"(^(?:\d*'d)?([0-9]*)$)");
-    std::regex oct_number(R"(^\d*'o([0-7]*)$)");
-    std::regex bin_number(R"(\d*'b([0-1]*))");
-
-    std::smatch sm;
-    if(std::regex_match(s,sm, hex_number)){
-        return std::stoul(sm[1],nullptr, 16);
-    } else if(std::regex_match(s,sm, dec_number)){
-        return std::stoul(sm[1],nullptr, 10);
-    } else if(std::regex_match(s,sm, oct_number)){
-        return std::stoul(sm[1],nullptr, 8);
-    } else if(std::regex_match(s,sm, bin_number)){
-        return std::stoul(sm[1],nullptr, 2);
+    if(auto m = ctre::match<R"(\d*'h([0-9a-fA-F]*))">(s)) {
+        return std::stoul(m.get<1>().str(),nullptr, 16);
+    } else if(auto m = ctre::match<R"(^(?:\d*'d)?([0-9]*)$)">(s)) {
+        return std::stoul(m.get<1>().str(),nullptr, 10);
+    } else if(auto m = ctre::match<R"(^\d*'o([0-7]*)$)">(s)) {
+        return std::stoul(m.get<1>().str(),nullptr, 8);
+    } else if(auto m = ctre::match<R"(\d*'b([0-1]*))">(s)) {
+        return std::stoul(m.get<1>().str(),nullptr, 2);
     }
     return 0;
 }

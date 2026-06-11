@@ -19,7 +19,6 @@
 #include <utility>
 #include <unordered_set>
 #include <vector>
-#include <regex>
 
 #include "data_model/data_store.hpp"
 #include "Backend/backend_types.hpp"

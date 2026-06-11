@@ -24,7 +24,9 @@ Auxiliary_resolver::Auxiliary_resolver(std::shared_ptr<data_store> store) {
 std::vector<script_source> Auxiliary_resolver::get_tcl_script_paths(const std::vector<Script> &names) {
     std::vector<script_source> ret_val;
     for(auto item : names){
-        std::string script_name = std::regex_replace(item.get_name(), std::regex("\\.tcl|\\.py"), "");
+        std::string script_name = item.get_name();
+        if (script_name.ends_with(".tcl")) script_name.resize(script_name.size() - 4);
+        else if (script_name.ends_with(".py")) script_name.resize(script_name.size() - 3);
         Script scr = d_store->get_script(script_name);
         if(scr.get_type() == tcl_script) {
             script_source s;
@@ -46,7 +48,8 @@ std::unordered_set<std::string> Auxiliary_resolver::get_python_script_paths(cons
 std::unordered_set<std::string> Auxiliary_resolver::get_constraints(const std::vector<Constraints> &names) {
     std::unordered_set<std::string> ret_val;
     for(auto item : names){
-        std::string constraint_name = std::regex_replace(item.get_name(), std::regex("\\.xdc"), "");
+        std::string constraint_name = item.get_name();
+        if (constraint_name.ends_with(".xdc")) constraint_name.resize(constraint_name.size() - 4);
         Constraints cnstr = d_store->get_constraint(constraint_name);
         if(cnstr == Constraints()){
             throw std::runtime_error("ERROR: constraint file " + constraint_name+ " not found!");
@@ -60,7 +63,9 @@ std::unordered_set<std::string>
 Auxiliary_resolver::get_script_paths_by_type(const std::vector<Script> &names, script_type_t type) {
     std::unordered_set<std::string> ret_val;
     for(auto item : names){
-        std::string script_name = std::regex_replace(item.get_name(), std::regex("\\.tcl|\\.py"), "");
+        std::string script_name = item.get_name();
+        if (script_name.ends_with(".tcl")) script_name.resize(script_name.size() - 4);
+        else if (script_name.ends_with(".py")) script_name.resize(script_name.size() - 3);
         Script scr = d_store->get_script(script_name);
         if(scr.get_type() == type) ret_val.insert(scr.get_path());
 
@@ -71,7 +76,9 @@ Auxiliary_resolver::get_script_paths_by_type(const std::vector<Script> &names, s
 std::vector<Script>  Auxiliary_resolver::get_script_objects_by_type(const std::vector<Script> &names, script_type_t type) {
     std::vector<Script> ret_val;
     for(auto item : names){
-        std::string script_name = std::regex_replace(item.get_name(), std::regex("\\.tcl|\\.py"), "");
+        std::string script_name = item.get_name();
+        if (script_name.ends_with(".tcl")) script_name.resize(script_name.size() - 4);
+        else if (script_name.ends_with(".py")) script_name.resize(script_name.size() - 3);
         Script scr =  d_store->get_script(script_name);
 
         if(scr.get_type() == type){
