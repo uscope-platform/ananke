@@ -49,7 +49,6 @@ target_sources(ananke_lib
     data_model/HDL/parameters/components/Ternary.cpp
     data_model/HDL/parameters/components/Replication.cpp
     data_model/HDL/parameters/components/Cast.cpp
-    data_model/HDL/parameters/Expression_evaluator.cpp
     data_model/HDL/parameters/components/Expression_component.cpp
     data_model/HDL/parameters/components/HDL_function_def.cpp
     data_model/HDL/parameters/components/HDL_function_call.cpp

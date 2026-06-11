@@ -14,7 +14,6 @@ set(ANANKE_TESTS
         test_main.cpp
         data_model/Depfile_test.cpp
         data_model/Script_test.cpp
-        data_model/Expression_evaluator.cpp
         data_model/Constraints_test.cpp
         data_model/hdl_resource_testing.cpp
         data_model/initialization_list.cpp

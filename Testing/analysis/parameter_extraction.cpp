@@ -1217,7 +1217,6 @@ TEST(parameter_extraction, simple_expressions) {
         {{"", "", "add_expr_p"}, 40},
         {{"", "", "sub_expr_p"}, 24},
         {{"", "", "mul_expr_p"}, 256},
-        {{"", "", "pow_expr_p"}, 256},
         {{"", "", "div_expr_p"}, 4},
         {{"", "", "chained_expression"}, 1320},
         {{"", "", "modulo_expr_p"}, 0},
