@@ -951,6 +951,9 @@ public:
   virtual void enterExpression(sv2017::ExpressionContext * /*ctx*/) override { }
   virtual void exitExpression(sv2017::ExpressionContext * /*ctx*/) override { }
 
+  virtual void enterOperator_power(sv2017::Operator_powerContext * /*ctx*/) override { }
+  virtual void exitOperator_power(sv2017::Operator_powerContext * /*ctx*/) override { }
+
   virtual void enterOperator_bitwise_and(sv2017::Operator_bitwise_andContext * /*ctx*/) override { }
   virtual void exitOperator_bitwise_and(sv2017::Operator_bitwise_andContext * /*ctx*/) override { }
 

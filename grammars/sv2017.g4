@@ -1306,7 +1306,7 @@ expression:
     | KW_TAGGED identifier ( expression )?
     | unary_operator ( attribute_instance )* primary
     | inc_or_dec_expression
-    | expression DOUBLESTAR           ( attribute_instance )* expression
+    | expression operator_power       ( attribute_instance )* expression
     | expression operator_mul_div_mod ( attribute_instance )* expression
     | expression operator_plus_minus  ( attribute_instance )* expression
     | expression operator_shift       ( attribute_instance )* expression
@@ -1323,6 +1323,10 @@ expression:
     | <assoc=right> expression operator_impl        ( attribute_instance )* expression
 ;
 
+
+operator_power :
+    DOUBLESTAR
+;
 
 operator_bitwise_and :
     AMPERSAND

@@ -1261,6 +1261,10 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitOperator_power(sv2017::Operator_powerContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitOperator_bitwise_and(sv2017::Operator_bitwise_andContext *ctx) override {
     return visitChildren(ctx);
   }
