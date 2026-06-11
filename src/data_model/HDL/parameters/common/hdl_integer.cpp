@@ -45,6 +45,14 @@ hdl_integer hdl_integer::operator%(const hdl_integer &o) const {
     return value % o.value;
 }
 
+hdl_integer hdl_integer::operator&&(const hdl_integer &o) const {
+    return value && o.value;
+}
+
+hdl_integer hdl_integer::operator||(const hdl_integer &o) const {
+    return value || o.value;
+}
+
 hdl_integer hdl_integer::operator&(const hdl_integer &o) const {
     return value & o.value;
 }

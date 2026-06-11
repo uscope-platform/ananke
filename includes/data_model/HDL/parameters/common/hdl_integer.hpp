@@ -40,6 +40,8 @@ public:
     hdl_integer operator/(const hdl_integer &o) const;
     hdl_integer operator%(const hdl_integer &o) const;
 
+    hdl_integer operator&&(const hdl_integer &o) const;
+    hdl_integer operator||(const hdl_integer &o) const;
     hdl_integer operator&(const hdl_integer &o) const;
     hdl_integer operator|(const hdl_integer &o) const;
     hdl_integer operator^(const hdl_integer &o) const;

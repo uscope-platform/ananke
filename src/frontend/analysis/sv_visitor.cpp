@@ -412,6 +412,10 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
         std::string type;
         if(ctx->QUESTIONMARK()){
             params_factory.stop_ternary();
+        } else if(ctx->AND_LOG()){
+            route_expression_component("&&");
+        } else if(ctx->OR_LOG()){
+            route_expression_component("||");
         }
         params_factory.stop_expression_new();
     }else if (f_factory.is_active()) {

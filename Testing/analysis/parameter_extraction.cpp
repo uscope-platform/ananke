@@ -1510,8 +1510,95 @@ TEST(parameter_extraction, arithmetic_shift_right) {
         ASSERT_EQ(value, defaults.at(name));
     }
 }
+ 
+TEST(parameter_extraction, logical_and_or) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter op_a = 3,
+            op_b = 0,
+            op_c = 5
+        )();
+            parameter log_and_expr = op_a && op_b;
+            parameter log_or_expr = op_a || op_b;
+            parameter mixed_expr = op_a && op_b || op_c;
+        endmodule
+    )";
+ 
+    sv_analyzer analyzer;
+ 
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+ 
+    Parameters_map check_params;
+ 
+    auto p = std::make_shared<HDL_parameter>();
+    p->set_name("op_a");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("3", Expression_component::number));
+    check_params.insert(p);
+ 
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("op_b");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("0", Expression_component::number));
+    check_params.insert(p);
+ 
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("op_c");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("5", Expression_component::number));
+    check_params.insert(p);
+ 
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("log_and_expr");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component("op_b", Expression_component::identifier));
+    p->add_component(Expression_component("&&", Expression_component::operation));
+    check_params.insert(p);
+ 
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("log_or_expr");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component("op_b", Expression_component::identifier));
+    p->add_component(Expression_component("||", Expression_component::operation));
+    check_params.insert(p);
+ 
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("mixed_expr");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component("op_b", Expression_component::identifier));
+    p->add_component(Expression_component("&&", Expression_component::operation));
+    p->add_component(Expression_component("op_c", Expression_component::identifier));
+    p->add_component(Expression_component("||", Expression_component::operation));
+    check_params.insert(p);
+ 
+    ASSERT_EQ(check_params.size(), parameters.size());
+ 
+    for(const auto& [name, item]:check_params){
+        EXPECT_TRUE(parameters.contains(item->get_name()));
+        ASSERT_EQ(*item, *parameters.get(name));
+    }
+ 
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    // 3 && 0 = 0, 3 || 0 = 1, (3 && 0) || 5 = 1
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {{"", "", "op_a"}, 3},
+        {{"", "", "op_b"}, 0},
+        {{"", "", "op_c"}, 5},
+        {{"", "", "log_and_expr"}, 0},
+        {{"", "", "log_or_expr"}, 1},
+        {{"", "", "mixed_expr"}, 1},
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
 
-
+ 
 TEST(parameter_extraction, assay_assignment) {
     auto test_pattern = R"(
         module test_mod #(
