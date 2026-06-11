@@ -60,8 +60,7 @@ class ananke {
         bool dump_ast = false;
         bool keep_makefile = false;
         bool makefile_only = false;
-        std::string get_setting;
-        std::string set_setting;
+        std::string profile;
         std::string new_app_name;
         std::string new_app_lang;
         std::vector<std::string> parse_targets;

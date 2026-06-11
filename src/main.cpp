@@ -35,8 +35,7 @@ int main(int argc, char *argv[]){
     app.add_flag("--L",opts.generate_lattice,"Generate Lattice Makefile");
     app.add_flag("--S",opts.synth_design,"synthetize design");
     app.add_flag("--k",opts.keep_makefile, "if set to true does not remove the makefile after use");
-    app.add_option("--get_setting",opts.get_setting, "Print the value of a cached user setting");
-    app.add_option("--set_setting",opts.set_setting, "Modify the value of a cached user setting");
+    app.add_option("--profile", opts.profile, "Select a tool profile to use");
     app.add_option("--new_app",opts.new_app_name, "Setup a new blank application");
     app.add_option("--lang",opts.new_app_lang, "Specify the language for the new app");
     app.add_flag("--measure-runtime",opts.measure_runtime, "Measure the runtime of the current program invocation");

@@ -27,18 +27,29 @@
 #include <spdlog/spdlog.h>
 #include <iostream>
 
+struct settings_profile {
+    std::filesystem::path hdl_store;
+    std::set<std::string> includes;
+    std::set<std::string> excludes;
+};
+
 class settings_store {
 public:
-    settings_store(bool e, std::string cache_dir_path);
+    settings_store(bool e, std::string cache_dir_path, std::string profile);
 
     std::filesystem::path get_hdl_store();
     std::filesystem::path get_tool_path(const std::string &tool);
     std::set<std::string> get_default_includes();
     std::set<std::string> get_excluded_paths();
-    void remove_setting(const std::string& setting);
     void flush();
     ~settings_store();
 private:
+
+    void load_settings(const std::string  &settings);
+
+    std::map<std::string, settings_profile> profiles;
+    std::map<std::string, std::filesystem::path> tool_paths;
+    std::string selected_profile;
 
     nlohmann::json settings_backend;
 

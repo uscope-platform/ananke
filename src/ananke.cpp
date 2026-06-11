@@ -28,7 +28,7 @@ ananke::ananke(const CLI_opt &options) {
         getchar();
     }
 
-    s_store = std::make_shared<settings_store>(false, opts.cache_dir);
+    s_store = std::make_shared<settings_store>(false, opts.cache_dir, opts.profile);
 
     t1 = std::chrono::high_resolution_clock::now();
 }
@@ -44,7 +44,6 @@ ananke::~ananke() {
 std::optional<int> ananke::clear_cache() const {
     if(opts.clear_cache) {
         data_store::clear_cache(opts.cache_dir);
-        s_store->remove_setting("cache_dump");
         s_store->flush();
         return 0;
     }

@@ -16,12 +16,12 @@
 
 #include <utility>
 
-settings_store::settings_store(bool e, std::string cache_dir_path) {
+settings_store::settings_store(bool e, std::string cache_dir_path, std::string profile) {
     store_path = std::move(cache_dir_path);
     if (!std::filesystem::exists(store_path)) std::filesystem::create_directory(store_path);
     ephemeral = e;
     settings_file = store_path + "/settings";
-
+    selected_profile = std::move(profile);
     if(!ephemeral){
         if(!std::filesystem::exists(settings_file) ) {
             std::ofstream ofs(settings_file);
@@ -29,67 +29,88 @@ settings_store::settings_store(bool e, std::string cache_dir_path) {
             ofs.flush();
             ofs.close();
         }
-        std::ifstream ifs(settings_file);
-        settings_backend =  nlohmann::json::parse( ifs );
+        load_settings(settings_file);
     }
 }
 
 std::filesystem::path settings_store::get_hdl_store() {
-    if (!settings_backend.contains("hdl_store")) {
+    if (profiles[selected_profile].hdl_store.empty()) {
         std::string target_repository;
         spdlog::info("Please enter the absolute path of the HDL repository");
         std::cin >> target_repository;
-        settings_backend["hdl_store"]  = target_repository;
+        profiles[selected_profile].hdl_store = target_repository;
     }
 
-    return settings_backend["hdl_store"];
+    return profiles[selected_profile].hdl_store;
 }
 
 std::filesystem::path settings_store::get_tool_path(const std::string &tool) {
-    if (!settings_backend.contains(tool + "_path")) {
+
+    if (!tool_paths.contains(tool)) {
         std::string target_repository;
         spdlog::info("Please enter the absolute path of the {} installation", tool);
         std::cin >> target_repository;
-        settings_backend[tool + "_path"]  = target_repository;
+        tool_paths[tool]  = target_repository;
     }
 
-    return settings_backend[tool + "_path"];
+    return tool_paths[tool];
 }
 
 std::set<std::string> settings_store::get_default_includes() {
 
     std::set<std::string> raw_includes;
 
-    if (settings_backend.contains("default_includes")) {
-        for (const auto& item : settings_backend["default_includes"]) {
-            raw_includes.insert(std::filesystem::path(settings_backend["hdl_store"]) / item);
-        }
+    for (const auto& item : profiles[selected_profile].includes) {
+        raw_includes.insert(profiles[selected_profile].hdl_store / item);
     }
     return  raw_includes;
 }
 
 std::set<std::string> settings_store::get_excluded_paths() {
-    std::set<std::string> raw_includes;
-    if (settings_backend.contains("excluded_paths")) {
-        raw_includes = settings_backend["excluded_paths"];
-    }
-    return  raw_includes;
+    return   profiles[selected_profile].excludes;
 }
 
 settings_store::~settings_store() {
     if(!ephemeral){
         flush();
     }
-
 }
 
-void settings_store::remove_setting(const std::string &setting) {
-    settings_backend.erase(setting);
+void settings_store::load_settings(const std::string  &settings_file) {
+    std::ifstream ifs(settings_file);
+    auto settings =  nlohmann::json::parse( ifs );
+
+    if (settings.contains("profiles")) {
+        for (auto &[key, value]: settings["profiles"].items()) {
+            if (value.contains("hdl_store"))
+                profiles[key].hdl_store = std::filesystem::path(value["hdl_store"]);
+            if (value.contains("default_includes"))
+                profiles[key].includes = value["default_includes"];
+            if (value.contains("excluded_paths"))
+                profiles[key].includes = value["excluded_paths"];
+        }
+    }
+    if (settings.contains("amd_vivado_path"))
+        tool_paths["amd_vivado"] = std::filesystem::path(settings["amd_vivado_path"]);
+    if (settings.contains("lattice_radiant_path"))
+        tool_paths["lattice_radiant"] = std::filesystem::path(settings["lattice_radiant_path"]);
+
+    if (settings.contains("default_profile")) selected_profile = settings["default_profile"];
 }
 
 void settings_store::flush() {
     std::ofstream ofs(settings_file);
-    ofs << settings_backend.dump();
+    nlohmann::json settings;
+
+    for (const auto& [key, profile] : profiles) {
+        settings["profiles"][key]["hdl_store"] = profile.hdl_store.string();
+        settings["profiles"][key]["default_includes"] = profile.includes;
+    }
+    for (auto &[tool_name, path]: tool_paths) {
+        settings[tool_name + "_path"] = path;
+    }
+    settings["default_profile"] = selected_profile;
+    ofs << settings.dump(4);
 }
 
 
