@@ -230,6 +230,22 @@ std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolve
         return 0;
     }
     if(operation ==  ">>"){
+        if(int_exec) {
+            uint64_t u_a = static_cast<uint64_t>(i_a.get_value());
+            if(current_size > 0 && current_size < 64) {
+                u_a &= (1ULL << current_size) - 1;
+            }
+            return hdl_integer(static_cast<int64_t>(u_a >> i_b.get_value()));
+        }
+        spdlog::warn("The shift operator is only defined between integers");
+        return 0;
+    }
+    if(operation ==  "<<<"){
+        if(int_exec) return i_a << i_b;
+        spdlog::warn("The shift operator is only defined between integers");
+        return 0;
+    }
+    if(operation ==  ">>>"){
         if(int_exec) return i_a >> i_b;
         spdlog::warn("The shift operator is only defined between integers");
         return 0;
@@ -334,6 +350,12 @@ std::variant<hdl_integer, double> Expression::evaluate_cast(resolved_parameter o
 
 void Expression::add_index(const Expression &idx) {
     if (!components.empty()) components.back().add_array_index(idx);
+}
+
+void Expression::set_container_sizes(const resolved_type &s,
+    const std::map<qualified_identifier, resolved_parameter> &context) {
+    current_size = 1;
+    for (auto &size:s.packed_sizes) current_size *= size;
 }
 
 Expression Expression::clone()  const{

@@ -1386,6 +1386,130 @@ TEST(parameter_extraction, power_expression) {
     }
 }
 
+TEST(parameter_extraction, arithmetic_shift_left) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter op_a = 3,
+            op_b = 2
+        )();
+            parameter shl_expr = op_a <<< op_b;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+    p->set_name("op_a");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("3", Expression_component::number));
+    check_params.insert(p);
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("op_b");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("2", Expression_component::number));
+    check_params.insert(p);
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("shl_expr");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component("<<<", Expression_component::operation));
+    p->add_component(Expression_component("op_b", Expression_component::identifier));
+    check_params.insert(p);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& [name, item]:check_params){
+        EXPECT_TRUE(parameters.contains(item->get_name()));
+        ASSERT_EQ(*item, *parameters.get(name));
+    }
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    // 3 <<< 2 = 12
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {{"", "", "op_a"}, 3},
+        {{"", "", "op_b"}, 2},
+        {{"", "", "shl_expr"},12},
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, arithmetic_shift_right) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter op_a = -8,
+            op_b = 2
+        )();
+            parameter shr_a_expr = op_a >>> op_b;
+            parameter shr_l_expr = op_a >> op_b;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+    p->set_name("op_a");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("-", Expression_component::operation));
+    p->add_component(Expression_component("8", Expression_component::number));
+    check_params.insert(p);
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("op_b");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("2", Expression_component::number));
+    check_params.insert(p);
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("shr_a_expr");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component(">>>", Expression_component::operation));
+    p->add_component(Expression_component("op_b", Expression_component::identifier));
+    check_params.insert(p);
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("shr_l_expr");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component(">>", Expression_component::operation));
+    p->add_component(Expression_component("op_b", Expression_component::identifier));
+    check_params.insert(p);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& [name, item]:check_params){
+        EXPECT_TRUE(parameters.contains(item->get_name()));
+        ASSERT_EQ(*item, *parameters.get(name));
+    }
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {{"", "", "op_a"}, -8},
+        {{"", "", "op_b"}, 2},
+        {{"", "", "shr_a_expr"}, -2},
+        {{"", "", "shr_l_expr"}, 1073741822},
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
 
 
 TEST(parameter_extraction, assay_assignment) {

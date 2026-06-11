@@ -143,7 +143,7 @@ private:
 
     static constexpr bool is_string_operator(std::string_view op) {
         constexpr std::string_view operators[] = {
-            "!", "~", "*", "/", "%", "+", "-", "<<", ">>",
+            "!", "~", "*", "/", "%", "+", "-", "<<", ">>", "<<<", ">>>",
             ">", ">=", "<", "<=", "==", "!=", "&", "|", "^", "~^", "^~", "**"
         };
 
@@ -195,6 +195,8 @@ private:
             {"-", binary_operator},
             {"<<", binary_operator},
             {">>", binary_operator},
+            {"<<<", binary_operator},
+            {">>>", binary_operator},
             {">", binary_operator},
             {">=", binary_operator},
             {"<", binary_operator},
@@ -221,6 +223,8 @@ private:
             {"-",      4},
             {"<<",     5},
             {">>",     5},
+            {"<<<",     5},
+            {">>>",     5},
             {">",      6},
             {">=",     6},
             {"<",      6},

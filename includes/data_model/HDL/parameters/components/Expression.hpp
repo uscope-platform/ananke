@@ -69,7 +69,7 @@ public:
         return !(lhs == rhs);
     }
 
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override {}
+    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
 
     std::shared_ptr<Parameter_value_base> clone_ptr() const override {
         return std::make_shared<Expression>(*this);  // Copy constructor
@@ -89,6 +89,7 @@ public:
         // This will use the operator== of Expression_component for each element in the vector
         return std::tie(components, rpn) == std::tie(rhs.components, rhs.rpn);
     }
+    uint64_t current_size=0;
 };
 
 
