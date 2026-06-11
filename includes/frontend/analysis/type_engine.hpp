@@ -39,7 +39,7 @@ public:
     void start_composite_type_declaration(type_kind kind);
     void open_composite_member();
     void close_composite_member(const std::string &name);
-    std::shared_ptr<hdl_type> stop_composite_type_declaration(const std::string &name);
+    std::shared_ptr<hdl_type> stop_composite_type_declaration(const std::string &name, bool anonymous);
 
     void start_simple_type_declaration();
     std::shared_ptr<hdl_type> stop_type_declaration(const std::string &name);

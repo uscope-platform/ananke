@@ -135,23 +135,41 @@ void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
         } else {
             type_engine.start_simple_type_declaration();
         }
-
     } else {
-
+        if (ctx->data_type_or_implicit() &&
+            ctx->data_type_or_implicit()->data_type() &&
+            ctx->data_type_or_implicit()->data_type()->struct_union()
+        ) {
+            in_anonymous_struct = true;
+            type_engine.start_composite_type_declaration(Type_engine::struct_type);
+            params_factory.start_param_assignment();
+        }
     }
 }
 
-
 void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
     if (ctx->type_declaration()) {
-            auto name = ctx->type_declaration()->identifier(0)->getText();
+        auto name = ctx->type_declaration()->identifier(0)->getText();
         if (type_engine.is_simple_type()) {
             modules_factory.add_typedef(name, type_engine.stop_type_declaration(name));
         } else {;
-            modules_factory.add_struct_def(name, type_engine.stop_composite_type_declaration(name));
+            modules_factory.add_struct_def(name, type_engine.stop_composite_type_declaration(name, false));
         }
     } else {
-
+        if (ctx->data_type_or_implicit() &&
+            ctx->data_type_or_implicit()->data_type() &&
+            ctx->data_type_or_implicit()->data_type()->struct_union()
+        ) {
+            in_anonymous_struct = false;
+            auto name = ctx->list_of_variable_decl_assignments()
+                ->variable_decl_assignment(0)->identifier()->getText();
+            params_factory.set_type(pending_anon_struct_type);
+            params_factory.new_parameter(name);
+            params_factory.stop_param_assignment();
+            auto param = params_factory.get_parameter();
+            param->set_type(pending_anon_struct_type);
+            modules_factory.add_parameter(param);
+        }
     }
 }
 
@@ -191,6 +209,9 @@ void sv_visitor::enterData_type(sv2017::Data_typeContext *ctx) {
 
 void sv_visitor::exitData_type(sv2017::Data_typeContext *ctx) {
     type_engine.close_packed_dimensions();
+    if (in_anonymous_struct && ctx->struct_union() && type_engine.active()) {
+        pending_anon_struct_type = type_engine.stop_composite_type_declaration("", true);
+    }
 }
 
 void sv_visitor::exitInterface_header(sv2017::Interface_headerContext *ctx) {

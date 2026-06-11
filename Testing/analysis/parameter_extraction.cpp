@@ -4233,8 +4233,7 @@ TEST(parameter_extraction, anonymous_packed_struct_typed_parameter) {
             struct packed {
                 int field_a;
                 int field_b;
-            } my_struct_t;
-            parameter my_struct_t struct_param = '{42, 17};
+            } anon_struct = '{42, 17};
         endmodule
     )";
 
@@ -4242,20 +4241,26 @@ TEST(parameter_extraction, anonymous_packed_struct_typed_parameter) {
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto parameters = resource.get_parameters();
-    ASSERT_TRUE(parameters.contains("struct_param"));
+    ASSERT_TRUE(parameters.contains("anon_struct"));
 
-    auto p = parameters.get("struct_param");
+    auto p = parameters.get("anon_struct");
     ASSERT_TRUE(p->get_type()->is<HDL_struct_type>());
     auto &st = p->get_type()->as<HDL_struct_type>();
     EXPECT_TRUE(st.packed);
     ASSERT_EQ(st.member.size(), 2);
     EXPECT_EQ(st.member[0].name, "field_a");
     ASSERT_TRUE(st.member[0].type != nullptr);
+    dimension_t check_dim;
+    check_dim.packed = true;
+    check_dim.first_bound = Expression(Expression_component(31, 5));
+    check_dim.second_bound = Expression(Expression_component(0, 1));
+    ASSERT_EQ(st.member[0].type->as<HDL_simple_type>().get_packed_dimensions()[0],check_dim);
     EXPECT_EQ(st.member[1].name, "field_b");
     ASSERT_TRUE(st.member[1].type != nullptr);
+    ASSERT_EQ(st.member[1].type->as<HDL_simple_type>().get_packed_dimensions()[0],check_dim);
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
-    qualified_identifier check_id = {"","", "struct_param"};
+    qualified_identifier check_id = {"","", "anon_struct"};
     EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(180388626449));
 }
 
@@ -4265,8 +4270,7 @@ TEST(parameter_extraction, anonymous_unpacked_struct_parameter) {
             struct {
                 int field_a;
                 int field_b;
-            } my_struct_t;
-            parameter my_struct_t struct_param = '{42, 17};
+            } anon_struct =  '{42, 17};
         endmodule
     )";
 
@@ -4274,9 +4278,9 @@ TEST(parameter_extraction, anonymous_unpacked_struct_parameter) {
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto parameters = resource.get_parameters();
-    ASSERT_TRUE(parameters.contains("struct_param"));
+    ASSERT_TRUE(parameters.contains("anon_struct"));
 
-    auto p = parameters.get("struct_param");
+    auto p = parameters.get("anon_struct");
     ASSERT_TRUE(p->get_type()->is<HDL_struct_type>());
     auto &st = p->get_type()->as<HDL_struct_type>();
     EXPECT_FALSE(st.packed);
@@ -4289,7 +4293,7 @@ TEST(parameter_extraction, anonymous_unpacked_struct_parameter) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {17, 42});
-    qualified_identifier sid = {"","", "struct_param"};
+    qualified_identifier sid = {"","", "anon_struct"};
     EXPECT_EQ(defaults[sid], array_value);
 }
 

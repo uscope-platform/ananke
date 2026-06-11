@@ -62,10 +62,11 @@ void Type_engine::set_member_signed(bool s) {
     }
 }
 
-std::shared_ptr<hdl_type> Type_engine::stop_composite_type_declaration(const std::string &name) {
+std::shared_ptr<hdl_type> Type_engine::stop_composite_type_declaration(const std::string &name, bool anonymous) {
     kind = simple_type;
-    type_registry[name] = std::make_shared<HDL_struct_type>(current_struct);
-    return type_registry.at(name);
+    auto result = std::make_shared<HDL_struct_type>(current_struct);
+    if (!anonymous) type_registry[name] = result;
+    return result;
 }
 
 void Type_engine::set_type(const std::string &type) {
