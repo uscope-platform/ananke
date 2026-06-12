@@ -104,7 +104,7 @@ void PrintTo(const HDL_parameter &param, std::ostream *os) {
 
 void HDL_parameter::add_component(const Expression_component &component) {
     if (!raw_value) raw_value = std::make_shared<Expression>();
-    if(raw_value->is_expression()) {
+    if(raw_value->is<Expression>()) {
         auto expr = static_cast<Expression *>(raw_value.get());
         expr->push_back(component);
     }

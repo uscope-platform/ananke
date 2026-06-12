@@ -30,7 +30,7 @@
 #include "data_model/HDL/HDL_instance.hpp"
 #include "data_model/HDL/HDL_Resource.hpp"
 
-
+#include "data_model/HDL/parameters/components/Parameter_components.hpp"
 
 #include <utility>
 #include <vector>

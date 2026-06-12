@@ -935,7 +935,7 @@ void sv_visitor::enterGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
 
 void sv_visitor::exitGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
     auto param = params_factory.get_parameter();
-    if(!(param->get_expression()->is_expression() || param->get_expression()->is_cast())) {
+    if(!(param->get_expression()->is<Expression>() || param->get_expression()->is<Cast>())) {
         throw std::runtime_error("Concatenations or replications are not allowed in loop declarations");
     }
     auto ex = static_cast<Expression *>(param->get_expression().get());

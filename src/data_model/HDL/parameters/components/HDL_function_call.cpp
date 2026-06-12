@@ -84,7 +84,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_scalar(const std::
         if (!raw_value.value().is_int_array()) return raw_value;
         auto components = raw_value.value().get_int_array().get_1d_slice({0, 0});
         auto size = 0;
-        if (assignments[0].get_value()->is_replication()) size = assignments[0].get_value()->as<Replication>().get_item()->get_size();
+        if (assignments[0].get_value()->is<Replication>()) size = assignments[0].get_value()->as<Replication>().get_item()->get_size();
         else size = assignments[0].get_value()->get_size();
         std::vector<int64_t> packing_sizes(components.size(), size);
         return pack_values(components, packing_sizes);

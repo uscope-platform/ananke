@@ -13,8 +13,16 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+#ifndef ANANKE_PARAMETER_COMPONENTS_HPP
+#define ANANKE_PARAMETER_COMPONENTS_HPP
+
+
+#include "data_model/HDL/parameters/components/Cast.hpp"
+#include "data_model/HDL/parameters/components/Concatenation.hpp"
+#include "data_model/HDL/parameters/components/Expression.hpp"
+#include "data_model/HDL/parameters/components/HDL_function_call.hpp"
+#include "data_model/HDL/parameters/components/Replication.hpp"
+#include "data_model/HDL/parameters/components/Ternary.hpp"
 #include "data_model/HDL/parameters/components/Token.hpp"
 
-Token::Token() {
-    type = token;
-}
+#endif //ANANKE_PARAMETER_COMPONENTS_HPP

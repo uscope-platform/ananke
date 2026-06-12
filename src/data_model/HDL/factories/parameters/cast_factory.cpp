@@ -31,7 +31,7 @@ void cast_factory::set_type(const std::string &t) {
 
 void cast_factory::consume(const std::shared_ptr<Parameter_value_base> &c) {
     if (state == build_phase::size) {
-        if (c->is_expression()) {
+        if (c->is<Expression>()) {
             new_cast.set_size(c->as<Expression>());
         } else {
             spdlog::warn("non expression cast size: {}", c->print());

@@ -391,7 +391,7 @@ void Expression::propagate_expression(const qualified_identifier &constant_id,
     for (auto & component : components) {
         if (component.is_identifier()) {
             if (component.get_value().value().get_string() == constant_id.name) {
-                if (value->is_expression()) {
+                if (value->is<Expression>()) {
                     auto expr = value->as<Expression>();
                     if (expr.components.size() == 1) {
                         new_expr.push_back(expr.components[0]);

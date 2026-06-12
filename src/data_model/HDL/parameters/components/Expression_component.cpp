@@ -57,7 +57,7 @@ Expression_component::Expression_component(std::variant<hdl_integer, double> n, 
 }
 
 Expression_component::Expression_component(const std::shared_ptr<Parameter_value_base> &param) {
-    if (!param->is_function()) {
+    if (!param->is<HDL_function_call>()) {
         throw std::invalid_argument("Only functions are supported as expression components");
     }
     call = std::make_shared<HDL_function_call>(param->as<HDL_function_call>());

@@ -98,7 +98,7 @@ std::optional<resolved_parameter> Replication::evaluate(const std::map<qualified
     if (!raw_size.value().is_integer()) return false;
     auto size = raw_size.value().get_integer().get_value();
     mdarray<hdl_integer>::md_1d_array repeated_value;
-    if (repeated_item->is_expression()) {
+    if (repeated_item->is<Expression>()) {
         auto item = repeated_item->as<Expression>().evaluate(context);
         int64_t repeated_size = repeated_item->as<Expression>().get_size();
         if (!item.has_value()) return false;
@@ -108,7 +108,7 @@ std::optional<resolved_parameter> Replication::evaluate(const std::map<qualified
         } else {
             return pack_repetition(item.value().get_integer() , repeated_size, size);
         }
-    } else if (repeated_item->is_concatenation()) {
+    } else if (repeated_item->is<Concatenation>()) {
 
         auto raw_item = repeated_item->as<Concatenation>().evaluate(context);
         if (!raw_item.has_value()) return std::nullopt;
@@ -121,7 +121,7 @@ std::optional<resolved_parameter> Replication::evaluate(const std::map<qualified
                 repeated_value.insert(repeated_value.end(), item_vect.begin(), item_vect.end());
             }
         }
-    } else if (repeated_item->is_replication()) {
+    } else if (repeated_item->is<Replication>()) {
         // TODO: Probably i just need to call evaluate again "nested style" with packed st toet to true;
         throw std::runtime_error("Nested repetitions are not supported yet");
     } else {

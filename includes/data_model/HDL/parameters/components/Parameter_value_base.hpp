@@ -35,7 +35,8 @@ public:
         replication,
         function,
         ternary,
-        cast
+        cast,
+        token
     };
 
     virtual ~Parameter_value_base() = default;
@@ -48,18 +49,18 @@ public:
     virtual int64_t get_size() {return 0;}
 
 
-    [[nodiscard]] bool is_expression() const {return type == expression;}
-    [[nodiscard]] bool is_replication() const {return type == replication;}
-    [[nodiscard]] bool is_concatenation() const {return type == concatenation;}
-    [[nodiscard]] bool is_function() const {return type == function;}
-    [[nodiscard]] bool is_ternary() const {return type == ternary;}
-    [[nodiscard]] bool is_cast() const {return type == cast;}
 
     virtual void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) = 0;
     virtual std::shared_ptr<Parameter_value_base> clone_ptr() const = 0;
 
     template<typename T>
         T& as() { return static_cast<T&>(*this); }
+
+    template<typename T>
+        bool is() const {
+        // dynamic_cast with pointers returns nullptr if the cast fails
+        return dynamic_cast<const T*>(this) != nullptr;
+    }
 
     template<class Archive>
     void serialize( Archive & ar ) {
