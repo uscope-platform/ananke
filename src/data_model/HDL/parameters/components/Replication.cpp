@@ -26,26 +26,22 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Replication)
 Replication::Replication(const std::shared_ptr<Expression> &size, std::shared_ptr<Parameter_value_base> item)  {
     repeated_item = std::move(item);
     repetition_size = size;
-    type = replication;
 }
 
 Replication::Replication(const Replication &other) {
     repetition_size = other.repetition_size;
     if(other.repeated_item != nullptr) repeated_item = other.repeated_item->clone_ptr();
-    type = other.type;
 }
 
 Replication::Replication(Replication &&other) noexcept {
     repetition_size = other.repetition_size;
     if(other.repeated_item != nullptr) repeated_item = other.repeated_item->clone_ptr();
-    type = other.type;
 }
 
 Replication Replication::clone()  const{
     Replication result;
     result.repetition_size = repetition_size;
     if(repeated_item != nullptr) result.repeated_item = repeated_item->clone_ptr();
-    result.type = type;
     return result;
 }
 
@@ -54,7 +50,6 @@ Replication & Replication::operator=(const Replication &other) {
     if (this != &other) {
         repetition_size = other.repetition_size;
         if(other.repeated_item != nullptr) repeated_item = other.repeated_item->clone_ptr();
-        type = other.type;
     }
     return *this;
 }
@@ -63,7 +58,6 @@ Replication & Replication::operator=(Replication &&other) noexcept {
     if (this != &other) {
         repetition_size = other.repetition_size;
         if(other.repeated_item != nullptr) repeated_item = other.repeated_item->clone_ptr();
-        type = other.type;
     }
     return *this;
 }

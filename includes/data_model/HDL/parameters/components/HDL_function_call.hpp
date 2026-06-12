@@ -25,10 +25,9 @@
 
 class HDL_function_call : public Parameter_value_base{
 public:
-    HDL_function_call();
+    HDL_function_call() = default;
     explicit HDL_function_call(const std::string &n) {
         function_name = n;
-        type = function;
     }
     void set_name(const std::string &n){function_name = n;}
     std::string get_name(){return function_name;}

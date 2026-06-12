@@ -24,13 +24,12 @@
 
 class Cast : public Parameter_value_base{
 public:
-    Cast();
+    Cast() = default;
 
     Cast & operator=(const Cast &other) {
         if (this == &other)
             return *this;
         Parameter_value_base::operator =(other);
-        type = other.type;
         if (other.content != nullptr) content = other.content->clone_ptr();
         type_cast = other.type_cast;
         target_type = other.target_type;
@@ -42,7 +41,6 @@ public:
         if (this == &other)
             return *this;
         Parameter_value_base::operator =(std::move(other));
-        type = other.type;
         type_cast = other.type_cast;
         target_type = other.target_type;
         if (other.content != nullptr) content = std::move(other.content->clone_ptr());

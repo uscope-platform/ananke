@@ -29,7 +29,6 @@ Concatenation::Concatenation(const Concatenation &other) {
     default_initialization = other.default_initialization;
     packing = other.packing;
     unpacked_dimension = other.unpacked_dimension;
-    type = concatenation;
 }
 
 Concatenation::Concatenation(Concatenation &&other) noexcept {
@@ -40,7 +39,6 @@ Concatenation::Concatenation(Concatenation &&other) noexcept {
     default_initialization = other.default_initialization;
     packing = other.packing;
     unpacked_dimension = other.unpacked_dimension;
-    type = concatenation;
 }
 
 Concatenation Concatenation::clone()  const{

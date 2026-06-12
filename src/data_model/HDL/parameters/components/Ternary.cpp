@@ -22,9 +22,6 @@
 CEREAL_REGISTER_TYPE(Ternary)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Ternary)
 
-Ternary::Ternary() {
-    type = ternary;
-}
 
 std::set<qualified_identifier> Ternary::get_dependencies() const {
     std::set<qualified_identifier> ret_val;

@@ -24,7 +24,7 @@
 
 class Ternary : public Parameter_value_base{
 public:
-    Ternary();
+    Ternary() = default;
     void set_condition(const Expression &c) {condition = c;}
     void set_true_value(const std::shared_ptr<Parameter_value_base> &v) {true_value = v;}
     void set_false_value(const std::shared_ptr<Parameter_value_base> &v) {false_value =v;}

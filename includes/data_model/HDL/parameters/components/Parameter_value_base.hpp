@@ -29,15 +29,6 @@ class HDL_function_def;
 
 class Parameter_value_base {
 public:
-    enum param_value_type {
-        concatenation,
-        expression,
-        replication,
-        function,
-        ternary,
-        cast,
-        token
-    };
 
     virtual ~Parameter_value_base() = default;
 
@@ -62,17 +53,8 @@ public:
         return dynamic_cast<const T*>(this) != nullptr;
     }
 
-    template<class Archive>
-    void serialize( Archive & ar ) {
-        ar(type);
-    }
-    // Public equality operator using the enum discriminator
     bool operator==(const Parameter_value_base& other) const {
-        // Use your existing member variable instead of RTTI
-        if (this->type != other.type) return false;
-
-        // Delegate to the virtual implementation
-        return isEqual(other);
+        return typeid(*this) == typeid(other) && isEqual(other);
     }
 
 
@@ -95,7 +77,6 @@ public:
     }
 
 protected:
-    param_value_type type = expression;
     virtual bool isEqual(const Parameter_value_base& other) const = 0;
 };
 

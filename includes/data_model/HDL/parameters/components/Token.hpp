@@ -19,7 +19,9 @@
 #include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
 
 class Token : public Parameter_value_base{
-    Token();
+public:
+    Token() = default;
+private:
 };
 
 

@@ -25,9 +25,7 @@
 
 class Replication : public Parameter_value_base{
 public:
-    Replication() {
-        type = replication;
-    };
+    Replication() = default;
     Replication(const std::shared_ptr<Expression> &size, std::shared_ptr<Parameter_value_base> item);
 
     Replication(const Replication &other);

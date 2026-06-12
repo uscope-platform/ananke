@@ -14,7 +14,3 @@
 //  limitations under the License.
 
 #include "data_model/HDL/parameters/components/Token.hpp"
-
-Token::Token() {
-    type = token;
-}

@@ -27,10 +27,6 @@ CEREAL_REGISTER_TYPE(HDL_function_call)
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, HDL_function_call)
 
-HDL_function_call::HDL_function_call() {
-    type = function;
-}
-
 void HDL_function_call::add_argument(const std::shared_ptr<Parameter_value_base> &p) {
     arguments.push_back(p);
 }

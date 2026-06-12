@@ -21,14 +21,8 @@
 CEREAL_REGISTER_TYPE(Cast)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Cast)
 
-
-Cast::Cast() {
-    type = cast;
-}
-
 Cast::Cast(const Cast &other) {
     size = other.size;
-    type = other.type;
     type_cast = other.type_cast;
     target_type = other.target_type;
     if (other.content != nullptr) content = other.content->clone_ptr();
@@ -36,7 +30,6 @@ Cast::Cast(const Cast &other) {
 
 Cast::Cast(Cast &&other) noexcept {
     size = other.size;
-    type = other.type;
     type_cast = other.type_cast;
     target_type = other.target_type;
     if (other.content != nullptr) content = other.content->clone_ptr();
