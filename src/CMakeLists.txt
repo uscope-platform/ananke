@@ -14,7 +14,7 @@ target_sources(ananke_lib
     analysis/data_acquisition_analysis.cpp
     analysis/control_bus_analysis.cpp
     analysis/type_cast_engine.cpp
-        frontend/analysis/type_engine.cpp
+    frontend/analysis/type_engine.cpp
     analysis/loop_solver.cpp
     analysis/proxy_bus_analysis.cpp
     Backend/Dependency_resolver.cpp
@@ -31,7 +31,7 @@ target_sources(ananke_lib
     Backend/python_script_runner.cpp
     data_model/HDL/HDL_Resource.cpp
     data_model/HDL/HDL_instance.cpp
-        data_model/HDL/types/HDL_struct_type.cpp
+    data_model/HDL/types/HDL_struct_type.cpp
     data_model/HDL/HDL_instance_AST.cpp
     data_model/mm_file.cpp
     data_model/HDL/factories/HDL_instances_factory.cpp
@@ -43,12 +43,13 @@ target_sources(ananke_lib
     data_model/HDL/parameters/HDL_parameter.cpp
     data_model/HDL/parameters/common/resolved_parameter.cpp
     data_model/HDL/parameters/common/hdl_integer.cpp
-        data_model/HDL/types/HDL_simple_type.cpp
+    data_model/HDL/types/HDL_simple_type.cpp
     data_model/HDL/parameters/components/Expression.cpp
     data_model/HDL/parameters/components/Concatenation.cpp
     data_model/HDL/parameters/components/Ternary.cpp
     data_model/HDL/parameters/components/Replication.cpp
     data_model/HDL/parameters/components/Cast.cpp
+    data_model/HDL/parameters/components/Token.cpp
     data_model/HDL/parameters/components/Expression_component.cpp
     data_model/HDL/parameters/components/HDL_function_def.cpp
     data_model/HDL/parameters/components/HDL_function_call.cpp
