@@ -71,7 +71,7 @@ std::set<std::string> settings_store::get_excluded_paths() {
     std::set<std::string> raw_includes;
 
     for (const auto& item : profiles[selected_profile].excludes) {
-        raw_includes.insert(profiles[selected_profile].hdl_store / item);
+        raw_includes.insert(profiles[selected_profile].hdl_store / std::filesystem::path(item));
     }
     return  raw_includes;
 }
@@ -93,7 +93,7 @@ void settings_store::load_settings(const std::string  &settings_file) {
             if (value.contains("default_includes"))
                 profiles[key].includes = value["default_includes"];
             if (value.contains("excluded_paths"))
-                profiles[key].includes = value["excluded_paths"];
+                profiles[key].excludes = value["excluded_paths"];
         }
     }
     if (settings.contains("amd_vivado_path"))
@@ -101,7 +101,7 @@ void settings_store::load_settings(const std::string  &settings_file) {
     if (settings.contains("lattice_radiant_path"))
         tool_paths["lattice_radiant"] = std::filesystem::path(settings["lattice_radiant_path"]);
 
-    if (settings.contains("default_profile")) selected_profile = settings["default_profile"];
+    if (settings.contains("default_profile") && selected_profile.empty()) selected_profile = settings["default_profile"];
 }
 
 void settings_store::flush() {

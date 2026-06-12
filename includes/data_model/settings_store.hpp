@@ -51,8 +51,6 @@ private:
     std::map<std::string, std::filesystem::path> tool_paths;
     std::string selected_profile;
 
-    nlohmann::json settings_backend;
-
     bool ephemeral;
     std::string store_path;
     std::string settings_file;
