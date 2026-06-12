@@ -46,7 +46,7 @@ TEST(parameter_extraction, init_list_after_reg) {
 )";
 
     sv_analyzer analyzer;
-    
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
@@ -353,6 +353,81 @@ TEST(parameter_extraction, multiple_type_cast) {
 
     ASSERT_EQ(251, defaults.at({"","", "TEST_PARAM"}).get_integer());
     ASSERT_EQ(3, defaults.at({"","", "TEST_PARAM_2"}).get_integer());
+}
+
+TEST(parameter_extraction, cast_in_binary_expression) {
+    auto test_pattern = R"(
+        module test_mod #()();
+            parameter integer x = -1;
+            parameter integer y = 'hfffffffa;
+            parameter integer A = unsigned'(x) + 1;
+            parameter integer B = signed'(y) - 2;
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+    p->set_name("x");
+    p->set_type(Type_engine::create_primitive_type("integer"));
+    p->add_component(Expression_component("-", Expression_component::operation));
+    p->add_component(Expression_component("1", Expression_component::number));
+    check_params.insert(p);
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("y");
+    p->set_type(Type_engine::create_primitive_type("integer"));
+    p->add_component(Expression_component(4294967290, 32));
+    check_params.insert(p);
+
+
+    auto cast_a = std::make_shared<Cast>();
+    cast_a->set_type_cast();
+    cast_a->set_target_type("unsigned");
+    cast_a->set_content(std::make_shared<Expression>(Expression(
+        Expression_component("x", Expression_component::identifier))));
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("A");
+    p->set_type(Type_engine::create_primitive_type("integer"));
+    p->set_raw_value(cast_a);
+    check_params.insert(p);
+
+    auto cast_b = std::make_shared<Cast>();
+    cast_b->set_type_cast();
+    cast_b->set_target_type("signed");
+    cast_b->set_content(std::make_shared<Expression>(Expression(
+        Expression_component("y", Expression_component::identifier))));
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("B");
+    p->set_type(Type_engine::create_primitive_type("integer"));
+    p->set_raw_value(cast_b);
+    check_params.insert(p);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
+    }
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    std::map<qualified_identifier, resolved_parameter> check_defaults = {
+        {{"","", "x"}, -1},
+        {{"","", "y"}, static_cast<uint64_t>(4294967290)},
+        {{"","", "A"}, static_cast<uint64_t>(4294967294)},
+        {{"","", "B"}, -8},
+    };
+
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
 }
 
 TEST(parameter_extraction,time_literal) {
@@ -1510,7 +1585,7 @@ TEST(parameter_extraction, arithmetic_shift_right) {
         ASSERT_EQ(value, defaults.at(name));
     }
 }
- 
+
 TEST(parameter_extraction, logical_and_or) {
     auto test_pattern = R"(
         module test_mod #(
@@ -1523,32 +1598,32 @@ TEST(parameter_extraction, logical_and_or) {
             parameter mixed_expr = op_a && op_b || op_c;
         endmodule
     )";
- 
+
     sv_analyzer analyzer;
- 
+
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
- 
+
     Parameters_map check_params;
- 
+
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("3", Expression_component::number));
     check_params.insert(p);
- 
+
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("0", Expression_component::number));
     check_params.insert(p);
- 
+
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_c");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("5", Expression_component::number));
     check_params.insert(p);
- 
+
     p = std::make_shared<HDL_parameter>();
     p->set_name("log_and_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
@@ -1556,7 +1631,7 @@ TEST(parameter_extraction, logical_and_or) {
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     p->add_component(Expression_component("&&", Expression_component::operation));
     check_params.insert(p);
- 
+
     p = std::make_shared<HDL_parameter>();
     p->set_name("log_or_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
@@ -1564,7 +1639,7 @@ TEST(parameter_extraction, logical_and_or) {
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     p->add_component(Expression_component("||", Expression_component::operation));
     check_params.insert(p);
- 
+
     p = std::make_shared<HDL_parameter>();
     p->set_name("mixed_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
@@ -1574,14 +1649,14 @@ TEST(parameter_extraction, logical_and_or) {
     p->add_component(Expression_component("op_c", Expression_component::identifier));
     p->add_component(Expression_component("||", Expression_component::operation));
     check_params.insert(p);
- 
+
     ASSERT_EQ(check_params.size(), parameters.size());
- 
+
     for(const auto& [name, item]:check_params){
         EXPECT_TRUE(parameters.contains(item->get_name()));
         ASSERT_EQ(*item, *parameters.get(name));
     }
- 
+
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     // 3 && 0 = 0, 3 || 0 = 1, (3 && 0) || 5 = 1
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -1598,7 +1673,7 @@ TEST(parameter_extraction, logical_and_or) {
     }
 }
 
- 
+
 TEST(parameter_extraction, assay_assignment) {
     auto test_pattern = R"(
         module test_mod #(
