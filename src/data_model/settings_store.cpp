@@ -67,7 +67,13 @@ std::set<std::string> settings_store::get_default_includes() {
 }
 
 std::set<std::string> settings_store::get_excluded_paths() {
-    return   profiles[selected_profile].excludes;
+
+    std::set<std::string> raw_includes;
+
+    for (const auto& item : profiles[selected_profile].excludes) {
+        raw_includes.insert(profiles[selected_profile].hdl_store / item);
+    }
+    return  raw_includes;
 }
 
 settings_store::~settings_store() {
