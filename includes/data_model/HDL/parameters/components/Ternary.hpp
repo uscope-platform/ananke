@@ -45,7 +45,6 @@ public:
     }
 
 protected:
-    param_value_type type = ternary;
     [[nodiscard]] bool isEqual(const Parameter_value_base& other) const override;
 
 private:
