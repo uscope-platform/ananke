@@ -177,11 +177,8 @@ int64_t Expression_component::get_operator_precedence() {
     return operators_precedence[string_value];
 }
 
-std::optional<resolved_parameter> Expression_component::get_value() const {
-    return value;
-}
 
-std::optional<resolved_parameter> Expression_component::get_value(const std::map<qualified_identifier, resolved_parameter> &context) const {
+std::optional<resolved_parameter> Expression_component::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) const {
     if (type == identifier) {
         qualified_identifier id{package_prefix, instance_prefix, value.get_string()};
         auto it = context.find(id);

@@ -58,34 +58,16 @@ public:
     explicit Expression_component(const std::shared_ptr<Parameter_value_base> &param);
     std::set<qualified_identifier> get_dependencies()const;
     void propagate_function(HDL_function_def def);
+
     bool is_subscripted() const {return !array_index.empty();}
     bool is_string() const {return type == string;}
     bool is_identifier() const {return type == identifier;}
     bool is_array() const {return value.is_int_array();}
+    bool is_function() const {return type == function;}
+    bool is_operator() const {return type == operation;}
+    bool is_numeric() const {return type == number;}
 
-    bool is_function() const {
-        return type == function;
-    }
-    bool is_operator() const {
-        return type == operation;
-    }
-
-    bool is_numeric() const {
-        return type == number;
-    }
-
-    std::optional<resolved_parameter> get_value()const;
-    std::optional<resolved_parameter> get_value(const std::map<qualified_identifier, resolved_parameter> &context) const;
-
-    void set_value(const resolved_parameter &v) {
-        value = v;
-    }
-
-    void set_instance_prefix(const std::string &p){instance_prefix = p;}
-    std::string get_instance_prefix() {return instance_prefix;};
-
-    void set_package_prefix(const std::string &s) {package_prefix = s;}
-    std::string get_package_prefix() const {return package_prefix;};
+    std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) const;
 
     bool is_right_associative();
     int64_t get_operator_precedence();
@@ -98,13 +80,24 @@ public:
 
     operator_type_t get_operator_type();
 
+    static component_type get_type(const std::string &s);
+
+
     friend bool operator==(const Expression_component&lhs, const Expression_component&rhs);
 
     void set_array_index(const std::vector<Expression> &v);
     void add_array_index(const Expression &c);
     std::vector<Expression> get_array_index();
 
-    std::string print_index(const std::vector<Expression> &index)const;
+    void set_instance_prefix(const std::string &p){instance_prefix = p;}
+    std::string get_instance_prefix() {return instance_prefix;};
+
+    void set_package_prefix(const std::string &s) {package_prefix = s;}
+    std::string get_package_prefix() const {return package_prefix;};
+
+    void set_value(const resolved_parameter &v) {value = v;}
+    std::optional<resolved_parameter> get_value()const{return value;}
+
 
     int64_t get_binary_size() const{return binary_size;}
     void set_binary_size(int64_t s) {binary_size = s;}
@@ -114,9 +107,11 @@ public:
         ar(value,type, array_index, instance_prefix, package_prefix, binary_size);
     }
 
-    static component_type get_type(const std::string &s);
 
 private:
+
+    std::string print_index(const std::vector<Expression> &index)const;
+
     static  std::pair<resolved_parameter, int64_t>  process_number(const std::string &s);
 
     component_type type = number;

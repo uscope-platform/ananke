@@ -27,11 +27,7 @@ struct qualified_identifier {
         instance = i;
         name = n;
     }
-    qualified_identifier(std::array<std::string, 3> il) {
-        prefix = il[0];
-        instance = il[1];
-        name = il[2];
-    }
+
     std::string prefix;
     std::string instance;
     std::string name;

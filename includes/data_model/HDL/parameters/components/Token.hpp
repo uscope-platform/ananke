@@ -46,6 +46,29 @@ public:
         return res;
     }
 
+    void set_instance_prefix(const std::string &p){instance_prefix = p;}
+    std::string get_instance_prefix() {return instance_prefix;};
+
+    void set_package_prefix(const std::string &s) {package_prefix = s;}
+    std::string get_package_prefix() const {return package_prefix;};
+
+    void set_value(const resolved_parameter &v) {value = v;}
+    std::optional<resolved_parameter> get_value()const{return value;}
+
+
+    int64_t get_binary_size() const{return binary_size;}
+    void set_binary_size(int64_t s) {binary_size = s;}
+
+    void set_array_index(const std::vector<std::shared_ptr<Parameter_value_base>> &a_i){array_index = a_i;};
+    void add_array_index(const std::shared_ptr<Parameter_value_base> &a_i){array_index.push_back(a_i);}
+    std::vector<std::shared_ptr<Parameter_value_base>> get_array_index(){return array_index;}
+
+
+    template<class Archive>
+    void serialize( Archive & ar ) {
+        ar(value,type, array_index, instance_prefix, package_prefix, binary_size);
+    }
+
 private:
 
     token_type type = number;

@@ -109,7 +109,7 @@ Expression Expression::to_rpm() const {
 std::optional<resolved_parameter> Expression::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     if(components.empty()) return std::nullopt;
     if (components.size() == 1) {
-        return components[0].get_value(context);
+        return components[0].evaluate(context);
     }
 
     auto expr_stack = to_rpm();
@@ -119,7 +119,7 @@ std::optional<resolved_parameter> Expression::evaluate(const std::map<qualified_
         if(i.is_numeric()) {
             evaluator_stack.push(i);
         } else if (i.is_identifier()) {
-            auto resolved = i.get_value(context);
+            auto resolved = i.evaluate(context);
             if (!resolved.has_value()) return std::nullopt;
             if (resolved.value().is_integer()) {
                 evaluator_stack.emplace(resolved.value().get_integer(), 0);
