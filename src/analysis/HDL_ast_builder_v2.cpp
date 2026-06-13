@@ -151,7 +151,7 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::specialize_instance(const 
                 auto new_net = n;
                 Expression n_idx;
                 n_idx.emplace_back(idx);
-                new_net.set_index(n_idx);
+                new_net.set_index(std::make_shared<Expression>(n_idx));
                 port_content.emplace_back(new_net);
             } else {
                 port_content.push_back(n);

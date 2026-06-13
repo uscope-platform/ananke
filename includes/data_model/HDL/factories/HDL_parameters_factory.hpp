@@ -33,8 +33,8 @@ public:
 
     void set_type(const std::shared_ptr<hdl_type> &type);
 
-    void add_component(const Expression_component &c){add_component(c, false);}
-    void add_component(const Expression_component &c, bool is_call_argument);
+    void add_component(const Token &c){add_component(c, false);}
+    void add_component(const Token &c, bool is_call_argument);
 
 
     void start_initialization_list();
@@ -111,7 +111,7 @@ private:
     param_context ctx = param_context::idle;
 
     bool in_bit_selection = false;
-    Expression bit_index;
+    std::shared_ptr<Parameter_value_base> bit_index;
 
     std::shared_ptr<hdl_type> current_type = std::make_shared<HDL_simple_type>();
 };

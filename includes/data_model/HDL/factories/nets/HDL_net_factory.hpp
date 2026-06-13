@@ -28,7 +28,7 @@ public:
     void start_range();
     void close_range();
     void add_component(const std::string &c);
-    void add_component(const Expression_component &ec);
+    void add_component(const Token &ec);
     void add_replication_size(const std::string &c);
     void add_replication_target(const std::string &c);
     void add_index_component(const std::string &c);

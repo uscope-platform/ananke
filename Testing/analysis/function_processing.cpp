@@ -46,7 +46,7 @@ TEST(function_processing, simple_function_scalar) {
 
     HDL_function_def check_f;
     check_f.set_name("CTRL_ADDR_CALC");
-    assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Expression>(Expression(Expression_component("67", Expression_component::number))));
+    assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Expression>(Expression(Token("67", Token::number))));
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,functions["CTRL_ADDR_CALC"]);
 
@@ -84,20 +84,20 @@ TEST(function_processing, simple_function_array) {
     check_f.set_name("CTRL_ADDR_CALC");
     assignment a(
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("0", Expression_component::number))),
-        std::make_shared<Expression>(Expression(Expression_component("100", Expression_component::number)))
+        std::make_shared<Expression>(Expression(Token("0", Token::number))),
+        std::make_shared<Expression>(Expression(Token("100", Token::number)))
         );
     check_f.add_assignment(a);
     a = assignment(
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("1", Expression_component::number))),
-        std::make_shared<Expression>(Expression(Expression_component("200", Expression_component::number)))
+        std::make_shared<Expression>(Expression(Token("1", Token::number))),
+        std::make_shared<Expression>(Expression(Token("200", Token::number)))
         );
     check_f.add_assignment(a);
     a = assignment(
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("2", Expression_component::number))),
-        std::make_shared<Expression>(Expression(Expression_component("300", Expression_component::number)))
+        std::make_shared<Expression>(Expression(Token("2", Token::number))),
+        std::make_shared<Expression>(Expression(Token("300", Token::number)))
         );
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);
@@ -135,23 +135,23 @@ TEST(function_processing, simple_loop_function) {
 
     HDL_parameter p;
     p.set_name("i");
-    p.add_component(Expression_component("0", Expression_component::number));
+    p.add_component(Token("0", Token::number));
     metadata.set_init(p);
     metadata.set_end_c({
-        Expression_component("i", Expression_component::identifier),
-        Expression_component(Expression_component::less),
-        Expression_component("3", Expression_component::number)
+        Token("i", Token::identifier),
+        Token(Token::less),
+        Token("3", Token::number)
         });
 
     metadata.set_iter({
-        Expression_component("i", Expression_component::identifier),
-        Expression_component(Expression_component::add),
-        Expression_component("1", Expression_component::number)});
+        Token("i", Token::identifier),
+        Token(Token::add),
+        Token("1", Token::number)});
 
     assignment a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("i", Expression_component::identifier))),
-        std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number), Expression_component(Expression_component::multiply), Expression_component("i", Expression_component::identifier)}))
+        std::make_shared<Expression>(Expression(Token("i", Token::identifier))),
+        std::make_shared<Expression>(Expression({Token("100", Token::number), Token(Token::multiply), Token("i", Token::identifier)}))
     };
 
     metadata.add_assignment(a);
@@ -190,23 +190,23 @@ TEST(function_processing, parametric_loop_function) {
 
     HDL_parameter p;
     p.set_name("i");
-    p.add_component(Expression_component("0", Expression_component::number));
+    p.add_component(Token("0", Token::number));
     metadata.set_init(p);
     metadata.set_end_c({
-        Expression_component("i", Expression_component::identifier),
-        Expression_component(Expression_component::less),
-        Expression_component("N_CORES", Expression_component::identifier)
+        Token("i", Token::identifier),
+        Token(Token::less),
+        Token("N_CORES", Token::identifier)
         });
 
     metadata.set_iter({
-        Expression_component("i", Expression_component::identifier),
-        Expression_component(Expression_component::add),
-        Expression_component("1", Expression_component::number)});
+        Token("i", Token::identifier),
+        Token(Token::add),
+        Token("1", Token::number)});
 
     assignment a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("i", Expression_component::identifier))),
-        std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number), Expression_component(Expression_component::multiply), Expression_component("i", Expression_component::identifier)}))
+        std::make_shared<Expression>(Expression(Token("i", Token::identifier))),
+        std::make_shared<Expression>(Expression({Token("100", Token::number), Token(Token::multiply), Token("i", Token::identifier)}))
     };
 
     metadata.add_assignment(a);
@@ -246,40 +246,40 @@ TEST(function_processing, complex_loop_function) {
 
     HDL_parameter p;
     p.set_name("i");
-    p.add_component(Expression_component("1", Expression_component::number));
+    p.add_component(Token("1", Token::number));
     metadata.set_init(p);
     metadata.set_end_c({
-                Expression_component("i", Expression_component::identifier),
-               Expression_component(Expression_component::less),
-               Expression_component("N_CORES", Expression_component::identifier),
-               Expression_component( Expression_component::add),
-               Expression_component("1", Expression_component::number)
+                Token("i", Token::identifier),
+               Token(Token::less),
+               Token("N_CORES", Token::identifier),
+               Token( Token::add),
+               Token("1", Token::number)
     });
 
     metadata.set_iter({
-            Expression_component("i", Expression_component::identifier),
-            Expression_component(Expression_component::add),
-            Expression_component("1", Expression_component::number)
+            Token("i", Token::identifier),
+            Token(Token::add),
+            Token("1", Token::number)
         });
 
     assignment a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("i", Expression_component::identifier))),
-        std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number), Expression_component(Expression_component::multiply), Expression_component("i", Expression_component::identifier)}))
+        std::make_shared<Expression>(Expression(Token("i", Token::identifier))),
+        std::make_shared<Expression>(Expression({Token("100", Token::number), Token(Token::multiply), Token("i", Token::identifier)}))
     };
 
     metadata.add_assignment(a);
     check_f.add_loop_metadata(metadata);
     a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("0", Expression_component::number))),
-        std::make_shared<Expression>(Expression(Expression_component("44", Expression_component::number)))
+        std::make_shared<Expression>(Expression(Token("0", Token::number))),
+        std::make_shared<Expression>(Expression(Token("44", Token::number)))
     };
     check_f.add_assignment(a);
     a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("4", Expression_component::number))),
-        std::make_shared<Expression>(Expression(Expression_component("667", Expression_component::number)))
+        std::make_shared<Expression>(Expression(Token("4", Token::number))),
+        std::make_shared<Expression>(Expression(Token("667", Token::number)))
     };
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);
@@ -314,14 +314,14 @@ TEST(function_processing, parametrized_function) {
 
     assignment a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("0", Expression_component::number))),
-        std::make_shared<Expression>(Expression(Expression_component("44", Expression_component::number)))
+        std::make_shared<Expression>(Expression(Token("0", Token::number))),
+        std::make_shared<Expression>(Expression(Token("44", Token::number)))
     };
     check_f.add_assignment(a);
     a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("N_CORES", Expression_component::identifier))),
-        std::make_shared<Expression>(Expression(Expression_component("33", Expression_component::number)))
+        std::make_shared<Expression>(Expression(Token("N_CORES", Token::identifier))),
+        std::make_shared<Expression>(Expression(Token("33", Token::number)))
     };
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);
@@ -356,10 +356,10 @@ TEST(function_processing, package_assignment) {
 
     assignment a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Expression_component("0", Expression_component::number))),
-        std::make_shared<Expression>(Expression(Expression_component("bus_base", Expression_component::identifier)))
+        std::make_shared<Expression>(Expression(Token("0", Token::number))),
+        std::make_shared<Expression>(Expression(Token("bus_base", Token::identifier)))
     };
-    a.get_value()->as<Expression>().components[0].set_package_prefix("hil_address_space");
+    a.get_value()->as<Expression>().components[0]->as<Token>().set_package_prefix("hil_address_space");
     check_f.add_assignment(a);
 
     EXPECT_EQ(check_f,result);

@@ -257,7 +257,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("param_1");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Expression_component(4, 0));
+    p->add_component(Token(4, 0));
     p->set_value(4);
 
     check_params.insert(p);
@@ -265,15 +265,15 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p = std::make_shared<HDL_parameter>();
     mdarray<hdl_integer> av;
     av.set_1d_slice({0,0}, {9,8});
-    auto ec = Expression_component(0, 0);
+    auto ec = Token(0, 0);
     ec.set_value(av);
     p->set_raw_value(std::make_shared<Expression>(Expression(ec)));
     p->set_name("param_2");
     HDL_simple_type t;
     t = Type_engine::create_primitive_type("implicit")->as<HDL_simple_type>();
     t.add_dimension({
-        Expression(Expression_component("1", Expression_component::number)),
-        Expression(Expression_component("0", Expression_component::number)),
+        Expression(Token("1", Token::number)),
+        Expression(Token("0", Token::number)),
         false
     });
     p->set_type(std::make_shared<HDL_simple_type>(t));
@@ -283,21 +283,21 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("param_3");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Expression_component("(", Expression_component::parenthesis));
-    p->add_component(Expression_component(4, 0));
-    p->add_component(Expression_component(Expression_component::add));
-    p->add_component(Expression_component(7, 3));
-    p->add_component(Expression_component(")", Expression_component::parenthesis));
-    p->add_component(Expression_component(Expression_component::multiply));
-    p->add_component(Expression_component(1, 1));
+    p->add_component(Token("(", Token::parenthesis));
+    p->add_component(Token(4, 0));
+    p->add_component(Token(Token::add));
+    p->add_component(Token(7, 3));
+    p->add_component(Token(")", Token::parenthesis));
+    p->add_component(Token(Token::multiply));
+    p->add_component(Token(1, 1));
     p->set_value(11);
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("p1_t");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    ec = Expression_component("param_2", Expression_component::identifier);
-    ec.add_array_index({Expression_component(0, 1)});
+    ec = Token("param_2", Token::identifier);
+    ec.add_array_index(std::make_shared<Expression>(Token(0, 1)));
     p->add_component(ec);
     p->set_value(9);
     check_params.insert(p);
@@ -306,8 +306,8 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("p2_t");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    ec = Expression_component("param_2", Expression_component::identifier);
-    ec.add_array_index({Expression_component(1, 1)});
+    ec = Token("param_2", Token::identifier);
+    ec.add_array_index(std::make_shared<Expression>(Token(1, 1)));
     p->add_component(ec);
     p->set_value(8);
     check_params.insert(p);
@@ -960,7 +960,7 @@ TEST(parameter_processing, override_with_package_parameter) {
             auto override_param = std::make_shared<HDL_parameter>();
             override_param->set_name("param_1");
             override_param->set_type(Type_engine::create_primitive_type("implicit"));
-            Expression_component ec("base", Expression_component::identifier);
+            Token ec("base", Token::identifier);
             ec.set_package_prefix("test_package");
             override_param->add_component(ec);
             override_param->set_type(param->get_type());
@@ -1100,7 +1100,7 @@ TEST(parameter_processing, override_package_function) {
             auto override_param = std::make_shared<HDL_parameter>();
             override_param->set_name("param_1");
             override_param->set_type(Type_engine::create_primitive_type("implicit"));
-            Expression_component ec("test_param", Expression_component::identifier);
+            Token ec("test_param", Token::identifier);
             ec.set_package_prefix("test_pack");
             override_param->add_component(ec);
             override_param->set_type(param->get_type());
@@ -1328,24 +1328,24 @@ TEST(parameter_processing, init_list_override) {
     HDL_parameter p;
     p.set_name("NS");
     p.set_type(Type_engine::create_primitive_type("implicit"));
-    p.set_raw_value(std::make_shared<Expression>(Expression(Expression_component("2", Expression_component::number))));
+    p.set_raw_value(std::make_shared<Expression>(Expression(Token("2", Token::number))));
     p.set_value(2);
     check_params.insert(std::make_shared<HDL_parameter>(p));
     p = HDL_parameter();
     p.set_name("SLAVE_ADDR");
     auto param_type = HDL_simple_type();
     param_type.add_dimension({
-        {Expression_component("NS", Expression_component::identifier),Expression_component(Expression_component::subtract),Expression_component("1", Expression_component::number),},
-        {Expression_component("0", Expression_component::number)},
+        {Token("NS", Token::identifier),Token(Token::subtract),Token("1", Token::number),},
+        {Token("0", Token::number)},
         false});
     param_type.add_dimension({
-    {Expression_component("31", Expression_component::number),},
-    {Expression_component("0", Expression_component::number)},
+    {Token("31", Token::number),},
+    {Token("0", Token::number)},
     true});
     Concatenation c;
 
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component(1136656384, 0))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component(1136656448, 0))));
+    c.add_component(std::make_shared<Expression>(Expression(Token(1136656384, 0))));
+    c.add_component(std::make_shared<Expression>(Expression(Token(1136656448, 0))));
 
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(c));
@@ -1358,17 +1358,17 @@ TEST(parameter_processing, init_list_override) {
     p = HDL_parameter();
     p.set_name("SLAVE_MASK");
     Replication r;
-    r.set_item(std::make_shared<Expression>(Expression(Expression_component(64, 32))));
-    auto size = std::make_shared<Expression>(Expression(Expression_component(2, 1)));
+    r.set_item(std::make_shared<Expression>(Expression(Token(64, 32))));
+    auto size = std::make_shared<Expression>(Expression(Token(2, 1)));
     r.set_size(size);
     HDL_simple_type param_type_2;
     param_type_2.add_dimension({
-    {Expression_component("NS", Expression_component::identifier),Expression_component(Expression_component::subtract),Expression_component("1", Expression_component::number),},
-    {Expression_component("0", Expression_component::number)},
+    {Token("NS", Token::identifier),Token(Token::subtract),Token("1", Token::number),},
+    {Token("0", Token::number)},
     false});
     param_type_2.add_dimension({
-    {Expression_component("31", Expression_component::number),},
-    {Expression_component("0", Expression_component::number)},
+    {Token("31", Token::number),},
+    {Token("0", Token::number)},
     true});
     p.set_type(std::make_shared<HDL_simple_type>(param_type_2));
     p.set_raw_value(std::make_shared<Replication>(r));

@@ -24,13 +24,13 @@ void HDL_repetition_factory::stop_repetition() {
 
 void HDL_repetition_factory::add_component(const std::string &c) {
     if(phase == size) {
-        repetition.size.emplace_back(c, Expression_component::get_type(c));
+        repetition.size.emplace_back(c, Token::get_type(c));
     } else {
-        repetition.target.emplace_back(c,Expression_component::get_type(c));
+        repetition.target.emplace_back(c,Token::get_type(c));
     }
 }
 
-void HDL_repetition_factory::add_component(const Expression_component &ec) {
+void HDL_repetition_factory::add_component(const Token &ec) {
     if(phase == size) {
         repetition.size.push_back(ec);
     } else {

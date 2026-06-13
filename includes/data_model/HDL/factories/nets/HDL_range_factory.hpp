@@ -26,7 +26,7 @@ public:
     void open_range(bool direct);
     void advance_state();
     void add_component(const std::string &c);
-    void add_component(const Expression_component &ec);
+    void add_component(const Token &ec);
     void set_range_type(HDL_range::range_type_t t);
     HDL_range get_range();
     bool is_active() const;

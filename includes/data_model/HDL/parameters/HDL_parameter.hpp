@@ -95,7 +95,7 @@ public:
     void set_type(const std::shared_ptr<hdl_type> &t){type = t;}
 
     void set_raw_value(const std::shared_ptr<Parameter_value_base> &e) { raw_value = e; }
-    void add_component(const Expression_component &component);
+    void add_component(const Token &component);
     std::shared_ptr<Parameter_value_base> get_expression() {
         return raw_value;
     }

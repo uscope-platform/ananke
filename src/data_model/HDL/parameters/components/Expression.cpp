@@ -22,27 +22,36 @@ CEREAL_REGISTER_TYPE(Expression)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Expression)
 
 
+Expression::Expression(const std::initializer_list<Token> &list) {
+    components.reserve(list.size());
+
+    for (const auto &token : list) {
+        // Copy the token onto the heap inside a shared_ptr
+        components.push_back(std::make_shared<Token>(token));
+    }
+}
+
 std::string Expression::print() const {
     std::string ret_val;
     for(auto &item:components){
-        auto val = item.get_value();
+        auto val = item->as<Token>().get_value();
         if (val.has_value()) {
-            if(item.is_array()) {
+            if(item->as<Token>().is_array()) {
                 auto arr = val.value().get_int_array();;
                 ret_val += "{xxxxxxx}";
-            } else if(item.is_numeric()){
+            } else if(item->as<Token>().is_numeric()){
                 if( val.value().is_integer())
                     ret_val += std::to_string(val.value().get_integer());
                 else if(val.value().is_real()) {
                     ret_val += std::to_string(val.value().get_real());
                 }
-            } else if(item.is_identifier()){
-                if(!item.get_package_prefix().empty()){
-                    ret_val += item.get_package_prefix() + "::";
+            } else if(item->as<Token>().is_identifier()){
+                if(!item->as<Token>().get_package_prefix().empty()){
+                    ret_val += item->as<Token>().get_package_prefix() + "::";
                 }
                 ret_val += val->get_string();
-            } else if(item.is_operator()) {
-                ret_val += item.print_value();
+            } else if(item->as<Token>().is_operator()) {
+                ret_val += item->as<Token>().print();
             }
         }
     }
@@ -51,7 +60,7 @@ std::string Expression::print() const {
 
 Expression Expression::to_rpm() const {
     Expression rpn_exp;
-    std::stack<Expression_component> shunting_stack;
+    std::stack<std::shared_ptr<Parameter_value_base>> shunting_stack;
 
     if(components.empty()){
         return {};
@@ -64,38 +73,38 @@ Expression Expression::to_rpm() const {
     }
 
     for(auto item:components){
-        if (item.is_numeric()) {
-            rpn_exp.push_back(item);
-        } else if(item.is_operator()){
+        if (item->as<Token>().is_numeric()) {
+            rpn_exp.push_back(item->as<Token>());
+        } else if(item->as<Token>().is_operator()){
             while (
                     !shunting_stack.empty() &&
-                    !shunting_stack.top().is_parenthesis()  &&
+                    !shunting_stack.top()->as<Token>().is_parenthesis()  &&
                     (
-                        shunting_stack.top().is_function() ||
-                        shunting_stack.top().get_operator_precedence()<item.get_operator_precedence() ||
-                        shunting_stack.top().get_operator_precedence()==item.get_operator_precedence() &&
-                        !shunting_stack.top().is_right_associative()
+                        shunting_stack.top()->as<Token>().is_function() ||
+                        shunting_stack.top()->as<Token>().get_operator_precedence()<item->as<Token>().get_operator_precedence() ||
+                        shunting_stack.top()->as<Token>().get_operator_precedence()==item->as<Token>().get_operator_precedence() &&
+                        !shunting_stack.top()->as<Token>().is_right_associative()
                     )
             ){
-                rpn_exp.push_back(shunting_stack.top());
+                rpn_exp.push_back(shunting_stack.top()->as<Token>());
                 shunting_stack.pop();
             }
             shunting_stack.push(item);
-        } else if(item.get_value().value().get_string() == "(" || item.is_function()){
+        } else if(item->as<Token>().get_value().value().get_string() == "(" || item->as<Token>().is_function()){
             shunting_stack.push(item);
-        } else if(item.get_value().value().get_string()  == ")"){
-            while (!shunting_stack.empty() && !shunting_stack.top().is_parenthesis()) {
-                rpn_exp.push_back(shunting_stack.top());
+        } else if(item->as<Token>().get_value().value().get_string()  == ")"){
+            while (!shunting_stack.empty() && !shunting_stack.top()->as<Token>().is_parenthesis()) {
+                rpn_exp.push_back(shunting_stack.top()->as<Token>());
                 shunting_stack.pop();
             }
             if (!shunting_stack.empty()) shunting_stack.pop();
         } else {
-            rpn_exp.push_back(item);
+            rpn_exp.push_back(item->as<Token>());
         }
     }
 
     while(!shunting_stack.empty()){
-        rpn_exp.push_back(shunting_stack.top());
+        rpn_exp.push_back(shunting_stack.top()->as<Token>());
         shunting_stack.pop();
     }
     rpn_exp.rpn = true;
@@ -105,76 +114,76 @@ Expression Expression::to_rpm() const {
 std::optional<resolved_parameter> Expression::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     if(components.empty()) return std::nullopt;
     if (components.size() == 1) {
-        return components[0].evaluate(context);
+        return components[0]->as<Token>().evaluate(context);
     }
 
     auto expr_stack = to_rpm();
 
-    std::stack<Expression_component> evaluator_stack;
+    std::stack<std::shared_ptr<Parameter_value_base>> evaluator_stack;
     for(auto & i : expr_stack.components){
-        if(i.is_numeric()) {
+        if(i->as<Token>().is_numeric()) {
             evaluator_stack.push(i);
-        } else if (i.is_identifier()) {
-            auto resolved = i.evaluate(context);
+        } else if (i->as<Token>().is_identifier()) {
+            auto resolved = i->as<Token>().evaluate(context);
             if (!resolved.has_value()) return std::nullopt;
             if (resolved.value().is_integer()) {
-                evaluator_stack.emplace(resolved.value().get_integer(), 0);
+                evaluator_stack.emplace(std::make_shared<Token>(resolved.value().get_integer(), 0));
             } else if (resolved.value().is_real()) {
-                evaluator_stack.emplace(resolved.value().get_real(), 0);
+                evaluator_stack.emplace(std::make_shared<Token>(resolved.value().get_real(), 0));
             } else if (resolved.value().is_string()) {
-                evaluator_stack.emplace(resolved.value().get_string(), Expression_component::string);
+                evaluator_stack.emplace(std::make_shared<Token>(resolved.value().get_string(), Token::string));
             } else {
                 return std::nullopt;
             }
-        } else if (i.is_string()) {
+        } else if (i->as<Token>().is_string()) {
             evaluator_stack.push(i);
         } else {
-            if (i.is_function()) {
-                auto resolved = i.evaluate(context);
+            if (i->as<Token>().is_function()) {
+                auto resolved = i->as<Token>().evaluate(context);
                 if (!resolved.has_value()) return std::nullopt;
                 if (resolved.value().is_integer()) {
-                    evaluator_stack.emplace(std::variant<hdl_integer, double>(resolved.value().get_integer()), 0);
+                    evaluator_stack.emplace(std::make_shared<Token>(std::variant<hdl_integer, double>(resolved.value().get_integer()), 0));
                 } else if (resolved.value().is_real()) {
-                    evaluator_stack.emplace(std::variant<hdl_integer, double>(resolved.value().get_real()), 0);
+                    evaluator_stack.emplace(std::make_shared<Token>(std::variant<hdl_integer, double>(resolved.value().get_real()), 0));
                 } else if (resolved.value().is_int_array()) {
-                    Expression_component ec;
-                    ec.set_value(resolved.value());
-                    evaluator_stack.push(ec);
+                    Token t;
+                    t.set_value(resolved.value());
+                    evaluator_stack.push(std::make_shared<Token>(t));
                 } else {
                     return std::nullopt;
                 }
                 continue;
             }
             std::variant<hdl_integer, double> result;
-            if (!i.is_operator()) return std::nullopt;
-            if(i.get_operator_type() == Expression_component::unary_operator){
-                auto op = evaluator_stack.top().get_value();
-                result = evaluate_unary_expression(op.value(), i.get_operation());
+            if (!i->as<Token>().is_operator()) return std::nullopt;
+            if(i->as<Token>().get_operator_type() == Token::unary_operator){
+                auto op = evaluator_stack.top()->as<Token>().get_value();
+                result = evaluate_unary_expression(op.value(), i->as<Token>().get_operation());
                 evaluator_stack.pop();
-            } else if(i.get_operator_type() == Expression_component::binary_operator){
+            } else if(i->as<Token>().get_operator_type() == Token::binary_operator){
                 resolved_parameter op_a;
-                auto op_b = evaluator_stack.top().get_value();
+                auto op_b = evaluator_stack.top()->as<Token>().get_value();
                 evaluator_stack.pop();
                 if(expr_stack.components.size()==2)
                     op_a = 0;
                 else {
-                    op_a = evaluator_stack.top().get_value().value();
+                    op_a = evaluator_stack.top()->as<Token>().get_value().value();
                     evaluator_stack.pop();
                 }
-                result = evaluate_binary_expression(op_a, op_b.value(), i.get_operation());
+                result = evaluate_binary_expression(op_a, op_b.value(), i->as<Token>().get_operation());
             }
-            evaluator_stack.emplace(result, Expression_component::number);
+            evaluator_stack.emplace(std::make_shared<Token>(result, Token::number));
         }
     }
 
     if (evaluator_stack.empty())throw std::runtime_error("Evaluation of an empty expression");
-    return evaluator_stack.top().get_value();
+    return evaluator_stack.top()->as<Token>().get_value();
 
 }
 
 int64_t Expression::get_size() {
     if (components.size() == 1) {
-        return components[0].get_binary_size();
+        return components[0]->as<Token>().get_binary_size();
     }
 
     auto expression_value = evaluate({});
@@ -185,12 +194,12 @@ int64_t Expression::get_size() {
     return 0;
 }
 
-std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, Expression_component::sv_operators operation) {
+std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, Token::sv_operators operation) {
 
-    if(operation ==  Expression_component::equal){
+    if(operation ==  Token::equal){
         return op_a == op_b;
     }
-    if(operation ==  Expression_component::not_equal){
+    if(operation ==  Token::not_equal){
         return op_a != op_b;
     }
 
@@ -211,37 +220,37 @@ std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolve
     else d_b = static_cast<double>(op_b.get_integer().get_value());
     if(op_a.is_integer()) i_a =  op_a.get_integer();
     if(op_b.is_integer()) i_b =  op_b.get_integer();
-    if(operation == Expression_component::add){
+    if(operation == Token::add){
         if(int_exec) return i_a + i_b;
         return d_a + d_b;
     }
-    if(operation == Expression_component::subtract){
+    if(operation == Token::subtract){
         if(int_exec) return i_a - i_b;
         return d_a - d_b;
     }
-    if(operation == Expression_component::multiply){
+    if(operation == Token::multiply){
         if(int_exec) return i_a * i_b;
         return d_a * d_b;
     }
-    if(operation == Expression_component::power){
+    if(operation == Token::power){
         if(int_exec) return std::pow(i_a, i_b);
         return std::pow(d_a, d_b);
     }
-    if(operation == Expression_component::divide){
+    if(operation == Token::divide){
         if(int_exec) return i_a / i_b;
         return d_a / d_b;
     }
-    if(operation == Expression_component::modulo){
+    if(operation == Token::modulo){
         if(int_exec) return i_a % i_b;
         spdlog::warn("The modulus operator is only defined between integers");
         return 0;
     }
-    if(operation == Expression_component::logic_shift_left){
+    if(operation == Token::logic_shift_left){
         if(int_exec) return i_a << i_b;
         spdlog::warn("The shift operator is only defined between integers");
         return 0;
     }
-    if(operation == Expression_component::logic_shift_right){
+    if(operation == Token::logic_shift_right){
         if(int_exec) {
             uint64_t u_a = static_cast<uint64_t>(i_a.get_value());
             if(current_size > 0 && current_size < 64) {
@@ -254,60 +263,60 @@ std::variant<hdl_integer, double> Expression::evaluate_binary_expression(resolve
         spdlog::warn("The shift operator is only defined between integers");
         return 0;
     }
-    if(operation == Expression_component::arithmetic_shift_left){
+    if(operation == Token::arithmetic_shift_left){
         if(int_exec) return i_a << i_b;
         spdlog::warn("The shift operator is only defined between integers");
         return 0;
     }
 
-    if(operation == Expression_component::arithmetic_shift_right){
+    if(operation == Token::arithmetic_shift_right){
         if(int_exec) return i_a >> i_b;
         spdlog::warn("The shift operator is only defined between integers");
         return 0;
     }
 
-    if(operation == Expression_component::greater){
+    if(operation == Token::greater){
         if(int_exec) return i_a > i_b;
         return d_a > d_b;
     }
 
-    if(operation == Expression_component::greater_equal){
+    if(operation == Token::greater_equal){
         if(int_exec) return i_a >= i_b;
         return d_a >= d_b;
 
     }
-    if(operation == Expression_component::less){
+    if(operation == Token::less){
         if(int_exec) return i_a < i_b;
         return d_a < d_b;
     }
-    if(operation == Expression_component::less_equal){
+    if(operation == Token::less_equal){
         if(int_exec) return i_a <= i_b;
         return d_a <= d_b;
     }
-    if(operation == Expression_component::bitwise_and){
+    if(operation == Token::bitwise_and){
         return i_a & i_b;
     }
-    if(operation == Expression_component::bitwise_or){
+    if(operation == Token::bitwise_or){
         return i_a | i_b;
     }
-    if(operation == Expression_component::bitwise_xor){
+    if(operation == Token::bitwise_xor){
         return i_a ^ i_b;
     }
-    if(operation == Expression_component::bitwise_xnor){
+    if(operation == Token::bitwise_xnor){
         return ~(i_a ^ i_b);
     }
-    if(operation == Expression_component::logical_and){
+    if(operation == Token::logical_and){
         if(int_exec) return i_a && i_b;
         return static_cast<double>(d_a && d_b);
     }
-    if(operation == Expression_component::logical_or){
+    if(operation == Token::logical_or){
         if(int_exec)  return i_a || i_b;
         return static_cast<double>(d_a || d_b);
     }
     throw std::runtime_error("Error: Attempted evaluation of an unsupported binary expression expression ");
 }
 
-std::variant<hdl_integer, double> Expression::evaluate_unary_expression(resolved_parameter operand, Expression_component::sv_operators operation) {
+std::variant<hdl_integer, double> Expression::evaluate_unary_expression(resolved_parameter operand, Token::sv_operators operation) {
 
     if( !operand.is_integer() || operand.is_real()) {
         spdlog::warn("Attempted evaluation of operand of unsupported type");
@@ -315,37 +324,24 @@ std::variant<hdl_integer, double> Expression::evaluate_unary_expression(resolved
     }
     const bool int_exec = operand.is_integer();
 
-    hdl_integer int_op = 0;
+    hdl_integer int_op;
     if(int_exec) int_op = operand.get_integer();
     double double_op = 0;
     if(operand.is_real()) double_op = operand.get_real();
-    if(operation == Expression_component::logic_neg){
+    if(operation == Token::logic_neg){
         if(int_exec) return !int_op;
         return double_op != 0 ? 1 : 0;
     }
 
-    if(operation ==  Expression_component::bitwise_neg){
+    if(operation ==  Token::bitwise_neg){
         return ~operand.get_integer();
     }
     throw std::runtime_error("Error: Attempted evaluation of an unsupported unary expression ");
 }
 
-std::variant<hdl_integer, double> Expression::evaluate_cast(resolved_parameter operand, const std::string &operation) {
-    if(operation == "$itor") {
-        if(operand.is_integer()) return static_cast<double>(operand.get_integer().get_value());
-        spdlog::warn("Attempted cast of an unsupported type");
-        return 0;
-    } else if(operation == "$rtoi") {
-        if(operand.is_real()) return static_cast<int64_t>(round(operand.get_real()));
-        spdlog::warn("Attempted cast of an unsupported type");
-        return 0;
-    }
-    spdlog::warn("Attempted evaluation of an unsupported cast expression {}", operation);
-    return 0;
-}
 
-void Expression::add_index(const Expression &idx) {
-    if (!components.empty()) components.back().add_array_index(idx);
+void Expression::add_index(const std::shared_ptr<Parameter_value_base> &idx) {
+    if (!components.empty()) components.back()->as<Token>().add_array_index(idx);
 }
 
 void Expression::set_container_sizes(const resolved_type &s,
@@ -364,7 +360,7 @@ Expression Expression::clone()  const{
 std::set<qualified_identifier> Expression::get_dependencies()const {
     std::set<qualified_identifier> result;
     for (auto &comp:components) {
-        auto deps = comp.get_dependencies();
+        auto deps = comp->as<Token>().get_dependencies();
         result.insert(deps.begin(), deps.end());
     }
     return result;
@@ -372,15 +368,15 @@ std::set<qualified_identifier> Expression::get_dependencies()const {
 
 void Expression::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {
-    std::vector<Expression_component> new_expr;
+    std::vector<std::shared_ptr<Parameter_value_base>> new_expr;
 
     for (auto & component : components) {
-        if (component.is_identifier()) {
-            if (component.get_value().value().get_string() == constant_id.name) {
+        if (component->as<Token>().is_identifier()) {
+            if (component->as<Token>().get_value().value().get_string() == constant_id.name) {
                 if (value->is<Expression>()) {
                     auto expr = value->as<Expression>();
                     if (expr.components.size() == 1) {
-                        new_expr.push_back(expr.components[0]);
+                        new_expr.push_back(std::make_shared<Token>(expr.components[0]));
                         continue;
                     }
                 }
@@ -393,6 +389,6 @@ void Expression::propagate_expression(const qualified_identifier &constant_id,
 
 void Expression::propagate_function(const HDL_function_def &def) {
     for (auto & component : components) {
-        component.propagate_function(def);
+        component->as<Token>().propagate_function(def);
     }
 }

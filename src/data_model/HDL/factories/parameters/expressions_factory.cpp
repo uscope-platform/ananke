@@ -46,7 +46,7 @@ void expressions_factory::pause() {
     paused = true;
 }
 
-void expressions_factory::add_component(const Expression_component &ec) {
+void expressions_factory::add_component(const Token &ec) {
     if (factory_active && !paused) {
         current.push_back(ec);
     }
@@ -54,7 +54,7 @@ void expressions_factory::add_component(const Expression_component &ec) {
 }
 
 
-void expressions_factory::add_index(const Expression &idx) {
+void expressions_factory::add_index(const std::shared_ptr<Parameter_value_base>  &idx) {
     current.add_index(idx);
 }
 

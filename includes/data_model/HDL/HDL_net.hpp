@@ -80,7 +80,7 @@ public:
         return !replication.size.empty();
     }
     bool is_array() {
-        return !range.accessor.empty() || !index.empty();
+        return !range.accessor.empty() || !index->as<Expression>().empty();
     }
 
 
@@ -99,8 +99,14 @@ public:
     std::string get_name() const {
         return name;
     }
-    Expression_component get_index_at(uint32_t i) {return index.components[i];}
-    Expression get_index() const {return index;}
+    std::shared_ptr<Parameter_value_base> get_index_at(uint32_t i) {
+        if (!index->is<Expression>()) {
+            spdlog::error("Non expression indexes for hdl nets are not supported");
+            return nullptr;
+        }
+        return index->as<Expression>().components[i];
+    }
+    std::shared_ptr<Parameter_value_base> get_index() const {return index;}
     HDL_range get_range() const {return range;}
     HDL_replication get_replication() const {return replication;}
     void evaluate(const std::map<qualified_identifier, resolved_parameter> &context);
@@ -108,23 +114,23 @@ public:
     void set_name(const std::string &s) {
         name = s;
     }
-    void set_index(Expression i) {
+    void set_index(std::shared_ptr<Parameter_value_base> i) {
         index = i;
     }
     void add_index_component(const std::string &ec) {
-        index.emplace_back(ec, Expression_component::get_type(ec));
+        index->as<Expression>().emplace_back(ec, Token::get_type(ec));
     }
-    void add_index_component(const Expression_component &ec) {
-        index.push_back(ec);
+    void add_index_component(const Token &ec) {
+        index->as<Expression>().push_back(ec);
     }
     void set_range(HDL_range r) {
         range = r;
     }
     void add_relication_size(const std::string &ec) {
-        replication.size.emplace_back(ec, Expression_component::get_type(ec));
+        replication.size.emplace_back(ec, Token::get_type(ec));
     }
     void add_relication_target(const std::string &ec) {
-        replication.target.emplace_back(ec, Expression_component::get_type(ec));
+        replication.target.emplace_back(ec, Token::get_type(ec));
     }
     void set_replication(HDL_replication r) {
         replication = r;
@@ -137,7 +143,7 @@ public:
     virtual nlohmann::json dump();
 private:
     std::string name;
-    Expression index;
+    std::shared_ptr<Parameter_value_base> index;
     HDL_range range;
     HDL_replication replication;
 };

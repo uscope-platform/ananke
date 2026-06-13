@@ -43,7 +43,7 @@ std::vector<HDL_instance> HDL_loops_factory::get_instances() {
     return repeated_instances;
 }
 
-void HDL_loops_factory::add_component(const Expression_component &c) {
+void HDL_loops_factory::add_component(const Token &c) {
     current_expression.push_back(c);
 }
 

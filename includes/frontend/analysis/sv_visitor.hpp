@@ -214,7 +214,7 @@ public:
 
 private:
     void route_expression_component(const std::string& text);
-    void route_expression_component(const Expression_component& ec);
+    void route_expression_component(const Token& ec);
 
     bool in_param_declaration = false;
     bool in_class = false;

@@ -18,7 +18,7 @@
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
-assignment::assignment(const std::string &n, const std::optional<std::shared_ptr<Expression>> &idx,
+assignment::assignment(const std::string &n, const std::optional<std::shared_ptr<Parameter_value_base>> &idx,
                        const std::shared_ptr<Expression> &val) {
     name = n;
     index = idx;
@@ -37,7 +37,7 @@ bool assignment::operator==(const assignment &rhs) const {
     return retval;
 }
 
-void assignment::set_index(const std::shared_ptr<Expression> &idx) {
+void assignment::set_index(const std::shared_ptr<Parameter_value_base> &idx) {
     index = idx;
 }
 
@@ -45,7 +45,7 @@ void assignment::set_value(const std::shared_ptr<Parameter_value_base> &val) {
     value = val;
 }
 
-std::optional<std::shared_ptr<Expression>> assignment::get_index() const {
+std::optional<std::shared_ptr<Parameter_value_base>> assignment::get_index() const {
     return index;
 }
 
@@ -64,7 +64,7 @@ void assignment::propagate_argument(const std::string &name, const std::shared_p
 assignment assignment::clone() const {
     assignment a;
     a.name = name;
-    if(index.has_value()) a.set_index(std::make_shared<Expression>(*index.value()));
+    if(index.has_value()) a.set_index(index.value());
     if(value!= nullptr) a.set_value(value->clone_ptr());
     return a;
 }

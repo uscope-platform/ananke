@@ -21,12 +21,11 @@
 #include <tuple>
 #include <stack>
 #include "Expression_component.hpp"
+#include "data_model/HDL/parameters/components/Token.hpp"
 #include "Parameter_value_base.hpp"
 
 class Expression : public Parameter_value_base{
 public:
-    std::vector<Expression_component> components;
-    bool rpn = false;
 
     Expression clone() const;
     Expression(const Expression &other) = default;
@@ -37,16 +36,15 @@ public:
 
     Expression() = default;
 
-    Expression(const Expression_component &ec)
-            : components({ec}) {}
-    Expression(const std::initializer_list<Expression_component> &list)
-            : components(list) {}
+    Expression(const Token &ec)
+            : components({std::make_shared<Token>(ec)}) {}
+    Expression(const std::initializer_list<Token> &list);
     void clear() {components.clear(); rpn = false;}
     bool empty() const {return components.empty();}
-    void push_back(const Expression_component &ec) {components.emplace_back(ec);}
-    void push_front(const Expression_component &ec) {components.insert(components.begin(), ec);}
-    void emplace_back(const std::string &ec, Expression_component::component_type t) {components.emplace_back(ec, t);}
-    void emplace_back(const hdl_integer &ec) {components.emplace_back(ec, Expression_component::number);}
+    void push_back(const Token &t) {components.emplace_back(std::make_shared<Token>(t));}
+    void push_front(const Token &t) {components.insert(components.begin(), std::make_shared<Token>(t));}
+    void emplace_back(const std::string &ec, Token::token_type t) {components.push_back(std::make_shared<Token>(ec, t));}
+    void emplace_back(const hdl_integer &ec) {components.emplace_back(std::make_shared<Token>(ec, Expression_component::number));}
     std::set<qualified_identifier> get_dependencies()const override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
     void propagate_function(const HDL_function_def &def) override;
@@ -55,12 +53,10 @@ public:
     void set_rpn(bool s) {rpn = s;}
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
     int64_t get_size() override;
-    std::variant<hdl_integer, double> evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, Expression_component::sv_operators operation);
-    std::variant<hdl_integer, double> evaluate_unary_expression(resolved_parameter operand, Expression_component::sv_operators operation);
+    std::variant<hdl_integer, double> evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, Token::sv_operators operation);
+    std::variant<hdl_integer, double> evaluate_unary_expression(resolved_parameter operand, Token::sv_operators operation);
 
-    std::variant<hdl_integer, double> evaluate_cast(resolved_parameter operand, const std::string &operation);
-
-    void add_index(const Expression &idx);
+    void add_index(const std::shared_ptr<Parameter_value_base>  &idx);
 
     friend bool operator==(const Expression &lhs, const Expression &rhs) {
         return std::tie(lhs.components, lhs.rpn) == std::tie(rhs.components, rhs.rpn);
@@ -89,6 +85,9 @@ public:
         // This will use the operator== of Expression_component for each element in the vector
         return std::tie(components, rpn) == std::tie(rhs.components, rhs.rpn);
     }
+
+    std::vector<std::shared_ptr<Parameter_value_base>> components;
+    bool rpn = false;
     uint64_t current_size=0;
 };
 

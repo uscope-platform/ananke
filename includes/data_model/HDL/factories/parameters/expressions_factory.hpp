@@ -32,9 +32,9 @@ public:
     void clear_expression() {current.clear();}
     std::optional<Expression> get_expression();
     [[nodiscard]] int get_level() const {return expression_level;}
-    void add_component(const Expression_component &ec);
+    void add_component(const Token &ec);
     void pause();
-    void add_index(const Expression &idx);
+    void add_index(const std::shared_ptr<Parameter_value_base> &idx);
 
     void consume(const std::shared_ptr<Parameter_value_base>& v);
     bool active() const;

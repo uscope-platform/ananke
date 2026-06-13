@@ -23,7 +23,7 @@ sv_visitor::sv_visitor(std::string p) {
 }
 
 void sv_visitor::route_expression_component(const std::string& text) {
-    Expression_component ec(text, Expression_component::get_type(text));
+    Token ec(text, Token::get_type(text));
     if(loops_factory.in_loop()) {
         loops_factory.add_component(ec);
     }
@@ -40,7 +40,7 @@ void sv_visitor::route_expression_component(const std::string& text) {
     }
 }
 
-void sv_visitor::route_expression_component(const Expression_component& ec) {
+void sv_visitor::route_expression_component(const Token& ec) {
     if(loops_factory.in_loop()) {
         loops_factory.add_component(ec);
     }
@@ -243,7 +243,7 @@ void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
         }
         if(ctx->data_type()){
             if(!package_prefix.empty()){
-                Expression_component ec(package_item, Expression_component::get_type(package_item));
+                Token ec(package_item, Token::get_type(package_item));
                 ec.set_package_prefix(package_prefix);
                 if (f_factory.is_active()) {
                     f_factory.add_component(ec);
@@ -255,9 +255,9 @@ void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
             } else{
                 auto text = ctx->data_type()->getText();
                 if (f_factory.is_active()) {
-                    f_factory.add_component(Expression_component(text, Expression_component::get_type(text)));
+                    f_factory.add_component(Token(text, Token::get_type(text)));
                 } else {
-                    params_factory.add_component(Expression_component(text, Expression_component::get_type(text)), true);
+                    params_factory.add_component(Token(text, Token::get_type(text)), true);
                 }
 
             }
@@ -449,85 +449,85 @@ void sv_visitor::enterPrimaryPath(sv2017::PrimaryPathContext *ctx) {
 
 
 void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
-    Expression_component ec;
+    Token ec;
 
     if(!package_prefix.empty()) {
-        ec = Expression_component(package_item, Expression_component::get_type(package_item));
+        ec = Token(package_item, Token::get_type(package_item));
         ec.set_package_prefix(package_prefix);
         package_prefix.clear();
         package_item.clear();
     } else if (!instance_prefix.empty()){
-        ec = Expression_component(instance_item, Expression_component::get_type(instance_item));
+        ec = Token(instance_item, Token::get_type(instance_item));
         ec.set_instance_prefix(instance_prefix);
         instance_item.clear();
         instance_prefix.clear();
     } else {
-        ec = Expression_component(ctx->getText(), Expression_component::get_type(ctx->getText()));
+        ec = Token(ctx->getText(), Token::get_type(ctx->getText()));
     }
 
     route_expression_component(ec);
 }
 
 void sv_visitor::exitOperator_plus_minus(sv2017::Operator_plus_minusContext *ctx) {
-    if (ctx->PLUS())  route_expression_component(Expression_component(Expression_component::add));
-    if (ctx->MINUS()) route_expression_component(Expression_component(Expression_component::subtract));
+    if (ctx->PLUS())  route_expression_component(Token(Token::add));
+    if (ctx->MINUS()) route_expression_component(Token(Token::subtract));
 }
 
 void sv_visitor::exitOperator_mul_div_mod(sv2017::Operator_mul_div_modContext *ctx) {
-    if (ctx->MUL())  route_expression_component(Expression_component(Expression_component::multiply));
-    if (ctx->DIV()) route_expression_component(Expression_component(Expression_component::divide));
-    if (ctx->MOD()) route_expression_component(Expression_component(Expression_component::modulo));
+    if (ctx->MUL())  route_expression_component(Token(Token::multiply));
+    if (ctx->DIV()) route_expression_component(Token(Token::divide));
+    if (ctx->MOD()) route_expression_component(Token(Token::modulo));
 }
 
 
 void sv_visitor::exitOperator_shift(sv2017::Operator_shiftContext *ctx) {
-    if (ctx->SHIFT_LEFT()) route_expression_component(Expression_component(Expression_component::logic_shift_left));
-    if (ctx->SHIFT_RIGHT()) route_expression_component(Expression_component(Expression_component::logic_shift_right));
-    if (ctx->ARITH_SHIFT_LEFT()) route_expression_component(Expression_component(Expression_component::arithmetic_shift_left));
-    if (ctx->ARITH_SHIFT_RIGHT()) route_expression_component(Expression_component(Expression_component::arithmetic_shift_right));
+    if (ctx->SHIFT_LEFT()) route_expression_component(Token(Token::logic_shift_left));
+    if (ctx->SHIFT_RIGHT()) route_expression_component(Token(Token::logic_shift_right));
+    if (ctx->ARITH_SHIFT_LEFT()) route_expression_component(Token(Token::arithmetic_shift_left));
+    if (ctx->ARITH_SHIFT_RIGHT()) route_expression_component(Token(Token::arithmetic_shift_right));
 
 }
 
 void sv_visitor::exitUnary_operator(sv2017::Unary_operatorContext *ctx) {
-    if (ctx->PLUS())  route_expression_component(Expression_component(Expression_component::add));
-    if (ctx->MINUS()) route_expression_component(Expression_component(Expression_component::subtract));
+    if (ctx->PLUS())  route_expression_component(Token(Token::add));
+    if (ctx->MINUS()) route_expression_component(Token(Token::subtract));
 }
 
 void sv_visitor::exitOperator_cmp(sv2017::Operator_cmpContext *ctx) {
-    if (ctx->GT()) route_expression_component(Expression_component(Expression_component::greater));
-    if (ctx->GE()) route_expression_component(Expression_component(Expression_component::greater_equal));
-    if (ctx->LT()) route_expression_component(Expression_component(Expression_component::less));
-    if (ctx->LE()) route_expression_component(Expression_component(Expression_component::less_equal));
+    if (ctx->GT()) route_expression_component(Token(Token::greater));
+    if (ctx->GE()) route_expression_component(Token(Token::greater_equal));
+    if (ctx->LT()) route_expression_component(Token(Token::less));
+    if (ctx->LE()) route_expression_component(Token(Token::less_equal));
 }
 
 void sv_visitor::exitOperator_eq_neq(sv2017::Operator_eq_neqContext *ctx) {
-    if (ctx->EQ()) route_expression_component(Expression_component(Expression_component::equal));
-    if (ctx->NE()) route_expression_component(Expression_component(Expression_component::not_equal));
+    if (ctx->EQ()) route_expression_component(Token(Token::equal));
+    if (ctx->NE()) route_expression_component(Token(Token::not_equal));
 }
 
 void sv_visitor::exitOperator_bitwise_and(sv2017::Operator_bitwise_andContext *ctx) {
-    route_expression_component(Expression_component(Expression_component::bitwise_and));
+    route_expression_component(Token(Token::bitwise_and));
 }
 
 void sv_visitor::exitOperator_bitwise_or(sv2017::Operator_bitwise_orContext *ctx) {
-    route_expression_component(Expression_component(Expression_component::bitwise_or));
+    route_expression_component(Token(Token::bitwise_or));
 }
 
 void sv_visitor::exitOperator_xor(sv2017::Operator_xorContext *ctx) {
-    if (ctx->XOR()) route_expression_component(Expression_component(Expression_component::bitwise_xor));
-    if (ctx->XORN()) route_expression_component(Expression_component(Expression_component::bitwise_xnor));
-    if (ctx->NXOR()) route_expression_component(Expression_component(Expression_component::bitwise_xnor));
+    if (ctx->XOR()) route_expression_component(Token(Token::bitwise_xor));
+    if (ctx->XORN()) route_expression_component(Token(Token::bitwise_xnor));
+    if (ctx->NXOR()) route_expression_component(Token(Token::bitwise_xnor));
 }
 
 void sv_visitor::exitOperator_power(sv2017::Operator_powerContext *ctx) {
-    route_expression_component(Expression_component(Expression_component::power));
+    route_expression_component(Token(Token::power));
 }
 
 void sv_visitor::exitOperator_log_and(sv2017::Operator_log_andContext *ctx) {
-    route_expression_component(Expression_component(Expression_component::logical_and));
+    route_expression_component(Token(Token::logical_and));
 };
 void sv_visitor::exitOperator_log_or(sv2017::Operator_log_orContext *ctx) {
-    route_expression_component(Expression_component(Expression_component::logical_or));
+    route_expression_component(Token(Token::logical_or));
 };
 
 uint32_t sv_visitor::parse_number(const std::string& s) {
@@ -644,7 +644,7 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
         params_factory.stop_packed_assignment();
     } else {
         if(!package_prefix.empty()){
-            Expression_component ec(package_item, Expression_component::get_type(package_item));
+            Token ec(package_item, Token::get_type(package_item));
             ec.set_package_prefix(package_prefix);
             params_factory.add_component(ec);
             package_prefix.clear();
@@ -652,7 +652,7 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
         } else{
             if (ctx->constant_param_expression()) {
                 auto val = ctx->constant_param_expression()->getText();
-                params_factory.add_component(Expression_component(val, Expression_component::get_type(val)));
+                params_factory.add_component(Token(val, Token::get_type(val)));
             }
         }
     }
@@ -673,7 +673,7 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
 
 
 void sv_visitor::enterPrimaryPar(sv2017::PrimaryParContext *ctx) {
-    auto ec = Expression_component("(", Expression_component::parenthesis);
+    auto ec = Token("(", Token::parenthesis);
     if (type_engine.active() || type_engine.is_ranging())
         type_engine.add_component(ec);
     else
@@ -681,7 +681,7 @@ void sv_visitor::enterPrimaryPar(sv2017::PrimaryParContext *ctx) {
 }
 
 void sv_visitor::exitPrimaryPar(sv2017::PrimaryParContext *ctx) {
-    auto ec = Expression_component(")", Expression_component::parenthesis);
+    auto ec = Token(")", Token::parenthesis);
     if (type_engine.active() || type_engine.is_ranging())
         type_engine.add_component(ec);
     else
@@ -1041,13 +1041,13 @@ void sv_visitor::enterInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPos
         if(loops_factory.in_definition()) {
             auto name = ctx->variable_lvalue()->getText();
             Expression e;
-            e.emplace_back(name, Expression_component::get_type(name));
+            e.emplace_back(name, Token::get_type(name));
             if(ctx->inc_or_dec_operator()->INCR()){
-                e.push_back(Expression_component(Expression_component::add));
+                e.push_back(Token(Token::add));
             } else if(ctx->inc_or_dec_operator()->DECR()){
-                e.push_back(Expression_component(Expression_component::subtract));
+                e.push_back(Token(Token::subtract));
             }
-            e.emplace_back("1", Expression_component::number);
+            e.emplace_back("1", Token::number);
             loops_factory.add_expression(e);
         }
     }
@@ -1084,11 +1084,11 @@ void sv_visitor::exitGenvar_iteration(sv2017::Genvar_iterationContext *ctx) {
 
        Expression e;
        auto str = ctx->identifier()->getText();
-       e.emplace_back(str, Expression_component::get_type(str));
+       e.emplace_back(str, Token::get_type(str));
        if(ctx->inc_or_dec_operator()->INCR()){
-           e.push_back(Expression_component(Expression_component::add));
+           e.push_back(Token(Token::add));
        } else if(ctx->inc_or_dec_operator()->DECR()){
-           e.push_back(Expression_component(Expression_component::subtract));
+           e.push_back(Token(Token::subtract));
        }
        e.emplace_back(1);
        loops_factory.add_expression(e);

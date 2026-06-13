@@ -31,15 +31,15 @@ TEST(Initialization_list, get_values_1d_unpacked)  {
     HDL_simple_type param_type;
 
     param_type.add_dimension({
-        Expression(Expression_component("4", Expression_component::number)),
-        Expression(Expression_component("0", Expression_component::number)),
+        Expression(Token("4", Token::number)),
+        Expression(Token("0", Token::number)),
     false});
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("5", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("3", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("4", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("6", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("69", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("5", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("3", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("4", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("6", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("69", Token::number))));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -60,25 +60,25 @@ TEST(Initialization_list, get_values_2d_unpacked) {
     HDL_simple_type param_type;
 
     param_type.add_dimension({
-        Expression(Expression_component("2", Expression_component::number)),
-        Expression(Expression_component("0", Expression_component::number)),
+        Expression(Token("2", Token::number)),
+        Expression(Token("0", Token::number)),
         false
     });
     param_type.add_dimension({
-        Expression(Expression_component("1", Expression_component::number)),
-        Expression(Expression_component("0", Expression_component::number)),
+        Expression(Token("1", Token::number)),
+        Expression(Token("0", Token::number)),
         false
     });
     Concatenation outer_c;
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("5", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("3", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("4", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("5", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("3", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("4", Token::number))));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     c = Concatenation();
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("6", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("69", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("54", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("6", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("69", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("54", Token::number))));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(outer_c));
@@ -101,42 +101,42 @@ TEST(Initialization_list, get_values_3d_unpacked) {
     HDL_simple_type param_type;
 
     param_type.add_dimension({
-        Expression(Expression_component("2", Expression_component::number)),
-        Expression(Expression_component("0", Expression_component::number)),
+        Expression(Token("2", Token::number)),
+        Expression(Token("0", Token::number)),
             false
     });
     param_type.add_dimension({
-        Expression(Expression_component("1", Expression_component::number)),
-        Expression(Expression_component("0", Expression_component::number)),
+        Expression(Token("1", Token::number)),
+        Expression(Token("0", Token::number)),
         false
     });
     param_type.add_dimension({
-        Expression(Expression_component("1", Expression_component::number)),
-        Expression(Expression_component("0", Expression_component::number)),
+        Expression(Token("1", Token::number)),
+        Expression(Token("0", Token::number)),
         false
     });
 
     Concatenation c_inner, c_outer, c_top;
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("5", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("3", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("4", Expression_component::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("5", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("3", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("4", Token::number))));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_inner = Concatenation();
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("6", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("69", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("54", Expression_component::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("6", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("69", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("54", Token::number))));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
     c_inner = Concatenation();
     c_outer = Concatenation();
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("57", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("13", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("24", Expression_component::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("57", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("13", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("24", Token::number))));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_inner = Concatenation();
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("43", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("82", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("11", Expression_component::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("43", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("82", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("11", Token::number))));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
 
@@ -161,19 +161,19 @@ TEST(Initialization_list, packed_concatenation) {
     HDL_simple_type param_type;
 
     param_type.add_dimension({
-        Expression_component("7", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("7", Token::number),
+        Token("0", Token::number),
         true
     });
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
 
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(c));
@@ -193,41 +193,41 @@ TEST(Initialization_list, get_values_1d_packed) {
     HDL_parameter p("param");
     HDL_simple_type param_type;
     param_type.add_dimension({
-        Expression_component("2", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("2", Token::number),
+        Token("0", Token::number),
         true
     });
 
     param_type.add_dimension({
-        Expression_component("4", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("4", Token::number),
+        Token("0", Token::number),
         false
     });
 
     Concatenation inner_c, outer_c;
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c = Concatenation();
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c = Concatenation();
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c = Concatenation();
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c = Concatenation();
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    inner_c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    inner_c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(outer_c));
@@ -250,47 +250,47 @@ TEST(Initialization_list, get_values_2d_packed) {
     HDL_parameter p("param");
     HDL_simple_type param_type;
     param_type.add_dimension({
-        Expression_component("2", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("2", Token::number),
+        Token("0", Token::number),
         true
     });
 
     param_type.add_dimension({
-        Expression_component("1", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("1", Token::number),
+        Token("0", Token::number),
         false
     });
 
 
     param_type.add_dimension({
-        Expression_component("1", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("1", Token::number),
+        Token("0", Token::number),
         false
     });
 
 
 
     Concatenation c_inner, c_outer, c_top;
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_inner = Concatenation();
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
     c_inner = Concatenation();
     c_outer = Concatenation();
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_inner = Concatenation();
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c_inner.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c_inner.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
@@ -314,69 +314,69 @@ TEST(Initialization_list, get_values_3d_packed) {
     HDL_parameter p("param");
     HDL_simple_type param_type;
     param_type.add_dimension({
-        Expression_component("1", Expression_component::number),
-        Expression_component("0", Expression_component::number), true
+        Token("1", Token::number),
+        Token("0", Token::number), true
         });
 
     param_type.add_dimension({
-        Expression_component("1", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("1", Token::number),
+        Token("0", Token::number),
         false
     });
 
 
     param_type.add_dimension({
-        Expression_component("1", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("1", Token::number),
+        Token("0", Token::number),
         false
     });
 
     param_type.add_dimension({
-        Expression_component("1", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("1", Token::number),
+        Token("0", Token::number),
         false
     });
 
 
     Concatenation c_pack, c_inner, c_outer,c_top;
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_pack = Concatenation();
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_pack = Concatenation();
     c_inner = Concatenation();
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_pack = Concatenation();
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
     c_pack = Concatenation();
     c_inner = Concatenation();
     c_outer = Concatenation();
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_pack = Concatenation();
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_pack = Concatenation();
     c_inner = Concatenation();
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_pack = Concatenation();
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b0", Expression_component::number))));
-    c_pack.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c_pack.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
@@ -415,19 +415,19 @@ TEST(Initialization_list, get_values_concatenation_initialization) {
     HDL_parameter p("param");
     HDL_simple_type param_type;
     param_type.add_dimension({
-        Expression_component("31", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("31", Token::number),
+        Token("0", Token::number),
         true
     });
     param_type.add_dimension({
-        Expression_component("1", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("1", Token::number),
+        Token("0", Token::number),
         false
     });
 
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("31", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("43", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("31", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("43", Token::number))));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -447,33 +447,33 @@ TEST(Initialization_list, get_values_1d_mixed_packed_unpacked) {
     HDL_simple_type param_type;
     Concatenation outer_c;
     param_type.add_dimension({
-        Expression_component("31", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("31", Token::number),
+        Token("0", Token::number),
         true
     });
     param_type.add_dimension({
-        Expression_component("4", Expression_component::number),
-        Expression_component("0", Expression_component::number),
+        Token("4", Token::number),
+        Token("0", Token::number),
         false
     });
-    outer_c.add_component(std::make_shared<Expression>(Expression(Expression_component("3", Expression_component::number))));
-    outer_c.add_component(std::make_shared<Expression>(Expression(Expression_component("3", Expression_component::number))));
-    outer_c.add_component(std::make_shared<Expression>(Expression(Expression_component("3", Expression_component::number))));
+    outer_c.add_component(std::make_shared<Expression>(Expression(Token("3", Token::number))));
+    outer_c.add_component(std::make_shared<Expression>(Expression(Token("3", Token::number))));
+    outer_c.add_component(std::make_shared<Expression>(Expression(Token("3", Token::number))));
 
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("3'b0", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("1'b1", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("5'b0", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("4'hE", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("4'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("3'b0", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("5'b0", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("4'hE", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("4'b0", Token::number))));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     c = Concatenation();
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("2'h2", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("2'b1", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("2'h3", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("4'hE", Expression_component::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Expression_component("4'b0", Expression_component::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("2'h2", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("2'b1", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("2'h3", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("4'hE", Token::number))));
+    c.add_component(std::make_shared<Expression>(Expression(Token("4'b0", Token::number))));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(outer_c));

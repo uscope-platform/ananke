@@ -36,14 +36,14 @@ TEST( analysis_test , package) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("bus_base");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    Expression e = {Expression_component("32'h43c00000", Expression_component::number)};
+    Expression e = {Token("32'h43c00000", Token::number)};
     p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("timebase");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    e = { Expression_component("bus_base", Expression_component::identifier)};
+    e = { Token("bus_base", Token::identifier)};
     p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
@@ -51,11 +51,11 @@ TEST( analysis_test , package) {
     p->set_name("gpio");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     e = {
-        Expression_component("timebase", Expression_component::identifier), Expression_component(Expression_component::add),
-        Expression_component("32'h1000", Expression_component::number), Expression_component(Expression_component::multiply),
-        Expression_component("2", Expression_component::number), Expression_component(Expression_component::divide),
-        Expression_component("2", Expression_component::number), Expression_component(Expression_component::add),
-        Expression_component("1", Expression_component::number)
+        Token("timebase", Token::identifier), Token(Token::add),
+        Token("32'h1000", Token::number), Token(Token::multiply),
+        Token("2", Token::number), Token(Token::divide),
+        Token("2", Token::number), Token(Token::add),
+        Token("1", Token::number)
     };
     p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
@@ -63,14 +63,14 @@ TEST( analysis_test , package) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("scope_mux");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    e = { Expression_component("gpio", Expression_component::identifier)};
+    e = { Token("gpio", Token::identifier)};
     p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("out_of_order");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    e = { Expression_component("scope_mux", Expression_component::identifier)};
+    e = { Token("scope_mux", Token::identifier)};
     p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
 
@@ -78,7 +78,7 @@ TEST( analysis_test , package) {
     p->set_name("modulo_parameter");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     e = {
-        Expression_component("3", Expression_component::number),Expression_component(Expression_component::modulo),Expression_component("2", Expression_component::number)
+        Token("3", Token::number),Token(Token::modulo),Token("2", Token::number)
     };
     p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
@@ -87,7 +87,7 @@ TEST( analysis_test , package) {
     p->set_name("subtraction_parameter");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     e = {
-        Expression_component("'o4", Expression_component::number),Expression_component(Expression_component::subtract),Expression_component("'b10", Expression_component::number)
+        Token("'o4", Token::number),Token(Token::subtract),Token("'b10", Token::number)
     };
     p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
@@ -147,7 +147,7 @@ TEST( analysis_test , sv_module) {
     d3.add_port_connection("syndrome", {HDL_net("data_out")});
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
-    Expression_component ec("param", Expression_component::identifier);
+    Token ec("param", Token::identifier);
     ec.set_package_prefix("test_package");
     Expression e = {ec};
     p->set_raw_value(std::make_shared<Expression>(e));
@@ -158,7 +158,7 @@ TEST( analysis_test , sv_module) {
     HDL_instance d0("if_array", "axi_lite", module);
     p = std::make_shared<HDL_parameter>();
     p->set_name("instance_array_qualifier");
-    e = {Expression_component("module_parameter_2", Expression_component::identifier),Expression_component(Expression_component::add),Expression_component("1", Expression_component::number)};
+    e = {Token("module_parameter_2", Token::identifier),Token(Token::add),Token("1", Token::number)};
     p->set_raw_value(std::make_shared<Expression>(e));
     d0.add_array_quantifier(p);
     std::vector deps = {d0, d1, d2, d3};
@@ -182,14 +182,14 @@ TEST( analysis_test , sv_module) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("module_parameter_1");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Expression_component("56", Expression_component::number));
+    p->add_component(Token("56", Token::number));
     check_res.add_parameter(p);
 
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("module_parameter_2");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Expression_component("74", Expression_component::number));
+    p->add_component(Token("74", Token::number));
     check_res.add_parameter(p);
     ASSERT_EQ(resource, check_res);
     resource = res[1];
@@ -273,7 +273,7 @@ TEST(analysis_test, interfaces_array) {
     check_dependency.set_dependency_class(module);
     auto array_qual = std::make_shared<HDL_parameter>();
     array_qual->set_name("instance_array_qualifier");
-    array_qual->add_component(Expression_component("3", Expression_component::number));
+    array_qual->add_component(Token("3", Token::number));
     check_dependency.add_array_quantifier(array_qual);
     ASSERT_EQ(dep, check_dependency);
 }
@@ -302,8 +302,8 @@ TEST(analysis_test, parameter_array_assignment) {
 
     HDL_parameter reference_param;
     reference_param.set_name("TEST_PARAM");
-    Expression_component ec("TEST_ARRAY", Expression_component::identifier);
-    ec.add_array_index({Expression_component("2", Expression_component::number)});
+    Token ec("TEST_ARRAY", Token::identifier);
+    ec.add_array_index({std::make_shared<Token>("2", Token::number)});
     auto e = {ec};
     reference_param.set_raw_value(std::make_shared<Expression>(e));
 

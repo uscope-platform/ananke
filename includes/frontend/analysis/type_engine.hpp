@@ -54,7 +54,7 @@ public:
     void advance_range();
 
     void start_expression();
-    void add_component(const Expression_component &c);
+    void add_component(const Token &c);
     void stop_expression();
 
     [[nodiscard]] bool active() const { return kind != simple_type; }

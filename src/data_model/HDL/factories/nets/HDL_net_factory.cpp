@@ -55,7 +55,7 @@ void HDL_net_factory::add_component(const std::string &c) {
     }
 }
 
-void HDL_net_factory::add_component(const Expression_component &ec) {
+void HDL_net_factory::add_component(const Token &ec) {
     if(range_factory.is_active()) {
         range_factory.add_component(ec);
     }

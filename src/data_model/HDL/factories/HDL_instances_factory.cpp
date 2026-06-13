@@ -68,7 +68,7 @@ void HDL_instances_factory::add_connection_element(const std::string &s) {
     net_factory.add_component(s);
 }
 
-void HDL_instances_factory::add_connection_element(const Expression_component &ec) {
+void HDL_instances_factory::add_connection_element(const Token &ec) {
     net_factory.add_component(ec);
 }
 

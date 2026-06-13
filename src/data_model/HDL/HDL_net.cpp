@@ -25,8 +25,8 @@ std::string HDL_net::get_full_name() const {
             base_name += ":" + range.range.print();
         }
         base_name += "]";
-    } else if(!index.empty()) {
-        base_name += "[" + index.print() + "]";
+    } else if(!index->as<Expression>().empty()) {
+        base_name += "[" + index->print() + "]";
     }
     return base_name;
 
@@ -36,32 +36,32 @@ void HDL_net::evaluate(const std::map<qualified_identifier, resolved_parameter> 
     auto val = range.accessor.evaluate(context);
     if(val.has_value()) {
         if(val.value().get_integer().get_value()) {
-            range.accessor = {Expression_component(val.value().get_integer(), 0)};
+            range.accessor = {Token(val.value().get_integer(), 0)};
         }
     }
     val = range.range.evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
-            range.range = {Expression_component(val.value().get_integer(), 0)};
+            range.range = {Token(val.value().get_integer(), 0)};
         }
     }
-    index.evaluate(context);
-    val = index.evaluate(context);
+    index->evaluate(context);
+    val = index->evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
-            index = {Expression_component(val.value().get_integer(), 0)};
+            index = std::make_shared<Token>(Token(val.value().get_integer(), 0));
         }
     }
     val = replication.size.evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
-            replication.size = {Expression_component(val.value().get_integer(), 0)};
+            replication.size = {Token(val.value().get_integer(), 0)};
         }
     }
     val = replication.target.evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
-            replication.target = {Expression_component(val.value().get_integer(), 0)};
+            replication.target = {Token(val.value().get_integer(), 0)};
         }
     }
 }

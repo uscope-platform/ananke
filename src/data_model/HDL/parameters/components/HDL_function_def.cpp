@@ -32,11 +32,11 @@ HDL_function_def HDL_function_def::clone() {
     return def;
 }
 
-void HDL_function_def::start_assignment(const std::string &n, Expression idx) {
-    if(idx.empty())
+void HDL_function_def::start_assignment(const std::string &n, const std::shared_ptr<Parameter_value_base> &idx) {
+    if(idx->as<Expression>().empty())
         assignments.push_back({name, {}, {}});
     else
-        assignments.push_back({name, std::make_shared<Expression>(idx), {}});
+        assignments.push_back({name, idx, {}});
 }
 
 void HDL_function_def::close_assignment(const std::shared_ptr<Parameter_value_base> &val) {

@@ -32,7 +32,7 @@ public:
 
     void set_name(const std::string &s) { name = s;}
     void add_argument(const std::string &s){argument_names.push_back(s);}
-    void start_assignment(const std::string &n, Expression idx);
+    void start_assignment(const std::string &n, const std::shared_ptr<Parameter_value_base> & idx);
     void close_assignment(const std::shared_ptr<Parameter_value_base> &val);
     void add_assignment(const assignment &a){assignments.push_back(a);}
     void add_loop_metadata(const HDL_loop_metadata &l){loop_metadata = l;}

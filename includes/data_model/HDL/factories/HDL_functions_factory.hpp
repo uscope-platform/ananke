@@ -38,7 +38,7 @@ public:
     }
     void start_assignment(const std::string &n) {current_assigned_variable = n;}
     void add_argument(const std::string &a);
-    void add_component(const Expression_component &c);
+    void add_component(const Token &c);
     void add_value(const std::shared_ptr<Parameter_value_base> &v);
     void close_lvalue();
     void start_body(){phase = body;}
@@ -83,7 +83,7 @@ private:
     bool in_bit_selection = false;
     std::stack<std::unique_ptr<factory_base>> consumer_stack;
     HDL_function_def f;
-    Expression bit_index;
+    std::shared_ptr<Parameter_value_base> bit_index;
 
     enum{
         arguments,

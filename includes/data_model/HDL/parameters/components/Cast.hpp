@@ -54,8 +54,8 @@ public:
     void set_type_cast(){type_cast = true;}
     void set_target_type(const std::string &tt){target_type = tt;}
 
-    void add_size_component(const Expression_component &c) {size.components.push_back(c);}
-    void add_content_component(const Expression_component &c){content = nullptr;}
+    void add_size_component(const Token &c) {size.components.push_back(std::make_shared<Token>(c));}
+    void add_content_component(const Token &c){content = std::make_shared<Token>(c);}
     void set_size(const Expression &expr){size = expr;}
     void set_content(const std::shared_ptr<Parameter_value_base> &c){content = c;}
 

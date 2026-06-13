@@ -22,10 +22,10 @@ void HDL_functions_factory::add_argument(const std::string &a) {
     f.add_argument(a);
 }
 
-void HDL_functions_factory::add_component(const Expression_component &c) {
+void HDL_functions_factory::add_component(const Token &c) {
     if (phase == body) {
         if (in_bit_selection) {
-            bit_index.push_back(c);
+            bit_index->as<Expression>().push_back(c);
         } else if (is_raw_body()) {
             new_expression.push_back(c);
         } else {
@@ -49,7 +49,7 @@ void HDL_functions_factory::close_lvalue() {
         ignore_assignment = true;
     }
     new_expression.clear();
-    bit_index = Expression();
+    bit_index = std::make_shared<Expression>();
 }
 
 void HDL_functions_factory::close_assignment() {
@@ -185,7 +185,7 @@ bool HDL_functions_factory::is_component_relevant() const {
 void HDL_functions_factory::start_bit_selection() {
     if (!top_as<replication_factory>()) {
         in_bit_selection = true;
-        bit_index = Expression();
+        bit_index = std::make_shared<Expression>();
     }
 }
 

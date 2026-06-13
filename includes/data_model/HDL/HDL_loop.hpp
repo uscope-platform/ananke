@@ -31,7 +31,7 @@ class Expression;
 
 struct assignment {
     assignment() = default;
-    assignment(const std::string &n,const  std::optional<std::shared_ptr<Expression>> &idx, const  std::shared_ptr<Expression> &val);
+    assignment(const std::string &n,const std::optional<std::shared_ptr<Parameter_value_base>> &idx, const  std::shared_ptr<Expression> &val);
     bool operator==(const assignment &rhs) const;
 
     template<class Archive>
@@ -40,14 +40,14 @@ struct assignment {
     }
     assignment clone() const;
     void set_container_size(const resolved_type &r, const std::map<qualified_identifier, resolved_parameter> &context = {}) {value->set_container_sizes(r, context);}
-    void set_index(const std::shared_ptr<Expression> &idx);
+    void set_index(const std::shared_ptr<Parameter_value_base> &idx);
     void set_value(const std::shared_ptr<Parameter_value_base> &val);
-    std::optional<std::shared_ptr<Expression>> get_index() const;
+    std::optional<std::shared_ptr<Parameter_value_base>> get_index() const;
     std::shared_ptr<Parameter_value_base> get_value() const;
     void propagate_argument(const std::string &name, const std::shared_ptr<Parameter_value_base> &value);
 private:
     std::string name;
-    std::optional<std::shared_ptr<Expression>> index;
+    std::optional<std::shared_ptr<Parameter_value_base>> index;
     std::shared_ptr<Parameter_value_base> value;
 };
 

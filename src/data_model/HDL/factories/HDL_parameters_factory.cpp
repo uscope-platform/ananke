@@ -35,7 +35,7 @@ void HDL_parameters_factory::set_type(const std::shared_ptr<hdl_type> &type) {
     current_type = type;
 }
 
-void HDL_parameters_factory::add_component(const Expression_component &c, bool is_call_argument) {
+void HDL_parameters_factory::add_component(const Token &c, bool is_call_argument) {
     if (is_call_argument) {
         if (top_as<function_calls_factory>()) {
             consumer_stack.top()->consume(std::make_shared<Expression>(Expression({c})));
@@ -43,7 +43,7 @@ void HDL_parameters_factory::add_component(const Expression_component &c, bool i
         expr_factory.increase_level();
         expr_factory.stop_expression();
     } else if (in_bit_selection) {
-        bit_index.push_back(c);
+        bit_index->as<Expression>().push_back(c);
     } else {
         expr_factory.add_component(c);
     }
@@ -78,7 +78,7 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
 
 void HDL_parameters_factory::start_bit_selection() {
     in_bit_selection = true;
-    bit_index = Expression();
+    bit_index = std::make_shared<Expression>();
 }
 
 void HDL_parameters_factory::stop_bit_selection() {
@@ -322,7 +322,7 @@ void HDL_parameters_factory::stop_function_call() {
         auto call = consumer_stack.top()->result();
         consumer_stack.pop();
         expr_factory.pop_level();
-        Expression_component ec(call);
+        Token ec(call);
         if (top_as<function_calls_factory>()) {
             consumer_stack.top()->consume(call);
         } else if (top_as<ternary_factory>()) {
@@ -330,7 +330,7 @@ void HDL_parameters_factory::stop_function_call() {
         } else if(expr_factory.active()) {
             expr_factory.add_component(ec);
         } else if (in_bit_selection) {
-            bit_index.push_back(ec);
+            bit_index->as<Expression>().push_back(ec);
         } else if (top_as<concatenation_factory>()) {
             consumer_stack.top()->consume(std::make_shared<Expression>(Expression({ec})));
         } else if (top_as<replication_factory>()) {
