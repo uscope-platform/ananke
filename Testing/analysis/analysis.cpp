@@ -303,7 +303,7 @@ TEST(analysis_test, parameter_array_assignment) {
     HDL_parameter reference_param;
     reference_param.set_name("TEST_PARAM");
     Token ec("TEST_ARRAY", Token::identifier);
-    ec.add_array_index({std::make_shared<Token>("2", Token::number)});
+    ec.add_array_index(std::make_shared<Expression>(Token("2", Token::number)));
     auto e = {ec};
     reference_param.set_raw_value(std::make_shared<Expression>(e));
 

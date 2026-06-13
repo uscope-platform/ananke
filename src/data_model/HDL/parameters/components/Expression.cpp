@@ -376,7 +376,7 @@ void Expression::propagate_expression(const qualified_identifier &constant_id,
                 if (value->is<Expression>()) {
                     auto expr = value->as<Expression>();
                     if (expr.components.size() == 1) {
-                        new_expr.push_back(std::make_shared<Token>(expr.components[0]));
+                        new_expr.push_back(expr.components[0]);
                         continue;
                     }
                 }
