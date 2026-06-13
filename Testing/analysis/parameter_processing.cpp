@@ -285,10 +285,10 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("(", Expression_component::parenthesis));
     p->add_component(Expression_component(4, 0));
-    p->add_component(Expression_component("+", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::add));
     p->add_component(Expression_component(7, 3));
     p->add_component(Expression_component(")", Expression_component::parenthesis));
-    p->add_component(Expression_component("*", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::multiply));
     p->add_component(Expression_component(1, 1));
     p->set_value(11);
     check_params.insert(p);
@@ -1335,7 +1335,7 @@ TEST(parameter_processing, init_list_override) {
     p.set_name("SLAVE_ADDR");
     auto param_type = HDL_simple_type();
     param_type.add_dimension({
-        {Expression_component("NS", Expression_component::identifier),Expression_component("-", Expression_component::operation),Expression_component("1", Expression_component::number),},
+        {Expression_component("NS", Expression_component::identifier),Expression_component(Expression_component::subtract),Expression_component("1", Expression_component::number),},
         {Expression_component("0", Expression_component::number)},
         false});
     param_type.add_dimension({
@@ -1363,7 +1363,7 @@ TEST(parameter_processing, init_list_override) {
     r.set_size(size);
     HDL_simple_type param_type_2;
     param_type_2.add_dimension({
-    {Expression_component("NS", Expression_component::identifier),Expression_component("-", Expression_component::operation),Expression_component("1", Expression_component::number),},
+    {Expression_component("NS", Expression_component::identifier),Expression_component(Expression_component::subtract),Expression_component("1", Expression_component::number),},
     {Expression_component("0", Expression_component::number)},
     false});
     param_type_2.add_dimension({

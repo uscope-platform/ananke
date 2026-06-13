@@ -51,10 +51,10 @@ TEST( analysis_test , package) {
     p->set_name("gpio");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     e = {
-        Expression_component("timebase", Expression_component::identifier), Expression_component("+", Expression_component::operation),
-        Expression_component("32'h1000", Expression_component::number), Expression_component("*", Expression_component::operation),
-        Expression_component("2", Expression_component::number), Expression_component("/", Expression_component::operation),
-        Expression_component("2", Expression_component::number), Expression_component("+", Expression_component::operation),
+        Expression_component("timebase", Expression_component::identifier), Expression_component(Expression_component::add),
+        Expression_component("32'h1000", Expression_component::number), Expression_component(Expression_component::multiply),
+        Expression_component("2", Expression_component::number), Expression_component(Expression_component::divide),
+        Expression_component("2", Expression_component::number), Expression_component(Expression_component::add),
         Expression_component("1", Expression_component::number)
     };
     p->set_raw_value(std::make_shared<Expression>(e));
@@ -78,7 +78,7 @@ TEST( analysis_test , package) {
     p->set_name("modulo_parameter");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     e = {
-        Expression_component("3", Expression_component::number),Expression_component("%", Expression_component::operation),Expression_component("2", Expression_component::number)
+        Expression_component("3", Expression_component::number),Expression_component(Expression_component::modulo),Expression_component("2", Expression_component::number)
     };
     p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
@@ -87,7 +87,7 @@ TEST( analysis_test , package) {
     p->set_name("subtraction_parameter");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     e = {
-        Expression_component("'o4", Expression_component::number),Expression_component("-", Expression_component::operation),Expression_component("'b10", Expression_component::number)
+        Expression_component("'o4", Expression_component::number),Expression_component(Expression_component::subtract),Expression_component("'b10", Expression_component::number)
     };
     p->set_raw_value(std::make_shared<Expression>(e));
     check_map.insert(p);
@@ -158,7 +158,7 @@ TEST( analysis_test , sv_module) {
     HDL_instance d0("if_array", "axi_lite", module);
     p = std::make_shared<HDL_parameter>();
     p->set_name("instance_array_qualifier");
-    e = {Expression_component("module_parameter_2", Expression_component::identifier),Expression_component("+", Expression_component::operation),Expression_component("1", Expression_component::number)};
+    e = {Expression_component("module_parameter_2", Expression_component::identifier),Expression_component(Expression_component::add),Expression_component("1", Expression_component::number)};
     p->set_raw_value(std::make_shared<Expression>(e));
     d0.add_array_quantifier(p);
     std::vector deps = {d0, d1, d2, d3};

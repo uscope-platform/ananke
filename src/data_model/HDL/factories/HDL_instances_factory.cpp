@@ -68,6 +68,10 @@ void HDL_instances_factory::add_connection_element(const std::string &s) {
     net_factory.add_component(s);
 }
 
+void HDL_instances_factory::add_connection_element(const Expression_component &ec) {
+    net_factory.add_component(ec);
+}
+
 void HDL_instances_factory::start_bit_selection() {
     net_factory.start_array();
 }

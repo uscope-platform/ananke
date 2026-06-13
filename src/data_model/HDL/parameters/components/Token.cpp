@@ -24,3 +24,4 @@ bool operator==(const Token &lhs, const Token &rhs) {
     ret_val &= lhs.binary_size == rhs.binary_size;
     return ret_val;
 }
+

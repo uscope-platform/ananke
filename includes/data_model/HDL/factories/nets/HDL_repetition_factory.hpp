@@ -27,6 +27,7 @@ public:
     bool is_in_repetition() const {return is_active;}
 
     void add_component(const std::string &c);
+    void add_component(const Expression_component &ec);
     void advance_phase();
     HDL_replication get_repetition();
 private:

@@ -1316,14 +1316,20 @@ expression:
     | expression operator_bitwise_and ( attribute_instance )* expression
     | expression operator_xor         ( attribute_instance )* expression
     | expression operator_bitwise_or  ( attribute_instance )* expression
-    | expression AND_LOG              ( attribute_instance )* expression
-    | expression OR_LOG               ( attribute_instance )* expression
+    | expression operator_log_and     ( attribute_instance )* expression
+    | expression operator_log_or      ( attribute_instance )* expression
     | expression ( KW_MATCHES pattern )? TRIPLE_AND expression ( KW_MATCHES pattern )?
     | <assoc=right> expression ( KW_MATCHES pattern )? QUESTIONMARK ( attribute_instance )* expression COLON expression
     | <assoc=right> expression operator_impl        ( attribute_instance )* expression
 ;
 
+operator_log_and:
+    AND_LOG
+;
 
+operator_log_or:
+    OR_LOG
+;
 operator_power :
     DOUBLESTAR
 ;

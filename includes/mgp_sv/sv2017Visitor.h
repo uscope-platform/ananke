@@ -642,6 +642,10 @@ public:
 
     virtual std::any visitExpression(sv2017::ExpressionContext *context) = 0;
 
+    virtual std::any visitOperator_log_and(sv2017::Operator_log_andContext *context) = 0;
+
+    virtual std::any visitOperator_log_or(sv2017::Operator_log_orContext *context) = 0;
+
     virtual std::any visitOperator_power(sv2017::Operator_powerContext *context) = 0;
 
     virtual std::any visitOperator_bitwise_and(sv2017::Operator_bitwise_andContext *context) = 0;

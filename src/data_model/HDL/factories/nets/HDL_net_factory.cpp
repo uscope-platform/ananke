@@ -55,6 +55,18 @@ void HDL_net_factory::add_component(const std::string &c) {
     }
 }
 
+void HDL_net_factory::add_component(const Expression_component &ec) {
+    if(range_factory.is_active()) {
+        range_factory.add_component(ec);
+    }
+    if(repetition_factory.is_in_repetition()) {
+        repetition_factory.add_component(ec);
+    }
+    if(in_array) {
+        current_net.add_index_component(ec);
+    }
+}
+
 void HDL_net_factory::set_range_type(HDL_range::range_type_t t) {
     range_factory.set_range_type(t);
 }

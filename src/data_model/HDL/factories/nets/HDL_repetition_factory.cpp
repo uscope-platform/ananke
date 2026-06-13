@@ -30,6 +30,14 @@ void HDL_repetition_factory::add_component(const std::string &c) {
     }
 }
 
+void HDL_repetition_factory::add_component(const Expression_component &ec) {
+    if(phase == size) {
+        repetition.size.push_back(ec);
+    } else {
+        repetition.target.push_back(ec);
+    }
+}
+
 void HDL_repetition_factory::advance_phase() {
     phase = target;
 }

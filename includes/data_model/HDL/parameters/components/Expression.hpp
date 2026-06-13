@@ -55,8 +55,8 @@ public:
     void set_rpn(bool s) {rpn = s;}
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
     int64_t get_size() override;
-    std::variant<hdl_integer, double> evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, const std::string &operation);
-    std::variant<hdl_integer, double> evaluate_unary_expression(resolved_parameter operand, const std::string &operation);
+    std::variant<hdl_integer, double> evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b, Expression_component::sv_operators operation);
+    std::variant<hdl_integer, double> evaluate_unary_expression(resolved_parameter operand, Expression_component::sv_operators operation);
 
     std::variant<hdl_integer, double> evaluate_cast(resolved_parameter operand, const std::string &operation);
 

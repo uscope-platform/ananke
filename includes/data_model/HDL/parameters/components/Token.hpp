@@ -30,21 +30,7 @@ public:
         parenthesis
     };
 
-
     Token() = default;
-
-    friend bool operator==(const Token &lhs, const Token &rhs);
-
-    bool isEqual(const Parameter_value_base& other) const override {
-        const auto& rhs = static_cast<const Token&>(other);
-
-        bool res = std::tie(type, value, package_prefix, instance_prefix, binary_size) == std::tie(rhs.type, rhs.value, rhs.package_prefix, rhs.instance_prefix, rhs.binary_size);
-        if (array_index.size() != rhs.array_index.size()) return false;
-        for (int i = 0; i< array_index.size(); i++) {
-            res &= *array_index[i] == *rhs.array_index[i];
-        }
-        return res;
-    }
 
     void set_instance_prefix(const std::string &p){instance_prefix = p;}
     std::string get_instance_prefix() {return instance_prefix;};
@@ -64,12 +50,34 @@ public:
     std::vector<std::shared_ptr<Parameter_value_base>> get_array_index(){return array_index;}
 
 
+
+    typedef enum{
+        unary_operator = 0,
+        binary_operator = 1
+    } operator_type_t;
+
+    operator_type_t get_operator_type();
+
+
     template<class Archive>
     void serialize( Archive & ar ) {
         ar(value,type, array_index, instance_prefix, package_prefix, binary_size);
     }
 
+    friend bool operator==(const Token &lhs, const Token &rhs);
+
 private:
+
+    bool isEqual(const Parameter_value_base& other) const override {
+        const auto& rhs = static_cast<const Token&>(other);
+
+        bool res = std::tie(type, value, package_prefix, instance_prefix, binary_size) == std::tie(rhs.type, rhs.value, rhs.package_prefix, rhs.instance_prefix, rhs.binary_size);
+        if (array_index.size() != rhs.array_index.size()) return false;
+        for (int i = 0; i< array_index.size(); i++) {
+            res &= *array_index[i] == *rhs.array_index[i];
+        }
+        return res;
+    }
 
     token_type type = number;
 

@@ -246,13 +246,13 @@ TEST(port_extraction,range_concat_expression) {
     check_ports["in_data"] = {HDL_net("S_AXI_AWADDR"), HDL_net("S_AXI_AWPROT")};
 
     HDL_range range;
-    range.accessor = {Expression_component("N", Expression_component::identifier),Expression_component("*", Expression_component::operation),Expression_component("ADDR_WIDTH", Expression_component::identifier)};
+    range.accessor = {Expression_component("N", Expression_component::identifier),Expression_component(Expression_component::multiply),Expression_component("ADDR_WIDTH", Expression_component::identifier)};
     range.range = {Expression_component("ADDR_WIDTH", Expression_component::identifier)};
     range.type = HDL_range::increasing_range;
 
     check_ports["in_data"][0].set_range(range);
 
-    range.accessor = {Expression_component("N", Expression_component::identifier),Expression_component("*", Expression_component::operation),Expression_component("3", Expression_component::number)};
+    range.accessor = {Expression_component("N", Expression_component::identifier),Expression_component(Expression_component::multiply),Expression_component("3", Expression_component::number)};
     range.range = {Expression_component("3", Expression_component::number)};
     range.type = HDL_range::increasing_range;
 
@@ -287,14 +287,14 @@ TEST(port_extraction, concat_complex_slicing) {
     check_ports["stream_in"] = {HDL_net("S_AXI_AWADDR"), HDL_net("S_AXI_AWPROT")};
 
     HDL_range range;
-    range.accessor = {Expression_component("N", Expression_component::identifier),Expression_component("*", Expression_component::operation),Expression_component("ADDR_WIDTH", Expression_component::identifier)};
+    range.accessor = {Expression_component("N", Expression_component::identifier),Expression_component(Expression_component::multiply),Expression_component("ADDR_WIDTH", Expression_component::identifier)};
     range.range = {Expression_component("ADDR_WIDTH", Expression_component::identifier)};
     range.type = HDL_range::increasing_range;
 
 
     check_ports["stream_in"][0].set_range(range);
 
-    range.accessor = {Expression_component("N", Expression_component::identifier),Expression_component("*", Expression_component::operation),Expression_component("3", Expression_component::number)};
+    range.accessor = {Expression_component("N", Expression_component::identifier),Expression_component(Expression_component::multiply),Expression_component("3", Expression_component::number)};
     range.range = {Expression_component("3", Expression_component::number)};
     range.type = HDL_range::increasing_range;
 
@@ -387,7 +387,7 @@ TEST(port_extraction, complex_nested_concat_port) {
     check_ports["stream_in"][0].set_index({Expression_component("data_in.dest", Expression_component::identifier)});
 
     HDL_replication rep;
-    rep.size = {Expression_component("DATA_PATH_WIDTH", Expression_component::identifier),Expression_component("-", Expression_component::operation),Expression_component("1", Expression_component::number)};
+    rep.size = {Expression_component("DATA_PATH_WIDTH", Expression_component::identifier),Expression_component(Expression_component::subtract),Expression_component("1", Expression_component::number)};
     rep.target = {Expression_component("1'b0", Expression_component::number)};
     check_ports["stream_in"][1].set_replication(rep);
 
@@ -426,7 +426,7 @@ TEST(port_extraction, concat_of_repetitions) {
 
     check_ports["stream_in"][0].set_replication(rep);
 
-    rep.size = {Expression_component("DATA_PATH_WIDTH", Expression_component::identifier),Expression_component("-", Expression_component::operation),Expression_component("1", Expression_component::number)};
+    rep.size = {Expression_component("DATA_PATH_WIDTH", Expression_component::identifier),Expression_component(Expression_component::subtract),Expression_component("1", Expression_component::number)};
     rep.target = {Expression_component("1'b0", Expression_component::number)};
 
     check_ports["stream_in"][1].set_replication(rep);

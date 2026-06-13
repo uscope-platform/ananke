@@ -139,19 +139,19 @@ TEST(function_processing, simple_loop_function) {
     metadata.set_init(p);
     metadata.set_end_c({
         Expression_component("i", Expression_component::identifier),
-        Expression_component("<", Expression_component::operation),
+        Expression_component(Expression_component::less),
         Expression_component("3", Expression_component::number)
         });
 
     metadata.set_iter({
         Expression_component("i", Expression_component::identifier),
-        Expression_component("+", Expression_component::operation),
+        Expression_component(Expression_component::add),
         Expression_component("1", Expression_component::number)});
 
     assignment a = {
         "CTRL_ADDR_CALC",
         std::make_shared<Expression>(Expression(Expression_component("i", Expression_component::identifier))),
-        std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number), Expression_component("*", Expression_component::operation), Expression_component("i", Expression_component::identifier)}))
+        std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number), Expression_component(Expression_component::multiply), Expression_component("i", Expression_component::identifier)}))
     };
 
     metadata.add_assignment(a);
@@ -194,19 +194,19 @@ TEST(function_processing, parametric_loop_function) {
     metadata.set_init(p);
     metadata.set_end_c({
         Expression_component("i", Expression_component::identifier),
-        Expression_component("<", Expression_component::operation),
+        Expression_component(Expression_component::less),
         Expression_component("N_CORES", Expression_component::identifier)
         });
 
     metadata.set_iter({
         Expression_component("i", Expression_component::identifier),
-        Expression_component("+", Expression_component::operation),
+        Expression_component(Expression_component::add),
         Expression_component("1", Expression_component::number)});
 
     assignment a = {
         "CTRL_ADDR_CALC",
         std::make_shared<Expression>(Expression(Expression_component("i", Expression_component::identifier))),
-        std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number), Expression_component("*", Expression_component::operation), Expression_component("i", Expression_component::identifier)}))
+        std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number), Expression_component(Expression_component::multiply), Expression_component("i", Expression_component::identifier)}))
     };
 
     metadata.add_assignment(a);
@@ -250,22 +250,22 @@ TEST(function_processing, complex_loop_function) {
     metadata.set_init(p);
     metadata.set_end_c({
                 Expression_component("i", Expression_component::identifier),
-               Expression_component("<", Expression_component::operation),
+               Expression_component(Expression_component::less),
                Expression_component("N_CORES", Expression_component::identifier),
-               Expression_component("+", Expression_component::operation),
+               Expression_component( Expression_component::add),
                Expression_component("1", Expression_component::number)
     });
 
     metadata.set_iter({
             Expression_component("i", Expression_component::identifier),
-            Expression_component("+", Expression_component::operation),
+            Expression_component(Expression_component::add),
             Expression_component("1", Expression_component::number)
         });
 
     assignment a = {
         "CTRL_ADDR_CALC",
         std::make_shared<Expression>(Expression(Expression_component("i", Expression_component::identifier))),
-        std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number), Expression_component("*", Expression_component::operation), Expression_component("i", Expression_component::identifier)}))
+        std::make_shared<Expression>(Expression({Expression_component("100", Expression_component::number), Expression_component(Expression_component::multiply), Expression_component("i", Expression_component::identifier)}))
     };
 
     metadata.add_assignment(a);

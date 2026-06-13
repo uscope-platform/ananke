@@ -41,6 +41,16 @@ void HDL_range_factory::add_component(const std::string &c) {
     }
 }
 
+void HDL_range_factory::add_component(const Expression_component &ec) {
+    if(factory_state == wait_name) {
+        factory_state = accessor;
+    }else if(factory_state == accessor) {
+        current_range.accessor.push_back(ec);
+    } else if(factory_state == range) {
+        current_range.range.push_back(ec);
+    }
+}
+
 void HDL_range_factory::set_range_type(HDL_range::range_type_t t) {
     current_range.type = t;
     advance_state();

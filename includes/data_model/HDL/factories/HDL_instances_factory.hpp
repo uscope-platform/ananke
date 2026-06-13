@@ -34,6 +34,7 @@ public:
     void start_replication_port(const std::string &n);
     void add_concatenation_net();
     void add_connection_element(const std::string &s);
+    void add_connection_element(const Expression_component &ec);
     bool is_valid_dependency() const{return valid_instance;}
     bool in_concatenation() const {return net_factory.is_in_concatenation();}
     bool is_interface() const {return in_interface;}

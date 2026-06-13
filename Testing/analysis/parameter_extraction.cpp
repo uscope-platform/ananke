@@ -197,7 +197,7 @@ TEST(parameter_extraction, type_cast) {
     c.set_type_cast();
     c.set_target_type("unsigned");
     c.set_content(std::make_shared<Expression>(Expression({
-        Expression_component("-", Expression_component::operation),
+        Expression_component(Expression_component::subtract),
         Expression_component("5", Expression_component::number)
     })));
     dimension_t d;
@@ -246,7 +246,7 @@ TEST(parameter_extraction, nested_type_cast) {
     inner_c.set_type_cast();
     inner_c.set_target_type("unsigned");
     inner_c.set_content(std::make_shared<Expression>(Expression({
-        Expression_component("-", Expression_component::operation),
+        Expression_component(Expression_component::subtract),
         Expression_component("5", Expression_component::number)
     })));
 
@@ -314,7 +314,7 @@ TEST(parameter_extraction, multiple_type_cast) {
     c.set_type_cast();
     c.set_target_type("unsigned");
     c.set_content(std::make_shared<Expression>(Expression({
-        Expression_component("-", Expression_component::operation),
+        Expression_component(Expression_component::subtract),
         Expression_component("5", Expression_component::number)
     })));
     dimension_t d;
@@ -376,7 +376,7 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("x");
     p->set_type(Type_engine::create_primitive_type("integer"));
-    p->add_component(Expression_component("-", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::subtract));
     p->add_component(Expression_component("1", Expression_component::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
@@ -668,7 +668,7 @@ TEST(parameter_extraction, strings_array) {
     param_type.add_dimension({
     Expression({
         Expression_component("N_CORES", Expression_component::identifier),
-        Expression_component("-", Expression_component::operation),
+        Expression_component(Expression_component::subtract),
         Expression_component("1", Expression_component::number),
     }),
     Expression(Expression_component("0", Expression_component::number)),
@@ -727,12 +727,12 @@ TEST(parameter_extraction, float_parameter) {
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("(", Expression_component::parenthesis));
     p->add_component(Expression_component("2", Expression_component::number));
-    p->add_component(Expression_component("*", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::multiply));
     p->add_component(Expression_component("3.14159265358979323846", Expression_component::number));
-    p->add_component(Expression_component("/", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::divide));
     p->add_component(Expression_component("4.0", Expression_component::number));
     p->add_component(Expression_component(")", Expression_component::parenthesis));
-    p->add_component(Expression_component("/", Expression_component::operation));
+    p->add_component(Expression_component( Expression_component::divide));
     p->add_component(Expression_component("LUT_DEPTH", Expression_component::identifier));
     check_params.insert(p);
 
@@ -824,7 +824,7 @@ TEST(parameter_extraction, multiple_system_task) {
     HDL_function_call call("$rtoi");
     call.add_argument(std::make_shared<Expression>(Expression({
         Expression_component("14.8", Expression_component::number),
-        Expression_component("+", Expression_component::operation),
+        Expression_component(Expression_component::add),
         Expression_component("2", Expression_component::number)
     })));
 
@@ -884,7 +884,7 @@ TEST(parameter_extraction, system_task_propagation) {
     HDL_function_call call("$rtoi");
     call.add_argument(std::make_shared<Expression>(Expression({
         Expression_component("11.8", Expression_component::number),
-        Expression_component("+", Expression_component::operation),
+        Expression_component(Expression_component::add),
         Expression_component("PARAMETER_1", Expression_component::identifier)
     })));
 
@@ -946,7 +946,7 @@ TEST(parameter_extraction, nested_system_task) {
     auto inner_call = std::make_shared<HDL_function_call>("$ceil");
     Expression e;
     e.push_back(Expression_component("PARAMETER_1", Expression_component::identifier));
-    e.push_back(Expression_component("/", Expression_component::operation));
+    e.push_back(Expression_component(Expression_component::divide));
     e.push_back(Expression_component("16.0", Expression_component::number));
     inner_call->add_argument(std::make_shared<Expression>(e));
     auto outer_call = std::make_shared<HDL_function_call>("$rtoi");
@@ -1014,13 +1014,13 @@ TEST(parameter_extraction, package_parameters) {
     p->set_name("gpio");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("timebase" , Expression_component::identifier));
-    p->add_component(Expression_component("+" , Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::add));
     p->add_component(Expression_component("32'h1000" , Expression_component::number));
-    p->add_component(Expression_component("*" , Expression_component::operation));
+    p->add_component(Expression_component( Expression_component::multiply));
     p->add_component(Expression_component("2" , Expression_component::number));
-    p->add_component(Expression_component("/" , Expression_component::operation));
+    p->add_component(Expression_component( Expression_component::divide));
     p->add_component(Expression_component("2" , Expression_component::number));
-    p->add_component(Expression_component("+" , Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::add));
     p->add_component(Expression_component("1" , Expression_component::number));
     check_params.insert(p);
 
@@ -1028,7 +1028,7 @@ TEST(parameter_extraction, package_parameters) {
     p->set_name("modulo_parameter");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("3" , Expression_component::number));
-    p->add_component(Expression_component("%" , Expression_component::operation));
+    p->add_component(Expression_component(  Expression_component::modulo));
     p->add_component(Expression_component("2" , Expression_component::number));
     check_params.insert(p);
 
@@ -1036,7 +1036,7 @@ TEST(parameter_extraction, package_parameters) {
     p->set_name("subtraction_parameter");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("'o4" , Expression_component::number));
-    p->add_component(Expression_component("-" , Expression_component::operation));
+    p->add_component(Expression_component(  Expression_component::subtract));
     p->add_component(Expression_component("'b10" , Expression_component::number));
     check_params.insert(p);
 
@@ -1191,7 +1191,7 @@ TEST(parameter_extraction, simple_expressions) {
     p->set_name("add_expr_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("simple_numeric_p", Expression_component::identifier));
-    p->add_component(Expression_component("+", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::add));
     p->add_component(Expression_component("sv_numeric_p", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1199,7 +1199,7 @@ TEST(parameter_extraction, simple_expressions) {
     p->set_name("sub_expr_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("simple_numeric_p", Expression_component::identifier));
-    p->add_component(Expression_component("-", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::subtract));
     p->add_component(Expression_component("sv_numeric_p", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1207,7 +1207,7 @@ TEST(parameter_extraction, simple_expressions) {
     p->set_name("mul_expr_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("simple_numeric_p", Expression_component::identifier));
-    p->add_component(Expression_component("*", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::multiply));
     p->add_component(Expression_component("sv_numeric_p", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1216,7 +1216,7 @@ TEST(parameter_extraction, simple_expressions) {
     p->set_name("div_expr_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("simple_numeric_p", Expression_component::identifier));
-    p->add_component(Expression_component("/", Expression_component::operation));
+    p->add_component(Expression_component( Expression_component::divide));
     p->add_component(Expression_component("sv_numeric_p", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1224,7 +1224,7 @@ TEST(parameter_extraction, simple_expressions) {
     p->set_name("modulo_expr_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("simple_numeric_p", Expression_component::identifier));
-    p->add_component(Expression_component("%", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::modulo));
     p->add_component(Expression_component("sv_numeric_p", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1232,9 +1232,9 @@ TEST(parameter_extraction, simple_expressions) {
     p->set_name("chained_expression");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("add_expr_p", Expression_component::identifier));
-    p->add_component(Expression_component("+", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::add));
     p->add_component(Expression_component("mul_expr_p", Expression_component::identifier));
-    p->add_component(Expression_component("*", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::multiply));
     p->add_component(Expression_component("5", Expression_component::number));
     check_params.insert(p);
 
@@ -1245,7 +1245,7 @@ TEST(parameter_extraction, simple_expressions) {
     HDL_function_call call("$clog2");
     call.add_argument(std::make_shared<Expression>(Expression({
         Expression_component("add_expr_p", Expression_component::identifier),
-        Expression_component("+", Expression_component::operation),
+        Expression_component(Expression_component::add),
         Expression_component("2", Expression_component::number)
     })));
 
@@ -1268,10 +1268,10 @@ TEST(parameter_extraction, simple_expressions) {
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("(", Expression_component::parenthesis));
     p->add_component(Expression_component("add_expr_p", Expression_component::identifier));
-    p->add_component(Expression_component("+", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::add));
     p->add_component(Expression_component("mul_expr_p", Expression_component::identifier));
     p->add_component(Expression_component(")", Expression_component::parenthesis));
-    p->add_component(Expression_component("*", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::multiply));
     p->add_component(Expression_component("5", Expression_component::number));
     check_params.insert(p);
 
@@ -1344,7 +1344,7 @@ TEST(parameter_extraction, bitwise_expressions) {
     p->set_name("b_and_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
-    p->add_component(Expression_component("&", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::bitwise_and));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1352,7 +1352,7 @@ TEST(parameter_extraction, bitwise_expressions) {
     p->set_name("b_or_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
-    p->add_component(Expression_component("|", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::bitwise_or));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1360,7 +1360,7 @@ TEST(parameter_extraction, bitwise_expressions) {
     p->set_name("b_xor_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
-    p->add_component(Expression_component("^", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::bitwise_xor));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1368,7 +1368,7 @@ TEST(parameter_extraction, bitwise_expressions) {
     p->set_name("b_xnor_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
-    p->add_component(Expression_component("~^", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::bitwise_xnor));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1376,7 +1376,7 @@ TEST(parameter_extraction, bitwise_expressions) {
     p->set_name("b_xnor2_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
-    p->add_component(Expression_component("^~", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::bitwise_xnor));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1438,7 +1438,7 @@ TEST(parameter_extraction, power_expression) {
     p->set_name("pow_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
-    p->add_component(Expression_component("**", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::power));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1494,7 +1494,7 @@ TEST(parameter_extraction, arithmetic_shift_left) {
     p->set_name("shl_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
-    p->add_component(Expression_component("<<<", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::arithmetic_shift_left));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1539,7 +1539,7 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Expression_component("-", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::subtract));
     p->add_component(Expression_component("8", Expression_component::number));
     check_params.insert(p);
 
@@ -1553,7 +1553,7 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     p->set_name("shr_a_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
-    p->add_component(Expression_component(">>>", Expression_component::operation));
+    p->add_component(Expression_component( Expression_component::arithmetic_shift_right));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1561,7 +1561,7 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     p->set_name("shr_l_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
-    p->add_component(Expression_component(">>", Expression_component::operation));
+    p->add_component(Expression_component( Expression_component::logic_shift_right));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
     check_params.insert(p);
 
@@ -1628,26 +1628,26 @@ TEST(parameter_extraction, logical_and_or) {
     p->set_name("log_and_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component(Expression_component::logical_and));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
-    p->add_component(Expression_component("&&", Expression_component::operation));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("log_or_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component(Expression_component::logical_or));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
-    p->add_component(Expression_component("||", Expression_component::operation));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("mixed_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->add_component(Expression_component("op_a", Expression_component::identifier));
+    p->add_component(Expression_component( Expression_component::logical_and));
     p->add_component(Expression_component("op_b", Expression_component::identifier));
-    p->add_component(Expression_component("&&", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::logical_or));
     p->add_component(Expression_component("op_c", Expression_component::identifier));
-    p->add_component(Expression_component("||", Expression_component::operation));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -2044,7 +2044,7 @@ TEST(parameter_extraction, simple_array_propagation) {
     ai.push_back(Expression(Expression_component("0", Expression_component::number)));
     e.set_array_index(ai);
     p->add_component(e);
-    p->add_component(Expression_component("+", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::add));
     e = Expression_component("array_parameter", Expression_component::identifier);
     ai.clear();
     ai.push_back(Expression(Expression_component("1", Expression_component::number)));
@@ -2122,10 +2122,10 @@ TEST(parameter_extraction, array_expression) {
     p->set_type(Type_engine::create_primitive_type("implicit"));
     Expression_component e = Expression_component("array_parameter", Expression_component::identifier);
     std::vector<Expression> ai;
-    ai.push_back({Expression_component("sv_numeric_p", Expression_component::identifier), Expression_component("*", Expression_component::operation), Expression_component("0", Expression_component::number)});
+    ai.push_back({Expression_component("sv_numeric_p", Expression_component::identifier), Expression_component(Expression_component::multiply), Expression_component("0", Expression_component::number)});
     e.set_array_index(ai);
     p->add_component(e);
-    p->add_component(Expression_component("+", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::add));
     e = Expression_component("array_parameter", Expression_component::identifier);
     ai.clear();
     ai.push_back(Expression(Expression_component("1", Expression_component::number)));
@@ -2193,7 +2193,7 @@ TEST(parameter_extraction, multidimensional_array_expression) {
 
     auto param_type = HDL_simple_type();
     param_type.add_dimension({{Expression_component("31", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, true});
-    param_type.add_dimension({{Expression_component("repetition_size", Expression_component::identifier),Expression_component("-", Expression_component::operation), Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
+    param_type.add_dimension({{Expression_component("repetition_size", Expression_component::identifier),Expression_component(Expression_component::subtract), Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     param_type.add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}, false});
     Concatenation c;
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("32", Expression_component::number))));
@@ -2870,7 +2870,7 @@ TEST(parameter_extraction, negative_number_parameters) {
 
     p->set_name("negative_param");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Expression_component("-", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::subtract));
     p->add_component(Expression_component("16'sd32767", Expression_component::number));
     check_params.insert(p);
 
@@ -2922,7 +2922,7 @@ TEST(parameter_extraction, packed_bit_access) {
       });
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Expression>(Expression({
-        Expression_component("-", Expression_component::operation),
+        Expression_component(Expression_component::subtract),
         Expression_component("1", Expression_component::number) })));
 
     check_params.insert(p);
@@ -2987,7 +2987,7 @@ TEST(parameter_extraction, negative_number_array_init) {
     auto param_type = Type_engine::create_primitive_type("implicit")->as<HDL_simple_type>();
     param_type.add_dimension({{Expression_component("1", Expression_component::number)}, {Expression_component("0", Expression_component::number)}});
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression({Expression_component("-", Expression_component::operation),Expression_component("16'sd32767", Expression_component::number)})));
+    c.add_component(std::make_shared<Expression>(Expression({Expression_component(Expression_component::subtract),Expression_component("16'sd32767", Expression_component::number)})));
     c.add_component(std::make_shared<Expression>(Expression(Expression_component("16'sd32767", Expression_component::number))));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
@@ -3042,14 +3042,14 @@ TEST(parameter_extraction, expression_array_init) {
     c.add_component(std::make_shared<Expression>(
         Expression({
             Expression_component("5", Expression_component::number),
-            Expression_component("+", Expression_component::operation),
+            Expression_component(Expression_component::add),
             Expression_component("4", Expression_component::number)
         })
     ));
     c.add_component(std::make_shared<Expression>(
         Expression({
             Expression_component("7", Expression_component::number),
-            Expression_component("*", Expression_component::operation),
+            Expression_component(Expression_component::multiply),
             Expression_component("6", Expression_component::number)
         })
     ));
@@ -3235,7 +3235,7 @@ TEST(parameter_extraction, instance_parameter) {
 
     p->set_name("param_2");
     p->add_component(Expression_component("test_param", Expression_component::identifier));
-    p->add_component(Expression_component("+", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::add));
     p->add_component(Expression_component("5", Expression_component::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
@@ -3243,10 +3243,10 @@ TEST(parameter_extraction, instance_parameter) {
     p->set_name("param_3");
     p->add_component(Expression_component("(", Expression_component::parenthesis));
     p->add_component(Expression_component("test_param", Expression_component::identifier));
-    p->add_component(Expression_component("+", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::add));
     p->add_component(Expression_component("7", Expression_component::number));
     p->add_component(Expression_component(")", Expression_component::parenthesis));
-    p->add_component(Expression_component("*", Expression_component::operation));
+    p->add_component(Expression_component(Expression_component::multiply));
     p->add_component(Expression_component("1", Expression_component::number));
     check_params.insert(p);
 
@@ -3607,7 +3607,7 @@ TEST(parameter_extraction, simple_function_parameter) {
     param_type.add_dimension({
          {
              Expression_component("ADDR_WIDTH", Expression_component::identifier),
-             Expression_component("-", Expression_component::operation),
+             Expression_component(Expression_component::subtract),
              Expression_component("1", Expression_component::number)
          },
         {Expression_component("0", Expression_component::number)},
@@ -3724,7 +3724,7 @@ TEST(parameter_extraction, replication_in_function) {
     c.set_size(Expression(Expression_component("4", Expression_component::number)));
     c.set_content(std::make_shared<Expression>(Expression({
         Expression_component("11", Expression_component::number),
-        Expression_component("-", Expression_component::operation),
+        Expression_component(Expression_component::subtract),
         Expression_component("8", Expression_component::number)
     })));
     Replication repl;
@@ -3784,7 +3784,7 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     c.set_size(Expression(Expression_component("4", Expression_component::number)));
     c.set_content(std::make_shared<Expression>(Expression({
         Expression_component("11", Expression_component::number),
-        Expression_component("-", Expression_component::operation),
+        Expression_component(Expression_component::subtract),
         Expression_component("8", Expression_component::number)
     })));
     Concatenation concat;
@@ -3895,12 +3895,12 @@ TEST(parameter_extraction, loop_function_parameter) {
     loop.set_init(idx);
     loop.set_end_c({
         Expression_component("i", Expression_component::identifier),
-        Expression_component("<", Expression_component::operation),
+        Expression_component(Expression_component::less),
         Expression_component("3", Expression_component::number),
     });
     loop.set_iter({
         Expression_component("i", Expression_component::identifier),
-        Expression_component("+", Expression_component::operation),
+        Expression_component(Expression_component::add),
         Expression_component("1", Expression_component::number),
     });
     assignment a(
@@ -3908,7 +3908,7 @@ TEST(parameter_extraction, loop_function_parameter) {
         std::make_shared<Expression>(Expression(Expression_component("i", Expression_component::identifier))),
         std::make_shared<Expression>(Expression({
             Expression_component("100", Expression_component::number),
-            Expression_component("*", Expression_component::operation),
+            Expression_component(Expression_component::multiply),
             Expression_component("i", Expression_component::identifier)
         }
         )));
@@ -3933,16 +3933,13 @@ TEST(parameter_extraction, loop_function_parameter) {
 }
 
 
-
 TEST(parameter_extraction, parametric_loop_function_parameter) {
     auto test_pattern = R"(
-
 
         module test_mod #(
             parameter N_CHAINS = 3,
             parameter OFFSET = 100
         )();
-
 
             typedef logic [31:0] ctrl_addr_init_t [2:0];
             function ctrl_addr_init_t CTRL_ADDR_CALC();
@@ -3954,7 +3951,6 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
         parameter logic [31:0] TEST_PARAM [2:0] = CTRL_ADDR_CALC();
         endmodule
     )";
-
 
     sv_analyzer analyzer;
 
@@ -3974,12 +3970,12 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     loop.set_init(idx);
     loop.set_end_c({
         Expression_component("i", Expression_component::identifier),
-        Expression_component("<", Expression_component::operation),
+        Expression_component(Expression_component::less),
         Expression_component("N_CHAINS", Expression_component::identifier),
     });
     loop.set_iter({
         Expression_component("i", Expression_component::identifier),
-        Expression_component("+", Expression_component::operation),
+        Expression_component(Expression_component::add),
         Expression_component("1", Expression_component::number),
     });
     assignment a(
@@ -3987,7 +3983,7 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
         std::make_shared<Expression>(Expression(Expression_component("i", Expression_component::identifier))),
         std::make_shared<Expression>(Expression({
             Expression_component("OFFSET", Expression_component::identifier),
-            Expression_component("*", Expression_component::operation),
+            Expression_component(Expression_component::multiply),
             Expression_component("i", Expression_component::identifier)
         })
         ));
@@ -4011,8 +4007,7 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
 
-    EXPECT_EQ(p, *param);
-
+    ASSERT_EQ(p, *param);
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     mdarray<hdl_integer> av;
@@ -4026,7 +4021,6 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
         ASSERT_EQ(value, defaults.at(name));
     }
 }
-
 
 
 TEST(parameter_extraction, function_with_arguments) {
@@ -4058,7 +4052,7 @@ TEST(parameter_extraction, function_with_arguments) {
     call.add_argument(std::make_shared<Expression>(Expression(Expression_component("7", Expression_component::component_type::number))));
     call.add_assignment({"add",std::nullopt, std::make_shared<Expression>(Expression({
         Expression_component(5, 3),
-        Expression_component("+", Expression_component::operation),
+        Expression_component(Expression_component::add),
         Expression_component(7, 3),
     })) });
     auto param_type = HDL_simple_type();
@@ -4202,8 +4196,8 @@ TEST(parameter_extraction, generate_for) {
     p.add_component(Expression_component("0", Expression_component::number));
 
     check_loop.set_init(p);
-    check_loop.set_end_c({Expression_component("n", Expression_component::identifier), Expression_component("<", Expression_component::operation), Expression_component("N_REPETITIONS", Expression_component::identifier)});
-    check_loop.set_iter({Expression_component("n", Expression_component::identifier), Expression_component("+", Expression_component::operation), Expression_component("1", Expression_component::number)});
+    check_loop.set_end_c({Expression_component("n", Expression_component::identifier), Expression_component(Expression_component::less), Expression_component("N_REPETITIONS", Expression_component::identifier)});
+    check_loop.set_iter({Expression_component("n", Expression_component::identifier), Expression_component(Expression_component::add), Expression_component("1", Expression_component::number)});
 
 
     ASSERT_EQ(loop, check_loop);
@@ -4244,7 +4238,7 @@ TEST(parameter_extraction, param_ternary_conditional) {
     Ternary t;
     t.set_condition(Expression({
         Expression_component("condition", Expression_component::identifier),
-        Expression_component(">", Expression_component::operation),
+        Expression_component(Expression_component::greater),
         Expression_component("1", Expression_component::number),
     }));
     t.set_true_value(
@@ -4262,7 +4256,7 @@ TEST(parameter_extraction, param_ternary_conditional) {
     t = Ternary();
     t.set_condition(Expression({
         Expression_component("condition", Expression_component::identifier),
-        Expression_component(">", Expression_component::operation),
+        Expression_component(Expression_component::greater),
         Expression_component("65", Expression_component::number),
     }));
     t.set_true_value(
@@ -4327,7 +4321,7 @@ TEST(parameter_extraction, nested_ternary_conditional) {
     Ternary t;
     t.set_condition(Expression({
         Expression_component("condition", Expression_component::identifier),
-        Expression_component(">", Expression_component::operation),
+        Expression_component(Expression_component::greater),
         Expression_component("1", Expression_component::number),
     }));
     t.set_false_value(
@@ -4337,7 +4331,7 @@ TEST(parameter_extraction, nested_ternary_conditional) {
     Ternary inner_t;
     inner_t.set_condition(Expression({
         Expression_component("condition", Expression_component::identifier),
-        Expression_component(">", Expression_component::operation),
+        Expression_component(Expression_component::greater),
         Expression_component("65", Expression_component::number),
     }));
     inner_t.set_true_value(
@@ -4403,7 +4397,7 @@ TEST(parameter_extraction, complex_ternary_conditional) {
     Ternary t;
     t.set_condition(Expression({
         Expression_component("NM", Expression_component::identifier),
-        Expression_component(">", Expression_component::operation),
+        Expression_component(Expression_component::greater),
         Expression_component("1", Expression_component::number),
     }));
     HDL_function_call c("$clog2");

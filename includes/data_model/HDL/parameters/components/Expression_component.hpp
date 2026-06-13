@@ -53,6 +53,33 @@ public:
     };
 
 
+    enum sv_operators {
+        logic_neg,
+        bitwise_neg,
+        power,
+        multiply,
+        divide,
+        modulo,
+        add,
+        subtract,
+        logic_shift_left,
+        logic_shift_right,
+        arithmetic_shift_left,
+        arithmetic_shift_right,
+        greater,
+        greater_equal,
+        less,
+        less_equal,
+        equal,
+        not_equal,
+        bitwise_and,
+        bitwise_xor,
+        bitwise_xnor,
+        bitwise_or,
+        logical_and,
+        logical_or
+    };
+    explicit Expression_component(const sv_operators &op);
     explicit Expression_component(const std::string &s,const component_type &t);
     explicit Expression_component(std::variant<hdl_integer, double> n, int64_t b_s);
     explicit Expression_component(const std::shared_ptr<Parameter_value_base> &param);
@@ -66,6 +93,7 @@ public:
     bool is_function() const {return type == function;}
     bool is_operator() const {return type == operation;}
     bool is_numeric() const {return type == number;}
+    bool is_parenthesis() const {return type == parenthesis;}
 
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) const;
 
@@ -98,6 +126,7 @@ public:
     void set_value(const resolved_parameter &v) {value = v;}
     std::optional<resolved_parameter> get_value()const{return value;}
 
+    sv_operators get_operation(){return  operator_value;}
 
     int64_t get_binary_size() const{return binary_size;}
     void set_binary_size(int64_t s) {binary_size = s;}
@@ -117,6 +146,7 @@ private:
     component_type type = number;
 
     resolved_parameter value;
+    sv_operators operator_value;
 
     std::shared_ptr<HDL_function_call> call;
 
@@ -149,90 +179,66 @@ private:
         });
     }
 
-    static constexpr bool is_string_function(std::string_view op) {
-        constexpr std::string_view operators[] = {
-            "$clog2","$ceil", "$floor","$pow", "$rtoi", "$itor",
-        };
-
-        return std::ranges::any_of(operators, [op](std::string_view valid_op) {
-            return op == valid_op;
-        });
-    }
 
 
-    std::unordered_map<std::string, operator_type_t> operators_types = {
-            {"$clog2", unary_operator},
-            {"$ceil", unary_operator},
-            {"$floor", unary_operator},
-            {"$rtoi", unary_operator},
-            {"$itor", unary_operator},
-            {"$pow", binary_operator},
-            {"!", unary_operator},
-            {"~", unary_operator},
-            {"**", binary_operator},
-            {"*", binary_operator},
-            {"/", binary_operator},
-            {"&", binary_operator},
-            {"|", binary_operator},
-            {"^", binary_operator},
-            {"^~", binary_operator},
-            {"~^", binary_operator},
-            {"%", binary_operator},
-            {"+", binary_operator},
-            {"-", binary_operator},
-            {"<<", binary_operator},
-            {">>", binary_operator},
-            {"<<<", binary_operator},
-            {">>>", binary_operator},
-            {">", binary_operator},
-            {">=", binary_operator},
-            {"<", binary_operator},
-            {"<=", binary_operator},
-            {"==",  binary_operator},
-            {"!=", binary_operator},
-            {"&&", binary_operator},
-            {"||", binary_operator}
+
+    std::unordered_map<sv_operators, int64_t> operators_precedence = {
+        {logic_neg,      1},
+        {bitwise_neg,      1},
+        {power,     2},
+        {multiply,      3},
+        {divide,      3},
+        {modulo,      3},
+        {add,      4},
+        {subtract,      4},
+        {logic_shift_left,     5},
+        {logic_shift_right,     5},
+        {arithmetic_shift_left,     5},
+        {arithmetic_shift_right,     5},
+        {greater,      6},
+        {greater_equal,     6},
+        {less,      6},
+        {less_equal,     6},
+        {equal,     6},
+        {not_equal,     6},
+        {bitwise_and,      7},
+        {bitwise_xor,      8},
+        {bitwise_xnor,      8},
+        {bitwise_or,      9},
+        {logical_and,    10},
+        {logical_or,    11},
     };
 
-
-    std::unordered_map<std::string, int64_t> operators_precedence = {
-            {"$clog2", 0},
-            {"$ceil",  0},
-            {"$floor", 0},
-            {"$rtoi",  0},
-            {"$itor",  0},
-            {"$pow",   0},
-            {"!",      1},
-            {"~",      1},
-            {"**",     2},
-            {"*",      3},
-            {"/",      3},
-            {"%",      3},
-            {"+",      4},
-            {"-",      4},
-            {"<<",     5},
-            {">>",     5},
-            {"<<<",     5},
-            {">>>",     5},
-            {">",      6},
-            {">=",     6},
-            {"<",      6},
-            {"<=",     6},
-            {"==",     6},
-            {"!=",     6},
-            {"&",      7},
-            {"^",      8},
-            {"~^",      8},
-            {"^~",      8},
-            {"|",      9},
-            {"&&",    10},
-            {"||",    11},
+    std::set<sv_operators> right_associative_set = {
+        bitwise_neg, logic_neg
     };
 
-    std::set<std::string> right_associative_set = {
-           "$itor","$rtoi", "$clog2","$ceil", "$floor","$pow", "!", "~"
+    std::map<sv_operators, std::string> print_operator = {
+        {logic_neg, "!"},
+        {bitwise_neg, "~"},
+        {power,"**"},
+        {multiply,"*"},
+        {divide,"/"},
+        {modulo,"%"},
+        {add,"+"},
+        {subtract,"-"},
+        {logic_shift_left,"<<"},
+        {logic_shift_right,">>"},
+        {arithmetic_shift_left,"<<<"},
+        {arithmetic_shift_right,">>>"},
+        {greater,">"},
+        {greater_equal,">="},
+        {less,"<"},
+        {less_equal,"<="},
+        {equal,"=="},
+        {not_equal,"!="},
+        {bitwise_and,"&"},
+        {bitwise_xor,"^"},
+        {bitwise_xnor,"~^"},
+        {bitwise_or,"|"},
+        {logical_and,"&&"},
+        {logical_or,"||"}
     };
-
 
 };
 

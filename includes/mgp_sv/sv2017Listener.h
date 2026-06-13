@@ -949,6 +949,12 @@ public:
   virtual void enterExpression(sv2017::ExpressionContext *ctx) = 0;
   virtual void exitExpression(sv2017::ExpressionContext *ctx) = 0;
 
+  virtual void enterOperator_log_and(sv2017::Operator_log_andContext *ctx) = 0;
+  virtual void exitOperator_log_and(sv2017::Operator_log_andContext *ctx) = 0;
+
+  virtual void enterOperator_log_or(sv2017::Operator_log_orContext *ctx) = 0;
+  virtual void exitOperator_log_or(sv2017::Operator_log_orContext *ctx) = 0;
+
   virtual void enterOperator_power(sv2017::Operator_powerContext *ctx) = 0;
   virtual void exitOperator_power(sv2017::Operator_powerContext *ctx) = 0;
 

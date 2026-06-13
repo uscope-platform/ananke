@@ -52,6 +52,9 @@ void sv_visitor::route_expression_component(const Expression_component& ec) {
     } else if(params_factory.is_component_relevant()){
         params_factory.add_component(ec);
     }
+    if(deps_factory.is_valid_dependency() && ec.is_operator()){
+        deps_factory.add_connection_element(ec);
+    }
 }
 
 
@@ -416,10 +419,6 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
         std::string type;
         if(ctx->QUESTIONMARK()){
             params_factory.stop_ternary();
-        } else if(ctx->AND_LOG()){
-            route_expression_component("&&");
-        } else if(ctx->OR_LOG()){
-            route_expression_component("||");
         }
         params_factory.stop_expression_new();
     }else if (f_factory.is_active()) {
@@ -470,47 +469,66 @@ void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
 }
 
 void sv_visitor::exitOperator_plus_minus(sv2017::Operator_plus_minusContext *ctx) {
-    route_expression_component(ctx->getText());
+    if (ctx->PLUS())  route_expression_component(Expression_component(Expression_component::add));
+    if (ctx->MINUS()) route_expression_component(Expression_component(Expression_component::subtract));
 }
 
 void sv_visitor::exitOperator_mul_div_mod(sv2017::Operator_mul_div_modContext *ctx) {
-    route_expression_component(ctx->getText());
+    if (ctx->MUL())  route_expression_component(Expression_component(Expression_component::multiply));
+    if (ctx->DIV()) route_expression_component(Expression_component(Expression_component::divide));
+    if (ctx->MOD()) route_expression_component(Expression_component(Expression_component::modulo));
 }
 
 
 void sv_visitor::exitOperator_shift(sv2017::Operator_shiftContext *ctx) {
-    route_expression_component(ctx->getText());
+    if (ctx->SHIFT_LEFT()) route_expression_component(Expression_component(Expression_component::logic_shift_left));
+    if (ctx->SHIFT_RIGHT()) route_expression_component(Expression_component(Expression_component::logic_shift_right));
+    if (ctx->ARITH_SHIFT_LEFT()) route_expression_component(Expression_component(Expression_component::arithmetic_shift_left));
+    if (ctx->ARITH_SHIFT_RIGHT()) route_expression_component(Expression_component(Expression_component::arithmetic_shift_right));
+
 }
 
 void sv_visitor::exitUnary_operator(sv2017::Unary_operatorContext *ctx) {
-    if(ctx->PLUS() || ctx->MINUS()){
-        route_expression_component(ctx->getText());
-    }
+    if (ctx->PLUS())  route_expression_component(Expression_component(Expression_component::add));
+    if (ctx->MINUS()) route_expression_component(Expression_component(Expression_component::subtract));
 }
 
 void sv_visitor::exitOperator_cmp(sv2017::Operator_cmpContext *ctx) {
-    route_expression_component(ctx->getText());
+    if (ctx->GT()) route_expression_component(Expression_component(Expression_component::greater));
+    if (ctx->GE()) route_expression_component(Expression_component(Expression_component::greater_equal));
+    if (ctx->LT()) route_expression_component(Expression_component(Expression_component::less));
+    if (ctx->LE()) route_expression_component(Expression_component(Expression_component::less_equal));
 }
 
 void sv_visitor::exitOperator_eq_neq(sv2017::Operator_eq_neqContext *ctx) {
-    route_expression_component(ctx->getText());
+    if (ctx->EQ()) route_expression_component(Expression_component(Expression_component::equal));
+    if (ctx->NE()) route_expression_component(Expression_component(Expression_component::not_equal));
 }
 
 void sv_visitor::exitOperator_bitwise_and(sv2017::Operator_bitwise_andContext *ctx) {
-    route_expression_component(ctx->getText());
+    route_expression_component(Expression_component(Expression_component::bitwise_and));
 }
 
 void sv_visitor::exitOperator_bitwise_or(sv2017::Operator_bitwise_orContext *ctx) {
-    route_expression_component(ctx->getText());
+    route_expression_component(Expression_component(Expression_component::bitwise_or));
 }
 
 void sv_visitor::exitOperator_xor(sv2017::Operator_xorContext *ctx) {
-    route_expression_component(ctx->getText());
+    if (ctx->XOR()) route_expression_component(Expression_component(Expression_component::bitwise_xor));
+    if (ctx->XORN()) route_expression_component(Expression_component(Expression_component::bitwise_xnor));
+    if (ctx->NXOR()) route_expression_component(Expression_component(Expression_component::bitwise_xnor));
 }
 
 void sv_visitor::exitOperator_power(sv2017::Operator_powerContext *ctx) {
-    route_expression_component(ctx->getText());
+    route_expression_component(Expression_component(Expression_component::power));
 }
+
+void sv_visitor::exitOperator_log_and(sv2017::Operator_log_andContext *ctx) {
+    route_expression_component(Expression_component(Expression_component::logical_and));
+};
+void sv_visitor::exitOperator_log_or(sv2017::Operator_log_orContext *ctx) {
+    route_expression_component(Expression_component(Expression_component::logical_or));
+};
 
 uint32_t sv_visitor::parse_number(const std::string& s) {
     if(auto m = ctre::match<R"(\d*'h([0-9a-fA-F]*))">(s)) {
@@ -1025,9 +1043,9 @@ void sv_visitor::enterInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPos
             Expression e;
             e.emplace_back(name, Expression_component::get_type(name));
             if(ctx->inc_or_dec_operator()->INCR()){
-                e.emplace_back("+", Expression_component::operation);
+                e.push_back(Expression_component(Expression_component::add));
             } else if(ctx->inc_or_dec_operator()->DECR()){
-                e.emplace_back("-",Expression_component::operation);
+                e.push_back(Expression_component(Expression_component::subtract));
             }
             e.emplace_back("1", Expression_component::number);
             loops_factory.add_expression(e);
@@ -1068,9 +1086,9 @@ void sv_visitor::exitGenvar_iteration(sv2017::Genvar_iterationContext *ctx) {
        auto str = ctx->identifier()->getText();
        e.emplace_back(str, Expression_component::get_type(str));
        if(ctx->inc_or_dec_operator()->INCR()){
-           e.emplace_back("+", Expression_component::operation);
+           e.push_back(Expression_component(Expression_component::add));
        } else if(ctx->inc_or_dec_operator()->DECR()){
-           e.emplace_back("-", Expression_component::operation);
+           e.push_back(Expression_component(Expression_component::subtract));
        }
        e.emplace_back(1);
        loops_factory.add_expression(e);

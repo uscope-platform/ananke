@@ -25,9 +25,9 @@ TEST(shunting_yard, shunting_yard_priority){
 
     Expression expr = {
                     Expression_component("add_expr_p", Expression_component::identifier),
-                    Expression_component("+", Expression_component::operation),
+                    Expression_component(Expression_component::add),
                     Expression_component("mul_expr_p", Expression_component::identifier),
-                    Expression_component("*", Expression_component::operation),
+                    Expression_component(Expression_component::multiply),
                     Expression_component("5", Expression_component::number)
     };
     auto rpn_expr = expr.to_rpm();
@@ -36,8 +36,8 @@ TEST(shunting_yard, shunting_yard_priority){
             Expression_component("add_expr_p", Expression_component::identifier),
             Expression_component("mul_expr_p", Expression_component::identifier),
             Expression_component("5", Expression_component::number),
-            Expression_component("*", Expression_component::operation),
-            Expression_component("+", Expression_component::operation)
+            Expression_component(Expression_component::multiply),
+            Expression_component(Expression_component::add)
     };
     expected_result.set_rpn(true);
     ASSERT_EQ(rpn_expr, expected_result);
@@ -49,10 +49,10 @@ TEST(shunting_yard, shunting_yard_parenthesis){
     Expression expr_1 = {
                     Expression_component("(", Expression_component::parenthesis),
                     Expression_component("add_expr_p", Expression_component::identifier),
-                    Expression_component("+", Expression_component::operation),
+                    Expression_component(Expression_component::add),
                     Expression_component("mul_expr_p", Expression_component::identifier),
                     Expression_component(")", Expression_component::parenthesis),
-                    Expression_component("*", Expression_component::operation),
+                    Expression_component(Expression_component::multiply),
                     Expression_component("5", Expression_component::number)
     };
     auto rpn_expr_1 = expr_1.to_rpm();
@@ -60,9 +60,9 @@ TEST(shunting_yard, shunting_yard_parenthesis){
     Expression expected_result_1 = {
                     Expression_component("add_expr_p", Expression_component::identifier),
                     Expression_component("mul_expr_p", Expression_component::identifier),
-                    Expression_component("+", Expression_component::operation),
+                    Expression_component(Expression_component::add),
                     Expression_component("5", Expression_component::number),
-                    Expression_component("*", Expression_component::operation)
+                    Expression_component(Expression_component::multiply)
     };
 
     expected_result_1.set_rpn(true);
@@ -70,10 +70,10 @@ TEST(shunting_yard, shunting_yard_parenthesis){
 
     Expression expr_2 = {
                     Expression_component("5", Expression_component::number),
-                    Expression_component("*", Expression_component::operation),
+                    Expression_component(Expression_component::multiply),
                     Expression_component("(", Expression_component::parenthesis),
                     Expression_component("add_expr_p", Expression_component::identifier),
-                    Expression_component("+", Expression_component::operation),
+                    Expression_component(Expression_component::add),
                     Expression_component("mul_expr_p", Expression_component::identifier),
                     Expression_component(")", Expression_component::parenthesis)
     };
@@ -84,8 +84,8 @@ TEST(shunting_yard, shunting_yard_parenthesis){
                     Expression_component("5", Expression_component::number),
                     Expression_component("add_expr_p", Expression_component::identifier),
                     Expression_component("mul_expr_p", Expression_component::identifier),
-                    Expression_component("+", Expression_component::operation),
-                    Expression_component("*", Expression_component::operation)
+                    Expression_component(Expression_component::add),
+                    Expression_component(Expression_component::multiply)
     };
     expected_result_2.set_rpn(true);
     ASSERT_EQ(rpn_expr_2, expected_result_2);
@@ -96,12 +96,12 @@ TEST(shunting_yard, shunting_yard_parenthesis_complex){
     Expression expr_1 = {
                     Expression_component("(", Expression_component::parenthesis),
                     Expression_component("4", Expression_component::number),
-                    Expression_component("*", Expression_component::operation),
+                    Expression_component(Expression_component::multiply),
                     Expression_component("3", Expression_component::number),
-                    Expression_component("+", Expression_component::operation),
+                    Expression_component(Expression_component::add),
                     Expression_component("5", Expression_component::number),
                     Expression_component(")", Expression_component::parenthesis),
-                    Expression_component("+", Expression_component::operation),
+                    Expression_component(Expression_component::add),
                     Expression_component("1", Expression_component::number)
     };
     auto rpn_expr_1 = expr_1.to_rpm();
@@ -110,11 +110,11 @@ TEST(shunting_yard, shunting_yard_parenthesis_complex){
     Expression expected_result_1 = {
                     Expression_component("4", Expression_component::number),
                     Expression_component("3", Expression_component::number),
-                    Expression_component("*", Expression_component::operation),
+                    Expression_component(Expression_component::multiply),
                     Expression_component("5", Expression_component::number),
-                    Expression_component("+", Expression_component::operation),
+                    Expression_component(Expression_component::add),
                     Expression_component("1", Expression_component::number),
-                    Expression_component("+", Expression_component::operation)
+                    Expression_component(Expression_component::add)
     };
 
     expected_result_1.set_rpn(true);
@@ -126,9 +126,9 @@ TEST(shunting_yard, shunting_yard_test_5){
     Expression expr_1 = {
                     Expression_component("N_CHANNELS", Expression_component::identifier),
                     Expression_component("8", Expression_component::number),
-                    Expression_component("/", Expression_component::operation),
+                    Expression_component(Expression_component::divide),
                     Expression_component("1", Expression_component::number),
-                    Expression_component("+", Expression_component::operation)
+                    Expression_component(Expression_component::add)
     };
     expr_1.set_rpn(true);
     auto rpn_expr_1 = expr_1.to_rpm();

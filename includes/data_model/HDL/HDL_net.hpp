@@ -114,6 +114,9 @@ public:
     void add_index_component(const std::string &ec) {
         index.emplace_back(ec, Expression_component::get_type(ec));
     }
+    void add_index_component(const Expression_component &ec) {
+        index.push_back(ec);
+    }
     void set_range(HDL_range r) {
         range = r;
     }

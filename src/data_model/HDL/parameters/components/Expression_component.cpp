@@ -26,9 +26,15 @@ Expression_component::Expression_component(const Expression_component &c) {
     array_index = c.array_index;
     package_prefix = c.package_prefix;
     instance_prefix = c.instance_prefix;
+    operator_value = c.operator_value;
     binary_size = c.binary_size;
     type = c.type;
     if (call) call = std::make_shared<HDL_function_call>(*c.call);
+}
+
+Expression_component::Expression_component(const sv_operators &op) {
+    type = operation;
+    operator_value = op;
 }
 
 
@@ -37,6 +43,7 @@ Expression_component::Expression_component() {
 }
 
 Expression_component::Expression_component(const std::string &s, const component_type &t) {
+    if (t==operation) throw std::runtime_error("wrong_constructor");
     value =  s;
     type = t;
     if(t == number) {
@@ -84,15 +91,18 @@ void Expression_component::propagate_function(HDL_function_def def) {
     for (auto &component:array_index) {
         component.propagate_function(def);
     }
+    if (call) call->propagate_function(def);
 }
 
 
 bool operator==(const Expression_component &lhs, const Expression_component &rhs) {
      bool ret_val = true;
+    if (lhs.type != rhs.type) return false;
     ret_val &= lhs.value == rhs.value;
     ret_val &= lhs.array_index == rhs.array_index;
     ret_val &= lhs.package_prefix == rhs.package_prefix;
     ret_val &= lhs.instance_prefix == rhs.instance_prefix;
+    if (lhs.type == Expression_component::operation) ret_val &= lhs.operator_value == rhs.operator_value;
     ret_val &= lhs.binary_size == rhs.binary_size;
     if (lhs.call == nullptr ^ rhs.call == nullptr) return false;
     if (!(lhs.call == nullptr && rhs.call == nullptr)) ret_val &= *lhs.call == *rhs.call;
@@ -101,7 +111,9 @@ bool operator==(const Expression_component &lhs, const Expression_component &rhs
 
 std::string Expression_component::print_value() const {
     std::string ret_val;
-     if(is_numeric()){
+    if (type == operation) {
+        ret_val = print_operator.at(operator_value);
+    }else if(is_numeric()){
         ret_val = std::to_string(value.get_integer());
     } else {
         if(!array_index.empty()){
@@ -110,6 +122,7 @@ std::string Expression_component::print_value() const {
             ret_val = value.get_string();
         }
     }
+
 
 
     return ret_val;
@@ -162,23 +175,21 @@ std::pair<resolved_parameter, int64_t>  Expression_component::process_number(con
 }
 
 Expression_component::operator_type_t Expression_component::get_operator_type() {
-    if(!operators_types.contains(value.get_string())){
-        throw std::runtime_error("Error: attempted to get the type of a non operator/function expression component");
-    }
-    return operators_types[value.get_string()];
+    if(type!= operation) throw std::runtime_error("Error: attempted to get the type of a non operator");
+    if (operator_value == logic_neg || operator_value == bitwise_neg) return unary_operator;
+    return binary_operator;
 }
 
 int64_t Expression_component::get_operator_precedence() {
-    if (value.is_integer())  throw std::runtime_error("Error: attempted to get the precedence of a number");
-    auto string_value = value.get_string();
-    if(!operators_precedence.contains(string_value)){
-        throw std::runtime_error("Error: attempted to get the precedence of a non operator/function expression component");
-    }
-    return operators_precedence[string_value];
+    if(type!= operation) throw std::runtime_error("Error: attempted to get the precedence of a non operator");
+    return operators_precedence[operator_value];
 }
 
 
 std::optional<resolved_parameter> Expression_component::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) const {
+    if (type == function && call) {
+        return call->evaluate(context);
+    }
     if (type == identifier) {
         qualified_identifier id{package_prefix, instance_prefix, value.get_string()};
         auto it = context.find(id);
@@ -215,12 +226,8 @@ std::optional<resolved_parameter> Expression_component::evaluate(const std::map<
 }
 
 bool Expression_component::is_right_associative() {
-    if (value.is_integer())  throw std::runtime_error("Error: attempted to get the associativity of a number");
-    auto string_value = value.get_string();
-    if((type != operation) && (type != function)){
-        throw std::runtime_error("Error: attempted to get the right associativity of a non operator/function expression component");
-    }
-    return right_associative_set.contains(value.get_string());
+    if(type!= operation) throw std::runtime_error("Error: attempted to get the associativity of a non operator");
+    return right_associative_set.contains(operator_value);
 }
 
 std::string Expression_component::print_index(const std::vector<Expression> &index) const {
@@ -247,7 +254,6 @@ std::vector<Expression> Expression_component::get_array_index() {
 Expression_component::component_type Expression_component::get_type(const std::string &s) {
     if(ctre::match<R"(^\d+$)">(s) || ctre::search<R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))">(s)|| ctre::match<R"(^[+\-]?(\d+\.\d*|\.\d+)([eE][+\-]?\d+)?$|^[+\-]?\d+[eE][+\-]?\d+$)">(s)) return number;
     if(is_string_operator(s)) return operation;
-    if(is_string_function(s)) return function;
     if(is_string_parenthesis(s)) return parenthesis;
     if(s.starts_with("\"") | ctre::match<R"(\d+(\.\d+)?(s|ms|us|ns|ps|fs))">(s)) return string;
     return identifier;

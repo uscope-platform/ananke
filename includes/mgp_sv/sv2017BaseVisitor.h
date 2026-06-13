@@ -1261,6 +1261,14 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitOperator_log_and(sv2017::Operator_log_andContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitOperator_log_or(sv2017::Operator_log_orContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitOperator_power(sv2017::Operator_powerContext *ctx) override {
     return visitChildren(ctx);
   }
