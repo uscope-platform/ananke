@@ -69,8 +69,8 @@ struct HDL_range {
 
 class HDL_net {
 public:
-    HDL_net() = default;
-    explicit HDL_net(const std::string &s) {name = s;}
+    HDL_net();
+    explicit HDL_net(const std::string &s);
     bool empty() const {return name.empty() && range.accessor.empty() && replication.size.empty();}
 
     std::string get_full_name() const;

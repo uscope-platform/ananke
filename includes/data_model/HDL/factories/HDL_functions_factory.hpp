@@ -36,7 +36,7 @@ public:
         phase = arguments;
         active = true;
     }
-    void start_assignment(const std::string &n) {current_assigned_variable = n;}
+    void start_assignment(const std::string &n);
     void add_argument(const std::string &a);
     void add_component(const Token &c);
     void add_value(const std::shared_ptr<Parameter_value_base> &v);

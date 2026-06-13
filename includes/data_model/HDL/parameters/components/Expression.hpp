@@ -59,7 +59,13 @@ public:
     void add_index(const std::shared_ptr<Parameter_value_base>  &idx);
 
     friend bool operator==(const Expression &lhs, const Expression &rhs) {
-        return std::tie(lhs.components, lhs.rpn) == std::tie(rhs.components, rhs.rpn);
+        bool ret = true;
+        ret &= lhs.rpn == rhs.rpn;
+        if (lhs.components.size() != rhs.components.size()) return false;
+        for (int i = 0; i< lhs.components.size(); i++) {
+            ret &= *lhs.components[i] == *rhs.components[i];
+        }
+        return ret;
     }
     friend bool operator!=(const Expression &lhs, const Expression &rhs) {
         return !(lhs == rhs);
@@ -80,10 +86,14 @@ public:
         // 1. Safe cast: The base class operator== already verified
         // that this->type == other.type (which is 'expression')
         const auto& rhs = static_cast<const Expression&>(other);
+        bool ret = true;
+        ret &= rpn == rhs.rpn;
+        if (components.size() != rhs.components.size()) return false;
+        for (int i = 0; i< components.size(); i++) {
+            ret &= *components[i] == *rhs.components[i];
+        }
 
-        // 2. Compare the internal state
-        // This will use the operator== of Expression_component for each element in the vector
-        return std::tie(components, rpn) == std::tie(rhs.components, rhs.rpn);
+        return ret;
     }
 
     std::vector<std::shared_ptr<Parameter_value_base>> components;

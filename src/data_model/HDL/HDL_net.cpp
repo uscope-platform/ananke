@@ -15,6 +15,15 @@
 
 #include "data_model/HDL/HDL_net.hpp"
 
+HDL_net::HDL_net() {
+    index = std::make_shared<Expression>();
+}
+
+HDL_net::HDL_net(const std::string &s) {
+    name = s;
+    index = std::make_shared<Expression>();
+}
+
 std::string HDL_net::get_full_name() const {
     auto base_name = name;
     if(!range.accessor.empty()) {
