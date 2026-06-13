@@ -133,7 +133,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(value,type, array_index, instance_prefix, package_prefix, binary_size);
+        ar(value,type, array_index, instance_prefix, package_prefix, binary_size, operator_value);
     }
 
 
@@ -157,18 +157,6 @@ private:
 
     std::vector<Expression> array_index;
 
-    static constexpr bool is_string_operator(std::string_view op) {
-        constexpr std::string_view operators[] = {
-            "!", "~", "*", "/", "%", "+", "-", "<<", ">>", "<<<", ">>>",
-            ">", ">=", "<", "<=", "==", "!=", "&", "|", "^", "~^", "^~", "**",
-            "&&", "||"
-        };
-
-        return std::ranges::any_of(operators, [op](std::string_view valid_op) {
-            return op == valid_op;
-        });
-    }
-
     static constexpr bool is_string_parenthesis(std::string_view op) {
         constexpr std::string_view operators[] = {
             "(", ")", "[", "]", "{", "}"
@@ -178,7 +166,6 @@ private:
             return op == valid_op;
         });
     }
-
 
 
 

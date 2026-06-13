@@ -253,7 +253,6 @@ std::vector<Expression> Expression_component::get_array_index() {
 
 Expression_component::component_type Expression_component::get_type(const std::string &s) {
     if(ctre::match<R"(^\d+$)">(s) || ctre::search<R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))">(s)|| ctre::match<R"(^[+\-]?(\d+\.\d*|\.\d+)([eE][+\-]?\d+)?$|^[+\-]?\d+[eE][+\-]?\d+$)">(s)) return number;
-    if(is_string_operator(s)) return operation;
     if(is_string_parenthesis(s)) return parenthesis;
     if(s.starts_with("\"") | ctre::match<R"(\d+(\.\d+)?(s|ms|us|ns|ps|fs))">(s)) return string;
     return identifier;
