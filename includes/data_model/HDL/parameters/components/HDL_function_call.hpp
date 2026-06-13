@@ -18,8 +18,8 @@
 #define ANANKE_HDL_FUNCTION_CALL_HPP
 
 #include "Parameter_value_base.hpp"
-#include "Expression_component.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
+#include "data_model/HDL/parameters/HDL_function_def.hpp"
 #include "data_model/HDL/HDL_loop.hpp"
 
 

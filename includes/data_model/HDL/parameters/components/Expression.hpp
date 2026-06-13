@@ -20,7 +20,8 @@
 #include <vector>
 #include <tuple>
 #include <stack>
-#include "Expression_component.hpp"
+#include <spdlog/spdlog.h>
+
 #include "data_model/HDL/parameters/components/Token.hpp"
 #include "Parameter_value_base.hpp"
 
@@ -44,7 +45,7 @@ public:
     void push_back(const Token &t) {components.emplace_back(std::make_shared<Token>(t));}
     void push_front(const Token &t) {components.insert(components.begin(), std::make_shared<Token>(t));}
     void emplace_back(const std::string &ec, Token::token_type t) {components.push_back(std::make_shared<Token>(ec, t));}
-    void emplace_back(const hdl_integer &ec) {components.emplace_back(std::make_shared<Token>(ec, Expression_component::number));}
+    void emplace_back(const hdl_integer &ec) {components.emplace_back(std::make_shared<Token>(ec, Token::number));}
     std::set<qualified_identifier> get_dependencies()const override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
     void propagate_function(const HDL_function_def &def) override;

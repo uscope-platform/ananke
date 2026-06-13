@@ -22,7 +22,6 @@
 #include <string>
 
 #include "data_model/HDL/HDL_loop.hpp"
-#include "data_model/HDL/parameters/components/Expression_component.hpp"
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"

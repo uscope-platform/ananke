@@ -21,8 +21,8 @@
 
 
 
-TEST(Expression_component, sized_binary_sv_constant_parsing){
-    Expression_component ec("8'b10110", Expression_component::number);
+TEST(Token, sized_binary_sv_constant_parsing){
+    Token ec("8'b10110", Token::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(ec.get_value().value().get_integer(), 22);
@@ -30,8 +30,8 @@ TEST(Expression_component, sized_binary_sv_constant_parsing){
 }
 
 
-TEST(Expression_component, sized_octal_sv_constant_parsing){
-    Expression_component ec("12'o547", Expression_component::number);
+TEST(Token, sized_octal_sv_constant_parsing){
+    Token ec("12'o547", Token::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(ec.get_value().value().get_integer(), 359);
@@ -39,8 +39,8 @@ TEST(Expression_component, sized_octal_sv_constant_parsing){
 }
 
 
-TEST(Expression_component, sized_decimal_sv_constant_parsing){
-    Expression_component ec("14'd1542", Expression_component::number);
+TEST(Token, sized_decimal_sv_constant_parsing){
+    Token ec("14'd1542", Token::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(ec.get_value().value().get_integer(), 1542);
@@ -48,8 +48,8 @@ TEST(Expression_component, sized_decimal_sv_constant_parsing){
 }
 
 
-TEST(Expression_component, sized_hexadecimal_sv_constant_parsing){
-    Expression_component ec("20'hCA54", Expression_component::number);
+TEST(Token, sized_hexadecimal_sv_constant_parsing){
+    Token ec("20'hCA54", Token::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(ec.get_value().value().get_integer(), 51796);
@@ -58,8 +58,8 @@ TEST(Expression_component, sized_hexadecimal_sv_constant_parsing){
 
 
 
-TEST(Expression_component, unsized_binary_sv_constant_parsing){
-    Expression_component ec("'b10110", Expression_component::number);
+TEST(Token, unsized_binary_sv_constant_parsing){
+    Token ec("'b10110", Token::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(ec.get_value().value().get_integer(), 22);
@@ -67,8 +67,8 @@ TEST(Expression_component, unsized_binary_sv_constant_parsing){
 }
 
 
-TEST(Expression_component, unsized_octal_sv_constant_parsing){
-    Expression_component ec("'o547", Expression_component::number);
+TEST(Token, unsized_octal_sv_constant_parsing){
+    Token ec("'o547", Token::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(ec.get_value().value().get_integer(), 359);
@@ -76,8 +76,8 @@ TEST(Expression_component, unsized_octal_sv_constant_parsing){
 }
 
 
-TEST(Expression_component, unsized_decimal_sv_constant_parsing){
-    Expression_component ec("'d1542", Expression_component::number);
+TEST(Token, unsized_decimal_sv_constant_parsing){
+    Token ec("'d1542", Token::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(ec.get_value().value().get_integer(), 1542);
@@ -85,8 +85,8 @@ TEST(Expression_component, unsized_decimal_sv_constant_parsing){
 }
 
 
-TEST(Expression_component, unsized_hexadecimal_sv_constant_parsing){
-    Expression_component ec("'hCA54", Expression_component::number);
+TEST(Token, unsized_hexadecimal_sv_constant_parsing){
+    Token ec("'hCA54", Token::number);
 
     ASSERT_TRUE(ec.is_numeric());
     ASSERT_EQ(ec.get_value().value().get_integer(), 51796);
@@ -94,8 +94,8 @@ TEST(Expression_component, unsized_hexadecimal_sv_constant_parsing){
 }
 
 
-TEST(Expression_component, string){
-    Expression_component ec("\"FALSE\"", Expression_component::string);
+TEST(Token, string){
+    Token ec("\"FALSE\"", Token::string);
 
     ASSERT_TRUE(ec.is_string());
     ASSERT_FALSE(ec.is_identifier());
@@ -103,8 +103,8 @@ TEST(Expression_component, string){
 }
 
 
-TEST(Expression_component, identifier){
-    Expression_component ec("FALSE", Expression_component::identifier);
+TEST(Token, identifier){
+    Token ec("FALSE", Token::identifier);
 
     ASSERT_TRUE(ec.is_identifier());
     ASSERT_FALSE(ec.is_string());

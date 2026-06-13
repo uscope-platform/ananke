@@ -18,7 +18,7 @@
 
 #include <string>
 #include <sstream>
-
+#include <spdlog/spdlog.h>
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 
 struct struct_member {
