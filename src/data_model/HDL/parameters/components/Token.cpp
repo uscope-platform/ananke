@@ -18,7 +18,13 @@
 #include "data_model/HDL/parameters/components/Token.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+
 using namespace std::string_literals;
+
+CEREAL_REGISTER_TYPE(Token)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Token)
 
 Token::Token(const Token &c) {
     value = c.value;
