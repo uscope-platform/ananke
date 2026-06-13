@@ -114,8 +114,6 @@ public:
         ar(value,type, array_index, instance_prefix, package_prefix, binary_size);
     }
 
-    nlohmann::json dump();
-
     static component_type get_type(const std::string &s);
 
 private:

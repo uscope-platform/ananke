@@ -20,8 +20,44 @@
 
 class Token : public Parameter_value_base{
 public:
+
+    enum token_type {
+        number,
+        string,
+        identifier,
+        function,
+        operation,
+        parenthesis
+    };
+
+
     Token() = default;
+
+    friend bool operator==(const Token &lhs, const Token &rhs);
+
+    bool isEqual(const Parameter_value_base& other) const override {
+        const auto& rhs = static_cast<const Token&>(other);
+
+        bool res = std::tie(type, value, package_prefix, instance_prefix, binary_size) == std::tie(rhs.type, rhs.value, rhs.package_prefix, rhs.instance_prefix, rhs.binary_size);
+        if (array_index.size() != rhs.array_index.size()) return false;
+        for (int i = 0; i< array_index.size(); i++) {
+            res &= *array_index[i] == *rhs.array_index[i];
+        }
+        return res;
+    }
+
 private:
+
+    token_type type = number;
+
+    resolved_parameter value;
+
+    std::string package_prefix;
+    std::string instance_prefix;
+
+    int64_t binary_size = 0;
+
+    std::vector<std::shared_ptr<Parameter_value_base>> array_index;
 };
 
 

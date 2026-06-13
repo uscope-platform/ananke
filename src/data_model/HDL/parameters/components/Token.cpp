@@ -14,3 +14,13 @@
 //  limitations under the License.
 
 #include "data_model/HDL/parameters/components/Token.hpp"
+
+bool operator==(const Token &lhs, const Token &rhs) {
+    bool ret_val = true;
+    ret_val &= lhs.value == rhs.value;
+    ret_val &= lhs.array_index == rhs.array_index;
+    ret_val &= lhs.package_prefix == rhs.package_prefix;
+    ret_val &= lhs.instance_prefix == rhs.instance_prefix;
+    ret_val &= lhs.binary_size == rhs.binary_size;
+    return ret_val;
+}

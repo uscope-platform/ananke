@@ -234,12 +234,6 @@ std::string Expression_component::print_index(const std::vector<Expression> &ind
     return ret_val;
 }
 
-nlohmann::json Expression_component::dump() {
-    nlohmann::json ret;
-
-    return ret;
-}
-
 
 void Expression_component::set_array_index(const std::vector<Expression> &v) {
     array_index = v;
