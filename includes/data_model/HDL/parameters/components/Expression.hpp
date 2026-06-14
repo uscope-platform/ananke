@@ -68,9 +68,7 @@ public:
         }
         return ret;
     }
-    friend bool operator!=(const Expression &lhs, const Expression &rhs) {
-        return !(lhs == rhs);
-    }
+
 
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
 

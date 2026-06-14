@@ -39,9 +39,7 @@ namespace preprocessor {
                    && lhs.has_default == rhs.has_default;
         }
 
-        friend bool operator!=(const function_macro_argument &lhs, const function_macro_argument &rhs) {
-            return !(lhs == rhs);
-        }
+
     };
 
     struct function_macro {
@@ -53,9 +51,6 @@ namespace preprocessor {
             return lhs.arguments == rhs.arguments && lhs.value == rhs.value;
         }
 
-        friend bool operator!=(const function_macro &lhs, const function_macro &rhs) {
-            return !(lhs == rhs);
-        }
     };
 
     static constexpr auto identifier_pattern = ctre::search<R"(`([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()*)">;

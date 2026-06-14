@@ -71,9 +71,6 @@ public:
                && lhs.signedness == rhs.signedness;
     }
 
-    friend bool operator!=(const hdl_integer &lhs, const hdl_integer &rhs) {
-        return !(lhs == rhs);
-    }
 
     friend bool operator<(const hdl_integer &lhs, const hdl_integer &rhs) {
         return lhs.value < rhs.value;

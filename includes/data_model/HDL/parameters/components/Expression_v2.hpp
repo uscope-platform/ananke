@@ -30,6 +30,10 @@ private:
 
         return ret;
     }
+
+    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
+
+
 };
 
 

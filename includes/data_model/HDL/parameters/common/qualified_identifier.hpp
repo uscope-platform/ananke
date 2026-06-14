@@ -36,9 +36,6 @@ struct qualified_identifier {
         return std::tie(lhs.prefix, lhs.name, lhs.instance) == std::tie(rhs.prefix, rhs.name, rhs.instance);
     }
 
-    friend bool operator!=(const qualified_identifier &lhs, const qualified_identifier &rhs) {
-        return !(lhs == rhs);
-    }
 
     bool operator<(const qualified_identifier& other) const {
         return std::tie(prefix,instance, name) < std::tie(other.prefix,other.instance, other.name);

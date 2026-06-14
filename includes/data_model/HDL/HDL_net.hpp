@@ -136,10 +136,6 @@ public:
         replication = r;
     }
 
-    friend bool operator!=(const HDL_net &lhs, const HDL_net &rhs) {
-        return !(lhs == rhs);
-    }
-
     virtual nlohmann::json dump();
 private:
     std::string name;

@@ -58,9 +58,6 @@ public:
         return std::tie(lhs.repetition_size, *lhs.repeated_item) ==  std::tie(rhs.repetition_size, *rhs.repeated_item);
     }
 
-    friend bool operator!=(const Replication &lhs, const Replication &rhs) {
-        return !(lhs == rhs);
-    }
 
 
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
