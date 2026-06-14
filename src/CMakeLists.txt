@@ -45,6 +45,7 @@ target_sources(ananke_lib
     data_model/HDL/parameters/common/hdl_integer.cpp
     data_model/HDL/types/HDL_simple_type.cpp
     data_model/HDL/parameters/components/Expression.cpp
+    data_model/HDL/parameters/components/Expression_v2.cpp
     data_model/HDL/parameters/components/Concatenation.cpp
     data_model/HDL/parameters/components/Ternary.cpp
     data_model/HDL/parameters/components/Replication.cpp

@@ -265,20 +265,6 @@ bool HDL_function_call::empty() const {
     return function_name.empty();
 }
 
-std::shared_ptr<Parameter_value_base> HDL_function_call::clone_ptr() const {
-    HDL_function_call c;
-    for (auto &arg:arguments) {
-        c.arguments.push_back(arg->clone_ptr());
-    }
-    c.function_name = function_name;
-    c.packing = packing;
-    if(loop_metadata) c.loop_metadata = loop_metadata.value().clone();
-    for (auto &ass:assignments) {
-        c.assignments.push_back(ass.clone());
-    }
-    return std::make_shared<HDL_function_call>(c);
-}
-
 bool HDL_function_call::isEqual(const Parameter_value_base &other) const {
     bool is_equal = true;
 

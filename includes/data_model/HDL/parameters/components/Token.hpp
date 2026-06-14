@@ -129,7 +129,6 @@ public:
     void set_binary_size(int64_t s) {binary_size = s;}
 
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
-    std::shared_ptr<Parameter_value_base> clone_ptr() const override;
 
     template<class Archive>
     void serialize( Archive & ar ) {

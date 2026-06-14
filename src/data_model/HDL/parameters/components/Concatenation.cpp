@@ -22,9 +22,8 @@ CEREAL_REGISTER_TYPE(Concatenation)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Concatenation)
 
 Concatenation::Concatenation(const Concatenation &other) {
-    for(auto &item: other.components) {
-        components.push_back(item->clone_ptr());
-    }
+
+    components = other.components;
     container_size = other.container_size;
     default_initialization = other.default_initialization;
     packing = other.packing;
@@ -32,9 +31,7 @@ Concatenation::Concatenation(const Concatenation &other) {
 }
 
 Concatenation::Concatenation(Concatenation &&other) noexcept {
-    for(const auto &item: other.components) {
-        components.push_back(item->clone_ptr());
-    }
+    components = other.components;
     container_size = other.container_size;
     default_initialization = other.default_initialization;
     packing = other.packing;
@@ -43,9 +40,8 @@ Concatenation::Concatenation(Concatenation &&other) noexcept {
 
 Concatenation Concatenation::clone()  const{
     Concatenation ret;
-    for(auto &c : components) {
-        ret.components.push_back(c->clone_ptr());
-    }
+
+    ret.components = components;
     ret.packing = packing;
     ret.default_initialization = default_initialization;
     ret.unpacked_dimension = unpacked_dimension;

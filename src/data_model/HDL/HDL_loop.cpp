@@ -65,7 +65,7 @@ assignment assignment::clone() const {
     assignment a;
     a.name = name;
     if(index.has_value()) a.set_index(index.value());
-    if(value!= nullptr) a.set_value(value->clone_ptr());
+    a.set_value(value);
     return a;
 }
 

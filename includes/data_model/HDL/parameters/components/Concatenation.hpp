@@ -46,9 +46,7 @@ public:
             unpacked_dimension = other.unpacked_dimension;
             packing = other.packing;
             default_initialization = other.default_initialization;
-            components.clear();
-            components.reserve(other.components.size());
-            for(auto &item: other.components) components.push_back(item->clone_ptr());
+            components = other.components;
         }
         return *this;
     }
@@ -59,9 +57,7 @@ public:
             unpacked_dimension = other.unpacked_dimension;
             packing = other.packing;
             default_initialization = other.default_initialization;
-            components.clear();
-            components.reserve(other.components.size());
-            for(auto &item: other.components) components.push_back(item->clone_ptr());
+            components = other.components;
         }
         return *this;
     }
@@ -91,10 +87,6 @@ public:
         return !(lhs == rhs);
     }
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
-
-    std::shared_ptr<Parameter_value_base> clone_ptr() const override {
-        return std::make_shared<Concatenation>(*this);  // Copy constructor
-    }
 
     template<class Archive>
     void serialize( Archive & ar ) {

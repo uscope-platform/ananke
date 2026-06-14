@@ -66,15 +66,6 @@ std::string Ternary::print() const {
 }
 
 
-std::shared_ptr<Parameter_value_base> Ternary::clone_ptr() const {
-    Ternary t;
-    t.condition = condition.clone();
-    t.true_value = true_value->clone_ptr();
-    t.false_value = false_value->clone_ptr();
-
-    return std::make_shared<Ternary>(t);
-}
-
 bool Ternary::isEqual(const Parameter_value_base &other) const {
         const auto& rhs = static_cast<const Ternary&>(other);
 

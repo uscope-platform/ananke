@@ -34,8 +34,6 @@ public:
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
     [[nodiscard]] std::string print() const override;
 
-    [[nodiscard]] std::shared_ptr<Parameter_value_base> clone_ptr() const override;
-
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override {}
 
 

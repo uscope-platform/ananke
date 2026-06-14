@@ -170,10 +170,6 @@ int64_t Token::get_size() {
 void Token::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
 }
 
-std::shared_ptr<Parameter_value_base> Token::clone_ptr() const {
-    return std::make_shared<Token>(*this);
-}
-
 std::pair<resolved_parameter, int64_t> Token::process_number(const std::string &s) {
     int64_t ret_size;
     resolved_parameter ret_value;

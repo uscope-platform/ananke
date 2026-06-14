@@ -62,9 +62,6 @@ public:
         return !(lhs == rhs);
     }
 
-    std::shared_ptr<Parameter_value_base> clone_ptr() const override {
-        return std::make_shared<Replication>(*this);  // Copy constructor
-    }
 
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
 

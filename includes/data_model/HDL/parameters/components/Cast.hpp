@@ -30,7 +30,7 @@ public:
         if (this == &other)
             return *this;
         Parameter_value_base::operator =(other);
-        if (other.content != nullptr) content = other.content->clone_ptr();
+        content = other.content;
         type_cast = other.type_cast;
         target_type = other.target_type;
         size = other.size;
@@ -43,7 +43,7 @@ public:
         Parameter_value_base::operator =(std::move(other));
         type_cast = other.type_cast;
         target_type = other.target_type;
-        if (other.content != nullptr) content = std::move(other.content->clone_ptr());
+        if (other.content != nullptr) content = std::move(other.content);
         size = std::move(other.size);
         return *this;
     }
@@ -64,8 +64,6 @@ public:
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
     [[nodiscard]] std::string print() const override;
     int64_t get_size() override;
-
-    [[nodiscard]] std::shared_ptr<Parameter_value_base> clone_ptr() const override;
 
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
 

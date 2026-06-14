@@ -25,14 +25,14 @@ Cast::Cast(const Cast &other) {
     size = other.size;
     type_cast = other.type_cast;
     target_type = other.target_type;
-    if (other.content != nullptr) content = other.content->clone_ptr();
+    content = other.content;
 }
 
 Cast::Cast(Cast &&other) noexcept {
     size = other.size;
     type_cast = other.type_cast;
     target_type = other.target_type;
-    if (other.content != nullptr) content = other.content->clone_ptr();
+    content = other.content;
 }
 
 std::set<qualified_identifier> Cast::get_dependencies() const {
@@ -104,15 +104,6 @@ int64_t Cast::get_size() {
     return size.evaluate({}).value().get_integer().get_value();
 }
 
-
-std::shared_ptr<Parameter_value_base> Cast::clone_ptr() const {
-    Cast c;
-    if (content != nullptr) c.content = content->clone_ptr();
-    c.size = size;
-    c.type_cast = type_cast;
-    c.target_type = target_type;
-    return std::make_shared<Cast>(c);
-}
 
 void Cast::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
     container_size = s;

@@ -59,7 +59,7 @@ std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
     par.name = name;
     par.type = type;
     par.solved_value = solved_value;
-    if (raw_value) par.raw_value = raw_value->clone_ptr();
+    par.raw_value = raw_value;
     return std::make_shared<HDL_parameter>(par);
 }
 

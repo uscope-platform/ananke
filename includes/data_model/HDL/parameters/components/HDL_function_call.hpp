@@ -51,7 +51,6 @@ public:
     [[nodiscard]] bool empty() const;
 
 
-    std::shared_ptr<Parameter_value_base> clone_ptr() const  override;
 
     void add_body(const std::vector<assignment> &a, const std::optional<HDL_loop_metadata> &loop) {
         assignments = a;

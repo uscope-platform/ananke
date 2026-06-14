@@ -30,18 +30,18 @@ Replication::Replication(const std::shared_ptr<Expression> &size, std::shared_pt
 
 Replication::Replication(const Replication &other) {
     repetition_size = other.repetition_size;
-    if(other.repeated_item != nullptr) repeated_item = other.repeated_item->clone_ptr();
+    repeated_item = other.repeated_item;
 }
 
 Replication::Replication(Replication &&other) noexcept {
     repetition_size = other.repetition_size;
-    if(other.repeated_item != nullptr) repeated_item = other.repeated_item->clone_ptr();
+    repeated_item = other.repeated_item;
 }
 
 Replication Replication::clone()  const{
     Replication result;
     result.repetition_size = repetition_size;
-    if(repeated_item != nullptr) result.repeated_item = repeated_item->clone_ptr();
+    result.repeated_item = repeated_item;
     return result;
 }
 
@@ -49,7 +49,7 @@ Replication Replication::clone()  const{
 Replication & Replication::operator=(const Replication &other) {
     if (this != &other) {
         repetition_size = other.repetition_size;
-        if(other.repeated_item != nullptr) repeated_item = other.repeated_item->clone_ptr();
+        repeated_item = other.repeated_item;
     }
     return *this;
 }
@@ -57,7 +57,7 @@ Replication & Replication::operator=(const Replication &other) {
 Replication & Replication::operator=(Replication &&other) noexcept {
     if (this != &other) {
         repetition_size = other.repetition_size;
-        if(other.repeated_item != nullptr) repeated_item = other.repeated_item->clone_ptr();
+        repeated_item = other.repeated_item;
     }
     return *this;
 }
