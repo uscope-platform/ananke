@@ -18,6 +18,7 @@
 #define ANANKE_EXPRESSION_V2_HPP
 
 #include <map>
+#include <spdlog/spdlog.h>
 
 #include "Parameter_value_base.hpp"
 
@@ -104,6 +105,8 @@ private:
     std::shared_ptr<Parameter_value_base> lhs;
     std::shared_ptr<Parameter_value_base> rhs;
     expression_operator operation;
+
+    uint64_t current_size=0;
 };
 
 

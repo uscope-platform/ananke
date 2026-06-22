@@ -57,6 +57,8 @@ bool Expression_v2::isEqual(const Parameter_value_base &other) const {
 
 void Expression_v2::set_container_sizes(const resolved_type &s,
     const std::map<qualified_identifier, resolved_parameter> &context) {
+    current_size = 1;
+    for (auto &size:s.packed_sizes) current_size *= size;
 }
 
 bool operator==(const Expression_v2 &lhs, const Expression_v2 &rhs) {
@@ -67,24 +69,189 @@ bool operator==(const Expression_v2 &lhs, const Expression_v2 &rhs) {
     return ret;
 }
 
-std::optional<resolved_parameter> Expression_v2::evaluate(
-    const std::map<qualified_identifier, resolved_parameter> &context) {
-    return Parameter_value_base::evaluate(context);
-}
-
 int64_t Expression_v2::get_size() {
     return Parameter_value_base::get_size();
 }
 
 std::set<qualified_identifier> Expression_v2::get_dependencies() const {
-    return Parameter_value_base::get_dependencies();
+    std::set<qualified_identifier> deps;
+    if (lhs) {
+        auto lhs_deps = lhs->get_dependencies();
+        deps.insert(lhs_deps.begin(), lhs_deps.end());
+    }
+    if (rhs) {
+        auto rhs_deps = rhs->get_dependencies();
+        deps.insert(rhs_deps.begin(), rhs_deps.end());
+    }
+    return deps;
 }
 
-std::variant<hdl_integer, double> Expression_v2::evaluate_binary_expression(resolved_parameter op_a,
-    resolved_parameter op_b) {
-    return 0;
+std::optional<resolved_parameter> Expression_v2::evaluate(
+    const std::map<qualified_identifier, resolved_parameter> &context) {
+    std::optional<resolved_parameter> r_val, l_val;
+    resolved_parameter ret_val;
+
+    if (lhs) l_val = lhs->evaluate(context);
+    if (rhs) r_val = rhs->evaluate(context);
+    if (operation == logic_neg || operation == bitwise_neg) {
+        resolved_parameter operand = 0;
+        if (l_val.has_value()) operand = l_val.value();
+        auto res = evaluate_unary_expression(operand);
+        if (std::holds_alternative<double>(res)) ret_val = std::get<double>(res);
+        else ret_val = std::get<hdl_integer>(res);
+    } else {
+        resolved_parameter operand_a = 0;
+        resolved_parameter operand_b = 0;
+        if (l_val) operand_a = l_val.value();
+        if (r_val) operand_b = r_val.value();
+        auto res = evaluate_binary_expression(operand_a, operand_b);
+        if (std::holds_alternative<double>(res)) ret_val = std::get<double>(res);
+        else ret_val = std::get<hdl_integer>(res);
+    }
+    return  ret_val;
+}
+
+std::variant<hdl_integer, double> Expression_v2::evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b) {
+
+    if(operation ==  equal){
+        return op_a == op_b;
+    }
+    if(operation ==  not_equal){
+        return op_a != op_b;
+    }
+
+    bool supported_a = (op_a.is_integer() || op_a.is_real() );
+    bool supported_b = (op_b.is_integer() || op_b.is_real() );
+    if(  !supported_a || !supported_b) {
+        spdlog::warn("Attempted evaluation of operand of unsupported type");
+        return  0;
+    }
+    bool int_exec = op_a.is_integer() && op_b.is_integer();
+    double d_a, d_b;
+    hdl_integer i_a = 0;
+    hdl_integer i_b = 0;
+
+    if(op_a.is_real())  d_a = op_a.get_real();
+    else d_a = static_cast<double>(op_a.get_integer().get_value());
+    if(op_b.is_real())  d_b = op_b.get_real();
+    else d_b = static_cast<double>(op_b.get_integer().get_value());
+    if(op_a.is_integer()) i_a =  op_a.get_integer();
+    if(op_b.is_integer()) i_b =  op_b.get_integer();
+    if(operation == add){
+        if(int_exec) return i_a + i_b;
+        return d_a + d_b;
+    }
+    if(operation == subtract){
+        if(int_exec) return i_a - i_b;
+        return d_a - d_b;
+    }
+    if(operation == multiply){
+        if(int_exec) return i_a * i_b;
+        return d_a * d_b;
+    }
+    if(operation == power){
+        if(int_exec) return std::pow(i_a, i_b);
+        return std::pow(d_a, d_b);
+    }
+    if(operation == divide){
+        if(int_exec) return i_a / i_b;
+        return d_a / d_b;
+    }
+    if(operation == modulo){
+        if(int_exec) return i_a % i_b;
+        spdlog::warn("The modulus operator is only defined between integers");
+        return 0;
+    }
+    if(operation == logic_shift_left){
+        if(int_exec) return i_a << i_b;
+        spdlog::warn("The shift operator is only defined between integers");
+        return 0;
+    }
+    if(operation == logic_shift_right){
+        if(int_exec) {
+            uint64_t u_a = static_cast<uint64_t>(i_a.get_value());
+            if(current_size > 0 && current_size < 64) {
+                u_a &= (1ULL << current_size) - 1;
+            }
+            uint64_t shift = static_cast<uint64_t>(i_b.get_value());
+            if(shift >= 64) return hdl_integer(0);
+            return hdl_integer(static_cast<int64_t>(u_a >> shift));
+        }
+        spdlog::warn("The shift operator is only defined between integers");
+        return 0;
+    }
+    if(operation == arithmetic_shift_left){
+        if(int_exec) return i_a << i_b;
+        spdlog::warn("The shift operator is only defined between integers");
+        return 0;
+    }
+
+    if(operation == arithmetic_shift_right){
+        if(int_exec) return i_a >> i_b;
+        spdlog::warn("The shift operator is only defined between integers");
+        return 0;
+    }
+
+    if(operation == greater){
+        if(int_exec) return i_a > i_b;
+        return d_a > d_b;
+    }
+
+    if(operation == greater_equal){
+        if(int_exec) return i_a >= i_b;
+        return d_a >= d_b;
+
+    }
+    if(operation == less){
+        if(int_exec) return i_a < i_b;
+        return d_a < d_b;
+    }
+    if(operation == less_equal){
+        if(int_exec) return i_a <= i_b;
+        return d_a <= d_b;
+    }
+    if(operation == bitwise_and){
+        return i_a & i_b;
+    }
+    if(operation == bitwise_or){
+        return i_a | i_b;
+    }
+    if(operation == bitwise_xor){
+        return i_a ^ i_b;
+    }
+    if(operation == bitwise_xnor){
+        return ~(i_a ^ i_b);
+    }
+    if(operation == logical_and){
+        if(int_exec) return i_a && i_b;
+        return static_cast<double>(d_a && d_b);
+    }
+    if(operation == logical_or){
+        if(int_exec)  return i_a || i_b;
+        return static_cast<double>(d_a || d_b);
+    }
+    throw std::runtime_error("Error: Attempted evaluation of an unsupported binary expression expression ");
 }
 
 std::variant<hdl_integer, double> Expression_v2::evaluate_unary_expression(resolved_parameter operand) {
-    return 0;
+
+    if( !operand.is_integer() || operand.is_real()) {
+        spdlog::warn("Attempted evaluation of operand of unsupported type");
+        return  0;
+    }
+    const bool int_exec = operand.is_integer();
+
+    hdl_integer int_op;
+    if(int_exec) int_op = operand.get_integer();
+    double double_op = 0;
+    if(operand.is_real()) double_op = operand.get_real();
+    if(operation == logic_neg){
+        if(int_exec) return !int_op;
+        return double_op != 0 ? 1 : 0;
+    }
+
+    if(operation ==  bitwise_neg){
+        return ~operand.get_integer();
+    }
+    throw std::runtime_error("Error: Attempted evaluation of an unsupported unary expression ");
 }
