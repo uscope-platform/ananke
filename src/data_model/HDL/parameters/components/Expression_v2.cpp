@@ -13,7 +13,32 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+#include <sstream>
+
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
+
+std::string Expression_v2::print() const {
+    if (!lhs && !rhs) return "";
+
+    auto op_str = [](expression_operator op) -> std::string {
+        if (op_to_str.contains(op)) return op_to_str.at(op);
+        return "???";
+    };
+
+    bool is_unary = operation == logic_neg || operation == bitwise_neg;
+    is_unary |= !rhs && (operation == add || operation == subtract);
+
+    if (is_unary) {
+        auto operand = lhs ? lhs : rhs;
+        return op_str(operation) + (operand ? operand->print() : "");
+    }
+
+    std::ostringstream oss;
+    if (lhs) oss << lhs->print();
+    oss << " " << op_str(operation);
+    if (rhs) oss << " " << rhs->print();
+    return oss.str();
+}
 
 bool Expression_v2::isEqual(const Parameter_value_base &other) const {
     const auto& other_exp = static_cast<const Expression_v2&>(other);

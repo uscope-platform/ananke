@@ -146,14 +146,24 @@ void HDL_parameters_factory::start_expression_new(bool new_expr) {
 void HDL_parameters_factory::stop_expression_new(bool new_expr) {
     expr_factory.stop_expression(new_expr);
     if (expr_factory.get_level() == 0) {
-        auto expr = expr_factory.get_expression();
-        auto expr_v2 = expr_factory.get_expression_v2();
+        auto expr = expr_factory.get_expression_v2();
         if (expr.has_value()) {
-            if (!consumer_stack.empty()) {
-                consumer_stack.top()->consume(std::make_shared<Expression>(expr.value()));
-            } else {
-                current_resource.set_type(current_type);
-                current_resource.set_raw_value(std::make_shared<Expression>(expr.value()));
+            if (expr->get_operation() != Expression_v2::none) {
+                if (!consumer_stack.empty()) {
+                    consumer_stack.top()->consume(std::make_shared<Expression_v2>(expr.value()));
+                } else {
+                    current_resource.set_type(current_type);
+                    current_resource.set_raw_value(std::make_shared<Expression_v2>(expr.value()));
+                }
+            } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
+                auto token_expr = std::make_shared<Expression>();
+                token_expr->push_back(lhs->as<Token>());
+                if (!consumer_stack.empty()) {
+                    consumer_stack.top()->consume(token_expr);
+                } else {
+                    current_resource.set_type(current_type);
+                    current_resource.set_raw_value(token_expr);
+                }
             }
         }
         expr_factory.clear_expression();
@@ -261,10 +271,10 @@ void HDL_parameters_factory::set_cast_type(const std::string &t) {
 
 void HDL_parameters_factory::stop_cast() {
     if (top_as<cast_factory>()) {
-        auto expr = expr_factory.get_expression();
+        auto expr = expr_factory.get_expression_v2();
         expr_factory.clear_expression();
         if (expr.has_value()) {
-            consumer_stack.top()->consume(std::make_shared<Expression>(expr.value()));
+            consumer_stack.top()->consume(std::make_shared<Expression_v2>(expr.value()));
         }
 
         auto cast_value = consumer_stack.top()->result();
@@ -283,9 +293,9 @@ void HDL_parameters_factory::stop_cast() {
 void HDL_parameters_factory::advance_cast() {
     auto* cast = top_as<cast_factory>();
     if (cast) {
-        auto expr = expr_factory.get_expression();
+        auto expr = expr_factory.get_expression_v2();
         if (expr.has_value()) {
-            cast->consume(std::make_shared<Expression>(expr.value()));
+            cast->consume(std::make_shared<Expression_v2>(expr.value()));
             expr_factory.clear_expression();
         }
         cast->advance_cast();
@@ -319,6 +329,7 @@ void HDL_parameters_factory::start_function_call(const std::string &f_name) {
     auto calls = std::make_unique<function_calls_factory>();
     calls->start_function(f_name);
     consumer_stack.push(std::move(calls));
+    expr_factory.pause();
     expr_factory.push_level();
 }
 

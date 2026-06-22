@@ -30,12 +30,17 @@ public:
     void clear_level() {expression_level = 0;}
     void start_expression(bool new_expr);
     void stop_expression(bool new_expr);
-    void clear_expression() {current.clear();}
+    void clear_expression() {
+        current.clear();
+        current_v2 = Expression_v2();
+        operation_set = false;
+    }
     std::optional<Expression> get_expression();
     std::optional<Expression_v2> get_expression_v2();
     [[nodiscard]] int get_level() const {return expression_level;}
     void add_component(const Token &ec);
     void set_operation(const Expression_v2::expression_operator &op);
+    [[nodiscard]] bool has_operation() const {return operation_set;}
     void pause();
     void add_index(const std::shared_ptr<Parameter_value_base> &idx);
 
@@ -45,8 +50,10 @@ public:
 private:
     bool factory_active = false;
     bool paused = false;
+    bool skip_nesting = false;
     int expression_level = 0;
     Expression current;
+    bool operation_set = false;
     Expression_v2 current_v2 ={};
     std::stack<Expression_v2> nested_expressions;
     std::stack<int> levels_stack;

@@ -27,14 +27,18 @@ void expressions_factory::pop_level() {
 
 void expressions_factory::start_expression(bool new_expr) {
     if (new_expr) {
-        if (factory_active) {
+        if (factory_active && !skip_nesting) {
             nested_expressions.push(current_v2);
             current_v2 = Expression_v2();
         } else {
             current_v2 = Expression_v2();
         }
+    } else if (!factory_active) {
+        current_v2 = Expression_v2();
     }
     factory_active = true;
+    operation_set = false;
+    skip_nesting = false;
     expression_level++;
 
 }
@@ -68,6 +72,7 @@ std::optional<Expression_v2> expressions_factory::get_expression_v2() {
 
 void expressions_factory::pause() {
     paused = true;
+    skip_nesting = true;
 }
 
 void expressions_factory::add_component(const Token &ec) {
@@ -87,6 +92,7 @@ void expressions_factory::add_component(const Token &ec) {
 
 void expressions_factory::set_operation(const Expression_v2::expression_operator &op) {
     current_v2.set_operation(op);
+    operation_set = true;
 }
 
 
