@@ -168,11 +168,11 @@ void HDL_functions_factory::advance_cast() {
 }
 
 void HDL_functions_factory::start_expression() {
-    expr_factory_.start_expression();
+    expr_factory_.start_expression(false);
 }
 
 void HDL_functions_factory::stop_expression() {
-    expr_factory_.stop_expression();
+    expr_factory_.stop_expression(false);
     if (expr_factory_.get_level() == 0) {
         auto expr = expr_factory_.get_expression();
         if (expr.has_value()) {

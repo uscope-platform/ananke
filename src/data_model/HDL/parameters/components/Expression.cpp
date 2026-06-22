@@ -392,3 +392,13 @@ void Expression::propagate_function(const HDL_function_def &def) {
         component->as<Token>().propagate_function(def);
     }
 }
+
+bool operator==(const Expression &lhs, const Expression &rhs) {
+    bool ret = true;
+    ret &= lhs.rpn == rhs.rpn;
+    if (lhs.components.size() != rhs.components.size()) return false;
+    for (int i = 0; i< lhs.components.size(); i++) {
+        ret &= *lhs.components[i] == *rhs.components[i];
+    }
+    return ret;
+}

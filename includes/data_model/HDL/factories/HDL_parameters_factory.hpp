@@ -53,8 +53,11 @@ public:
 
     void start_replication_assignment();
     void stop_replication_assignment();
-    void start_expression_new();
-    void stop_expression_new();
+    void start_expression_new(bool new_expr);
+    void stop_expression_new(bool new_expr);
+
+
+    void set_operation(const Expression_v2::expression_operator &op);
 
     void start_packed_assignment();
     void stop_packed_assignment();

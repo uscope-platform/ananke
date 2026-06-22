@@ -25,12 +25,32 @@ void expressions_factory::pop_level() {
     levels_stack.pop();
 }
 
-void expressions_factory::start_expression() {
+void expressions_factory::start_expression(bool new_expr) {
+    if (new_expr) {
+        if (factory_active) {
+            nested_expressions.push(current_v2);
+            current_v2 = Expression_v2();
+        } else {
+            current_v2 = Expression_v2();
+        }
+    }
     factory_active = true;
     expression_level++;
+
 }
 
-void expressions_factory::stop_expression() {
+void expressions_factory::stop_expression(bool new_expr) {
+    if (new_expr) {
+        if (!nested_expressions.empty()) {
+            auto tmp_exp = std::make_shared<Expression_v2>(current_v2);
+            current_v2 = nested_expressions.top(); nested_expressions.pop();
+            if (current_v2.get_lhs()!= nullptr) {
+                current_v2.set_rhs(tmp_exp);
+            } else {
+                current_v2.set_lhs(tmp_exp);
+            }
+        }
+    }
     expression_level--;
     if (expression_level == 0) {
         factory_active = false;
@@ -42,15 +62,31 @@ std::optional<Expression> expressions_factory::get_expression() {
     return current;
 }
 
+std::optional<Expression_v2> expressions_factory::get_expression_v2() {
+    return current_v2;
+}
+
 void expressions_factory::pause() {
     paused = true;
 }
 
 void expressions_factory::add_component(const Token &ec) {
+    if (ec.is_operator()) {
+
+    }else if (current_v2.get_lhs() == nullptr) {
+        current_v2.set_lhs(std::make_shared<Token>(ec));
+    } else {
+        current_v2.set_rhs(std::make_shared<Token>(ec));
+    }
+
     if (factory_active && !paused) {
         current.push_back(ec);
     }
     if (paused) paused = false;
+}
+
+void expressions_factory::set_operation(const Expression_v2::expression_operator &op) {
+    current_v2.set_operation(op);
 }
 
 

@@ -18,6 +18,7 @@
 #define ANANKE_EXPRESSIONS_FACTORY_HPP
 
 #include "data_model/HDL/parameters/components/Expression.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
 
 class expressions_factory {
@@ -27,12 +28,14 @@ public:
     void push_level();
     void pop_level();
     void clear_level() {expression_level = 0;}
-    void start_expression();
-    void stop_expression();
+    void start_expression(bool new_expr);
+    void stop_expression(bool new_expr);
     void clear_expression() {current.clear();}
     std::optional<Expression> get_expression();
+    std::optional<Expression_v2> get_expression_v2();
     [[nodiscard]] int get_level() const {return expression_level;}
     void add_component(const Token &ec);
+    void set_operation(const Expression_v2::expression_operator &op);
     void pause();
     void add_index(const std::shared_ptr<Parameter_value_base> &idx);
 
@@ -44,7 +47,10 @@ private:
     bool paused = false;
     int expression_level = 0;
     Expression current;
+    Expression_v2 current_v2 ={};
+    std::stack<Expression_v2> nested_expressions;
     std::stack<int> levels_stack;
+
 };
 
 

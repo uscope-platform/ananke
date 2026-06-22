@@ -126,7 +126,7 @@ void Type_engine::advance_range() {
 }
 
 void Type_engine::start_expression() {
-    expr_factory.start_expression();
+    expr_factory.start_expression(false);
 }
 
 void Type_engine::add_component(const Token &c) {
@@ -134,7 +134,7 @@ void Type_engine::add_component(const Token &c) {
 }
 
 void Type_engine::stop_expression() {
-    expr_factory.stop_expression();
+    expr_factory.stop_expression(false);
     if (expr_factory.get_level() == 0) {
         auto expr = expr_factory.get_expression();
         if (expr.has_value()) {

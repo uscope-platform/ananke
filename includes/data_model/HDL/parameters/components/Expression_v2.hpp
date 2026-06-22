@@ -22,19 +22,58 @@
 
 class Expression_v2 : public Parameter_value_base {
 public:
+
+    enum expression_operator {
+        logic_neg,
+        bitwise_neg,
+        power,
+        multiply,
+        divide,
+        modulo,
+        add,
+        subtract,
+        logic_shift_left,
+        logic_shift_right,
+        arithmetic_shift_left,
+        arithmetic_shift_right,
+        greater,
+        greater_equal,
+        less,
+        less_equal,
+        equal,
+        not_equal,
+        bitwise_and,
+        bitwise_xor,
+        bitwise_xnor,
+        bitwise_or,
+        logical_and,
+        logical_or
+    };
+
+    Expression_v2() = default;
+    void set_lhs(const std::shared_ptr<Parameter_value_base> &comp){lhs = comp;}
+    void set_rhs(const std::shared_ptr<Parameter_value_base> &comp) {rhs = comp;}
+    std::shared_ptr<Parameter_value_base> get_lhs(){return lhs;}
+    std::shared_ptr<Parameter_value_base> get_rhs(){return rhs;}
+    void set_operation(const expression_operator &op) {operation = op;}
+
+    friend bool operator==(const Expression_v2 &lhs, const Expression_v2 &rhs);
+    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
+    std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
+    int64_t get_size() override;
+    std::set<qualified_identifier> get_dependencies()const override;
+
 private:
 
-    bool isEqual(const Parameter_value_base& other) const override {
-        const auto& rhs = static_cast<const Expression_v2&>(other);
-        bool ret = true;
+    bool isEqual(const Parameter_value_base& other) const override;
+    std::variant<hdl_integer, double> evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b);
+    std::variant<hdl_integer, double> evaluate_unary_expression(resolved_parameter operand);
 
-        return ret;
-    }
-
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
-
-
+    std::shared_ptr<Parameter_value_base> lhs;
+    std::shared_ptr<Parameter_value_base> rhs;
+    expression_operator operation;
 };
+
 
 
 

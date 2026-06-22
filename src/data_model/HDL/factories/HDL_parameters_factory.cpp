@@ -41,7 +41,7 @@ void HDL_parameters_factory::add_component(const Token &c, bool is_call_argument
             consumer_stack.top()->consume(std::make_shared<Expression>(Expression({c})));
         }
         expr_factory.increase_level();
-        expr_factory.stop_expression();
+        expr_factory.stop_expression(false);
     } else if (in_bit_selection) {
         bit_index->as<Expression>().push_back(c);
     } else {
@@ -139,14 +139,15 @@ void HDL_parameters_factory::stop_packed_assignment() {
     }
 }
 
-void HDL_parameters_factory::start_expression_new() {
-    expr_factory.start_expression();
+void HDL_parameters_factory::start_expression_new(bool new_expr) {
+    expr_factory.start_expression(new_expr);
 }
 
-void HDL_parameters_factory::stop_expression_new() {
-    expr_factory.stop_expression();
+void HDL_parameters_factory::stop_expression_new(bool new_expr) {
+    expr_factory.stop_expression(new_expr);
     if (expr_factory.get_level() == 0) {
         auto expr = expr_factory.get_expression();
+        auto expr_v2 = expr_factory.get_expression_v2();
         if (expr.has_value()) {
             if (!consumer_stack.empty()) {
                 consumer_stack.top()->consume(std::make_shared<Expression>(expr.value()));
@@ -157,6 +158,10 @@ void HDL_parameters_factory::stop_expression_new() {
         }
         expr_factory.clear_expression();
     }
+}
+
+void HDL_parameters_factory::set_operation(const Expression_v2::expression_operator &op) {
+    expr_factory.set_operation(op);
 }
 
 void HDL_parameters_factory::start_packed_assignment() {
@@ -237,7 +242,7 @@ void HDL_parameters_factory::start_cast(bool expression_size) {
     bool in_ctx = ctx != param_context::idle || top_as<concatenation_factory>();
     if (in_ctx) {
         if (top_as<concatenation_factory>() || expression_size) {
-            expr_factory.start_expression();
+            expr_factory.start_expression(false);
         } else {
             expr_factory.decrease_level();
         }

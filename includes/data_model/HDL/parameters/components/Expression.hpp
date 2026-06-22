@@ -59,17 +59,7 @@ public:
 
     void add_index(const std::shared_ptr<Parameter_value_base>  &idx);
 
-    friend bool operator==(const Expression &lhs, const Expression &rhs) {
-        bool ret = true;
-        ret &= lhs.rpn == rhs.rpn;
-        if (lhs.components.size() != rhs.components.size()) return false;
-        for (int i = 0; i< lhs.components.size(); i++) {
-            ret &= *lhs.components[i] == *rhs.components[i];
-        }
-        return ret;
-    }
-
-
+    friend bool operator==(const Expression &lhs, const Expression &rhs);
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
 
 
