@@ -1360,41 +1360,47 @@ TEST(parameter_extraction, bitwise_expressions) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("b_and_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token(Token::bitwise_and));
-    p->add_component(Token("op_b", Token::identifier));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::bitwise_and);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("b_or_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token(Token::bitwise_or));
-    p->add_component(Token("op_b", Token::identifier));
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::bitwise_or);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("b_xor_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token(Token::bitwise_xor));
-    p->add_component(Token("op_b", Token::identifier));
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::bitwise_xor);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("b_xnor_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token(Token::bitwise_xnor));
-    p->add_component(Token("op_b", Token::identifier));
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::bitwise_xnor);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("b_xnor2_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token(Token::bitwise_xnor));
-    p->add_component(Token("op_b", Token::identifier));
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::bitwise_xnor);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -1416,7 +1422,7 @@ TEST(parameter_extraction, bitwise_expressions) {
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
-        ASSERT_EQ(value, defaults.at(name));
+        EXPECT_EQ(value, defaults.at(name));
     }
 }
 
@@ -1454,9 +1460,11 @@ TEST(parameter_extraction, power_expression) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("pow_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token(Token::power));
-    p->add_component(Token("op_b", Token::identifier));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::power);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -1510,9 +1518,11 @@ TEST(parameter_extraction, arithmetic_shift_left) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("shl_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token(Token::arithmetic_shift_left));
-    p->add_component(Token("op_b", Token::identifier));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::arithmetic_shift_left);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -1556,8 +1566,10 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token(Token::subtract));
-    p->add_component(Token("8", Token::number));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("8", Token::number));
+    e.set_operation(Expression_v2::subtract);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1569,17 +1581,20 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("shr_a_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token( Token::arithmetic_shift_right));
-    p->add_component(Token("op_b", Token::identifier));
+    e = Expression_v2();
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::arithmetic_shift_right);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("shr_l_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token( Token::logic_shift_right));
-    p->add_component(Token("op_b", Token::identifier));
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::logic_shift_right);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -1644,27 +1659,33 @@ TEST(parameter_extraction, logical_and_or) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("log_and_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token(Token::logical_and));
-    p->add_component(Token("op_b", Token::identifier));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::logical_and);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("log_or_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token(Token::logical_or));
-    p->add_component(Token("op_b", Token::identifier));
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::logical_or);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("mixed_expr");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("op_a", Token::identifier));
-    p->add_component(Token( Token::logical_and));
-    p->add_component(Token("op_b", Token::identifier));
-    p->add_component(Token(Token::logical_or));
-    p->add_component(Token("op_c", Token::identifier));
+    Expression_v2 e2;
+    e.set_lhs(std::make_shared<Token>("op_a", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("op_b", Token::identifier));
+    e.set_operation(Expression_v2::expression_operator::logical_and);
+    e2.set_lhs(std::make_shared<Expression_v2>(e));
+    e2.set_rhs(std::make_shared<Token>("op_c", Token::identifier));
+    e2.set_operation(Expression_v2::expression_operator::logical_or);
+    p->set_raw_value(std::make_shared<Expression_v2>(e2));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -1675,7 +1696,7 @@ TEST(parameter_extraction, logical_and_or) {
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
-    // 3 && 0 = 0, 3 || 0 = 1, (3 && 0) || 5 = 1
+
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"", "", "op_a"}, 3},
         {{"", "", "op_b"}, 0},
@@ -2056,17 +2077,19 @@ TEST(parameter_extraction, simple_array_propagation) {
 
     p->set_name("array_parameter_expr_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    Token e = Token("array_parameter", Token::identifier);
+    Expression_v2 e;
+    Token t = Token("array_parameter", Token::identifier);
     std::vector<std::shared_ptr<Parameter_value_base>> ai;
     ai.push_back(std::make_shared<Expression>(Token("0", Token::number)));
-    e.set_array_index(ai);
-    p->add_component(e);
-    p->add_component(Token(Token::add));
-    e = Token("array_parameter", Token::identifier);
+    t.set_array_index(ai);
+    e.set_lhs(std::make_shared<Token>(t));
+    t = Token("array_parameter", Token::identifier);
     ai.clear();
     ai.push_back(std::make_shared<Expression>(Token("1", Token::number)));
-    e.set_array_index(ai);
-    p->add_component(e);
+    t.set_array_index(ai);
+    e.set_rhs(std::make_shared<Token>(t));
+    e.set_operation(Expression_v2::add);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
 

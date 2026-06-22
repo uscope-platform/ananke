@@ -50,7 +50,8 @@ bool Expression_v2::isEqual(const Parameter_value_base &other) const {
     const auto& other_exp = static_cast<const Expression_v2&>(other);
     bool ret = true;
     ret &= *lhs == *other_exp.lhs;
-    ret &= *rhs == *other_exp.rhs;
+    if (rhs != nullptr && other_exp.rhs!= nullptr) ret &= *rhs == *other_exp.rhs;
+    if (rhs != nullptr ^  other_exp.rhs!= nullptr) return false;
     ret &=  operation == other_exp.operation;
     return ret;
 }
@@ -103,7 +104,14 @@ std::optional<resolved_parameter> Expression_v2::evaluate(
         resolved_parameter operand_a = 0;
         resolved_parameter operand_b = 0;
         if (l_val) operand_a = l_val.value();
-        if (r_val) operand_b = r_val.value();
+        if (r_val) {
+            operand_b = r_val.value();
+        } else {
+            if (operation == subtract) {
+                operand_b = operand_a;
+                operand_a = 0;
+            }
+        }
         auto res = evaluate_binary_expression(operand_a, operand_b);
         if (std::holds_alternative<double>(res)) ret_val = std::get<double>(res);
         else ret_val = std::get<hdl_integer>(res);
