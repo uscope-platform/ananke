@@ -34,9 +34,15 @@ std::string Expression_v2::print() const {
     }
 
     std::ostringstream oss;
-    if (lhs) oss << lhs->print();
+    if (lhs) {
+        if (lhs->is<Expression_v2>()) oss << "(" << lhs->print() << ")";
+        else oss << lhs->print();
+    }
     oss << " " << op_str(operation);
-    if (rhs) oss << " " << rhs->print();
+    if (rhs) {
+        if (rhs->is<Expression_v2>()) oss << " (" << rhs->print() << ")";
+        else oss << " " << rhs->print();
+    }
     return oss.str();
 }
 

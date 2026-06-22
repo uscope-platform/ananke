@@ -1280,13 +1280,16 @@ TEST(parameter_extraction, simple_expressions) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("parenthesised_expr_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("(", Token::parenthesis));
-    p->add_component(Token("add_expr_p", Token::identifier));
-    p->add_component(Token(Token::add));
-    p->add_component(Token("mul_expr_p", Token::identifier));
-    p->add_component(Token(")", Token::parenthesis));
-    p->add_component(Token(Token::multiply));
-    p->add_component(Token("5", Token::number));
+
+    e2 = Expression_v2();
+    e2.set_lhs(std::make_shared<Token>("add_expr_p", Token::identifier));
+    e2.set_operation(Expression_v2::expression_operator::add);
+    e2.set_rhs(std::make_shared<Token>("mul_expr_p", Token::identifier));
+    e = Expression_v2();
+    e.set_rhs(std::make_shared<Token>("5", Token::number));
+    e.set_lhs(std::make_shared<Expression_v2>(e2));
+    e.set_operation(Expression_v2::expression_operator::multiply);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
 
@@ -1297,6 +1300,25 @@ TEST(parameter_extraction, simple_expressions) {
         ASSERT_EQ(*item, *parameters.get(name));
     }
 
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {{"", "", "simple_numeric_p"}, 32},
+        {{"", "", "sv_numeric_p"}, 8},
+        {{"", "", "dimensionless_sv_numeric_p"}, 63},
+        {{"", "", "simple_log_expr_p"},6},
+        {{"", "", "add_expr_p"}, 40},
+        {{"", "", "sub_expr_p"}, 24},
+        {{"", "", "mul_expr_p"}, 256},
+        {{"", "", "div_expr_p"}, 4},
+        {{"", "", "chained_expression"}, 1320},
+        {{"", "", "modulo_expr_p"}, 0},
+        {{"", "", "complex_log_expr_p"}, 6},
+        {{"", "", "parenthesised_expr_p"}, 1480}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
 }
 
 

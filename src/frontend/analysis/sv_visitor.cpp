@@ -710,16 +710,12 @@ void sv_visitor::enterPrimaryPar(sv2017::PrimaryParContext *ctx) {
     auto ec = Token("(", Token::parenthesis);
     if (type_engine.active() || type_engine.is_ranging())
         type_engine.add_component(ec);
-    else
-        params_factory.add_component(ec);
 }
 
 void sv_visitor::exitPrimaryPar(sv2017::PrimaryParContext *ctx) {
     auto ec = Token(")", Token::parenthesis);
     if (type_engine.active() || type_engine.is_ranging())
         type_engine.add_component(ec);
-    else
-        params_factory.add_component(ec);
 }
 
 void sv_visitor::enterAssignment_pattern(sv2017::Assignment_patternContext *ctx) {
