@@ -1013,31 +1013,39 @@ TEST(parameter_extraction, package_parameters) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("gpio");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("timebase" , Token::identifier));
-    p->add_component(Token(Token::add));
-    p->add_component(Token("32'h1000" , Token::number));
-    p->add_component(Token( Token::multiply));
-    p->add_component(Token("2" , Token::number));
-    p->add_component(Token( Token::divide));
-    p->add_component(Token("2" , Token::number));
-    p->add_component(Token(Token::add));
-    p->add_component(Token("1" , Token::number));
+    Expression_v2 e, e1, e2, e3;
+    e3.set_lhs(std::make_shared<Token>("32'h1000", Token::number));
+    e3.set_rhs(std::make_shared<Token>("2", Token::number));
+    e3.set_operation(Expression_v2::multiply);
+    e2.set_lhs(std::make_shared<Expression_v2>(e3));
+    e2.set_rhs(std::make_shared<Token>("2", Token::number));
+    e2.set_operation(Expression_v2::divide);
+    e1.set_lhs(std::make_shared<Token>("timebase", Token::identifier));
+    e1.set_rhs(std::make_shared<Expression_v2>(e2));
+    e1.set_operation(Expression_v2::add);
+    e.set_lhs(std::make_shared<Expression_v2>(e1));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::add);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("modulo_parameter");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("3" , Token::number));
-    p->add_component(Token(  Token::modulo));
-    p->add_component(Token("2" , Token::number));
+    e.set_lhs(std::make_shared<Token>("3", Token::number));
+    e.set_rhs(std::make_shared<Token>("2", Token::number));
+    e.set_operation(Expression_v2::expression_operator::modulo);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("subtraction_parameter");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("'o4" , Token::number));
-    p->add_component(Token(  Token::subtract));
-    p->add_component(Token("'b10" , Token::number));
+
+    e.set_lhs(std::make_shared<Token>("'o4", Token::number));
+    e.set_rhs(std::make_shared<Token>("'b10", Token::number));
+    e.set_operation(Expression_v2::expression_operator::subtract);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
 
