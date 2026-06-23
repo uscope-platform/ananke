@@ -25,9 +25,11 @@
 class cast_factory : public factory_base{
 public:
     void start();
+    void start(bool is_expr_size);
     void set_type(const std::string &t);
     void advance_cast() {state = build_phase::content;}
     bool in_size() const {return state == build_phase::size;}
+    bool is_expression_size() const {return expression_size;}
     void consume(const std::shared_ptr<Parameter_value_base>& v) override;
     bool active() const override;
     std::shared_ptr<Parameter_value_base> result() override;
@@ -40,6 +42,7 @@ private:
     };
 
     Cast new_cast;
+    bool expression_size = false;
 
     build_phase state = build_phase::inactive;
 

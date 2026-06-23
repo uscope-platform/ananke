@@ -261,7 +261,7 @@ void HDL_parameters_factory::start_cast(bool expression_size) {
             expr_factory.decrease_level();
         }
         auto cast = std::make_unique<cast_factory>();
-        cast->start();
+        cast->start(expression_size);
         consumer_stack.push(std::move(cast));
     }
 }
@@ -288,8 +288,13 @@ void HDL_parameters_factory::stop_cast() {
         }
 
         auto cast_value = consumer_stack.top()->result();
+        bool is_expr_size = top_as<cast_factory>()->is_expression_size();
         consumer_stack.pop();
-        expr_factory.increase_level();
+        if (is_expr_size) {
+            expr_factory.stop_expression(false);
+        } else {
+            expr_factory.increase_level();
+        }
 
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(cast_value);

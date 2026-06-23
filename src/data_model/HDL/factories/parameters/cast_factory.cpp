@@ -22,6 +22,12 @@ void cast_factory::start() {
     state = build_phase::size;
 }
 
+void cast_factory::start(bool is_expr_size) {
+    new_cast = Cast();
+    state = build_phase::size;
+    expression_size = is_expr_size;
+}
+
 
 void cast_factory::set_type(const std::string &t) {
     new_cast.set_type_cast();
