@@ -42,8 +42,6 @@ void HDL_parameters_factory::add_component(const Token &c, bool is_call_argument
         }
         expr_factory.increase_level();
         expr_factory.stop_expression(false);
-    } else if (in_bit_selection) {
-        bit_index->as<Expression>().push_back(c);
     } else {
         expr_factory.add_component(c);
     }
@@ -78,20 +76,20 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
 
 void HDL_parameters_factory::start_bit_selection() {
     in_bit_selection = true;
-    bit_index = std::make_shared<Expression>();
+    expr_factory.start_bit_selection();
 }
 
 void HDL_parameters_factory::stop_bit_selection() {
     if (in_bit_selection) {
-        expr_factory.add_index(bit_index);
+        expr_factory.stop_bit_selection();
         in_bit_selection = false;
     }
 }
 
 void HDL_parameters_factory::close_array_index() {
     if(in_bit_selection && (ctx == param_context::declaration || ctx == param_context::packed_dim || (top_as<replication_factory>() && top_as<replication_factory>()->is_assignment_context()) || ctx == param_context::override)){
+        expr_factory.stop_bit_selection();
         in_bit_selection = false;
-        expr_factory.add_index(bit_index);
     }
 }
 
@@ -140,10 +138,12 @@ void HDL_parameters_factory::stop_packed_assignment() {
 }
 
 void HDL_parameters_factory::start_expression_new(bool new_expr) {
+    if (in_bit_selection) return;
     expr_factory.start_expression(new_expr);
 }
 
 void HDL_parameters_factory::stop_expression_new(bool new_expr) {
+    if (in_bit_selection) return;
     expr_factory.stop_expression(new_expr);
     if (expr_factory.get_level() == 0) {
         auto expr = expr_factory.get_expression_v2();
@@ -171,6 +171,7 @@ void HDL_parameters_factory::stop_expression_new(bool new_expr) {
 }
 
 void HDL_parameters_factory::set_operation(const Expression_v2::expression_operator &op) {
+    if (in_bit_selection) return;
     expr_factory.set_operation(op);
 }
 
@@ -345,8 +346,6 @@ void HDL_parameters_factory::stop_function_call() {
             consumer_stack.top()->consume(call);
         } else if(expr_factory.active()) {
             expr_factory.add_component(ec);
-        } else if (in_bit_selection) {
-            bit_index->as<Expression>().push_back(ec);
         } else if (top_as<concatenation_factory>()) {
             consumer_stack.top()->consume(std::make_shared<Expression>(Expression({ec})));
         } else if (top_as<replication_factory>()) {

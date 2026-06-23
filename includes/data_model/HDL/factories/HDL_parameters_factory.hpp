@@ -114,7 +114,6 @@ private:
     param_context ctx = param_context::idle;
 
     bool in_bit_selection = false;
-    std::shared_ptr<Parameter_value_base> bit_index;
 
     std::shared_ptr<hdl_type> current_type = std::make_shared<HDL_simple_type>();
 };

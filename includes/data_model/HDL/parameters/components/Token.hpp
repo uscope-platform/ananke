@@ -123,7 +123,7 @@ public:
     void set_value(const resolved_parameter &v) {value = v;}
     std::optional<resolved_parameter> get_value() const {return value;}
 
-    sv_operators get_operation(){return operator_value;}
+    sv_operators get_operation() const {return operator_value;}
 
     int64_t get_binary_size() const {return binary_size;}
     void set_binary_size(int64_t s) {binary_size = s;}

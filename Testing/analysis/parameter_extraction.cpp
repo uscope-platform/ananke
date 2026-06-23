@@ -725,15 +725,17 @@ TEST(parameter_extraction, float_parameter) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("STEP");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("(", Token::parenthesis));
-    p->add_component(Token("2", Token::number));
-    p->add_component(Token(Token::multiply));
-    p->add_component(Token("3.14159265358979323846", Token::number));
-    p->add_component(Token(Token::divide));
-    p->add_component(Token("4.0", Token::number));
-    p->add_component(Token(")", Token::parenthesis));
-    p->add_component(Token( Token::divide));
-    p->add_component(Token("LUT_DEPTH", Token::identifier));
+    Expression_v2 e1, e2, e3;
+    e3.set_lhs(std::make_shared<Token>("2", Token::number));
+    e3.set_rhs(std::make_shared<Token>("3.14159265358979323846", Token::number));
+    e3.set_operation(Expression_v2::multiply);
+    e2.set_lhs(std::make_shared<Expression_v2>(e3));
+    e2.set_rhs(std::make_shared<Token>("4.0", Token::number));
+    e2.set_operation(Expression_v2::divide);
+    e1.set_lhs(std::make_shared<Expression_v2>(e2));
+    e1.set_rhs(std::make_shared<Token>("LUT_DEPTH", Token::identifier));
+    e1.set_operation(Expression_v2::divide);
+    p->set_raw_value(std::make_shared<Expression_v2>(e1));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -822,11 +824,11 @@ TEST(parameter_extraction, multiple_system_task) {
     p->set_name("CAST");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     HDL_function_call call("$rtoi");
-    call.add_argument(std::make_shared<Expression>(Expression({
-        Token("14.8", Token::number),
-        Token(Token::add),
-        Token("2", Token::number)
-    })));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("14.8", Token::number));
+    e.set_rhs(std::make_shared<Token>("2", Token::number));
+    e.set_operation(Expression_v2::add);
+    call.add_argument(std::make_shared<Expression_v2>(e));
 
     p->set_raw_value(std::make_shared<HDL_function_call>(call));
 
@@ -882,11 +884,11 @@ TEST(parameter_extraction, system_task_propagation) {
     p->set_name("CAST");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     HDL_function_call call("$rtoi");
-    call.add_argument(std::make_shared<Expression>(Expression({
-        Token("11.8", Token::number),
-        Token(Token::add),
-        Token("PARAMETER_1", Token::identifier)
-    })));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("11.8", Token::number));
+    e.set_rhs(std::make_shared<Token>("PARAMETER_1", Token::identifier));
+    e.set_operation(Expression_v2::add);
+    call.add_argument(std::make_shared<Expression_v2>(e));
 
     p->set_raw_value(std::make_shared<HDL_function_call>(call));
 
@@ -944,11 +946,11 @@ TEST(parameter_extraction, nested_system_task) {
     p->set_name("CAST");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     auto inner_call = std::make_shared<HDL_function_call>("$ceil");
-    Expression e;
-    e.push_back(Token("PARAMETER_1", Token::identifier));
-    e.push_back(Token(Token::divide));
-    e.push_back(Token("16.0", Token::number));
-    inner_call->add_argument(std::make_shared<Expression>(e));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("PARAMETER_1", Token::identifier));
+    e.set_operation(Expression_v2::divide);
+    e.set_rhs(std::make_shared<Token>("16.0", Token::number));
+    inner_call->add_argument(std::make_shared<Expression_v2>(e));
     auto outer_call = std::make_shared<HDL_function_call>("$rtoi");
     outer_call->add_argument(inner_call);
 
@@ -2168,17 +2170,23 @@ TEST(parameter_extraction, array_expression) {
 
     p->set_name("array_parameter_expr_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    Token e = Token("array_parameter", Token::identifier);
+    Token t = Token("array_parameter", Token::identifier);
     std::vector<std::shared_ptr<Parameter_value_base>> ai;
-    ai.push_back(std::make_shared<Expression>(Expression{Token("sv_numeric_p", Token::identifier), Token(Token::multiply), Token("0", Token::number)}));
-    e.set_array_index(ai);
-    p->add_component(e);
-    p->add_component(Token(Token::add));
-    e = Token("array_parameter", Token::identifier);
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("sv_numeric_p", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("0", Token::number));
+    e.set_operation(Expression_v2::multiply);
+    ai.push_back(std::make_shared<Expression_v2>(e));
+    t.set_array_index(ai);
+    Expression_v2 e2;
+    e2.set_lhs(std::make_shared<Token>(t));
+    t = Token("array_parameter", Token::identifier);
     ai.clear();
-    ai.push_back(std::make_shared<Expression>(Token("1", Token::number)));
-    e.set_array_index(ai);
-    p->add_component(e);
+    ai.push_back(std::make_shared<Token>("1", Token::number));
+    t.set_array_index(ai);
+    e2.set_rhs(std::make_shared<Token>(t));
+    e2.set_operation(Expression_v2::add);
+    p->set_raw_value(std::make_shared<Expression_v2>(e2));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
 

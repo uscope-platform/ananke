@@ -152,7 +152,8 @@ std::string Token::print() const {
     if (type == operation) {
         ret_val = print_operator.at(operator_value);
     } else if(is_numeric()){
-        ret_val = std::to_string(value.get_integer());
+        if (value.is_real()) ret_val = std::to_string(value.get_real());
+        else ret_val = std::to_string(value.get_integer());
     } else {
         if(!array_index.empty()){
             ret_val = value.get_string() + print_index(array_index);

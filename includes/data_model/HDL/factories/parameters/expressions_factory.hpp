@@ -30,6 +30,7 @@ public:
     void clear_level() {expression_level = 0;}
     void start_expression(bool new_expr);
     void stop_expression(bool new_expr);
+    std::optional<Expression_v2> pop_expression();
     void clear_expression() {
         current.clear();
         current_v2 = Expression_v2();
@@ -43,6 +44,8 @@ public:
     [[nodiscard]] bool has_operation() const {return operation_set;}
     void pause();
     void add_index(const std::shared_ptr<Parameter_value_base> &idx);
+    void start_bit_selection();
+    void stop_bit_selection();
 
     void consume(const std::shared_ptr<Parameter_value_base>& v);
     bool active() const;
@@ -57,6 +60,8 @@ private:
     Expression_v2 current_v2 ={};
     std::stack<Expression_v2> nested_expressions;
     std::stack<int> levels_stack;
+    bool bit_select_active = false;
+    Expression_v2 bit_select_v2;
 
 };
 
