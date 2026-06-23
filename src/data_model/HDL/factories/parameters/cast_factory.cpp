@@ -15,6 +15,7 @@
 
 
 #include "data_model/HDL/factories/parameters/cast_factory.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 void cast_factory::start() {
     new_cast = Cast();
@@ -31,8 +32,16 @@ void cast_factory::set_type(const std::string &t) {
 
 void cast_factory::consume(const std::shared_ptr<Parameter_value_base> &c) {
     if (state == build_phase::size) {
-        if (c->is<Expression>()) {
-            new_cast.set_size(c->as<Expression>());
+        auto size_val = c;
+        if (c->is<Expression_v2>()) {
+            auto &expr = c->as<Expression_v2>();
+            if (expr.get_operation() == Expression_v2::none) {
+                if (auto lhs = expr.get_lhs(); lhs && lhs->is<Token>()) {
+                    new_cast.set_size(lhs);
+                }
+            } else {
+                new_cast.set_size(size_val);
+            }
         } else {
             spdlog::warn("non expression cast size: {}", c->print());
         }

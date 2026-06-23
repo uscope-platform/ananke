@@ -103,8 +103,8 @@ TEST(parameter_extraction, size_cast) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     Cast c;
-    c.set_size(Expression(Token("4", Token::number)));
-    c.set_content(std::make_shared<Expression>(Expression(Token("31'h100003", Token::number))));
+    c.set_size(std::make_shared<Token>("4", Token::number));
+    c.set_content(std::make_shared<Token>("31'h100003", Token::number));
     p->set_raw_value(std::make_shared<Cast>(c));
     p->set_type(Type_engine::create_primitive_type("integer"));
     check_params.insert(p);
@@ -149,12 +149,8 @@ TEST(parameter_extraction, paretesized_cast) {
     p->set_name("TEST_PARAM");
 
     Cast c;
-    c.set_size(Expression({
-        Token("(",Token::parenthesis),
-        Token("SIZE", Token::identifier),
-        Token(")",Token::parenthesis)
-    }));
-    c.set_content(std::make_shared<Expression>(Expression({Token("31'h100003", Token::number)})));
+    c.set_size(std::make_shared<Token>("SIZE", Token::identifier));
+    c.set_content(std::make_shared<Token>(Token("31'h100003", Token::number)));
     p->set_raw_value(std::make_shared<Cast>(c));
     p->set_type(Type_engine::create_primitive_type("integer"));
     check_params.insert(p);
@@ -196,10 +192,10 @@ TEST(parameter_extraction, type_cast) {
     Cast c;
     c.set_type_cast();
     c.set_target_type("unsigned");
-    c.set_content(std::make_shared<Expression>(Expression({
-        Token(Token::subtract),
-        Token("5", Token::number)
-    })));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("5", Token::number));
+    e.set_operation(Expression_v2::subtract);
+    c.set_content(std::make_shared<Expression_v2>(e));
     dimension_t d;
     d.first_bound = std::make_shared<Token>("7", Token::number);
     d.second_bound =  std::make_shared<Token>("0", Token::number);
@@ -245,20 +241,16 @@ TEST(parameter_extraction, nested_type_cast) {
     Cast inner_c;
     inner_c.set_type_cast();
     inner_c.set_target_type("unsigned");
-    inner_c.set_content(std::make_shared<Expression>(Expression({
-        Token(Token::subtract),
-        Token("5", Token::number)
-    })));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("5", Token::number));
+    e.set_operation(Expression_v2::subtract);
+    inner_c.set_content(std::make_shared<Expression_v2>(e));
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
 
     Cast outer_c;
-    outer_c.set_size(Expression({
-        Token("(",Token::parenthesis),
-        Token("NumLevels", Token::identifier),
-        Token(")",Token::parenthesis)
-    }));
+    outer_c.set_size(std::make_shared<Token>("NumLevels", Token::identifier));
     outer_c.set_content(std::make_shared<Cast>(inner_c));
     dimension_t d;
     d.first_bound = std::make_shared<Token>("7", Token::number);
@@ -313,10 +305,10 @@ TEST(parameter_extraction, multiple_type_cast) {
     Cast c;
     c.set_type_cast();
     c.set_target_type("unsigned");
-    c.set_content(std::make_shared<Expression>(Expression({
-        Token(Token::subtract),
-        Token("5", Token::number)
-    })));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("5", Token::number));
+    e.set_operation(Expression_v2::subtract);
+    c.set_content(std::make_shared<Expression_v2>(e));
     dimension_t d;
     d.first_bound = std::make_shared<Token>("7", Token::number);
     d.second_bound =  std::make_shared<Token>("0", Token::number);
@@ -337,7 +329,7 @@ TEST(parameter_extraction, multiple_type_cast) {
     c = Cast();
     c.set_type_cast();
     c.set_target_type("int");
-    c.set_content(std::make_shared<Expression>(Expression(Token("2.5", Token::number))));
+    c.set_content(std::make_shared<Token>("2.5", Token::number));
     p->set_raw_value(std::make_shared<Cast>(c));
 
     check_params.insert(p);
@@ -389,8 +381,7 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     auto cast_a = std::make_shared<Cast>();
     cast_a->set_type_cast();
     cast_a->set_target_type("unsigned");
-    cast_a->set_content(std::make_shared<Expression>(Expression(
-        Token("x", Token::identifier))));
+    cast_a->set_content(std::make_shared<Token>("x", Token::identifier));
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("A");
@@ -401,8 +392,7 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     auto cast_b = std::make_shared<Cast>();
     cast_b->set_type_cast();
     cast_b->set_target_type("signed");
-    cast_b->set_content(std::make_shared<Expression>(Expression(
-        Token("y", Token::identifier))));
+    cast_b->set_content(std::make_shared<Token>("y", Token::identifier));
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("B");
@@ -488,12 +478,12 @@ TEST(parameter_extraction, cast_in_concat) {
     p->set_name("TEST_PARAM");
 
     Concatenation concat;
-    concat.add_component(std::make_shared<Expression>(Expression(Token("10'h0", Token::number))));
-    concat.add_component(std::make_shared<Expression>(Expression(Token("1'h1", Token::number))));
-    concat.add_component(std::make_shared<Expression>(Expression(Token("1'h0", Token::number))));
+    concat.add_component(std::make_shared<Token>("10'h0", Token::number));
+    concat.add_component(std::make_shared<Token>("1'h1", Token::number));
+    concat.add_component(std::make_shared<Token>("1'h0", Token::number));
     Cast c;
-    c.set_size(Expression(Token("4", Token::number)));
-    c.set_content(std::make_shared<Expression>(Expression(Token("31'h100003", Token::number))));
+    c.set_size(std::make_shared<Token>("4", Token::number));
+    c.set_content(std::make_shared<Token>("31'h100003", Token::number));
     concat.add_component(std::make_shared<Cast>(c));
     auto param_type = Type_engine::create_primitive_type("integer");
     p->set_type(param_type);
@@ -3781,7 +3771,7 @@ TEST(parameter_extraction, replication_in_function) {
     call.add_argument(std::make_shared<Token>("1'b0", Token::number));
     assignment a("get_axis_metadata", std::nullopt, nullptr);
     Cast c;
-    c.set_size(Expression(Token("4", Token::number)));
+    c.set_size(std::make_shared<Expression>(Token("4", Token::number)));
     c.set_content(std::make_shared<Expression>(Expression({
         Token("11", Token::number),
         Token(Token::subtract),
@@ -3841,7 +3831,7 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     call.add_argument(std::make_shared<Token>("1'b0", Token::number));
     assignment a("get_axis_metadata", std::nullopt, nullptr);
     Cast c;
-    c.set_size(Expression(Token("4", Token::number)));
+    c.set_size(std::make_shared<Expression>(Token("4", Token::number)));
     c.set_content(std::make_shared<Expression>(Expression({
         Token("11", Token::number),
         Token(Token::subtract),

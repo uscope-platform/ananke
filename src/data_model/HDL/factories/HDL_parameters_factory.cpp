@@ -270,8 +270,14 @@ void HDL_parameters_factory::stop_cast() {
     if (top_as<cast_factory>()) {
         auto expr = expr_factory.get_expression_v2();
         expr_factory.clear_expression();
-        if (expr.has_value()) {
-            consumer_stack.top()->consume(std::make_shared<Expression_v2>(expr.value()));
+        if (expr.has_value() && (expr->get_lhs() || expr->get_rhs())) {
+            if (expr->get_operation() != Expression_v2::none) {
+                consumer_stack.top()->consume(std::make_shared<Expression_v2>(expr.value()));
+            } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
+                consumer_stack.top()->consume(lhs);
+            } else {
+                consumer_stack.top()->consume(std::make_shared<Expression_v2>(expr.value()));
+            }
         }
 
         auto cast_value = consumer_stack.top()->result();

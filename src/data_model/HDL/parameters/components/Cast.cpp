@@ -39,7 +39,8 @@ std::set<qualified_identifier> Cast::get_dependencies() const {
     std::set<qualified_identifier> deps;
     auto content_deps = content->get_dependencies();
     deps.insert(content_deps.begin(), content_deps.end());
-    auto size_deps = size.get_dependencies();
+    std::set<qualified_identifier> size_deps;
+    if (size) size_deps = size->get_dependencies();
     deps.insert(size_deps.begin(), size_deps.end());
     return deps;
 }
@@ -48,7 +49,7 @@ void Cast::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {
 
     content->propagate_expression(constant_id, value);
-    size.propagate_expression(constant_id, value);
+    if (size) size->propagate_expression(constant_id, value);
 }
 
 std::optional<resolved_parameter> Cast::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
@@ -79,7 +80,8 @@ std::optional<resolved_parameter> Cast::evaluate(const std::map<qualified_identi
         auto content_val = content->evaluate(context);
         if (!content_val.has_value()) return std::nullopt;
         if (!content_val.value().is_integer()) return content_val.value();
-        auto raw_cast_size = size.evaluate(context);
+        if (!size) return std::nullopt;
+        auto raw_cast_size = size->evaluate(context);
         if (!raw_cast_size.has_value()) return std::nullopt;
         if (!raw_cast_size.value().is_integer()) {
             spdlog::warn("Cast size evaluates to a non integer");
@@ -96,12 +98,13 @@ std::optional<resolved_parameter> Cast::evaluate(const std::map<qualified_identi
 std::string Cast::print() const {
     std::string prefix;
     if (type_cast) prefix = target_type;
-    else prefix = size.print();
+    else if (size) prefix = size->print();
     return  prefix + "'(" + content->print() + ")";
 }
 
 int64_t Cast::get_size() {
-    return size.evaluate({}).value().get_integer().get_value();
+    if (!size) return 0;
+    return size->evaluate({}).value().get_integer().get_value();
 }
 
 
@@ -110,7 +113,8 @@ void Cast::set_container_sizes(const resolved_type &s, const std::map<qualified_
     if (type_cast)
         content->set_container_sizes(s, context);
     else {
-        auto cast_size = size.evaluate(context);
+        if (!size) return;
+        auto cast_size = size->evaluate(context);
         if (!cast_size.has_value()) return;
         resolved_type t;
         t.packed_sizes.push_back(cast_size.value().get_integer().get_value());
@@ -124,7 +128,8 @@ bool Cast::isEqual(const Parameter_value_base &other) const {
     const auto& rhs = static_cast<const Cast&>(other);
     bool res = true;
     res &= *content == *rhs.content;
-    res &= size == rhs.size;
+    if (size && rhs.size) res &= *size == *rhs.size;
+    else if (size || rhs.size) return false;
     res &= type_cast == rhs.type_cast;
     res &= target_type == rhs.target_type;
     return res;
