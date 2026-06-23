@@ -368,8 +368,10 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("x");
     p->set_type(Type_engine::create_primitive_type("integer"));
-    p->add_component(Token(Token::subtract));
-    p->set_raw_value(std::make_shared<Token>("1", Token::number));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::subtract);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
     p->set_name("y");
@@ -382,22 +384,28 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     cast_a->set_type_cast();
     cast_a->set_target_type("unsigned");
     cast_a->set_content(std::make_shared<Token>("x", Token::identifier));
+    e.set_lhs(cast_a);
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::add);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("A");
     p->set_type(Type_engine::create_primitive_type("integer"));
-    p->set_raw_value(cast_a);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     auto cast_b = std::make_shared<Cast>();
     cast_b->set_type_cast();
     cast_b->set_target_type("signed");
     cast_b->set_content(std::make_shared<Token>("y", Token::identifier));
+    e.set_lhs(cast_b);
+    e.set_rhs(std::make_shared<Token>("2", Token::number));
+    e.set_operation(Expression_v2::subtract);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("B");
     p->set_type(Type_engine::create_primitive_type("integer"));
-    p->set_raw_value(cast_b);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());

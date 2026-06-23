@@ -160,6 +160,13 @@ void HDL_parameters_factory::stop_expression_new(bool new_expr) {
                     current_resource.set_type(current_type);
                     current_resource.set_raw_value(lhs);
                 }
+            } else if (auto lhs = expr->get_lhs()) {
+                if (!consumer_stack.empty()) {
+                    consumer_stack.top()->consume(lhs);
+                } else {
+                    current_resource.set_type(current_type);
+                    current_resource.set_raw_value(lhs);
+                }
             }
         }
         expr_factory.clear_expression();
@@ -287,8 +294,7 @@ void HDL_parameters_factory::stop_cast() {
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(cast_value);
         } else {
-            current_resource.set_type(current_type);
-            current_resource.set_raw_value(cast_value);
+            expr_factory.consume(cast_value);
         }
     }
 }

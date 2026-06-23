@@ -173,6 +173,11 @@ void expressions_factory::add_index(const std::shared_ptr<Parameter_value_base> 
 }
 
 void expressions_factory::consume(const std::shared_ptr<Parameter_value_base> &v) {
+    if (current_v2.get_lhs() == nullptr) {
+        current_v2.set_lhs(v);
+    } else {
+        current_v2.set_rhs(v);
+    }
 }
 
 bool expressions_factory::active() const {
