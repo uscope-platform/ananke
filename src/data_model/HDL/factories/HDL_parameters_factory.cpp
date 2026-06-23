@@ -323,6 +323,7 @@ void HDL_parameters_factory::start_function_assignment(const std::string &f_name
     consumer_stack.push(std::move(calls));
     expr_factory.pause();
     expr_factory.push_level();
+    expr_factory.clear_expression();
 }
 
 void HDL_parameters_factory::stop_function_assignment() {
@@ -334,6 +335,7 @@ void HDL_parameters_factory::stop_function_assignment() {
         } else {
             current_resource.set_type(current_type);
             current_resource.set_raw_value(result);
+            expr_factory.clear_expression();
         }
     }
     expr_factory.pop_level();
@@ -366,6 +368,7 @@ void HDL_parameters_factory::stop_function_call() {
         } else if (ctx == param_context::packed_dim || ctx == param_context::declaration || ctx == param_context::override) {
             current_resource.set_type(current_type);
             current_resource.set_raw_value(call);
+            expr_factory.clear_expression();
         }
     }
 }
