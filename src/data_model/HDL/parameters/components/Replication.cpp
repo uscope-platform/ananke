@@ -115,9 +115,16 @@ std::optional<resolved_parameter> Replication::evaluate(const std::map<qualified
                 repeated_value.insert(repeated_value.end(), item_vect.begin(), item_vect.end());
             }
         }
-    } else if (repeated_item->is<Replication>()) {
-        // TODO: Probably i just need to call evaluate again "nested style" with packed st toet to true;
-        throw std::runtime_error("Nested repetitions are not supported yet");
+    } else if (repeated_item->is<Token>()){
+        auto item = repeated_item->as<Token>().evaluate(context);
+        int64_t repeated_size = repeated_item->as<Token>().get_size();
+        if (!item.has_value()) return false;
+        if (!item.value().is_integer()) throw std::runtime_error("Tried to replicate non integer");
+        if (!packing) {
+            repeated_value = std::vector(size, item.value().get_integer());
+        } else {
+            return pack_repetition(item.value().get_integer() , repeated_size, size);
+        }
     } else {
         throw std::runtime_error("Encountered a unknown parameter value type");
     }

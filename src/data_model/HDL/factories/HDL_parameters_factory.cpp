@@ -156,13 +156,11 @@ void HDL_parameters_factory::stop_expression_new(bool new_expr) {
                     current_resource.set_raw_value(std::make_shared<Expression_v2>(expr.value()));
                 }
             } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
-                auto token_expr = std::make_shared<Expression>();
-                token_expr->push_back(lhs->as<Token>());
                 if (!consumer_stack.empty()) {
-                    consumer_stack.top()->consume(token_expr);
+                    consumer_stack.top()->consume(lhs);
                 } else {
                     current_resource.set_type(current_type);
-                    current_resource.set_raw_value(token_expr);
+                    current_resource.set_raw_value(lhs);
                 }
             }
         }

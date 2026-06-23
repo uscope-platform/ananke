@@ -55,13 +55,13 @@ TEST(parameter_extraction, init_list_after_reg) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("low_control_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("'b001111", Token::number));
+    p->set_raw_value(std::make_shared<Token>("'b001111", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("low_control_n");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("'b110000", Token::number));
+    p->set_raw_value(std::make_shared<Token>("'b110000", Token::number));
     check_params.insert(p);
 
 
@@ -141,7 +141,7 @@ TEST(parameter_extraction, paretesized_cast) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("SIZE");
-    p->add_component(Token(4, 2));
+    p->set_raw_value(std::make_shared<Token>(4, 2));
     p->set_type(Type_engine::create_primitive_type("integer"));
     check_params.insert(p);
 
@@ -275,7 +275,7 @@ TEST(parameter_extraction, nested_type_cast) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("NumLevels");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token(4, 2));
+    p->set_raw_value(std::make_shared<Token>(4, 2));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -377,12 +377,12 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     p->set_name("x");
     p->set_type(Type_engine::create_primitive_type("integer"));
     p->add_component(Token(Token::subtract));
-    p->add_component(Token("1", Token::number));
+    p->set_raw_value(std::make_shared<Token>("1", Token::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
     p->set_name("y");
     p->set_type(Type_engine::create_primitive_type("integer"));
-    p->add_component(Token(4294967290, 32));
+    p->set_raw_value(std::make_shared<Token>(4294967290, 32));
     check_params.insert(p);
 
 
@@ -449,7 +449,7 @@ TEST(parameter_extraction,time_literal) {
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
-    p->add_component(Token("10ns", Token::string));
+    p->set_raw_value(std::make_shared<Token>("10ns", Token::string));
     p->set_type(Type_engine::create_primitive_type("integer"));
     check_params.insert(p);
 
@@ -538,7 +538,7 @@ TEST(parameter_extraction, strings_dafault_init) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("N_CORES");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("3", Token::number));
+    p->set_raw_value(std::make_shared<Token>("3", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -548,7 +548,7 @@ TEST(parameter_extraction, strings_dafault_init) {
     param_type.add_dimension({{Token("3", Token::number)}, {Token("0", Token::number)}, false});
     Concatenation c;
     c.set_default_init();
-    c.add_component(std::make_shared<Expression>(Expression(Token("\"FILE\"", Token::string))));
+    c.add_component(std::make_shared<Token>("\"FILE\"", Token::string));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -593,7 +593,7 @@ TEST(parameter_extraction, string_array_selection) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("N_CORES");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("3", Token::number));
+    p->set_raw_value(std::make_shared<Token>("3", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -603,7 +603,7 @@ TEST(parameter_extraction, string_array_selection) {
     param_type.add_dimension({{Token("3", Token::number)}, {Token("0", Token::number)}, false});
     Concatenation c;
     c.set_default_init();
-    c.add_component(std::make_shared<Expression>(Expression(Token("\"FILE\"", Token::string))));
+    c.add_component(std::make_shared<Token>("\"FILE\"", Token::string));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -612,11 +612,11 @@ TEST(parameter_extraction, string_array_selection) {
     p = std::make_shared<HDL_parameter>();
 
     p->set_name("SEL");
-    Token e = Token("TRANSLATION_TABLE_INIT", Token::identifier);
+    Token t = Token("TRANSLATION_TABLE_INIT", Token::identifier);
     std::vector<std::shared_ptr<Parameter_value_base>> ai;
-    ai.push_back(std::make_shared<Expression>(Token("2", Token::number)));
-    e.set_array_index(ai);
-    p->add_component(e);
+    ai.push_back(std::make_shared<Token>("2", Token::number));
+    t.set_array_index(ai);
+    p->set_raw_value(std::make_shared<Token>(t));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -658,7 +658,7 @@ TEST(parameter_extraction, strings_array) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("N_CORES");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("3", Token::number));
+    p->set_raw_value(std::make_shared<Token>("3", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -675,9 +675,9 @@ TEST(parameter_extraction, strings_array) {
         false
     });
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("\"FILE\"", Token::string))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("\"FILE\"", Token::string))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("\"FILE\"", Token::string))));
+    c.add_component(std::make_shared<Token>("\"FILE\"", Token::string));
+    c.add_component(std::make_shared<Token>("\"FILE\"", Token::string));
+    c.add_component(std::make_shared<Token>("\"FILE\"", Token::string));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
     check_params.insert(p);
@@ -719,7 +719,7 @@ TEST(parameter_extraction, float_parameter) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("LUT_DEPTH");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("9", Token::number));
+    p->set_raw_value(std::make_shared<Token>("9", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -777,7 +777,7 @@ TEST(parameter_extraction, simple_system_task) {
     p->set_name("CAST");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     HDL_function_call call("$rtoi");
-    call.add_argument(std::make_shared<Expression>(Expression(Token("16.8", Token::number))));
+    call.add_argument(std::make_shared<Token>("16.8", Token::number));
 
     p->set_raw_value(std::make_shared<HDL_function_call>(call));
 
@@ -838,7 +838,7 @@ TEST(parameter_extraction, multiple_system_task) {
     p->set_name("CAST_2");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     call = HDL_function_call("$rtoi");
-    call.add_argument(std::make_shared<Expression>(Expression(Token("12.2", Token::number))));
+    call.add_argument(std::make_shared<Token>("12.2", Token::number));
     p->set_raw_value(std::make_shared<HDL_function_call>(call));
 
     check_params.insert(p);
@@ -896,7 +896,7 @@ TEST(parameter_extraction, system_task_propagation) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("PARAMETER_1");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("5", Token:: number));
+    p->set_raw_value(std::make_shared<Token>("5", Token:: number));
     check_params.insert(p);
 
 
@@ -939,7 +939,7 @@ TEST(parameter_extraction, nested_system_task) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("PARAMETER_1");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("46", Token:: number));
+    p->set_raw_value(std::make_shared<Token>("46", Token:: number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1003,13 +1003,13 @@ TEST(parameter_extraction, package_parameters) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("bus_base");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("32'h43c00000", Token::number));
+    p->set_raw_value(std::make_shared<Token>("32'h43c00000", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("timebase");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("bus_base", Token::identifier));
+    p->set_raw_value(std::make_shared<Token>("bus_base", Token::identifier));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1097,37 +1097,37 @@ TEST(parameter_extraction, simple_parameters) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("simple_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("32", Token::number));
+    p->set_raw_value(std::make_shared<Token>("32", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("local_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("74", Token::number));
+    p->set_raw_value(std::make_shared<Token>("74", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("5'o10" , Token::number));
+    p->set_raw_value(std::make_shared<Token>("5'o10", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("dimensionless_sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("'h3F", Token::number));
+    p->set_raw_value(std::make_shared<Token>("'h3F", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("string_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("\"423\"", Token::string));
+    p->set_raw_value(std::make_shared<Token>("\"423\"", Token::string));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("nested_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("string_p", Token::identifier));
+    p->set_raw_value(std::make_shared<Token>("string_p", Token::identifier));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -1182,19 +1182,19 @@ TEST(parameter_extraction, simple_expressions) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("simple_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("32", Token::number));
+    p->set_raw_value(std::make_shared<Token>("32", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("5'o10", Token::number));
+    p->set_raw_value(std::make_shared<Token>("5'o10", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("dimensionless_sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("'h3F", Token::number));
+    p->set_raw_value(std::make_shared<Token>("'h3F", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1358,13 +1358,13 @@ TEST(parameter_extraction, bitwise_expressions) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("9", Token::number));
+    p->set_raw_value(std::make_shared<Token>("9", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("12", Token::number));
+    p->set_raw_value(std::make_shared<Token>("12", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1458,13 +1458,13 @@ TEST(parameter_extraction, power_expression) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("2", Token::number));
+    p->set_raw_value(std::make_shared<Token>("2", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("5", Token::number));
+    p->set_raw_value(std::make_shared<Token>("5", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1516,13 +1516,13 @@ TEST(parameter_extraction, arithmetic_shift_left) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("3", Token::number));
+    p->set_raw_value(std::make_shared<Token>("3", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("2", Token::number));
+    p->set_raw_value(std::make_shared<Token>("2", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1585,7 +1585,7 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("2", Token::number));
+    p->set_raw_value(std::make_shared<Token>("2", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1651,19 +1651,19 @@ TEST(parameter_extraction, logical_and_or) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("3", Token::number));
+    p->set_raw_value(std::make_shared<Token>("3", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("0", Token::number));
+    p->set_raw_value(std::make_shared<Token>("0", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_c");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("5", Token::number));
+    p->set_raw_value(std::make_shared<Token>("5", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1722,7 +1722,7 @@ TEST(parameter_extraction, logical_and_or) {
 }
 
 
-TEST(parameter_extraction, assay_assignment) {
+TEST(parameter_extraction, array_assignment) {
     auto test_pattern = R"(
         module test_mod #(
             parameter simple_numeric_p = 32,
@@ -1744,13 +1744,13 @@ TEST(parameter_extraction, assay_assignment) {
 
     p->set_name("simple_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("32", Token::number));
+    p->set_raw_value(std::make_shared<Token>("32", Token::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
 
     p->set_name("sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("5'o10", Token::number));
+    p->set_raw_value(std::make_shared<Token>("5'o10", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1761,8 +1761,8 @@ TEST(parameter_extraction, assay_assignment) {
     param_type.add_dimension({{Token("31", Token::number)}, {Token("0", Token::number)}, true});
     param_type.add_dimension({{Token("1", Token::number)}, {Token("0", Token::number)}, false});
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("simple_numeric_p", Token::identifier))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("sv_numeric_p", Token::identifier))));
+    c.add_component(std::make_shared<Token>("simple_numeric_p", Token::identifier));
+    c.add_component(std::make_shared<Token>("sv_numeric_p", Token::identifier));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -1823,7 +1823,7 @@ TEST(parameter_extraction, default_assign) {
     param_type.add_dimension({{Token("1", Token::number)}, {Token("0", Token::number)}, false});
     Concatenation c;
     c.set_default_init();
-    c.add_component(std::make_shared<Expression>(Expression(Token("5", Token::number))));
+    c.add_component(std::make_shared<Token>("5", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -1877,13 +1877,13 @@ TEST(parameter_extraction, array_concatenation) {
 
     p->set_name("simple_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("32", Token::number));
+    p->set_raw_value(std::make_shared<Token>("32", Token::number));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
 
     p->set_name("sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("5'o10", Token::number));
+    p->set_raw_value(std::make_shared<Token>("5'o10", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -1895,8 +1895,8 @@ TEST(parameter_extraction, array_concatenation) {
     param_type.add_dimension({{Token("31", Token::number)}, {Token("0", Token::number)}, true});
     param_type.add_dimension({{Token("1", Token::number)}, {Token("0", Token::number)}, false});
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("simple_numeric_p", Token::identifier))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("sv_numeric_p", Token::identifier))));
+    c.add_component(std::make_shared<Token>("simple_numeric_p", Token::identifier));
+    c.add_component(std::make_shared<Token>("sv_numeric_p", Token::identifier));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -1961,8 +1961,8 @@ TEST(parameter_extraction, array_parameter) {
     d.packed = false;
     param_type.add_dimension(d);
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("32", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("5", Token::number))));
+    c.add_component(std::make_shared<Token>("32", Token::number));
+    c.add_component(std::make_shared<Token>("5", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -2007,8 +2007,7 @@ TEST(parameter_extraction, integer_localparams) {
 
     p->set_name("serial_msb_out_first");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    Expression e = {Token("0", Token::number)};
-    p->set_raw_value(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Token>("0", Token::number));
 
     check_params.insert(p);
 
@@ -2017,8 +2016,7 @@ TEST(parameter_extraction, integer_localparams) {
 
     p->set_name("serial_lsb_out_first");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    e = {Token("1", Token::number)};
-    p->set_raw_value(std::make_shared<Expression>(e));
+    p->set_raw_value(std::make_shared<Token>("1", Token::number));
 
     check_params.insert(p);
 
@@ -2074,8 +2072,8 @@ TEST(parameter_extraction, simple_array_propagation) {
     d.packed = false;
     param_type.add_dimension(d);
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("32", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("5", Token::number))));
+    c.add_component(std::make_shared<Token>("32", Token::number));
+    c.add_component(std::make_shared<Token>("5", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -2157,8 +2155,8 @@ TEST(parameter_extraction, array_expression) {
     d.packed = false;
     param_type.add_dimension(d);
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("32", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("5", Token::number))));
+    c.add_component(std::make_shared<Token>("32", Token::number));
+    c.add_component(std::make_shared<Token>("5", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -2192,7 +2190,7 @@ TEST(parameter_extraction, array_expression) {
 
     p->set_name("sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("1", Token::number));
+    p->set_raw_value(std::make_shared<Token>("1", Token::number));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -2238,7 +2236,7 @@ TEST(parameter_extraction, multidimensional_array_expression) {
     auto p = std::make_shared<HDL_parameter>();
 
     p->set_name("repetition_size");
-    p->add_component(Token("2", Token::number));
+    p->set_raw_value(std::make_shared<Token>("2", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -2252,13 +2250,13 @@ TEST(parameter_extraction, multidimensional_array_expression) {
     param_type.add_dimension({{Token("repetition_size", Token::identifier),Token(Token::subtract), Token("1", Token::number)}, {Token("0", Token::number)}, false});
     param_type.add_dimension({{Token("1", Token::number)}, {Token("0", Token::number)}, false});
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("32", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("32", Token::number))));
+    c.add_component(std::make_shared<Token>("32", Token::number));
+    c.add_component(std::make_shared<Token>("32", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
     c = Concatenation();
-    c.add_component(std::make_shared<Expression>(Expression(Token("5", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("6", Token::number))));
+    c.add_component(std::make_shared<Token>("5", Token::number));
+    c.add_component(std::make_shared<Token>("6", Token::number));
     auto param_type = HDL_simple_type();
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
@@ -2332,9 +2330,9 @@ TEST(parameter_extraction, int_concat_initialization) {
     p->set_name("test_parameter");
 
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
     auto param_type = Type_engine::create_primitive_type("int");
     p->set_type(param_type);
     p->set_raw_value(std::make_shared<Concatenation>(c));
@@ -2383,9 +2381,9 @@ TEST(parameter_extraction, implicit_type_concatenation) {
     p->set_name("test_parameter");
 
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
     auto param_type = Type_engine::create_primitive_type("implicit");
     p->set_type(param_type);
     p->set_raw_value(std::make_shared<Concatenation>(c));
@@ -2434,7 +2432,7 @@ TEST(parameter_extraction, simple_repetition_initialization) {
 
     p->set_name("repetition_size");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("2", Token::number));
+    p->set_raw_value(std::make_shared<Token>("2", Token::number));
     check_params.insert(p);
 
 
@@ -2446,8 +2444,8 @@ TEST(parameter_extraction, simple_repetition_initialization) {
     auto param_type = Type_engine::create_primitive_type("int")->as<HDL_simple_type>();
     param_type.add_dimension({{Token("1", Token::number)}, {Token("0", Token::number)}, false});
     Replication rep;
-    rep.set_size(std::make_shared<Expression>(Expression(Token("repetition_size", Token::identifier))));
-    rep.set_item(std::make_shared<Expression>(Expression(Token("1", Token::number))));
+    rep.set_size(std::make_shared<Token>("repetition_size", Token::identifier));
+    rep.set_item(std::make_shared<Token>("1", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Replication>(rep));
 
@@ -2501,7 +2499,7 @@ TEST(parameter_extraction, packed_repetition_initialization) {
 
     p->set_name("repetition_size");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("2", Token::number));
+    p->set_raw_value(std::make_shared<Token>("2", Token::number));
     check_params.insert(p);
 
 
@@ -2510,9 +2508,9 @@ TEST(parameter_extraction, packed_repetition_initialization) {
     p->set_name("repetition_parameter_1");
 
     Replication rep;
-    auto size = std::make_shared<Expression>(Expression(Token("repetition_size", Token::identifier)));
+    auto size = std::make_shared<Token>("repetition_size", Token::identifier);
     rep.set_size(size);
-    rep.set_item(std::make_shared<Expression>(Expression(Token("1", Token::number))));
+    rep.set_item(std::make_shared<Token>("1", Token::number));
     auto param_type = Type_engine::create_primitive_type("int");
     p->set_type(param_type);
     p->set_raw_value(std::make_shared<Replication>(rep));
@@ -2567,7 +2565,7 @@ TEST(parameter_extraction, repetition_initialization) {
 
     p->set_name("repetition_size");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("2", Token::number));
+    p->set_raw_value(std::make_shared<Token>("2", Token::number));
     check_params.insert(p);
 
 
@@ -2579,10 +2577,10 @@ TEST(parameter_extraction, repetition_initialization) {
     auto param_type = HDL_simple_type();
     param_type.add_dimension({{Token("1", Token::number)}, {Token("0", Token::number)}, false});
     Replication r;
-    auto size = std::make_shared<Expression>(Expression(Token("repetition_size", Token::identifier)));
+    auto size = std::make_shared<Token>("repetition_size", Token::identifier);
 
     r.set_size(size);
-    r.set_item(std::make_shared<Expression>(Expression(Token("1", Token::number))));
+    r.set_item(std::make_shared<Token>("1", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Replication>(r));
 
@@ -2597,9 +2595,9 @@ TEST(parameter_extraction, repetition_initialization) {
 
     auto param_type_2 = HDL_simple_type();
     param_type_2.add_dimension({{Token("1", Token::number)}, {Token("0", Token::number)}, false});
-    size = std::make_shared<Expression>(Expression(Token("repetition_size", Token::identifier)));
+    size = std::make_shared<Token>("repetition_size", Token::identifier);
     r.set_size(size);
-    r.set_item(std::make_shared<Expression>(Expression(Token("4", Token::number))));
+    r.set_item(std::make_shared<Token>("4", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type_2));
     p->set_raw_value(std::make_shared<Replication>(r));
 
@@ -2619,8 +2617,8 @@ TEST(parameter_extraction, repetition_initialization) {
     false
     });
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("repetition_parameter_1", Token::identifier))));
-    c.add_component( std::make_shared<Expression>(Expression(Token("repetition_parameter_2", Token::identifier))));
+    c.add_component(std::make_shared<Token>("repetition_parameter_1", Token::identifier));
+    c.add_component( std::make_shared<Token>("repetition_parameter_2", Token::identifier));
     p->set_type(std::make_shared<HDL_simple_type>(param_type_3));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -2639,9 +2637,9 @@ TEST(parameter_extraction, repetition_initialization) {
     false
     });
     c = Concatenation();
-    c.add_component(std::make_shared<Expression>(Expression(Token("1", Token::number))));
-    c.add_component( std::make_shared<Expression>(Expression(Token("2", Token::number))));
-    c.add_component( std::make_shared<Expression>(Expression(Token("repetition_parameter_2", Token::identifier))));
+    c.add_component(std::make_shared<Token>("1", Token::number));
+    c.add_component( std::make_shared<Token>("2", Token::number));
+    c.add_component( std::make_shared<Token>("repetition_parameter_2", Token::identifier));
     p->set_type(std::make_shared<HDL_simple_type>(param_type_4));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -2705,14 +2703,14 @@ TEST(parameter_extraction, packed_array) {
     auto param_type = HDL_simple_type();
     param_type.add_dimension(d);
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -2767,24 +2765,24 @@ TEST(parameter_extraction, multpidim_packed_array) {
     param_type.add_dimension({{Token("1", Token::number)}, {Token("0", Token::number)}, false});
     Concatenation c2;
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
     c2.add_component(std::make_shared<Concatenation>(c));
     c = Concatenation({});
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
     c2.add_component(std::make_shared<Concatenation>(c));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c2));
@@ -2840,9 +2838,9 @@ TEST(parameter_extraction, package_parameters_use) {
 
     p->set_name("package_param");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    Token ec("bus_base", Token::identifier);
-    ec.set_package_prefix("test_package");
-    p->add_component(ec);
+    Token t("bus_base", Token::identifier);
+    t.set_package_prefix("test_package");
+    p->set_raw_value(std::make_shared<Token>(t));
     check_params.insert(p);
 
 
@@ -2996,10 +2994,10 @@ TEST(parameter_extraction, packed_bit_access) {
     {Token("0", Token::number)},
     true
 });
-    Token ec("param_a", Token::identifier);
-    ec.add_array_index(std::make_shared<Token>("3", Token::number));
+    Token t("param_a", Token::identifier);
+    t.add_array_index(std::make_shared<Token>("3", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type_2));
-    p->set_raw_value(std::make_shared<Expression>(Expression(ec)));
+    p->set_raw_value(std::make_shared<Token>(t));
 
     check_params.insert(p);
 
@@ -3050,7 +3048,7 @@ TEST(parameter_extraction, negative_number_array_init) {
     e.set_lhs(std::make_shared<Token>("16'sd32767", Token::number));
     e.set_operation(Expression_v2::subtract);
     c.add_component(std::make_shared<Expression_v2>(e));
-    c.add_component(std::make_shared<Expression>(Expression(Token("16'sd32767", Token::number))));
+    c.add_component(std::make_shared<Token>("16'sd32767", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -3161,24 +3159,24 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
     param_type.add_dimension({{Token("1", Token::number)}, {Token("0", Token::number)}, false});
     Concatenation c2;
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
     c2.add_component(std::make_shared<Concatenation>(c));
     c = Concatenation();
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c.add_component(std::make_shared<Token>("1'b1", Token::number));
     c2.add_component(std::make_shared<Concatenation>(c));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c2));
@@ -3199,14 +3197,14 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
     param_type_2.add_dimension({{Token("7", Token::number)}, {Token("0", Token::number)}, true});
     param_type_2.add_dimension({{Token("1", Token::number)}, {Token("0", Token::number)}, false});
     Replication r;
-    auto size = std::make_shared<Expression>(Expression(Token("8", Token::number)));
+    auto size = std::make_shared<Token>("8", Token::number);
     r.set_size(size);
-    r.set_item(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    r.set_item(std::make_shared<Token>("1'b1", Token::number));
     c2.add_component(std::make_shared<Replication>(r));
     r = Replication();
-    size = std::make_shared<Expression>(Expression(Token("8", Token::number)));
+    size = std::make_shared<Token>("8", Token::number);
     r.set_size(size);
-    r.set_item(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    r.set_item(std::make_shared<Token>("1'b0", Token::number));
     c2.add_component(std::make_shared<Replication>(r));
     p->set_type(std::make_shared<HDL_simple_type>(param_type_2));
     p->set_raw_value(std::make_shared<Concatenation>(c2));
@@ -3269,7 +3267,7 @@ TEST(parameter_extraction, instance_parameter) {
 
     p->set_name("test_param");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("4", Token::number));
+    p->set_raw_value(std::make_shared<Token>("4", Token::number));
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), def_parameters.size());
@@ -3284,7 +3282,7 @@ TEST(parameter_extraction, instance_parameter) {
     p = std::make_shared<HDL_parameter>();
 
     p->set_name("param_1");
-    p->add_component(Token("test_param", Token::identifier));
+    p->set_raw_value(std::make_shared<Token>("test_param", Token::identifier));
     check_params.insert(p);
     p = std::make_shared<HDL_parameter>();
 
@@ -3351,7 +3349,7 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
     auto p = std::make_shared<HDL_parameter>();
 
     p->set_name("SS_POLARITY_DEFAULT");
-    p->add_component(Token("0", Token::number));
+    p->set_raw_value(std::make_shared<Token>("0", Token::number));
     p->set_type(Type_engine::create_primitive_type("implicit"));
     check_params.insert(p);
 
@@ -3366,23 +3364,23 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
     param_type.add_dimension({{Token("31", Token::number)}, {Token("0", Token::number)}, true});
     param_type.add_dimension({{Token("4", Token::number)}, {Token("0", Token::number)}, false});
     Concatenation outer_c;
-    outer_c.add_component(std::make_shared<Expression>(Expression(Token("3", Token::number))));
-    outer_c.add_component(std::make_shared<Expression>(Expression(Token("3", Token::number))));
-    outer_c.add_component(std::make_shared<Expression>(Expression(Token("3", Token::number))));
+    outer_c.add_component(std::make_shared<Token>("3", Token::number));
+    outer_c.add_component(std::make_shared<Token>("3", Token::number));
+    outer_c.add_component(std::make_shared<Token>("3", Token::number));
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("SS_POLARITY_DEFAULT", Token::identifier))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("3'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("SS_POLARITY_DEFAULT", Token::identifier))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("5'b0", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("4'hE", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("4'b0", Token::number))));
+    c.add_component(std::make_shared<Token>("SS_POLARITY_DEFAULT", Token::identifier));
+    c.add_component(std::make_shared<Token>("3'b0", Token::number));
+    c.add_component(std::make_shared<Token>("SS_POLARITY_DEFAULT", Token::identifier));
+    c.add_component(std::make_shared<Token>("5'b0", Token::number));
+    c.add_component(std::make_shared<Token>("4'hE", Token::number));
+    c.add_component(std::make_shared<Token>("4'b0", Token::number));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     c = Concatenation();
-    c.add_component(std::make_shared<Expression>(Expression(Token("2'h2", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("2'b1", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("2'h3", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("4'hE", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("4'b0", Token::number))));
+    c.add_component(std::make_shared<Token>("2'h2", Token::number));
+    c.add_component(std::make_shared<Token>("2'b1", Token::number));
+    c.add_component(std::make_shared<Token>("2'h3", Token::number));
+    c.add_component(std::make_shared<Token>("4'hE", Token::number));
+    c.add_component(std::make_shared<Token>("4'b0", Token::number));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(outer_c));
@@ -3470,24 +3468,24 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     Concatenation top_c, outer_c, inner_c;
 
     for(const auto& item:v1.components){
-        inner_c.add_component(std::make_shared<Expression>(item->as<Token>()));
+        inner_c.add_component(item);
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c  = Concatenation();
     for(const auto& item:v2.components){
-        inner_c.add_component(std::make_shared<Expression>(item->as<Token>()));
+        inner_c.add_component(item);
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     top_c.add_component(std::make_shared<Concatenation>(outer_c));
     outer_c = Concatenation();
     inner_c  = Concatenation();
     for(const auto& item:v2.components){
-        inner_c.add_component(std::make_shared<Expression>(item->as<Token>()));
+        inner_c.add_component(item);
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c  = Concatenation();
     for(const auto& item:v1.components){
-        inner_c.add_component(std::make_shared<Expression>(item->as<Token>()));
+        inner_c.add_component(item);
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     top_c.add_component(std::make_shared<Concatenation>(outer_c));
@@ -3542,9 +3540,9 @@ TEST(parameter_extraction, packed_replication_init) {
     auto param_type = HDL_simple_type();
     param_type.add_dimension({{Token("4", Token::number)}, {Token("0", Token::number)}, true});
     Replication r;
-    auto size = std::make_shared<Expression>(Expression(Token("5", Token::number)));
+    auto size = std::make_shared<Token>("5", Token::number);
     r.set_size(size);
-    r.set_item(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    r.set_item(std::make_shared<Token>("1'b1", Token::number));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Replication>(r));
 
@@ -3608,7 +3606,7 @@ TEST(parameter_extraction, array_initialization_default) {
     d.packed = false;
     param_type.add_dimension(d);
     c.set_default_init();
-    c.add_component(std::make_shared<Expression>(Expression(Token("3", Token::number))));
+    c.add_component(std::make_shared<Token>("3", Token::number));
 
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
@@ -3672,7 +3670,7 @@ TEST(parameter_extraction, simple_function_parameter) {
         true
     });
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
-    p.set_raw_value(std::make_shared<Expression>(Expression(Token("CTRL_ADDR_CALC", Token::identifier))));
+    p.set_raw_value(std::make_shared<Token>("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("CTRL_ADDR_CALC");
     assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Expression>(Expression(Token("100", Token::number))));
     call.add_body({a},std::nullopt);
@@ -3717,16 +3715,16 @@ TEST(parameter_extraction, concat_in_function) {
     p.set_type(Type_engine::create_primitive_type("integer"));
     p.add_component(Token("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("get_axis_metadata");
-    call.add_argument(std::make_shared<Expression>(Expression(Token("11", Token::number))));
-    call.add_argument(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    call.add_argument(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    call.add_argument(std::make_shared<Token>("11", Token::number));
+    call.add_argument(std::make_shared<Token>("1'b1", Token::number));
+    call.add_argument(std::make_shared<Token>("1'b0", Token::number));
     assignment a("get_axis_metadata", std::nullopt, nullptr);
 
     Concatenation concat;
-    concat.add_component(std::make_shared<Expression>(Expression(Token("10'h0", Token::number))));
-    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    concat.add_component(std::make_shared<Token>("10'h0", Token::number));
+    concat.add_component(std::make_shared<Token>("1'b0", Token::number));
+    concat.add_component(std::make_shared<Token>("1'b1", Token::number));
+    concat.add_component(std::make_shared<Token>("1'b1", Token::number));
 
     a.set_value(std::make_shared<Concatenation>(concat));
     call.add_body({a},std::nullopt);
@@ -3774,9 +3772,9 @@ TEST(parameter_extraction, replication_in_function) {
     p.set_type(Type_engine::create_primitive_type("integer"));
     p.add_component(Token("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("get_axis_metadata");
-    call.add_argument(std::make_shared<Expression>(Expression(Token("11", Token::number))));
-    call.add_argument(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    call.add_argument(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    call.add_argument(std::make_shared<Token>("11", Token::number));
+    call.add_argument(std::make_shared<Token>("1'b1", Token::number));
+    call.add_argument(std::make_shared<Token>("1'b0", Token::number));
     assignment a("get_axis_metadata", std::nullopt, nullptr);
     Cast c;
     c.set_size(Expression(Token("4", Token::number)));
@@ -3786,9 +3784,9 @@ TEST(parameter_extraction, replication_in_function) {
         Token("8", Token::number)
     })));
     Replication repl;
-    auto size = std::make_shared<Expression>(Expression(Token("4", Token::number)));
+    auto size = std::make_shared<Token>("4", Token::number);
     repl.set_size(size);
-    repl.set_item(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    repl.set_item(std::make_shared<Token>("1'b1", Token::number));
     a.set_value(std::make_shared<Replication>(repl));
     call.add_body({a},std::nullopt);
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
@@ -3834,9 +3832,9 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     p.set_type(Type_engine::create_primitive_type("integer"));
     p.add_component(Token("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("get_axis_metadata");
-    call.add_argument(std::make_shared<Expression>(Expression(Token("11", Token::number))));
-    call.add_argument(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    call.add_argument(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    call.add_argument(std::make_shared<Token>("11", Token::number));
+    call.add_argument(std::make_shared<Token>("1'b1", Token::number));
+    call.add_argument(std::make_shared<Token>("1'b0", Token::number));
     assignment a("get_axis_metadata", std::nullopt, nullptr);
     Cast c;
     c.set_size(Expression(Token("4", Token::number)));
@@ -3846,9 +3844,9 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
         Token("8", Token::number)
     })));
     Concatenation concat;
-    concat.add_component(std::make_shared<Expression>(Expression(Token("10'h0", Token::number))));
-    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    concat.add_component(std::make_shared<Token>("10'h0", Token::number));
+    concat.add_component(std::make_shared<Token>("1'b0", Token::number));
+    concat.add_component(std::make_shared<Token>("1'b1", Token::number));
     concat.add_component(std::make_shared<Cast>(c));
 
     a.set_value(std::make_shared<Concatenation>(concat));
@@ -3944,7 +3942,7 @@ TEST(parameter_extraction, loop_function_parameter) {
         false
     });
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
-    p.set_raw_value(std::make_shared<Expression>(Expression(Token("CTRL_ADDR_CALC", Token::identifier))));
+    p.set_raw_value(std::make_shared<Token>("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("CTRL_ADDR_CALC");
     HDL_loop_metadata loop;
     HDL_parameter idx;
@@ -4106,8 +4104,8 @@ TEST(parameter_extraction, function_with_arguments) {
     p.set_name("TEST_PARAM");
 
     HDL_function_call call("add");
-    call.add_argument(std::make_shared<Expression>(Expression(Token("5", Token::number))));
-    call.add_argument(std::make_shared<Expression>(Expression(Token("7", Token::number))));
+    call.add_argument(std::make_shared<Token>("5", Token::number));
+    call.add_argument(std::make_shared<Token>("7", Token::number));
     call.add_assignment({"add",std::nullopt, std::make_shared<Expression>(Expression({
         Token(5, 3),
         Token(Token::add),
@@ -4183,19 +4181,19 @@ TEST(parameter_extraction, interface_parameters) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("DATA_WIDTH");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("32", Token::number));
+    p->set_raw_value(std::make_shared<Token>("32", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("USER_WIDTH");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("24", Token::number));
+    p->set_raw_value(std::make_shared<Token>("24", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("DEST_WIDTH");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("8", Token::number));
+    p->set_raw_value(std::make_shared<Token>("8", Token::number));
     check_params.insert(p);
 
     ASSERT_EQ(check_params, parameters);
@@ -4286,7 +4284,7 @@ TEST(parameter_extraction, param_ternary_conditional) {
 
     p->set_name("condition");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("2", Token::number));
+    p->set_raw_value(std::make_shared<Token>("2", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -4300,10 +4298,10 @@ TEST(parameter_extraction, param_ternary_conditional) {
         Token("1", Token::number),
     }));
     t.set_true_value(
-        std::make_shared<Expression>(Expression(Token("12", Token::number))));
+        std::make_shared<Token>("12", Token::number));
 
     t.set_false_value(
-        std::make_shared<Expression>(Expression(Token("34", Token::number))));
+        std::make_shared<Token>("34", Token::number));
     p->set_raw_value(std::make_shared<Ternary>(t));
     check_params.insert(p);
 
@@ -4317,13 +4315,9 @@ TEST(parameter_extraction, param_ternary_conditional) {
         Token(Token::greater),
         Token("65", Token::number),
     }));
-    t.set_true_value(
-        std::make_shared<Expression>(Expression(Token("12", Token::number)))
-        );
+    t.set_true_value(std::make_shared<Token>("12", Token::number));
 
-    t.set_false_value(
-        std::make_shared<Expression>(Expression(Token("34", Token::number)))
-        );
+    t.set_false_value(std::make_shared<Token>("34", Token::number));
     p->set_raw_value(std::make_shared<Ternary>(t));
     check_params.insert(p);
 
@@ -4369,7 +4363,7 @@ TEST(parameter_extraction, nested_ternary_conditional) {
 
     p->set_name("condition");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("2", Token::number));
+    p->set_raw_value(std::make_shared<Token>("2", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -4382,9 +4376,7 @@ TEST(parameter_extraction, nested_ternary_conditional) {
         Token(Token::greater),
         Token("1", Token::number),
     }));
-    t.set_false_value(
-        std::make_shared<Expression>(Expression(Token("34", Token::number)))
-        );
+    t.set_false_value(std::make_shared<Token>("34", Token::number));
 
     Ternary inner_t;
     inner_t.set_condition(Expression({
@@ -4392,13 +4384,9 @@ TEST(parameter_extraction, nested_ternary_conditional) {
         Token(Token::greater),
         Token("65", Token::number),
     }));
-    inner_t.set_true_value(
-        std::make_shared<Expression>(Expression(Token("12", Token::number)))
-        );
+    inner_t.set_true_value(std::make_shared<Token>("12", Token::number));
 
-    inner_t.set_false_value(
-        std::make_shared<Expression>(Expression(Token("96", Token::number)))
-        );
+    inner_t.set_false_value(std::make_shared<Token>("96", Token::number));
     t.set_true_value(std::make_shared<Ternary>(inner_t));
     p->set_raw_value(std::make_shared<Ternary>(t));
     check_params.insert(p);
@@ -4445,7 +4433,7 @@ TEST(parameter_extraction, complex_ternary_conditional) {
 
     p->set_name("NM");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("4", Token::number));
+    p->set_raw_value(std::make_shared<Token>("4", Token::number));
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
@@ -4459,11 +4447,9 @@ TEST(parameter_extraction, complex_ternary_conditional) {
         Token("1", Token::number),
     }));
     HDL_function_call c("$clog2");
-    c.add_argument(std::make_shared<Expression>(Expression(Token("NM", Token::identifier))));
+    c.add_argument(std::make_shared<Token>("NM", Token::identifier));
     t.set_true_value(std::make_shared<HDL_function_call>(c));
-    t.set_false_value(
-        std::make_shared<Expression>(Expression(Token("1", Token::number)))
-        );
+    t.set_false_value(std::make_shared<Token>("1", Token::number));
 
     p->set_raw_value(std::make_shared<Ternary>(t));
     check_params.insert(p);
@@ -4550,8 +4536,8 @@ TEST(parameter_extraction, struct_typed_parameter) {
     EXPECT_EQ(check_struct, p->get_type()->as<HDL_struct_type>());
 
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("42", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("17", Token::number))));
+    c.add_component(std::make_shared<Token>("42", Token::number));
+    c.add_component(std::make_shared<Token>("17", Token::number));
     EXPECT_TRUE(p->get_expression()->is<Concatenation>());
     EXPECT_EQ(p->get_expression()->as<Concatenation>(), c);
 
@@ -4616,8 +4602,8 @@ TEST(parameter_extraction, struct_unpacked_parameter) {
     EXPECT_EQ(check_struct, p->get_type()->as<HDL_struct_type>());
 
     Concatenation c;
-    c.add_component(std::make_shared<Expression>(Expression(Token("42", Token::number))));
-    c.add_component(std::make_shared<Expression>(Expression(Token("17", Token::number))));
+    c.add_component(std::make_shared<Token>("42", Token::number));
+    c.add_component(std::make_shared<Token>("17", Token::number));
     EXPECT_TRUE(p->get_expression()->is<Concatenation>());
     EXPECT_EQ(p->get_expression()->as<Concatenation>(), c);
 
