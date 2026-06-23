@@ -52,7 +52,6 @@ void HDL_parameters_factory::start_initialization_list() {
         auto concat = std::make_unique<concatenation_factory>();
         concat->start_concatenation();
         consumer_stack.push(std::move(concat));
-        expr_factory.decrease_level();
     }
 }
 
@@ -69,7 +68,6 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
         consumer_stack.pop();
         current_resource.set_type(current_type);
         current_resource.set_raw_value(result);
-        expr_factory.increase_level();
     }
 }
 

@@ -136,6 +136,7 @@ void Type_engine::add_component(const Token &c) {
 void Type_engine::stop_expression() {
     expr_factory.stop_expression(false);
     if (expr_factory.get_level() == 0) {
+        auto e2 = expr_factory.get_expression_v2();
         auto expr = expr_factory.get_expression();
         if (expr.has_value()) {
             r_factory.add_expression(expr.value());

@@ -403,6 +403,9 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
     if(type_engine.active() || type_engine.is_ranging()){
         type_engine.start_expression();
     } else if(params_factory.is_component_relevant()|| params_factory.is_param_assignment() || params_factory.is_param_override()) {
+        if (auto primary = dynamic_cast<sv2017::PrimaryAssigContext*>(ctx->primary())) {
+            if (primary->assignment_pattern_expression()) return;
+        }
         params_factory.start_expression_new(ctx->primary() == nullptr);
         if(ctx->QUESTIONMARK()){
             params_factory.start_ternary_operator();
@@ -416,6 +419,9 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
     if (type_engine.active() || type_engine.is_ranging()) {
         type_engine.stop_expression();
     } else if (params_factory.is_component_relevant() || params_factory.is_param_assignment() || params_factory.is_param_override()) {
+        if (auto primary = dynamic_cast<sv2017::PrimaryAssigContext*>(ctx->primary())) {
+            if (primary->assignment_pattern_expression()) return;
+        }
         std::string type;
         if(ctx->QUESTIONMARK()){
             params_factory.stop_ternary();
