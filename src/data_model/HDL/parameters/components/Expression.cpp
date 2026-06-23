@@ -379,6 +379,9 @@ void Expression::propagate_expression(const qualified_identifier &constant_id,
                         new_expr.push_back(expr.components[0]);
                         continue;
                     }
+                } else if (value->is<Token>()) {
+                    new_expr.push_back(value);
+                    continue;
                 }
             }
         }

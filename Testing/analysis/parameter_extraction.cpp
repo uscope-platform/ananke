@@ -3723,10 +3723,10 @@ TEST(parameter_extraction, concat_in_function) {
     assignment a("get_axis_metadata", std::nullopt, nullptr);
 
     Concatenation concat;
-    concat.add_component(std::make_shared<Token>("10'h0", Token::number));
-    concat.add_component(std::make_shared<Token>("1'b0", Token::number));
-    concat.add_component(std::make_shared<Token>("1'b1", Token::number));
-    concat.add_component(std::make_shared<Token>("1'b1", Token::number));
+    concat.add_component(std::make_shared<Expression>(Expression(Token("10'h0", Token::number))));
+    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
+    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
 
     a.set_value(std::make_shared<Concatenation>(concat));
     call.add_body({a},std::nullopt);

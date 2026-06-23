@@ -194,7 +194,12 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_system_task(const 
 
 void HDL_function_call::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
     packing = s.unpacked_sizes.empty();
-    if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) return;
+    if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) {
+        if (assignments.size()==1 && !loop_metadata.has_value()){
+            assignments[0].set_container_size(s, context);
+        }
+        return;
+    }
     if (s.unpacked_sizes.empty()) {
         if (assignments.size()==1 && !loop_metadata.has_value()){
             assignments[0].set_container_size(s, context);
@@ -249,7 +254,7 @@ std::string HDL_function_call::print() const {
     std::ostringstream result;
     result << function_name << "(";
     for(int i = 0; i< arguments.size(); i++) {
-        result << arguments[0]->print();
+        result << arguments[i]->print();
         if( arguments.size()>1 && i<arguments.size()-1) result << ", ";
     }
     result << ")";

@@ -146,6 +146,11 @@ void expressions_factory::add_component(const Token &ec) {
         return;
     }
 
+    if (paused) {
+        paused = false;
+        return;
+    }
+
     if (ec.is_operator()) {
 
     } else {
@@ -155,11 +160,10 @@ void expressions_factory::add_component(const Token &ec) {
         } else {
             current_v2.set_rhs(tok);
         }
-        if (factory_active && !paused) {
+        if (factory_active) {
             current.emplace_back(tok);
         }
     }
-    if (paused) paused = false;
 }
 
 void expressions_factory::set_operation(const Expression_v2::expression_operator &op) {
