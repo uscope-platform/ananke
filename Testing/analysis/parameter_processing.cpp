@@ -272,8 +272,8 @@ TEST(parameter_processing, array_instance_parameter_override) {
     HDL_simple_type t;
     t = Type_engine::create_primitive_type("implicit")->as<HDL_simple_type>();
     t.add_dimension({
-        Expression(Token("1", Token::number)),
-        Expression(Token("0", Token::number)),
+        std::make_shared<Token>("1", Token::number),
+        std::make_shared<Token>("0", Token::number),
         false
     });
     p->set_type(std::make_shared<HDL_simple_type>(t));
@@ -1334,13 +1334,17 @@ TEST(parameter_processing, init_list_override) {
     p = HDL_parameter();
     p.set_name("SLAVE_ADDR");
     auto param_type = HDL_simple_type();
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("NS", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::subtract);
     param_type.add_dimension({
-        {Token("NS", Token::identifier),Token(Token::subtract),Token("1", Token::number),},
-        {Token("0", Token::number)},
+        std::make_shared<Expression_v2>(e),
+        std::make_shared<Token>("0", Token::number),
         false});
     param_type.add_dimension({
-    {Token("31", Token::number),},
-    {Token("0", Token::number)},
+        std::make_shared<Token>("31", Token::number),
+        std::make_shared<Token>("0", Token::number),
     true});
     Concatenation c;
 
@@ -1362,13 +1366,16 @@ TEST(parameter_processing, init_list_override) {
     auto size = std::make_shared<Expression>(Expression(Token(2, 1)));
     r.set_size(size);
     HDL_simple_type param_type_2;
+    e.set_lhs(std::make_shared<Token>("NS", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::subtract);
     param_type_2.add_dimension({
-    {Token("NS", Token::identifier),Token(Token::subtract),Token("1", Token::number),},
-    {Token("0", Token::number)},
+    std::make_shared<Expression_v2>(e),
+    std::make_shared<Token>("0", Token::number),
     false});
     param_type_2.add_dimension({
-    {Token("31", Token::number),},
-    {Token("0", Token::number)},
+    std::make_shared<Token>("31", Token::number),
+    std::make_shared<Token>("0", Token::number),
     true});
     p.set_type(std::make_shared<HDL_simple_type>(param_type_2));
     p.set_raw_value(std::make_shared<Replication>(r));

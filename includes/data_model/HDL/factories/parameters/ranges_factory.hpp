@@ -19,6 +19,7 @@
 #include "data_model/HDL/parameters/common/dimension.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 class ranges_factory : public factory_base{
 public:
@@ -26,7 +27,7 @@ public:
     void open_range();
     void close_range();
     void advance_stage();
-    void add_expression(const Expression &e);
+    void add_expression(const std::shared_ptr<Parameter_value_base>  &e);
     void stop();
     void advance_range();
     void clear();

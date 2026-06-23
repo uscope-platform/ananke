@@ -478,8 +478,15 @@ void sv_visitor::exitOperator_plus_minus(sv2017::Operator_plus_minusContext *ctx
     if (ctx->PLUS())  route_expression_component(Token(Token::add));
     if (ctx->MINUS()) route_expression_component(Token(Token::subtract));
 
-    if (ctx->PLUS())  params_factory.set_operation(Expression_v2::expression_operator::add);
-    if (ctx->MINUS()) params_factory.set_operation(Expression_v2::expression_operator::subtract);
+    if (ctx->PLUS()) {
+        params_factory.set_operation(Expression_v2::expression_operator::add);
+        type_engine.set_operation(Expression_v2::expression_operator::add);
+    }
+    if (ctx->MINUS()) {
+        params_factory.set_operation(Expression_v2::expression_operator::subtract);
+        type_engine.set_operation(Expression_v2::expression_operator::subtract);
+    }
+
 
 }
 
@@ -488,9 +495,18 @@ void sv_visitor::exitOperator_mul_div_mod(sv2017::Operator_mul_div_modContext *c
     if (ctx->DIV()) route_expression_component(Token(Token::divide));
     if (ctx->MOD()) route_expression_component(Token(Token::modulo));
 
-    if (ctx->DIV())  params_factory.set_operation(Expression_v2::expression_operator::divide);
-    if (ctx->MOD()) params_factory.set_operation(Expression_v2::expression_operator::modulo);
-    if (ctx->MUL()) params_factory.set_operation(Expression_v2::expression_operator::multiply);
+    if (ctx->DIV()) {
+        params_factory.set_operation(Expression_v2::expression_operator::divide);
+        type_engine.set_operation(Expression_v2::expression_operator::divide);
+    }
+    if (ctx->MOD()) {
+        params_factory.set_operation(Expression_v2::expression_operator::modulo);
+        type_engine.set_operation(Expression_v2::expression_operator::modulo);
+    }
+    if (ctx->MUL()) {
+        params_factory.set_operation(Expression_v2::expression_operator::multiply);
+        type_engine.set_operation(Expression_v2::expression_operator::multiply);
+    }
 
 }
 
@@ -501,18 +517,36 @@ void sv_visitor::exitOperator_shift(sv2017::Operator_shiftContext *ctx) {
     if (ctx->ARITH_SHIFT_LEFT()) route_expression_component(Token(Token::arithmetic_shift_left));
     if (ctx->ARITH_SHIFT_RIGHT()) route_expression_component(Token(Token::arithmetic_shift_right));
 
-    if (ctx->SHIFT_LEFT()) params_factory.set_operation(Expression_v2::expression_operator::logic_shift_left);
-    if (ctx->SHIFT_RIGHT()) params_factory.set_operation(Expression_v2::expression_operator::logic_shift_right);
-    if (ctx->ARITH_SHIFT_LEFT()) params_factory.set_operation(Expression_v2::expression_operator::arithmetic_shift_left);
-    if (ctx->ARITH_SHIFT_RIGHT()) params_factory.set_operation(Expression_v2::expression_operator::arithmetic_shift_right);
+    if (ctx->SHIFT_LEFT()) {
+        params_factory.set_operation(Expression_v2::expression_operator::logic_shift_left);
+        type_engine.set_operation(Expression_v2::expression_operator::logic_shift_left);
+    }
+    if (ctx->SHIFT_RIGHT()) {
+        params_factory.set_operation(Expression_v2::expression_operator::logic_shift_right);
+        type_engine.set_operation(Expression_v2::expression_operator::logic_shift_right);
+    }
+    if (ctx->ARITH_SHIFT_LEFT()) {
+        params_factory.set_operation(Expression_v2::expression_operator::arithmetic_shift_left);
+        type_engine.set_operation(Expression_v2::expression_operator::arithmetic_shift_left);
+    }
+    if (ctx->ARITH_SHIFT_RIGHT()) {
+        params_factory.set_operation(Expression_v2::expression_operator::arithmetic_shift_right);
+        type_engine.set_operation(Expression_v2::expression_operator::arithmetic_shift_right);
+    }
 }
 
 void sv_visitor::exitUnary_operator(sv2017::Unary_operatorContext *ctx) {
     if (ctx->PLUS())  route_expression_component(Token(Token::add));
     if (ctx->MINUS()) route_expression_component(Token(Token::subtract));
 
-    if (ctx->PLUS())  params_factory.set_operation(Expression_v2::expression_operator::add);
-    if (ctx->MINUS()) params_factory.set_operation(Expression_v2::expression_operator::subtract);
+    if (ctx->PLUS()) {
+        params_factory.set_operation(Expression_v2::expression_operator::add);
+        type_engine.set_operation(Expression_v2::expression_operator::add);
+    }
+    if (ctx->MINUS()) {
+        params_factory.set_operation(Expression_v2::expression_operator::subtract);
+        type_engine.set_operation(Expression_v2::expression_operator::subtract);
+    }
 }
 
 void sv_visitor::exitOperator_cmp(sv2017::Operator_cmpContext *ctx) {
@@ -521,53 +555,83 @@ void sv_visitor::exitOperator_cmp(sv2017::Operator_cmpContext *ctx) {
     if (ctx->LT()) route_expression_component(Token(Token::less));
     if (ctx->LE()) route_expression_component(Token(Token::less_equal));
 
-    if (ctx->GT()) params_factory.set_operation(Expression_v2::expression_operator::greater);
-    if (ctx->GE()) params_factory.set_operation(Expression_v2::expression_operator::greater_equal);
-    if (ctx->LT()) params_factory.set_operation(Expression_v2::expression_operator::less);
-    if (ctx->LE()) params_factory.set_operation(Expression_v2::expression_operator::less_equal);
+    if (ctx->GT()) {
+        params_factory.set_operation(Expression_v2::expression_operator::greater);
+        type_engine.set_operation(Expression_v2::expression_operator::greater);
+    }
+    if (ctx->GE()) {
+        params_factory.set_operation(Expression_v2::expression_operator::greater_equal);
+        type_engine.set_operation(Expression_v2::expression_operator::greater_equal);
+    }
+    if (ctx->LT()) {
+        params_factory.set_operation(Expression_v2::expression_operator::less);
+        type_engine.set_operation(Expression_v2::expression_operator::less);
+    }
+    if (ctx->LE()) {
+        params_factory.set_operation(Expression_v2::expression_operator::less_equal);
+        type_engine.set_operation(Expression_v2::expression_operator::less_equal);
+    }
 }
 
 void sv_visitor::exitOperator_eq_neq(sv2017::Operator_eq_neqContext *ctx) {
     if (ctx->EQ()) route_expression_component(Token(Token::equal));
     if (ctx->NE()) route_expression_component(Token(Token::not_equal));
 
-    if (ctx->EQ()) params_factory.set_operation(Expression_v2::expression_operator::equal);
-    if (ctx->NE()) params_factory.set_operation(Expression_v2::expression_operator::not_equal);
-    if (ctx->NE()) params_factory.set_operation(Expression_v2::expression_operator::not_equal);
+    if (ctx->EQ()) {
+        params_factory.set_operation(Expression_v2::expression_operator::equal);
+        type_engine.set_operation(Expression_v2::expression_operator::equal);
+    }
+    if (ctx->NE()) {
+        params_factory.set_operation(Expression_v2::expression_operator::not_equal);
+        type_engine.set_operation(Expression_v2::expression_operator::not_equal);
+    }
+    if (ctx->NE()) {
+        params_factory.set_operation(Expression_v2::expression_operator::not_equal);
+        type_engine.set_operation(Expression_v2::expression_operator::not_equal);
+    }
 }
 
 void sv_visitor::exitOperator_bitwise_and(sv2017::Operator_bitwise_andContext *ctx) {
     route_expression_component(Token(Token::bitwise_and));
     params_factory.set_operation(Expression_v2::expression_operator::bitwise_and);
+    type_engine.set_operation(Expression_v2::expression_operator::bitwise_and);
 }
 
 void sv_visitor::exitOperator_bitwise_or(sv2017::Operator_bitwise_orContext *ctx) {
     params_factory.set_operation(Expression_v2::expression_operator::bitwise_or);
+    type_engine.set_operation(Expression_v2::expression_operator::bitwise_or);
     route_expression_component(Token(Token::bitwise_or));
 }
 
 void sv_visitor::exitOperator_xor(sv2017::Operator_xorContext *ctx) {
     if (ctx->XOR()) route_expression_component(Token(Token::bitwise_xor));
-    if (ctx->XORN()) route_expression_component(Token(Token::bitwise_xnor));
-    if (ctx->NXOR()) route_expression_component(Token(Token::bitwise_xnor));
+    if (ctx->XORN()|| ctx->NXOR()) route_expression_component(Token(Token::bitwise_xnor));
 
-    if (ctx->XOR()) params_factory.set_operation(Expression_v2::expression_operator::bitwise_xor);
-    if (ctx->XORN()) params_factory.set_operation(Expression_v2::expression_operator::bitwise_xnor);
-    if (ctx->NXOR()) params_factory.set_operation(Expression_v2::expression_operator::bitwise_xnor);
+    if (ctx->XOR()) {
+        params_factory.set_operation(Expression_v2::expression_operator::bitwise_xor);
+        type_engine.set_operation(Expression_v2::expression_operator::bitwise_xor);
+    }
+    if (ctx->XORN()|| ctx->NXOR()) {
+        params_factory.set_operation(Expression_v2::expression_operator::bitwise_xnor);
+        type_engine.set_operation(Expression_v2::expression_operator::bitwise_xnor);
+    }
 }
 
 void sv_visitor::exitOperator_power(sv2017::Operator_powerContext *ctx) {
     route_expression_component(Token(Token::power));
     params_factory.set_operation(Expression_v2::expression_operator::power);
+    type_engine.set_operation(Expression_v2::expression_operator::power);
 }
 
 void sv_visitor::exitOperator_log_and(sv2017::Operator_log_andContext *ctx) {
     route_expression_component(Token(Token::logical_and));
     params_factory.set_operation(Expression_v2::expression_operator::logical_and);
+    type_engine.set_operation(Expression_v2::expression_operator::logical_and);
 };
 void sv_visitor::exitOperator_log_or(sv2017::Operator_log_orContext *ctx) {
     route_expression_component(Token(Token::logical_or));
     params_factory.set_operation(Expression_v2::expression_operator::logical_or);
+    type_engine.set_operation(Expression_v2::expression_operator::logical_or);
 };
 
 uint32_t sv_visitor::parse_number(const std::string& s) {

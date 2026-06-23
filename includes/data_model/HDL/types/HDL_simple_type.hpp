@@ -67,16 +67,12 @@ public:
         ret &= lhs.is_real == rhs.is_real;
         if(lhs.unpacked_dimensions.size() != rhs.unpacked_dimensions.size()) return false;
         for(int i = 0; i<lhs.unpacked_dimensions.size(); i++){
-            ret &= lhs.unpacked_dimensions[i].packed == rhs.unpacked_dimensions[i].packed;
-            ret &= lhs.unpacked_dimensions[i].first_bound == rhs.unpacked_dimensions[i].first_bound;
-            ret &= lhs.unpacked_dimensions[i].second_bound == rhs.unpacked_dimensions[i].second_bound;
+            ret &= lhs.unpacked_dimensions[i] == rhs.unpacked_dimensions[i];
         }
 
         if(lhs.packed_dimensions.size() != rhs.packed_dimensions.size()) return false;
         for(int i = 0; i<lhs.packed_dimensions.size(); i++){
-            ret &= lhs.packed_dimensions[i].packed == rhs.packed_dimensions[i].packed;
-            ret &= lhs.packed_dimensions[i].first_bound == rhs.packed_dimensions[i].first_bound;
-            ret &= lhs.packed_dimensions[i].second_bound == rhs.packed_dimensions[i].second_bound;
+            ret &= lhs.packed_dimensions[i] == rhs.packed_dimensions[i];
         }
         return ret;
     }

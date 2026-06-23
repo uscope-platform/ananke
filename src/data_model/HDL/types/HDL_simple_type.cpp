@@ -43,16 +43,16 @@ void HDL_simple_type::set_unpacked_dimensions(const std::vector<dimension_t> &d)
 std::set<qualified_identifier> HDL_simple_type::get_dependencies() {
     std::set<qualified_identifier> result;
     for (auto &dim:unpacked_dimensions) {
-        auto deps = dim.first_bound.get_dependencies();
+        auto deps = dim.first_bound->get_dependencies();
         result.insert(deps.begin(), deps.end());
-        deps = dim.second_bound.get_dependencies();
+        deps = dim.second_bound->get_dependencies();
         result.insert(deps.begin(), deps.end());
     }
 
     for (auto &dim:packed_dimensions) {
-        auto deps = dim.first_bound.get_dependencies();
+        auto deps = dim.first_bound->get_dependencies();
         result.insert(deps.begin(), deps.end());
-        deps = dim.second_bound.get_dependencies();
+        deps = dim.second_bound->get_dependencies();
         result.insert(deps.begin(), deps.end());
     }
     return result;
@@ -61,15 +61,15 @@ std::set<qualified_identifier> HDL_simple_type::get_dependencies() {
 std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) {
     resolved_type result;
     for (auto &dim: unpacked_dimensions) {
-        auto f_b = dim.first_bound.evaluate(context);
-        auto s_b = dim.second_bound.evaluate(context);
+        auto f_b = dim.first_bound->evaluate(context);
+        auto s_b = dim.second_bound->evaluate(context);
         if (!(f_b.has_value() && s_b.has_value())) return std::nullopt;
         auto diff = std::abs(f_b.value().get_integer() - s_b.value().get_integer())+1;
         result.unpacked_sizes.push_back(diff.get_value());
     }
     for (auto &dim: packed_dimensions) {
-        auto f_b = dim.first_bound.evaluate(context);
-        auto s_b = dim.second_bound.evaluate(context);
+        auto f_b = dim.first_bound->evaluate(context);
+        auto s_b = dim.second_bound->evaluate(context);
         if (!(f_b.has_value() && s_b.has_value())) return std::nullopt;
         auto diff = std::abs(f_b.value().get_integer() - s_b.value().get_integer())+1;
         result.packed_sizes.push_back(diff.get_value());
@@ -91,10 +91,10 @@ std::string HDL_simple_type::to_print() const {
     }
 
     for(const auto &item : packed_dimensions){
-        result += "[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
+        result += "[" + item.first_bound->print() + ":" + item.second_bound->print()+ "]";
     }
     for(const auto &item : unpacked_dimensions){
-        result += "[" + item.first_bound.print() + ":" + item.second_bound.print()+ "]";
+        result += "[" + item.first_bound->print() + ":" + item.second_bound->print()+ "]";
     }
     return result;
 }

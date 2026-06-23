@@ -62,6 +62,10 @@ void Type_engine::set_member_signed(bool s) {
     }
 }
 
+void Type_engine::set_operation(Expression_v2::expression_operator op) {
+    expr_factory.set_operation(op);
+}
+
 std::shared_ptr<hdl_type> Type_engine::stop_composite_type_declaration(const std::string &name, bool anonymous) {
     kind = simple_type;
     auto result = std::make_shared<HDL_struct_type>(current_struct);
@@ -136,10 +140,15 @@ void Type_engine::add_component(const Token &c) {
 void Type_engine::stop_expression() {
     expr_factory.stop_expression(false);
     if (expr_factory.get_level() == 0) {
-        auto e2 = expr_factory.get_expression_v2();
-        auto expr = expr_factory.get_expression();
+        auto expr = expr_factory.get_expression_v2();
         if (expr.has_value()) {
-            r_factory.add_expression(expr.value());
+            if (expr->get_operation() != Expression_v2::none) {
+                r_factory.add_expression(std::make_shared<Expression_v2>(expr.value()));
+            } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
+                r_factory.add_expression(lhs);
+            } else {
+                r_factory.add_expression(std::make_shared<Expression_v2>(expr.value()));
+            }
         }
         expr_factory.clear_expression();
     }
@@ -187,8 +196,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_implicit(true);
         t.set_packed_dimensions({
             {
-                Expression(Token("31", Token::number)),
-                Expression(Token("0", Token::number)),
+                std::make_shared<Token>("31", Token::number),
+                std::make_shared<Token>("0", Token::number),
                 true
             }
         });
@@ -197,8 +206,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_signed(true);
         t.set_packed_dimensions({
             {
-                Expression(Token("15", Token::number)),
-                Expression(Token("0", Token::number)),
+                std::make_shared<Token>("15", Token::number),
+                std::make_shared<Token>("0", Token::number),
                 true
             }
         });
@@ -207,8 +216,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_signed(true);
         t.set_packed_dimensions({
             {
-                Expression(Token("31", Token::number)),
-                Expression(Token("0", Token::number)),
+                std::make_shared<Token>("31", Token::number),
+                std::make_shared<Token>("0", Token::number),
                 true
             }
         });
@@ -217,8 +226,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_signed(true);
         t.set_packed_dimensions({
             {
-                Expression({Token("63", Token::number)}),
-                Expression(Token("0", Token::number)),
+                std::make_shared<Token>("63", Token::number),
+                std::make_shared<Token>("0", Token::number),
                 true
             }
         });
@@ -227,8 +236,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_signed(false);
         t.set_packed_dimensions({
             {
-                Expression(Token("63", Token::number)),
-                Expression(Token("0", Token::number)),
+                std::make_shared<Token>("63", Token::number),
+                std::make_shared<Token>("0", Token::number),
                 true
             }
         });
@@ -237,8 +246,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_real(true);
         t.set_packed_dimensions({
             {
-                Expression(Token("63", Token::number)),
-                Expression(Token("0", Token::number)),
+                std::make_shared<Token>("63", Token::number),
+                std::make_shared<Token>("0", Token::number),
                 true
             }
         });
@@ -247,8 +256,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_real(true);
         t.set_packed_dimensions({
             {
-                Expression(Token("31", Token::number)),
-                Expression(Token("0", Token::number)),
+                std::make_shared<Token>("31", Token::number),
+                std::make_shared<Token>("0", Token::number),
                 true
             }
         });

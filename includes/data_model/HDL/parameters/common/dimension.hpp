@@ -20,20 +20,26 @@
 #include "data_model/HDL/parameters/components/Expression.hpp"
 
 typedef struct dims_struct{
-    Expression first_bound;
-    Expression second_bound;
+    std::shared_ptr<Parameter_value_base> first_bound;
+    std::shared_ptr<Parameter_value_base> second_bound;
     bool packed;
 
     template<class Archive>
     void serialize( Archive & ar ) {
         ar(first_bound, second_bound, packed);
     }
-    bool operator==(const dims_struct&) const = default;
+    bool operator==(const dims_struct& other) const {
+        bool ret = true;
+        ret &= *first_bound == *other.first_bound;
+        ret &= *second_bound == *other.second_bound;
+        ret &= packed == other.packed;
+        return ret;
+    };
 
     friend ::std::ostream& operator<<(::std::ostream& os, const dims_struct& dim) {
         return os << "dimension_t { "
-                  << "first_bound: " << dim.first_bound.print() << ", "
-                  << "second_bound: " << dim.second_bound.print() << ", "
+                  << "first_bound: " << dim.first_bound->print() << ", "
+                  << "second_bound: " << dim.second_bound->print() << ", "
                   << "packed: " << (dim.packed ? "true" : "false")
                   << " }";
     }

@@ -71,6 +71,8 @@ public:
     void set_packed();
     void set_member_signed(bool s);
 
+    void set_operation(Expression_v2::expression_operator subtract);
+
     static std::shared_ptr<hdl_type> create_primitive_type(const std::string &type_name);
     std::shared_ptr<hdl_type> resolve_type(const std::string &type_name);
 
