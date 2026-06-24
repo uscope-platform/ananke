@@ -59,7 +59,12 @@ void HDL_functions_factory::add_value(const std::shared_ptr<Parameter_value_base
 }
 
 void HDL_functions_factory::close_lvalue() {
+
     auto unwrapped_bit_index = Expression_v2::unwrap(*std::dynamic_pointer_cast<Expression_v2>(bit_index));
+    if (bit_index->is<Expression_v2>() &&
+        bit_index->as<Expression_v2>().get_operation() == Expression_v2::none &&
+        !bit_index->as<Expression_v2>().get_lhs()
+        ) unwrapped_bit_index = nullptr;
     if(current_assigned_variable == f.name) {
         f.start_assignment(current_assigned_variable, unwrapped_bit_index);
     } else {

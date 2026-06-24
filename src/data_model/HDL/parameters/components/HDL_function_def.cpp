@@ -36,7 +36,8 @@ HDL_function_def HDL_function_def::clone() {
 }
 
 void HDL_function_def::start_assignment(const std::string &n, const std::shared_ptr<Parameter_value_base> &idx) {
-    assignments.push_back({name, idx, {}});
+   if (idx == nullptr) assignments.push_back({name, {}, {}});
+    else assignments.push_back({name, idx, {}});
 }
 
 void HDL_function_def::close_assignment(const std::shared_ptr<Parameter_value_base> &val) {
