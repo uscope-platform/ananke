@@ -3674,7 +3674,11 @@ TEST(parameter_extraction, simple_function_parameter) {
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Token>("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("CTRL_ADDR_CALC");
-    assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Expression>(Expression(Token("100", Token::number))));
+    assignment a(
+        "CTRL_ADDR_CALC",
+        std::nullopt,
+        std::make_shared<Token>("100", Token::number)
+    );
     call.add_body({a},std::nullopt);
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
 
@@ -4101,11 +4105,11 @@ TEST(parameter_extraction, function_with_arguments) {
     HDL_function_call call("add");
     call.add_argument(std::make_shared<Token>("5", Token::number));
     call.add_argument(std::make_shared<Token>("7", Token::number));
-    call.add_assignment({"add",std::nullopt, std::make_shared<Expression>(Expression({
-        Token(5, 3),
-        Token(Token::add),
-        Token(7, 3),
-    })) });
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>(5, 3));
+    e.set_rhs(std::make_shared<Token>(7, 3));
+    e.set_operation(Expression_v2::add);
+    call.add_assignment({"add",std::nullopt, std::make_shared<Expression_v2>(e) });
     auto param_type = HDL_simple_type();
     param_type.add_dimension({
         std::make_shared<Token>("31", Token::number),

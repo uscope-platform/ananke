@@ -20,7 +20,7 @@
 
 void HDL_functions_factory::start_assignment(const std::string &n) {
     current_assigned_variable = n;
-    bit_index = std::make_shared<Expression>();
+    bit_index = std::make_shared<Expression_v2>();
 }
 
 void HDL_functions_factory::add_argument(const std::string &a) {
@@ -30,9 +30,13 @@ void HDL_functions_factory::add_argument(const std::string &a) {
 void HDL_functions_factory::add_component(const Token &c) {
     if (phase == body) {
         if (in_bit_selection) {
-            bit_index->as<Expression>().push_back(c);
-        } else if (is_raw_body()) {
-            new_expression.push_back(c);
+            if (c.is_operator()) {
+                bit_index->as<Expression_v2>().set_operation(map_operator_f(c.get_operation()));
+            } else if (!bit_index->as<Expression_v2>().get_lhs()) {
+                bit_index->as<Expression_v2>().set_lhs(std::make_shared<Token>(c));
+            } else {
+                bit_index->as<Expression_v2>().set_rhs(std::make_shared<Token>(c));
+            }
         } else if (c.is_operator()) {
             auto op = map_operator_f(c.get_operation());
             expr_factory_.set_operation(op);
@@ -86,27 +90,20 @@ void HDL_functions_factory::close_lvalue() {
     } else {
         ignore_assignment = true;
     }
-    new_expression.clear();
-    bit_index = std::make_shared<Expression>();
+    bit_index = std::make_shared<Expression_v2>();
 }
 
 void HDL_functions_factory::close_assignment() {
-    if(!ignore_assignment) {
-        if (assignment_value != nullptr) {
-            f.close_assignment(assignment_value);
-        } else {
-            f.close_assignment(std::make_shared<Expression>(new_expression));
-        }
+    if(!ignore_assignment && assignment_value != nullptr) {
+        f.close_assignment(assignment_value);
     }
 
     ignore_assignment = false;
-    new_expression.clear();
 }
 
 HDL_function_def HDL_functions_factory::get_function() {
     auto current_function = f;
     f = HDL_function_def();
-    new_expression.clear();
     active = false;
     return current_function;
 }
@@ -241,7 +238,7 @@ bool HDL_functions_factory::is_component_relevant() const {
 void HDL_functions_factory::start_bit_selection() {
     if (!top_as<replication_factory>()) {
         in_bit_selection = true;
-        bit_index = std::make_shared<Expression>();
+        bit_index = std::make_shared<Expression_v2>();
     }
 }
 

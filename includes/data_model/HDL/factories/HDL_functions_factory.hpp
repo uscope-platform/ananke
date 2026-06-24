@@ -22,7 +22,6 @@
 #include <string>
 
 #include "data_model/HDL/HDL_loop.hpp"
-#include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
@@ -90,7 +89,6 @@ private:
         body
     }phase;
     bool ignore_assignment = false;
-    Expression new_expression;
     std::shared_ptr<Parameter_value_base> assignment_value;
     std::string current_assigned_variable;
 };

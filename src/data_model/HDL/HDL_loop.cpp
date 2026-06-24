@@ -19,7 +19,7 @@
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 assignment::assignment(const std::string &n, const std::optional<std::shared_ptr<Parameter_value_base>> &idx,
-                       const std::shared_ptr<Expression> &val) {
+                       const std::shared_ptr<Parameter_value_base> &val) {
     name = n;
     index = idx;
     value = val;

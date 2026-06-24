@@ -31,7 +31,7 @@ class Expression;
 
 struct assignment {
     assignment() = default;
-    assignment(const std::string &n,const std::optional<std::shared_ptr<Parameter_value_base>> &idx, const  std::shared_ptr<Expression> &val);
+    assignment(const std::string &n,const std::optional<std::shared_ptr<Parameter_value_base>> &idx, const  std::shared_ptr<Parameter_value_base> &val);
     bool operator==(const assignment &rhs) const;
 
     template<class Archive>
