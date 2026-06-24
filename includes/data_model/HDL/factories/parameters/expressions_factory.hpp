@@ -17,7 +17,7 @@
 #ifndef ANANKE_EXPRESSIONS_FACTORY_HPP
 #define ANANKE_EXPRESSIONS_FACTORY_HPP
 
-#include "data_model/HDL/parameters/components/Expression.hpp"
+#include <stack>
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
 
@@ -32,7 +32,6 @@ public:
     void stop_expression(bool new_expr);
     std::optional<Expression_v2> pop_expression();
     void clear_expression() {
-        current.clear();
         current_v2 = Expression_v2();
         operation_set = false;
     }
@@ -54,13 +53,12 @@ private:
     bool paused = false;
     bool skip_nesting = false;
     int expression_level = 0;
-    Expression current;
     bool operation_set = false;
     Expression_v2 current_v2 ={};
     std::stack<Expression_v2> nested_expressions;
     std::stack<int> levels_stack;
     bool bit_select_active = false;
-    Expression_v2 bit_select_v2;
+    Expression_v2 bit_select_v2 = {};
 
 };
 

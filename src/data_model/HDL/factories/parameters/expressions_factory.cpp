@@ -142,17 +142,12 @@ void expressions_factory::add_component(const Token &ec) {
         return;
     }
 
-    if (ec.is_operator()) {
-
-    } else {
+    if (!ec.is_operator()) {
         auto tok = std::make_shared<Token>(ec);
         if (current_v2.get_lhs() == nullptr) {
             current_v2.set_lhs(tok);
         } else {
             current_v2.set_rhs(tok);
-        }
-        if (factory_active && !paused) {
-            current.emplace_back(tok);
         }
     }
     if (paused) paused = false;
@@ -165,7 +160,15 @@ void expressions_factory::set_operation(const Expression_v2::expression_operator
 
 
 void expressions_factory::add_index(const std::shared_ptr<Parameter_value_base>  &idx) {
-    current.add_index(idx);
+    std::shared_ptr<Parameter_value_base> target;
+    if (current_v2.get_rhs()) {
+        target = current_v2.get_rhs();
+    } else if (current_v2.get_lhs()) {
+        target = current_v2.get_lhs();
+    }
+    if (auto tok = std::dynamic_pointer_cast<Token>(target)) {
+        tok->add_array_index(idx);
+    }
 }
 
 void expressions_factory::consume(const std::shared_ptr<Parameter_value_base> &v) {
