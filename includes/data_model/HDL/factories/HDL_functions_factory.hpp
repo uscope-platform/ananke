@@ -66,6 +66,7 @@ public:
     bool is_component_relevant() const;
 
     void start_bit_selection();
+    Expression_v2::expression_operator map_operator_f(Token::sv_operators op);
 
     void stop_bit_selection();
 

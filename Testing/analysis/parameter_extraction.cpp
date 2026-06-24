@@ -3723,10 +3723,10 @@ TEST(parameter_extraction, concat_in_function) {
     assignment a("get_axis_metadata", std::nullopt, nullptr);
 
     Concatenation concat;
-    concat.add_component(std::make_shared<Expression>(Expression(Token("10'h0", Token::number))));
-    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b0", Token::number))));
-    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
-    concat.add_component(std::make_shared<Expression>(Expression(Token("1'b1", Token::number))));
+    concat.add_component(std::make_shared<Token>("10'h0", Token::number));
+    concat.add_component(std::make_shared<Token>("1'b0", Token::number));
+    concat.add_component(std::make_shared<Token>("1'b1", Token::number));
+    concat.add_component(std::make_shared<Token>("1'b1", Token::number));
 
     a.set_value(std::make_shared<Concatenation>(concat));
     call.add_body({a},std::nullopt);
@@ -3839,12 +3839,12 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     call.add_argument(std::make_shared<Token>("1'b0", Token::number));
     assignment a("get_axis_metadata", std::nullopt, nullptr);
     Cast c;
-    c.set_size(std::make_shared<Expression>(Token("4", Token::number)));
-    c.set_content(std::make_shared<Expression>(Expression({
-        Token("11", Token::number),
-        Token(Token::subtract),
-        Token("8", Token::number)
-    })));
+    c.set_size(std::make_shared<Token>("4", Token::number));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("11", Token::number));
+    e.set_rhs(std::make_shared<Token>("8", Token::number));
+    e.set_operation(Expression_v2::subtract);
+    c.set_content(std::make_shared<Expression_v2>(e));
     Concatenation concat;
     concat.add_component(std::make_shared<Token>("10'h0", Token::number));
     concat.add_component(std::make_shared<Token>("1'b0", Token::number));

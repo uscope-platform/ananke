@@ -49,7 +49,7 @@ void cast_factory::consume(const std::shared_ptr<Parameter_value_base> &c) {
                 new_cast.set_size(size_val);
             }
         } else {
-            spdlog::warn("non expression cast size: {}", c->print());
+            new_cast.set_size(c);
         }
     } else {
         new_cast.set_content(c);

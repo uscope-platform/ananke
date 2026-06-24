@@ -36,7 +36,6 @@ public:
         current_v2 = Expression_v2();
         operation_set = false;
     }
-    std::optional<Expression> get_expression();
     std::optional<Expression_v2> get_expression_v2();
     [[nodiscard]] int get_level() const {return expression_level;}
     void add_component(const Token &ec);

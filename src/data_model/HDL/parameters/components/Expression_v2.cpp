@@ -62,6 +62,16 @@ void Expression_v2::set_container_sizes(const resolved_type &s,
     for (auto &size:s.packed_sizes) current_size *= size;
 }
 
+void Expression_v2::propagate_expression(const qualified_identifier &constant_id,
+    const std::shared_ptr<Parameter_value_base> &value) {
+    if (lhs && !Token::try_replace_identifier(lhs, constant_id, value)) {
+        lhs->propagate_expression(constant_id, value);
+    }
+    if (rhs && !Token::try_replace_identifier(rhs, constant_id, value)) {
+        rhs->propagate_expression(constant_id, value);
+    }
+}
+
 bool operator==(const Expression_v2 &lhs, const Expression_v2 &rhs) {
     bool ret = true;
     ret &= *lhs.lhs == *rhs.lhs;

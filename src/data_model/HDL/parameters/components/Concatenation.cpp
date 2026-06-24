@@ -61,7 +61,9 @@ std::set<qualified_identifier> Concatenation::get_dependencies() const{
 void Concatenation::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {
     for (auto &comp:components) {
-        comp->propagate_expression(constant_id, value);
+        if (!Token::try_replace_identifier(comp, constant_id, value)) {
+            comp->propagate_expression(constant_id, value);
+        }
     }
 }
 

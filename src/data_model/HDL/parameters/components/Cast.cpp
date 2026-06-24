@@ -45,13 +45,6 @@ std::set<qualified_identifier> Cast::get_dependencies() const {
     return deps;
 }
 
-void Cast::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Parameter_value_base> &value) {
-
-    content->propagate_expression(constant_id, value);
-    if (size) size->propagate_expression(constant_id, value);
-}
-
 std::optional<resolved_parameter> Cast::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     if (type_cast) {
         if (!container_size) return std::nullopt;
@@ -100,6 +93,13 @@ std::string Cast::print() const {
     if (type_cast) prefix = target_type;
     else if (size) prefix = size->print();
     return  prefix + "'(" + content->print() + ")";
+}
+
+void Cast::propagate_expression(const qualified_identifier &constant_id,
+    const std::shared_ptr<Parameter_value_base> &value) {
+
+    content->propagate_expression(constant_id, value);
+    if (size) size->propagate_expression(constant_id, value);
 }
 
 int64_t Cast::get_size() {

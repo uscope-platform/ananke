@@ -63,7 +63,7 @@ void expressions_factory::start_expression(bool new_expr) {
         } else {
             current_v2 = Expression_v2();
         }
-    } else if (!factory_active) {
+    } else if (!factory_active || skip_nesting) {
         current_v2 = Expression_v2();
     }
     factory_active = true;
@@ -99,10 +99,6 @@ std::optional<Expression_v2> expressions_factory::pop_expression() {
     return inner;
 }
 
-std::optional<Expression> expressions_factory::get_expression() {
-    if (current.empty()) return std::nullopt;
-    return current;
-}
 
 std::optional<Expression_v2> expressions_factory::get_expression_v2() {
     return current_v2;

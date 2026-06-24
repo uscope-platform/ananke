@@ -106,6 +106,9 @@ public:
     } operator_type_t;
 
     static token_type get_type(const std::string &s);
+    static bool try_replace_identifier(std::shared_ptr<Parameter_value_base> &slot,
+                                        const qualified_identifier &constant_id,
+                                        const std::shared_ptr<Parameter_value_base> &value);
     operator_type_t get_operator_type();
 
     friend bool operator==(const Token &lhs, const Token &rhs);

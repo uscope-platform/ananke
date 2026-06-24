@@ -261,3 +261,16 @@ bool operator==(const Token &lhs, const Token &rhs) {
     if (!(lhs.call == nullptr && rhs.call == nullptr)) ret_val &= *lhs.call == *rhs.call;
     return ret_val;
 }
+
+bool Token::try_replace_identifier(std::shared_ptr<Parameter_value_base> &slot,
+                                    const qualified_identifier &constant_id,
+                                    const std::shared_ptr<Parameter_value_base> &value) {
+    if (slot->is<Token>() && slot->as<Token>().is_identifier()) {
+        auto tok_val = slot->as<Token>().get_value();
+        if (tok_val.has_value() && tok_val.value().get_string() == constant_id.name) {
+            slot = value;
+            return true;
+        }
+    }
+    return false;
+}
