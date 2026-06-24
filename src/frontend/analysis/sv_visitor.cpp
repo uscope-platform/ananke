@@ -482,11 +482,14 @@ void sv_visitor::exitOperator_plus_minus(sv2017::Operator_plus_minusContext *ctx
         params_factory.set_operation(Expression_v2::expression_operator::add);
         type_engine.set_operation(Expression_v2::expression_operator::add);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::add);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::add);
+
     }
     if (ctx->MINUS()) {
         params_factory.set_operation(Expression_v2::expression_operator::subtract);
         type_engine.set_operation(Expression_v2::expression_operator::subtract);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::subtract);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::subtract);
     }
 
 
@@ -501,16 +504,19 @@ void sv_visitor::exitOperator_mul_div_mod(sv2017::Operator_mul_div_modContext *c
         params_factory.set_operation(Expression_v2::expression_operator::divide);
         type_engine.set_operation(Expression_v2::expression_operator::divide);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::divide);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::divide);
     }
     if (ctx->MOD()) {
         params_factory.set_operation(Expression_v2::expression_operator::modulo);
         type_engine.set_operation(Expression_v2::expression_operator::modulo);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::modulo);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::modulo);
     }
     if (ctx->MUL()) {
         params_factory.set_operation(Expression_v2::expression_operator::multiply);
         type_engine.set_operation(Expression_v2::expression_operator::multiply);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::multiply);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::multiply);
     }
 
 }
@@ -525,21 +531,25 @@ void sv_visitor::exitOperator_shift(sv2017::Operator_shiftContext *ctx) {
     if (ctx->SHIFT_LEFT()) {
         params_factory.set_operation(Expression_v2::expression_operator::logic_shift_left);
         type_engine.set_operation(Expression_v2::expression_operator::logic_shift_left);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::logic_shift_left);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::logic_shift_left);
     }
     if (ctx->SHIFT_RIGHT()) {
         params_factory.set_operation(Expression_v2::expression_operator::logic_shift_right);
         type_engine.set_operation(Expression_v2::expression_operator::logic_shift_right);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::logic_shift_right);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::logic_shift_right);
     }
     if (ctx->ARITH_SHIFT_LEFT()) {
         params_factory.set_operation(Expression_v2::expression_operator::arithmetic_shift_left);
         type_engine.set_operation(Expression_v2::expression_operator::arithmetic_shift_left);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::arithmetic_shift_left);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::arithmetic_shift_left);
     }
     if (ctx->ARITH_SHIFT_RIGHT()) {
         params_factory.set_operation(Expression_v2::expression_operator::arithmetic_shift_right);
         type_engine.set_operation(Expression_v2::expression_operator::arithmetic_shift_right);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::arithmetic_shift_right);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::arithmetic_shift_right);
     }
 }
@@ -551,11 +561,13 @@ void sv_visitor::exitUnary_operator(sv2017::Unary_operatorContext *ctx) {
     if (ctx->PLUS()) {
         params_factory.set_operation(Expression_v2::expression_operator::add);
         type_engine.set_operation(Expression_v2::expression_operator::add);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::add);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::add);
     }
     if (ctx->MINUS()) {
         params_factory.set_operation(Expression_v2::expression_operator::subtract);
         type_engine.set_operation(Expression_v2::expression_operator::subtract);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::subtract);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::subtract);
     }
 }
@@ -569,21 +581,25 @@ void sv_visitor::exitOperator_cmp(sv2017::Operator_cmpContext *ctx) {
     if (ctx->GT()) {
         params_factory.set_operation(Expression_v2::expression_operator::greater);
         type_engine.set_operation(Expression_v2::expression_operator::greater);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::greater);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::greater);
     }
     if (ctx->GE()) {
         params_factory.set_operation(Expression_v2::expression_operator::greater_equal);
         type_engine.set_operation(Expression_v2::expression_operator::greater_equal);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::greater_equal);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::greater_equal);
     }
     if (ctx->LT()) {
         params_factory.set_operation(Expression_v2::expression_operator::less);
         type_engine.set_operation(Expression_v2::expression_operator::less);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::less);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::less);
     }
     if (ctx->LE()) {
         params_factory.set_operation(Expression_v2::expression_operator::less_equal);
         type_engine.set_operation(Expression_v2::expression_operator::less_equal);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::less_equal);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::less_equal);
     }
 }
@@ -595,16 +611,13 @@ void sv_visitor::exitOperator_eq_neq(sv2017::Operator_eq_neqContext *ctx) {
     if (ctx->EQ()) {
         params_factory.set_operation(Expression_v2::expression_operator::equal);
         type_engine.set_operation(Expression_v2::expression_operator::equal);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::equal);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::equal);
     }
     if (ctx->NE()) {
         params_factory.set_operation(Expression_v2::expression_operator::not_equal);
         type_engine.set_operation(Expression_v2::expression_operator::not_equal);
-        if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::not_equal);
-    }
-    if (ctx->NE()) {
-        params_factory.set_operation(Expression_v2::expression_operator::not_equal);
-        type_engine.set_operation(Expression_v2::expression_operator::not_equal);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::not_equal);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::not_equal);
     }
 }
@@ -613,12 +626,14 @@ void sv_visitor::exitOperator_bitwise_and(sv2017::Operator_bitwise_andContext *c
     route_expression_component(Token(Token::bitwise_and));
     params_factory.set_operation(Expression_v2::expression_operator::bitwise_and);
     type_engine.set_operation(Expression_v2::expression_operator::bitwise_and);
+    if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::bitwise_and);
     if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::bitwise_and);
 }
 
 void sv_visitor::exitOperator_bitwise_or(sv2017::Operator_bitwise_orContext *ctx) {
     params_factory.set_operation(Expression_v2::expression_operator::bitwise_or);
     type_engine.set_operation(Expression_v2::expression_operator::bitwise_or);
+    if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::bitwise_or);
     if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::bitwise_or);
     route_expression_component(Token(Token::bitwise_or));
 }
@@ -627,14 +642,17 @@ void sv_visitor::exitOperator_xor(sv2017::Operator_xorContext *ctx) {
     if (ctx->XOR()) route_expression_component(Token(Token::bitwise_xor));
     if (ctx->XORN()|| ctx->NXOR()) route_expression_component(Token(Token::bitwise_xnor));
 
+
     if (ctx->XOR()) {
         params_factory.set_operation(Expression_v2::expression_operator::bitwise_xor);
         type_engine.set_operation(Expression_v2::expression_operator::bitwise_xor);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::bitwise_xor);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::bitwise_xor);
     }
     if (ctx->XORN()|| ctx->NXOR()) {
         params_factory.set_operation(Expression_v2::expression_operator::bitwise_xnor);
         type_engine.set_operation(Expression_v2::expression_operator::bitwise_xnor);
+        if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::bitwise_xnor);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::bitwise_xnor);
     }
 }
@@ -643,6 +661,7 @@ void sv_visitor::exitOperator_power(sv2017::Operator_powerContext *ctx) {
     route_expression_component(Token(Token::power));
     params_factory.set_operation(Expression_v2::expression_operator::power);
     type_engine.set_operation(Expression_v2::expression_operator::power);
+    if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::power);
     if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::power);
 }
 
@@ -650,12 +669,14 @@ void sv_visitor::exitOperator_log_and(sv2017::Operator_log_andContext *ctx) {
     route_expression_component(Token(Token::logical_and));
     params_factory.set_operation(Expression_v2::expression_operator::logical_and);
     type_engine.set_operation(Expression_v2::expression_operator::logical_and);
+    if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::logical_and);
     if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::logical_and);
 };
 void sv_visitor::exitOperator_log_or(sv2017::Operator_log_orContext *ctx) {
     route_expression_component(Token(Token::logical_or));
     params_factory.set_operation(Expression_v2::expression_operator::logical_or);
     type_engine.set_operation(Expression_v2::expression_operator::logical_or);
+    if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::logical_or);
     if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::logical_or);
 };
 

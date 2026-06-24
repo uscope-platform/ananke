@@ -46,7 +46,7 @@ TEST(function_processing, simple_function_scalar) {
 
     HDL_function_def check_f;
     check_f.set_name("CTRL_ADDR_CALC");
-    assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Expression>(Expression(Token("67", Token::number))));
+    assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Token>("67", Token::number));
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,functions["CTRL_ADDR_CALC"]);
 
@@ -84,20 +84,20 @@ TEST(function_processing, simple_function_array) {
     check_f.set_name("CTRL_ADDR_CALC");
     assignment a(
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("0", Token::number))),
-        std::make_shared<Expression>(Expression(Token("100", Token::number)))
+        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Token>("100", Token::number)
         );
     check_f.add_assignment(a);
     a = assignment(
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("1", Token::number))),
-        std::make_shared<Expression>(Expression(Token("200", Token::number)))
+        std::make_shared<Token>("1", Token::number),
+        std::make_shared<Token>("200", Token::number)
         );
     check_f.add_assignment(a);
     a = assignment(
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("2", Token::number))),
-        std::make_shared<Expression>(Expression(Token("300", Token::number)))
+        std::make_shared<Token>("2", Token::number),
+        std::make_shared<Token>("300", Token::number)
         );
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);

@@ -65,10 +65,11 @@ public:
     bool is_component_relevant() const;
 
     void start_bit_selection();
-    Expression_v2::expression_operator map_operator_f(Token::sv_operators op);
     std::shared_ptr<Parameter_value_base> get_last_value() const { return assignment_value; }
 
     void stop_bit_selection();
+
+    void set_operation(Expression_v2::expression_operator op);
 
 private:
     template<typename T>

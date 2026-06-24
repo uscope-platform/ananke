@@ -36,16 +36,7 @@ HDL_function_def HDL_function_def::clone() {
 }
 
 void HDL_function_def::start_assignment(const std::string &n, const std::shared_ptr<Parameter_value_base> &idx) {
-    bool has_index = false;
-    if (auto e = std::dynamic_pointer_cast<Expression_v2>(idx)) {
-        has_index = e->get_lhs() != nullptr;
-    } else if (auto e = std::dynamic_pointer_cast<Expression>(idx)) {
-        has_index = !e->empty();
-    }
-    if (!has_index)
-        assignments.push_back({name, {}, {}});
-    else
-        assignments.push_back({name, idx, {}});
+    assignments.push_back({name, idx, {}});
 }
 
 void HDL_function_def::close_assignment(const std::shared_ptr<Parameter_value_base> &val) {
