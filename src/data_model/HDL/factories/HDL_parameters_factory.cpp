@@ -362,9 +362,9 @@ void HDL_parameters_factory::stop_function_call() {
         } else if(expr_factory.active()) {
             expr_factory.add_component(ec);
         } else if (top_as<concatenation_factory>()) {
-            consumer_stack.top()->consume(std::make_shared<Expression>(Expression({ec})));
+            consumer_stack.top()->consume(call);
         } else if (top_as<replication_factory>()) {
-            consumer_stack.top()->consume(std::make_shared<Expression>(Expression({ec})));
+            consumer_stack.top()->consume(call);
         } else if (ctx == param_context::packed_dim || ctx == param_context::declaration || ctx == param_context::override) {
             current_resource.set_type(current_type);
             current_resource.set_raw_value(call);

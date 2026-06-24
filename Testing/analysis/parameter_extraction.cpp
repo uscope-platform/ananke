@@ -1284,7 +1284,7 @@ TEST(parameter_extraction, simple_expressions) {
     p->set_name("simple_log_expr_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     call = HDL_function_call("$clog2");
-    call.add_argument(std::make_shared<Expression>(Expression(Token("add_expr_p", Token::identifier))));
+    call.add_argument(std::make_shared<Token>("add_expr_p", Token::identifier));
     p->set_raw_value(std::make_shared<HDL_function_call>(call));
 
     check_params.insert(p);
