@@ -135,7 +135,7 @@ TEST(function_processing, simple_loop_function) {
 
     HDL_parameter p;
     p.set_name("i");
-    p.add_component(Token("0", Token::number));
+    p.set_raw_value(std::make_shared<Token>("0", Token::number));
     metadata.set_init(p);
 
     Expression_v2 e;
@@ -149,10 +149,13 @@ TEST(function_processing, simple_loop_function) {
     e.set_operation(Expression_v2::add);
     metadata.set_iter(e);
 
+    e.set_lhs(std::make_shared<Token>("100", Token::number));
+    e.set_rhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_operation(Expression_v2::multiply);
     assignment a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("i", Token::identifier))),
-        std::make_shared<Expression>(Expression({Token("100", Token::number), Token(Token::multiply), Token("i", Token::identifier)}))
+        std::make_shared<Token>("i", Token::identifier),
+        std::make_shared<Expression_v2>(e)
     };
 
     metadata.add_assignment(a);
@@ -191,7 +194,7 @@ TEST(function_processing, parametric_loop_function) {
 
     HDL_parameter p;
     p.set_name("i");
-    p.add_component(Token("0", Token::number));
+    p.set_raw_value(std::make_shared<Token>("0", Token::number));
     metadata.set_init(p);
 
     Expression_v2 e;
@@ -201,14 +204,18 @@ TEST(function_processing, parametric_loop_function) {
     metadata.set_end_c(e);
 
     e.set_lhs(std::make_shared<Token>("i", Token::identifier));
-    e.set_rhs(std::make_shared<Token>("1", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
     e.set_operation(Expression_v2::add);
     metadata.set_iter(e);
 
+
+    e.set_lhs(std::make_shared<Token>("100", Token::number));
+    e.set_rhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_operation(Expression_v2::multiply);
     assignment a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("i", Token::identifier))),
-        std::make_shared<Expression>(Expression({Token("100", Token::number), Token(Token::multiply), Token("i", Token::identifier)}))
+        std::make_shared<Token>("i", Token::identifier),
+        std::make_shared<Expression_v2>(e)
     };
 
     metadata.add_assignment(a);
@@ -248,7 +255,7 @@ TEST(function_processing, complex_loop_function) {
 
     HDL_parameter p;
     p.set_name("i");
-    p.add_component(Token("1", Token::number));
+    p.set_raw_value(std::make_shared<Token>("1", Token::number));
     metadata.set_init(p);
     Expression_v2 e, e2;
     e2.set_lhs(std::make_shared<Token>("N_CORES", Token::identifier));
@@ -260,28 +267,32 @@ TEST(function_processing, complex_loop_function) {
     metadata.set_end_c(e);
 
     e.set_lhs(std::make_shared<Token>("i", Token::identifier));
-    e.set_rhs(std::make_shared<Token>("1", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
     e.set_operation(Expression_v2::add);
     metadata.set_iter(e);
 
+    e.set_lhs(std::make_shared<Token>("100", Token::number));
+    e.set_rhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_operation(Expression_v2::multiply);
+
     assignment a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("i", Token::identifier))),
-        std::make_shared<Expression>(Expression({Token("100", Token::number), Token(Token::multiply), Token("i", Token::identifier)}))
+        std::make_shared<Token>("i", Token::identifier),
+        std::make_shared<Expression_v2>(e)
     };
 
     metadata.add_assignment(a);
     check_f.add_loop_metadata(metadata);
     a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("0", Token::number))),
-        std::make_shared<Expression>(Expression(Token("44", Token::number)))
+        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Token>("44", Token::number)
     };
     check_f.add_assignment(a);
     a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("4", Token::number))),
-        std::make_shared<Expression>(Expression(Token("667", Token::number)))
+        std::make_shared<Token>("4", Token::number),
+        std::make_shared<Token>("667", Token::number)
     };
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);
@@ -316,14 +327,14 @@ TEST(function_processing, parametrized_function) {
 
     assignment a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("0", Token::number))),
-        std::make_shared<Expression>(Expression(Token("44", Token::number)))
+        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Token>("44", Token::number)
     };
     check_f.add_assignment(a);
     a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("N_CORES", Token::identifier))),
-        std::make_shared<Expression>(Expression(Token("33", Token::number)))
+        std::make_shared<Token>("N_CORES", Token::identifier),
+        std::make_shared<Token>("33", Token::number)
     };
     check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);
@@ -356,12 +367,13 @@ TEST(function_processing, package_assignment) {
     HDL_function_def check_f;
     check_f.set_name("CTRL_ADDR_CALC");
 
+    Token t("bus_base", Token::identifier);
+    t.set_package_prefix("hil_address_space");
     assignment a = {
         "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("0", Token::number))),
-        std::make_shared<Expression>(Expression(Token("bus_base", Token::identifier)))
+        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Token>(t)
     };
-    a.get_value()->as<Expression>().components[0]->as<Token>().set_package_prefix("hil_address_space");
     check_f.add_assignment(a);
 
     EXPECT_EQ(check_f,result);
