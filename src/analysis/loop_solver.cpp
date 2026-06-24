@@ -26,7 +26,7 @@ std::vector<hdl_integer> loop_solver::solve_loop(std::shared_ptr<HDL_instance_AS
    return solve_loop(node->get_inner_loop(), context);
 }
 
-bool loop_solver::is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression end_cond,const std::map<qualified_identifier, resolved_parameter> &context) {
+bool loop_solver::is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression_v2 end_cond,const std::map<qualified_identifier, resolved_parameter> &context) {
     auto val = lv->get_numeric_value();
     if(!val.has_value()) throw std::runtime_error("Could not get the numeric value of a loop variable, something is seriously wrong");
     auto ctx = context;
@@ -49,7 +49,7 @@ std::shared_ptr<HDL_parameter> loop_solver::get_init_variable(const HDL_loop_met
 }
 
 std::shared_ptr<HDL_parameter> loop_solver::update_loop(
-    Expression e,
+    Expression_v2 e,
     std::shared_ptr<HDL_parameter> loop_var,
     const std::map<qualified_identifier, resolved_parameter> &context
     ) {

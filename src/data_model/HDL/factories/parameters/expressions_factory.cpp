@@ -76,7 +76,7 @@ void expressions_factory::start_expression(bool new_expr) {
 void expressions_factory::stop_expression(bool new_expr) {
     if (new_expr) {
         if (!nested_expressions.empty()) {
-            auto tmp_exp = std::make_shared<Expression_v2>(current_v2);
+            auto tmp_exp = Expression_v2::unwrap(current_v2);
             current_v2 = nested_expressions.top(); nested_expressions.pop();
             if (current_v2.get_lhs()!= nullptr) {
                 current_v2.set_rhs(tmp_exp);
@@ -114,7 +114,7 @@ void expressions_factory::stop_bit_selection() {
             auto idx = bit_select_v2.get_lhs();
             add_index(idx);
         } else if (has_op || has_rhs) {
-            auto idx = std::make_shared<Expression_v2>(std::move(bit_select_v2));
+            auto idx = Expression_v2::unwrap(std::move(bit_select_v2));
             add_index(idx);
         }
         bit_select_v2 = Expression_v2();

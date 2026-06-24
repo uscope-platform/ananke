@@ -20,6 +20,7 @@
 #include "data_model/HDL/HDL_instance.hpp"
 #include "data_model/HDL/HDL_loop.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 class HDL_loops_factory {
 public:
@@ -28,7 +29,7 @@ public:
     void clear();
 
     void add_instance(HDL_instance &i);
-    void add_expression(const Expression &e);
+    void add_expression(const Expression_v2 &e);
     void set_identifier(HDL_parameter &id) {loop_specs.set_init(id);}
     void start_assignment(const std::string &name);
     std::vector<HDL_instance> get_instances();
@@ -46,11 +47,12 @@ public:
     void set_phase(loop_phase_t p);
     void advance_expression();
     void close_expression();
+    static Expression_v2::expression_operator map_operator(Token::sv_operators op);
 private:
     std::vector<HDL_instance> repeated_instances;
     HDL_loop_metadata loop_specs;
 
-    Expression current_expression;
+    Expression_v2 current_expression;
 
     loop_phase_t loop_phase = init;
     bool expression_valid = false;

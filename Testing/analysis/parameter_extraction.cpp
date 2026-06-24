@@ -3950,27 +3950,27 @@ TEST(parameter_extraction, loop_function_parameter) {
     HDL_loop_metadata loop;
     HDL_parameter idx;
     idx.set_name("i");
-    idx.add_component(Token("0", Token::number));
+    idx.set_raw_value(std::make_shared<Token>("0", Token::number));
     loop.set_init(idx);
-    loop.set_end_c({
-        Token("i", Token::identifier),
-        Token(Token::less),
-        Token("3", Token::number),
-    });
-    loop.set_iter({
-        Token("i", Token::identifier),
-        Token(Token::add),
-        Token("1", Token::number),
-    });
+
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("3", Token::number));
+    e.set_operation(Expression_v2::less);
+    loop.set_end_c(e);
+
+    e.set_lhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::add);
+    loop.set_iter(e);
+
+    e.set_lhs(std::make_shared<Token>("100", Token::number));
+    e.set_rhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_operation(Expression_v2::multiply);
     assignment a(
     "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("i", Token::identifier))),
-        std::make_shared<Expression>(Expression({
-            Token("100", Token::number),
-            Token(Token::multiply),
-            Token("i", Token::identifier)
-        }
-        )));
+        std::make_shared<Token>("i", Token::identifier),
+        std::make_shared<Expression_v2>(e));
     loop.add_assignment(a);
     call.add_body({},loop);
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
@@ -4025,28 +4025,30 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     HDL_loop_metadata loop;
     HDL_parameter idx;
     idx.set_name("i");
-    idx.add_component(Token("0", Token::number));
+    idx.set_raw_value(std::make_shared<Token>("0", Token::number));
     loop.set_init(idx);
-    loop.set_end_c({
-        Token("i", Token::identifier),
-        Token(Token::less),
-        Token("N_CHAINS", Token::identifier),
-    });
-    loop.set_iter({
-        Token("i", Token::identifier),
-        Token(Token::add),
-        Token("1", Token::number),
-    });
+
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("N_CHAINS", Token::identifier));
+    e.set_operation(Expression_v2::less);
+    loop.set_end_c(e);
+
+    e.set_lhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::add);
+    loop.set_iter(e);
+
+    e.set_lhs(std::make_shared<Token>("OFFSET", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_operation(Expression_v2::multiply);
     assignment a(
-    "CTRL_ADDR_CALC",
-        std::make_shared<Expression>(Expression(Token("i", Token::identifier))),
-        std::make_shared<Expression>(Expression({
-            Token("OFFSET", Token::identifier),
-            Token(Token::multiply),
-            Token("i", Token::identifier)
-        })
-        ));
+        "CTRL_ADDR_CALC",
+        std::make_shared<Token>("i", Token::identifier),
+        std::make_shared<Expression_v2>(e)
+    );
     loop.add_assignment(a);
+
     call.add_body({},loop);
     auto param_type = HDL_simple_type();
     param_type.add_dimension({
@@ -4249,8 +4251,17 @@ TEST(parameter_extraction, generate_for) {
     p.add_component(Token("0", Token::number));
 
     check_loop.set_init(p);
-    check_loop.set_end_c({Token("n", Token::identifier), Token(Token::less), Token("N_REPETITIONS", Token::identifier)});
-    check_loop.set_iter({Token("n", Token::identifier), Token(Token::add), Token("1", Token::number)});
+
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("n", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("N_REPETITIONS", Token::identifier));
+    e.set_operation(Expression_v2::less);
+    check_loop.set_end_c(e);
+
+    e.set_lhs(std::make_shared<Token>("n", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::add);
+    check_loop.set_iter(e);
 
 
     ASSERT_EQ(loop, check_loop);

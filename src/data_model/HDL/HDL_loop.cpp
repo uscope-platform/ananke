@@ -15,7 +15,6 @@
 
 #include "data_model/HDL/HDL_loop.hpp"
 
-#include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 assignment::assignment(const std::string &n, const std::optional<std::shared_ptr<Parameter_value_base>> &idx,
@@ -75,15 +74,15 @@ HDL_loop_metadata::HDL_loop_metadata(const HDL_loop_metadata &other)
         : init(other.init),
           assignments(other.assignments) {
 
-    end_c = other.end_c ? std::make_unique<Expression>(*other.end_c): nullptr;
-    iter = other.iter ? std::make_unique<Expression>(*other.iter): nullptr;
+    end_c = other.end_c ? std::make_unique<Expression_v2>(*other.end_c): nullptr;
+    iter = other.iter ? std::make_unique<Expression_v2>(*other.iter): nullptr;
 }
 
 HDL_loop_metadata HDL_loop_metadata::clone() const{
     HDL_loop_metadata ret_val;
     ret_val.init = init ? init->clone(): nullptr;
-    ret_val.end_c = end_c ? std::make_unique<Expression>(*end_c): nullptr;
-    ret_val.iter = iter ? std::make_unique<Expression>(*iter): nullptr;
+    ret_val.end_c = end_c ? std::make_unique<Expression_v2>(*end_c): nullptr;
+    ret_val.iter = iter ? std::make_unique<Expression_v2>(*iter): nullptr;
     for(const auto &a:assignments) {
         ret_val.assignments.push_back(a.clone());
     }
@@ -102,8 +101,8 @@ HDL_loop_metadata & HDL_loop_metadata::operator=(const HDL_loop_metadata &other)
     if(this == &other)
         return *this;
     init = other.init;
-    end_c = other.end_c ? std::make_unique<Expression>(*other.end_c): nullptr;
-    iter = other.iter ? std::make_unique<Expression>(*other.iter): nullptr;
+    end_c = other.end_c ? std::make_unique<Expression_v2>(*other.end_c): nullptr;
+    iter = other.iter ? std::make_unique<Expression_v2>(*other.iter): nullptr;
     assignments = other.assignments;
     return *this;
 }
@@ -141,11 +140,11 @@ std::set<qualified_identifier> HDL_loop_metadata::get_dependencies() const {
 void HDL_loop_metadata::set_init(const HDL_parameter &p) {
     init = std::make_shared<HDL_parameter>(p);
 }
-void HDL_loop_metadata::set_end_c(const Expression &e) {
-    end_c = std::make_unique<Expression>(e);
+void HDL_loop_metadata::set_end_c(const Expression_v2 &e) {
+    end_c = std::make_unique<Expression_v2>(e);
 }
-void HDL_loop_metadata::set_iter(const Expression &i) {
-    iter = std::make_unique<Expression>(i);
+void HDL_loop_metadata::set_iter(const Expression_v2 &i) {
+    iter = std::make_unique<Expression_v2>(i);
 }
 
 
@@ -153,13 +152,14 @@ HDL_parameter HDL_loop_metadata::get_init() const {
     if(init == nullptr) return HDL_parameter();
     return *init;
 }
-Expression HDL_loop_metadata::get_end_c() const {
-    if(end_c == nullptr) return Expression();
+
+Expression_v2 HDL_loop_metadata::get_end_c() const {
+    if(end_c == nullptr) return Expression_v2();
     return *end_c;
 }
 
-Expression HDL_loop_metadata::get_iter() const {
-    if(iter == nullptr) return Expression();
+Expression_v2 HDL_loop_metadata::get_iter() const {
+    if(iter == nullptr) return Expression_v2();
     return *iter;
 }
 

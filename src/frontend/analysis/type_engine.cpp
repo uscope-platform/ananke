@@ -143,11 +143,11 @@ void Type_engine::stop_expression() {
         auto expr = expr_factory.get_expression_v2();
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
-                r_factory.add_expression(std::make_shared<Expression_v2>(expr.value()));
+                r_factory.add_expression(Expression_v2::unwrap(expr.value()));
             } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
                 r_factory.add_expression(lhs);
             } else {
-                r_factory.add_expression(std::make_shared<Expression_v2>(expr.value()));
+                r_factory.add_expression(Expression_v2::unwrap(expr.value()));
             }
         }
         expr_factory.clear_expression();

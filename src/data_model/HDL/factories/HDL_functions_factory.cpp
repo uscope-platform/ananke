@@ -177,7 +177,7 @@ void HDL_functions_factory::stop_cast() {
         expr_factory_.clear_expression();
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
-                consumer_stack.top()->consume(std::make_shared<Expression_v2>(std::move(*expr)));
+                consumer_stack.top()->consume(Expression_v2::unwrap(std::move(*expr)));
             } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
                 consumer_stack.top()->consume(lhs);
             } else if (auto lhs = expr->get_lhs()) {
@@ -209,7 +209,7 @@ void HDL_functions_factory::advance_cast() {
         auto expr = expr_factory_.get_expression_v2();
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
-                cast->consume(std::make_shared<Expression_v2>(std::move(*expr)));
+                cast->consume(Expression_v2::unwrap(std::move(*expr)));
             } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
                 cast->consume(lhs);
             } else if (auto lhs = expr->get_lhs()) {
@@ -231,7 +231,7 @@ void HDL_functions_factory::stop_expression() {
         auto expr = expr_factory_.get_expression_v2();
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
-                add_value(std::make_shared<Expression_v2>(std::move(*expr)));
+                add_value(Expression_v2::unwrap(std::move(*expr)));
             } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
                 add_value(lhs);
             } else if (auto lhs = expr->get_lhs()) {

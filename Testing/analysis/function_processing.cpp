@@ -137,16 +137,17 @@ TEST(function_processing, simple_loop_function) {
     p.set_name("i");
     p.add_component(Token("0", Token::number));
     metadata.set_init(p);
-    metadata.set_end_c({
-        Token("i", Token::identifier),
-        Token(Token::less),
-        Token("3", Token::number)
-        });
 
-    metadata.set_iter({
-        Token("i", Token::identifier),
-        Token(Token::add),
-        Token("1", Token::number)});
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("3", Token::number));
+    e.set_operation(Expression_v2::less);
+    metadata.set_end_c(e);
+
+    e.set_lhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::add);
+    metadata.set_iter(e);
 
     assignment a = {
         "CTRL_ADDR_CALC",
@@ -192,16 +193,17 @@ TEST(function_processing, parametric_loop_function) {
     p.set_name("i");
     p.add_component(Token("0", Token::number));
     metadata.set_init(p);
-    metadata.set_end_c({
-        Token("i", Token::identifier),
-        Token(Token::less),
-        Token("N_CORES", Token::identifier)
-        });
 
-    metadata.set_iter({
-        Token("i", Token::identifier),
-        Token(Token::add),
-        Token("1", Token::number)});
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("N_CORES", Token::identifier));
+    e.set_operation(Expression_v2::less);
+    metadata.set_end_c(e);
+
+    e.set_lhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::identifier));
+    e.set_operation(Expression_v2::add);
+    metadata.set_iter(e);
 
     assignment a = {
         "CTRL_ADDR_CALC",
@@ -248,19 +250,19 @@ TEST(function_processing, complex_loop_function) {
     p.set_name("i");
     p.add_component(Token("1", Token::number));
     metadata.set_init(p);
-    metadata.set_end_c({
-                Token("i", Token::identifier),
-               Token(Token::less),
-               Token("N_CORES", Token::identifier),
-               Token( Token::add),
-               Token("1", Token::number)
-    });
+    Expression_v2 e, e2;
+    e2.set_lhs(std::make_shared<Token>("N_CORES", Token::identifier));
+    e2.set_rhs(std::make_shared<Token>("1", Token::number));
+    e2.set_operation(Expression_v2::add);
+    e.set_lhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_rhs(std::make_shared<Expression_v2>(e2));
+    e.set_operation(Expression_v2::less);
+    metadata.set_end_c(e);
 
-    metadata.set_iter({
-            Token("i", Token::identifier),
-            Token(Token::add),
-            Token("1", Token::number)
-        });
+    e.set_lhs(std::make_shared<Token>("i", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::identifier));
+    e.set_operation(Expression_v2::add);
+    metadata.set_iter(e);
 
     assignment a = {
         "CTRL_ADDR_CALC",

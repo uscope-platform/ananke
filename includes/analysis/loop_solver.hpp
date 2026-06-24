@@ -30,11 +30,11 @@ public:
 private:
     static std::shared_ptr<HDL_parameter> get_init_variable(const HDL_loop_metadata &l, const std::map<qualified_identifier, resolved_parameter> &context);
     static std::shared_ptr<HDL_parameter> update_loop(
-        Expression e,
+        Expression_v2 e,
         std::shared_ptr<HDL_parameter> loop_var,
         const std::map<qualified_identifier, resolved_parameter> &context
     );
-    static bool is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression end_cond,const std::map<qualified_identifier, resolved_parameter> &context);
+    static bool is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression_v2 end_cond,const std::map<qualified_identifier, resolved_parameter> &context);
 };
 
 

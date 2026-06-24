@@ -24,9 +24,9 @@
 
 #include "parameters/common/qualified_identifier.hpp"
 #include "parameters/components/Parameter_value_base.hpp"
+#include "parameters/components/Expression_v2.hpp"
 
 class HDL_parameter;
-class Expression;
 
 
 struct assignment {
@@ -70,16 +70,16 @@ public:
     std::set<qualified_identifier> get_dependencies() const;
 
     void set_init(const HDL_parameter &p);
-    void set_end_c(const Expression &e);
-    void set_iter(const Expression &i);
+    void set_end_c(const Expression_v2 &e);
+    void set_iter(const Expression_v2 &i);
 
     void add_assignment(const assignment &a);
 
     void set_assignments(const std::vector<assignment> &a);
 
     HDL_parameter get_init() const;
-    Expression get_end_c() const;
-    Expression get_iter() const;
+    Expression_v2 get_end_c() const;
+    Expression_v2 get_iter() const;
 
     std::vector<assignment> get_assignments() const;
 
@@ -95,8 +95,8 @@ public:
 private:
 
     std::shared_ptr<HDL_parameter> init;
-    std::unique_ptr<Expression> end_c;
-    std::unique_ptr<Expression> iter;
+    std::unique_ptr<Expression_v2> end_c;
+    std::unique_ptr<Expression_v2> iter;
     std::vector<assignment> assignments;
 
 };

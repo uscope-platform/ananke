@@ -22,6 +22,13 @@
 CEREAL_REGISTER_TYPE(Expression_v2)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Expression_v2)
 
+std::shared_ptr<Parameter_value_base> Expression_v2::unwrap(Expression_v2 expr) {
+    if (expr.lhs && !expr.rhs && expr.operation == none) {
+        return expr.lhs;
+    }
+    return std::make_shared<Expression_v2>(expr);
+}
+
 std::string Expression_v2::print() const {
     if (!lhs && !rhs) return "";
 

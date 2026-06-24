@@ -83,6 +83,7 @@ public:
     };
 
     Expression_v2() = default;
+    static std::shared_ptr<Parameter_value_base> unwrap(Expression_v2 expr);
     void set_lhs(const std::shared_ptr<Parameter_value_base> &comp){lhs = comp;}
     void set_rhs(const std::shared_ptr<Parameter_value_base> &comp) {rhs = comp;}
     std::shared_ptr<Parameter_value_base> get_lhs(){return lhs;}
@@ -97,6 +98,11 @@ public:
     int64_t get_size() override;
     std::set<qualified_identifier> get_dependencies()const override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
+
+    template<class Archive>
+    void serialize( Archive & ar ) {
+        ar(lhs, rhs, operation);
+    }
 
 private:
 
