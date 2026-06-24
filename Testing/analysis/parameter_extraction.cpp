@@ -4152,7 +4152,7 @@ TEST(parameter_extraction, unrelated_wire_dependency_conflict) {
 
     auto check_param = std::make_shared<HDL_parameter>();
     check_param->set_name("DECIMATED");
-    check_param->add_component({Token("DECIMATE", Token::identifier)});
+    check_param->set_raw_value(std::make_shared<Token>("DECIMATE", Token::identifier));
 
     ASSERT_EQ(*parameter, *check_param);
 }
