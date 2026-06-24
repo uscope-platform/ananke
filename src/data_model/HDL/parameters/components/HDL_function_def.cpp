@@ -20,6 +20,8 @@
 #include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
+
 HDL_function_def HDL_function_def::clone() {
     HDL_function_def def;
     def.name = name;

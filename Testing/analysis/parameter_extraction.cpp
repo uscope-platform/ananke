@@ -2898,7 +2898,7 @@ TEST(parameter_extraction, interface_parameter_use) {
     p->set_name("TEST_PARAM");
     Token ec("DATA_WIDTH", Token::identifier);
     ec.set_package_prefix("test_interface");
-    p->add_component(ec);
+    p->set_raw_value(std::make_shared<Token>(ec));
     check_params.insert(p);
 
 
@@ -3437,7 +3437,7 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     check_params.clear();
 
 
-    Expression v1 = {
+    auto v1 = {
         Token("1'b1", Token::number),
         Token("1'b1", Token::number),
         Token("1'b1", Token::number),
@@ -3447,7 +3447,7 @@ TEST(parameter_extraction, multidimensional_packed_array) {
         Token("1'b1", Token::number),
         Token("1'b0", Token::number)
     };
-    Expression v2 = {
+    auto v2 = {
                 Token("1'b0", Token::number),
                 Token("1'b0", Token::number),
                 Token("1'b0", Token::number),
@@ -3469,25 +3469,25 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     param_type.add_dimension({std::make_shared<Token>("1", Token::number), std::make_shared<Token>("0", Token::number),false});
     Concatenation top_c, outer_c, inner_c;
 
-    for(const auto& item:v1.components){
-        inner_c.add_component(item);
+    for(const auto& item:v1){
+        inner_c.add_component(std::make_shared<Token>(item));
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c  = Concatenation();
-    for(const auto& item:v2.components){
-        inner_c.add_component(item);
+    for(const auto& item:v2){
+        inner_c.add_component(std::make_shared<Token>(item));
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     top_c.add_component(std::make_shared<Concatenation>(outer_c));
     outer_c = Concatenation();
     inner_c  = Concatenation();
-    for(const auto& item:v2.components){
-        inner_c.add_component(item);
+    for(const auto& item:v2){
+        inner_c.add_component(std::make_shared<Token>(item));
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c  = Concatenation();
-    for(const auto& item:v1.components){
-        inner_c.add_component(item);
+    for(const auto& item:v1){
+        inner_c.add_component(std::make_shared<Token>(item));
     }
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     top_c.add_component(std::make_shared<Concatenation>(outer_c));
@@ -3719,7 +3719,7 @@ TEST(parameter_extraction, concat_in_function) {
     HDL_parameter p;
     p.set_name("TEST_PARAM");
     p.set_type(Type_engine::create_primitive_type("integer"));
-    p.add_component(Token("CTRL_ADDR_CALC", Token::identifier));
+    p.set_raw_value(std::make_shared<Token>("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("get_axis_metadata");
     call.add_argument(std::make_shared<Token>("11", Token::number));
     call.add_argument(std::make_shared<Token>("1'b1", Token::number));
@@ -3776,19 +3776,19 @@ TEST(parameter_extraction, replication_in_function) {
     HDL_parameter p;
     p.set_name("TEST_PARAM");
     p.set_type(Type_engine::create_primitive_type("integer"));
-    p.add_component(Token("CTRL_ADDR_CALC", Token::identifier));
+    p.set_raw_value(std::make_shared<Token>("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("get_axis_metadata");
     call.add_argument(std::make_shared<Token>("11", Token::number));
     call.add_argument(std::make_shared<Token>("1'b1", Token::number));
     call.add_argument(std::make_shared<Token>("1'b0", Token::number));
     assignment a("get_axis_metadata", std::nullopt, nullptr);
     Cast c;
-    c.set_size(std::make_shared<Expression>(Token("4", Token::number)));
-    c.set_content(std::make_shared<Expression>(Expression({
-        Token("11", Token::number),
-        Token(Token::subtract),
-        Token("8", Token::number)
-    })));
+    c.set_size(std::make_shared<Token>("4", Token::number));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("11", Token::number));
+    e.set_rhs(std::make_shared<Token>("8", Token::number));
+    e.set_operation(Expression_v2::subtract);
+    c.set_content(std::make_shared<Expression_v2>(e));
     Replication repl;
     auto size = std::make_shared<Token>("4", Token::number);
     repl.set_size(size);
@@ -3836,7 +3836,7 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     HDL_parameter p;
     p.set_name("TEST_PARAM");
     p.set_type(Type_engine::create_primitive_type("integer"));
-    p.add_component(Token("CTRL_ADDR_CALC", Token::identifier));
+    p.set_raw_value(std::make_shared<Token>("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("get_axis_metadata");
     call.add_argument(std::make_shared<Token>("11", Token::number));
     call.add_argument(std::make_shared<Token>("1'b1", Token::number));
@@ -4019,8 +4019,7 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
-
-    p.add_component(Token("CTRL_ADDR_CALC", Token::identifier));
+    p.set_raw_value(std::make_shared<Token>("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("CTRL_ADDR_CALC");
     HDL_loop_metadata loop;
     HDL_parameter idx;

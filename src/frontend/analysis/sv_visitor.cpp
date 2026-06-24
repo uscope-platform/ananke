@@ -1146,11 +1146,24 @@ void sv_visitor::exitFor_initialization(sv2017::For_initializationContext *ctx) 
 void sv_visitor::enterFor_end_expression(sv2017::For_end_expressionContext *ctx) {
     if(f_factory.is_active()) {
         loops_factory.set_phase(HDL_loops_factory::end);
+        params_factory.start_param_assignment();
+        params_factory.new_parameter("for_end_expr");
     }
 }
 
 void sv_visitor::exitFor_end_expression(sv2017::For_end_expressionContext *ctx) {
-    sv2017BaseListener::exitFor_end_expression(ctx);
+    if(f_factory.is_active()) {
+        auto param = params_factory.get_parameter();
+        auto ex = param->get_expression();
+        if (ex->is<Expression_v2>()) {
+            loops_factory.add_expression(ex->as<Expression_v2>());
+        } else if (ex->is<Token>()) {
+            Expression_v2 e;
+            e.set_lhs(ex);
+            loops_factory.add_expression(e);
+        }
+        params_factory.stop_param_assignment();
+    }
 }
 
 void sv_visitor::enterFor_step(sv2017::For_stepContext *ctx) {

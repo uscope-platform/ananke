@@ -59,12 +59,13 @@ std::string Expression_v2::print() const {
 }
 
 bool Expression_v2::isEqual(const Parameter_value_base &other) const {
-    const auto& other_exp = static_cast<const Expression_v2&>(other);
+    auto other_exp = dynamic_cast<const Expression_v2*>(&other);
+    if (!other_exp) return false;
     bool ret = true;
-    ret &= *lhs == *other_exp.lhs;
-    if (rhs != nullptr && other_exp.rhs!= nullptr) ret &= *rhs == *other_exp.rhs;
-    if (rhs != nullptr ^  other_exp.rhs!= nullptr) return false;
-    ret &=  operation == other_exp.operation;
+    ret &= *lhs == *other_exp->lhs;
+    if (rhs != nullptr && other_exp->rhs!= nullptr) ret &= *rhs == *other_exp->rhs;
+    if (rhs != nullptr ^  other_exp->rhs!= nullptr) return false;
+    ret &=  operation == other_exp->operation;
     return ret;
 }
 
@@ -93,7 +94,12 @@ bool operator==(const Expression_v2 &lhs, const Expression_v2 &rhs) {
 }
 
 int64_t Expression_v2::get_size() {
-    return Parameter_value_base::get_size();
+    auto expression_value = evaluate({});
+    if(expression_value.has_value()) {
+        if(expression_value.value().is_integer())
+            return expression_value.value().get_integer().get_size();
+    }
+    return 0;
 }
 
 std::set<qualified_identifier> Expression_v2::get_dependencies() const {
@@ -113,6 +119,8 @@ std::optional<resolved_parameter> Expression_v2::evaluate(
     const std::map<qualified_identifier, resolved_parameter> &context) {
     std::optional<resolved_parameter> r_val, l_val;
     resolved_parameter ret_val;
+
+    if (operation == none && lhs && !rhs) return lhs->evaluate(context);
 
     if (lhs) l_val = lhs->evaluate(context);
     if (rhs) r_val = rhs->evaluate(context);

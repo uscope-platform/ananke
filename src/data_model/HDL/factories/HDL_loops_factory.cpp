@@ -70,7 +70,9 @@ void HDL_loops_factory::set_phase(loop_phase_t p) {
         loop_specs.set_init(init);
         current_expression = Expression_v2();
     } else if(p==step) {
-        loop_specs.set_end_c(current_expression);
+        if(!end_cond_valid) {
+            loop_specs.set_end_c(current_expression);
+        }
         current_expression = Expression_v2();
     } else if(p==body) {
         loop_specs.set_iter(current_expression);
