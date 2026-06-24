@@ -1054,23 +1054,15 @@ void sv_visitor::enterGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
 void sv_visitor::exitGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
     auto param = params_factory.get_parameter();
     auto ex = param->get_expression();
-    if(!(ex->is<Expression>() || ex->is<Cast>())) {
+    if (ex->is<Expression_v2>()) {
+        loops_factory.add_expression(ex->as<Expression_v2>());
+    } else if (ex->is<Token>()) {
+        Expression_v2 e;
+        e.set_lhs(ex);
+        loops_factory.add_expression(e);
+    } else if (!ex->is<Cast>()) {
         throw std::runtime_error("Concatenations or replications are not allowed in loop declarations");
     }
-    Expression_v2 loop_expr;
-    if (ex->is<Expression>()) {
-        auto &v1 = ex->as<Expression>();
-        auto &comps = v1.components;
-        if (!comps.empty()) {
-            loop_expr.set_lhs(comps[0]);
-            if (comps.size() >= 3 && comps[1]->is<Token>() && comps[1]->as<Token>().is_operator()) {
-                loop_expr.set_operation(HDL_loops_factory::map_operator(comps[1]->as<Token>().get_operation()));
-                loop_expr.set_rhs(comps[2]);
-            }
-        }
-    }
-    loops_factory.add_expression(loop_expr);
-
 }
 
 void sv_visitor::enterUntyped_function_declaration(sv2017::Untyped_function_declarationContext *ctx) {
@@ -1152,15 +1144,13 @@ void sv_visitor::enterInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPos
     if(f_factory.is_active()) {
         if(loops_factory.in_definition()) {
             auto name = ctx->variable_lvalue()->getText();
-            Expression_v2 e;
-            e.set_lhs(std::make_shared<Token>(name, Token::get_type(name)));
+            loops_factory.add_component(Token(name, Token::get_type(name)));
             if(ctx->inc_or_dec_operator()->INCR()){
-                e.set_operation(Expression_v2::add);
+                loops_factory.add_component(Token(Token::add));
             } else if(ctx->inc_or_dec_operator()->DECR()){
-                e.set_operation(Expression_v2::subtract);
+                loops_factory.add_component(Token(Token::subtract));
             }
-            e.set_rhs(std::make_shared<Token>("1", Token::number));
-            loops_factory.add_expression(e);
+            loops_factory.add_component(Token("1", Token::number));
         }
     }
 }
@@ -1194,15 +1184,13 @@ void sv_visitor::exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
 void sv_visitor::exitGenvar_iteration(sv2017::Genvar_iterationContext *ctx) {
    if(ctx->inc_or_dec_operator()) {
        auto str = ctx->identifier()->getText();
-       Expression_v2 e;
-       e.set_lhs(std::make_shared<Token>(str, Token::get_type(str)));
+       loops_factory.add_component(Token(str, Token::get_type(str)));
        if(ctx->inc_or_dec_operator()->INCR()){
-           e.set_operation(Expression_v2::add);
+           loops_factory.add_component(Token(Token::add));
        } else if(ctx->inc_or_dec_operator()->DECR()){
-           e.set_operation(Expression_v2::subtract);
+           loops_factory.add_component(Token(Token::subtract));
        }
-       e.set_rhs(std::make_shared<Token>(1, 1));
-       loops_factory.add_expression(e);
+       loops_factory.add_component(Token("1", Token::number));
    }
 }
 

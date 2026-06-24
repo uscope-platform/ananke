@@ -4247,8 +4247,7 @@ TEST(parameter_extraction, generate_for) {
 
     HDL_parameter p;
     p.set_name("n");
-
-    p.add_component(Token("0", Token::number));
+    p.set_raw_value(std::make_shared<Token>("0", Token::number));
 
     check_loop.set_init(p);
 
