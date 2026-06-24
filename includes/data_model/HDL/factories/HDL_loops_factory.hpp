@@ -47,7 +47,7 @@ public:
     void set_phase(loop_phase_t p);
     void advance_expression();
     void close_expression();
-    static Expression_v2::expression_operator map_operator(Token::sv_operators op);
+    void set_operation(const Expression_v2::expression_operator &op) {current_expression.set_operation(op);}
 private:
     std::vector<HDL_instance> repeated_instances;
     HDL_loop_metadata loop_specs;
