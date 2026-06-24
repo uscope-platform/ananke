@@ -27,7 +27,6 @@ set(ANANKE_TESTS
         analysis/bus_analyzer.cpp
         analysis/analysis.cpp
         analysis/parameter_extraction.cpp
-        analysis/shunting_yard.cpp
         analysis/parameter_processing.cpp
         analysis/port_extraction.cpp
         analysis/hdl_ast_builder.cpp
