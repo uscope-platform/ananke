@@ -4289,11 +4289,11 @@ TEST(parameter_extraction, param_ternary_conditional) {
     p->set_name("test_positive");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     Ternary t;
-    t.set_condition(Expression({
-        Token("condition", Token::identifier),
-        Token(Token::greater),
-        Token("1", Token::number),
-    }));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("condition", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::greater);
+    t.set_condition(std::make_shared<Expression_v2>(e));
     t.set_true_value(
         std::make_shared<Token>("12", Token::number));
 
@@ -4307,11 +4307,10 @@ TEST(parameter_extraction, param_ternary_conditional) {
     p->set_name("test_negative");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     t = Ternary();
-    t.set_condition(Expression({
-        Token("condition", Token::identifier),
-        Token(Token::greater),
-        Token("65", Token::number),
-    }));
+    e.set_lhs(std::make_shared<Token>("condition", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("65", Token::number));
+    e.set_operation(Expression_v2::greater);
+    t.set_condition(std::make_shared<Expression_v2>(e));
     t.set_true_value(std::make_shared<Token>("12", Token::number));
 
     t.set_false_value(std::make_shared<Token>("34", Token::number));
@@ -4368,19 +4367,19 @@ TEST(parameter_extraction, nested_ternary_conditional) {
     p->set_name("test_positive");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     Ternary t;
-    t.set_condition(Expression({
-        Token("condition", Token::identifier),
-        Token(Token::greater),
-        Token("1", Token::number),
-    }));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("condition", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::greater);
+    t.set_condition(std::make_shared<Expression_v2>(e));
     t.set_false_value(std::make_shared<Token>("34", Token::number));
 
     Ternary inner_t;
-    inner_t.set_condition(Expression({
-        Token("condition", Token::identifier),
-        Token(Token::greater),
-        Token("65", Token::number),
-    }));
+    e.set_lhs(std::make_shared<Token>("condition", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("65", Token::number));
+    e.set_operation(Expression_v2::greater);
+    inner_t.set_condition(std::make_shared<Expression_v2>(e));
+
     inner_t.set_true_value(std::make_shared<Token>("12", Token::number));
 
     inner_t.set_false_value(std::make_shared<Token>("96", Token::number));
@@ -4438,11 +4437,11 @@ TEST(parameter_extraction, complex_ternary_conditional) {
     p->set_name("LGNM");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     Ternary t;
-    t.set_condition(Expression({
-        Token("NM", Token::identifier),
-        Token(Token::greater),
-        Token("1", Token::number),
-    }));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("NM", Token::identifier));
+    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_operation(Expression_v2::greater);
+    t.set_condition(std::make_shared<Expression_v2>(e));
     HDL_function_call c("$clog2");
     c.add_argument(std::make_shared<Token>("NM", Token::identifier));
     t.set_true_value(std::make_shared<HDL_function_call>(c));

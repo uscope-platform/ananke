@@ -19,13 +19,13 @@
 
 #include <memory>
 #include "Parameter_value_base.hpp"
-#include "Expression.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 
 class Ternary : public Parameter_value_base{
 public:
     Ternary() = default;
-    void set_condition(const Expression &c) {condition = c;}
+    void set_condition(const std::shared_ptr<Parameter_value_base> &c) {condition = c;}
     void set_true_value(const std::shared_ptr<Parameter_value_base> &v) {true_value = v;}
     void set_false_value(const std::shared_ptr<Parameter_value_base> &v) {false_value =v;}
 
@@ -46,7 +46,7 @@ protected:
     [[nodiscard]] bool isEqual(const Parameter_value_base& other) const override;
 
 private:
-    Expression condition;
+    std::shared_ptr<Parameter_value_base> condition;
     std::shared_ptr<Parameter_value_base> true_value;
     std::shared_ptr<Parameter_value_base> false_value;
 

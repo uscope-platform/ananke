@@ -14,8 +14,13 @@
 //  limitations under the License.
 
 #include <sstream>
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
+
+CEREAL_REGISTER_TYPE(Expression_v2)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Expression_v2)
 
 std::string Expression_v2::print() const {
     if (!lhs && !rhs) return "";

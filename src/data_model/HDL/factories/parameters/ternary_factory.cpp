@@ -23,8 +23,7 @@ void ternary_factory::start_conditional() {
 
 void ternary_factory::consume(const std::shared_ptr<Parameter_value_base> &component) {
     if (state == build_phase::condition) {
-        if (!component->is<Expression>()) throw std::invalid_argument("Only valid expressions can be the condition of a ternary assignments");
-        current.set_condition(component->as<Expression>());
+        current.set_condition(component);
         state = build_phase::true_assignment;
     }else if (state == build_phase::true_assignment) {
         current.set_true_value(component);

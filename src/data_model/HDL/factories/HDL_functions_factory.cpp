@@ -95,9 +95,21 @@ void HDL_functions_factory::close_lvalue() {
 
 void HDL_functions_factory::close_assignment() {
     if(!ignore_assignment && assignment_value != nullptr) {
-        f.close_assignment(assignment_value);
+        if (assignment_value->is<Expression_v2>()) {
+            auto &e = assignment_value->as<Expression_v2>();
+            if (e.get_operation() != Expression_v2::none) {
+                f.close_assignment(assignment_value);
+            } else if (auto lhs = e.get_lhs(); lhs && lhs->is<Token>()) {
+                f.close_assignment(lhs);
+            } else if (auto lhs = e.get_lhs()) {
+                f.close_assignment(lhs);
+            } else {
+                f.close_assignment(assignment_value);
+            }
+        } else {
+            f.close_assignment(assignment_value);
+        }
     }
-
     ignore_assignment = false;
 }
 

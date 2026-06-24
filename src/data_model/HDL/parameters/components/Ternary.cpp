@@ -25,7 +25,7 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Ternary)
 
 std::set<qualified_identifier> Ternary::get_dependencies() const {
     std::set<qualified_identifier> ret_val;
-    auto cond_deps = condition.get_dependencies();
+    auto cond_deps = condition->get_dependencies();
     ret_val.insert(cond_deps.begin(), cond_deps.end());
 
     auto true_deps = true_value->get_dependencies();
@@ -39,13 +39,13 @@ std::set<qualified_identifier> Ternary::get_dependencies() const {
 
 void Ternary::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {
-    condition.propagate_expression(constant_id, value);
+    condition->propagate_expression(constant_id, value);
     true_value->propagate_expression(constant_id, value);
     false_value->propagate_expression(constant_id, value);
 }
 
 std::optional<resolved_parameter> Ternary::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
-    auto condition_value = condition.evaluate(context);
+    auto condition_value = condition->evaluate(context);
     if (!condition_value.has_value()) return std::nullopt;
     auto int_val = condition_value.value().get_integer();
     if (int_val == 0) {
@@ -57,7 +57,7 @@ std::optional<resolved_parameter> Ternary::evaluate(const std::map<qualified_ide
 
 std::string Ternary::print() const {
     std::ostringstream oss;
-    oss << condition.print();
+    oss << condition->print();
     oss << " ? ";
     if (true_value) oss << true_value->print();
     oss << " : ";
@@ -70,7 +70,7 @@ bool Ternary::isEqual(const Parameter_value_base &other) const {
         const auto& rhs = static_cast<const Ternary&>(other);
 
     bool ret_val = true;
-    ret_val &= condition == rhs.condition;
+    ret_val &= *condition == *rhs.condition;
     ret_val &= (true_value && rhs.true_value) && *true_value == *rhs.true_value;
     ret_val &= (false_value && rhs.false_value) && *false_value == *rhs.false_value;
     return ret_val;

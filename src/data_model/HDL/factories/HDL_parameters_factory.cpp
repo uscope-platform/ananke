@@ -38,7 +38,7 @@ void HDL_parameters_factory::set_type(const std::shared_ptr<hdl_type> &type) {
 void HDL_parameters_factory::add_component(const Token &c, bool is_call_argument) {
     if (is_call_argument) {
         if (top_as<function_calls_factory>()) {
-            consumer_stack.top()->consume(std::make_shared<Expression>(Expression({c})));
+            consumer_stack.top()->consume(std::make_shared<Token>(c));
         }
         expr_factory.increase_level();
         expr_factory.stop_expression(false);
