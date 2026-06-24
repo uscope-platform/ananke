@@ -91,15 +91,6 @@ void expressions_factory::stop_expression(bool new_expr) {
     }
 }
 
-std::optional<Expression_v2> expressions_factory::pop_expression() {
-    if (nested_expressions.empty()) return std::nullopt;
-    auto inner = std::move(current_v2);
-    current_v2 = nested_expressions.top();
-    nested_expressions.pop();
-    return inner;
-}
-
-
 std::optional<Expression_v2> expressions_factory::get_expression_v2() {
     return current_v2;
 }

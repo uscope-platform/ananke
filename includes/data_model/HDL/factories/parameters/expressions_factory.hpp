@@ -30,7 +30,6 @@ public:
     void clear_level() {expression_level = 0;}
     void start_expression(bool new_expr);
     void stop_expression(bool new_expr);
-    std::optional<Expression_v2> pop_expression();
     void clear_expression() {
         current_v2 = Expression_v2();
         operation_set = false;
