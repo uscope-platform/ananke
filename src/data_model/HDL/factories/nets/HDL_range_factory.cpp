@@ -16,6 +16,7 @@
 //  limitations under the License.
 
 #include "data_model/HDL/factories/nets/HDL_range_factory.hpp"
+#include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 
 void HDL_range_factory::open_range(bool direct) {
     if(direct) {
@@ -32,22 +33,35 @@ void HDL_range_factory::advance_state() {
 }
 
 void HDL_range_factory::add_component(const std::string &c) {
-    if(factory_state == wait_name) {
-        factory_state = accessor;
-    }else if(factory_state == accessor) {
-        current_range.accessor.emplace_back(c, Token::get_type(c));
-    } else if(factory_state == range) {
-        current_range.range.emplace_back(c, Token::get_type(c));
-    }
+    Token tok(c, Token::get_type(c));
+    add_to_current(tok);
 }
 
 void HDL_range_factory::add_component(const Token &ec) {
+    add_to_current(ec);
+}
+
+void HDL_range_factory::add_to_current(const Token &tok) {
     if(factory_state == wait_name) {
         factory_state = accessor;
-    }else if(factory_state == accessor) {
-        current_range.accessor.push_back(ec);
+        return;
+    }
+
+    Expression_v2 *target = nullptr;
+    if(factory_state == accessor) {
+        target = &current_range.accessor;
     } else if(factory_state == range) {
-        current_range.range.push_back(ec);
+        target = &current_range.range;
+    } else {
+        return;
+    }
+
+    if (tok.is_operator() && target->get_lhs() && target->get_operation() == Expression_v2::none) {
+        target->set_operation(expressions_factory::map_operator(tok.get_operation()));
+    } else if (!target->get_lhs()) {
+        target->set_lhs(std::make_shared<Token>(tok));
+    } else if (target->get_lhs() && !target->get_rhs()) {
+        target->set_rhs(std::make_shared<Token>(tok));
     }
 }
 
@@ -59,8 +73,8 @@ void HDL_range_factory::set_range_type(HDL_range::range_type_t t) {
 HDL_range HDL_range_factory::get_range() {
     assert(factory_state == range);
     auto ret = current_range;
-    current_range.range.clear();
-    current_range.accessor.clear();
+    current_range.range = Expression_v2();
+    current_range.accessor = Expression_v2();
     current_range.type  = HDL_range::explicit_range;
     factory_state = idle;
     return ret;

@@ -15,27 +15,26 @@
 
 #include "data_model/HDL/HDL_net.hpp"
 
-HDL_net::HDL_net() {
-    index = std::make_shared<Expression>();
-}
+HDL_net::HDL_net() = default;
 
 HDL_net::HDL_net(const std::string &s) {
     name = s;
-    index = std::make_shared<Expression>();
 }
 
 std::string HDL_net::get_full_name() const {
     auto base_name = name;
-    if(!range.accessor.empty()) {
+    if(range.accessor.get_lhs() != nullptr) {
         base_name += "[" + range.accessor.print();
-        if(!range.range.empty()) {
+        if(range.range.get_lhs() != nullptr) {
             if(range.type ==HDL_range::increasing_range) base_name += "+";
             else if(range.type ==HDL_range::decreasing_range) base_name += "-";
             base_name += ":" + range.range.print();
         }
         base_name += "]";
-    } else if(!index->as<Expression>().empty()) {
-        base_name += "[" + index->print() + "]";
+    } else if(!index.empty()) {
+        for (auto &idx : index) {
+            base_name += "[" + idx.print() + "]";
+        }
     }
     return base_name;
 
@@ -45,32 +44,43 @@ void HDL_net::evaluate(const std::map<qualified_identifier, resolved_parameter> 
     auto val = range.accessor.evaluate(context);
     if(val.has_value()) {
         if(val.value().get_integer().get_value()) {
-            range.accessor = {Token(val.value().get_integer(), 0)};
+            Expression_v2 acc;
+            acc.set_lhs(std::make_shared<Token>(val.value().get_integer(), 0));
+            range.accessor = acc;
         }
     }
     val = range.range.evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
-            range.range = {Token(val.value().get_integer(), 0)};
+            Expression_v2 rng;
+            rng.set_lhs(std::make_shared<Token>(val.value().get_integer(), 0));
+            range.range = rng;
         }
     }
-    index->evaluate(context);
-    val = index->evaluate(context);
-    if(val.has_value()) {
-        if(val.value().is_integer()) {
-            index = std::make_shared<Token>(Token(val.value().get_integer(), 0));
+    for (auto &idx : index) {
+        val = idx.evaluate(context);
+        if(val.has_value()) {
+            if(val.value().is_integer()) {
+                Expression_v2 idx_expr;
+                idx_expr.set_lhs(std::make_shared<Token>(val.value().get_integer(), 0));
+                idx = idx_expr;
+            }
         }
     }
     val = replication.size.evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
-            replication.size = {Token(val.value().get_integer(), 0)};
+            Expression_v2 sz;
+            sz.set_lhs(std::make_shared<Token>(val.value().get_integer(), 0));
+            replication.size = sz;
         }
     }
     val = replication.target.evaluate(context);
     if(val.has_value()) {
         if(val.value().is_integer()) {
-            replication.target = {Token(val.value().get_integer(), 0)};
+            Expression_v2 tgt;
+            tgt.set_lhs(std::make_shared<Token>(val.value().get_integer(), 0));
+            replication.target = tgt;
         }
     }
 }

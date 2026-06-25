@@ -31,6 +31,7 @@ std::shared_ptr<Parameter_value_base> Expression_v2::unwrap(Expression_v2 expr) 
 
 std::string Expression_v2::print() const {
     if (!lhs && !rhs) return "";
+    if (operation == none && lhs && !rhs) return lhs->print();
 
     auto op_str = [](expression_operator op) -> std::string {
         if (op_to_str.contains(op)) return op_to_str.at(op);
@@ -50,10 +51,10 @@ std::string Expression_v2::print() const {
         if (lhs->is<Expression_v2>()) oss << "(" << lhs->print() << ")";
         else oss << lhs->print();
     }
-    oss << " " << op_str(operation);
+    oss << op_str(operation);
     if (rhs) {
-        if (rhs->is<Expression_v2>()) oss << " (" << rhs->print() << ")";
-        else oss << " " << rhs->print();
+        if (rhs->is<Expression_v2>()) oss << "(" << rhs->print() << ")";
+        else oss << rhs->print();
     }
     return oss.str();
 }
@@ -61,12 +62,17 @@ std::string Expression_v2::print() const {
 bool Expression_v2::isEqual(const Parameter_value_base &other) const {
     auto other_exp = dynamic_cast<const Expression_v2*>(&other);
     if (!other_exp) return false;
-    bool ret = true;
-    ret &= *lhs == *other_exp->lhs;
-    if (rhs != nullptr && other_exp->rhs!= nullptr) ret &= *rhs == *other_exp->rhs;
-    if (rhs != nullptr ^  other_exp->rhs!= nullptr) return false;
-    ret &=  operation == other_exp->operation;
-    return ret;
+    if (lhs && other_exp->lhs) {
+        if (!(*lhs == *other_exp->lhs)) return false;
+    } else if (lhs || other_exp->lhs) {
+        return false;
+    }
+    if (rhs && other_exp->rhs) {
+        if (!(*rhs == *other_exp->rhs)) return false;
+    } else if (rhs || other_exp->rhs) {
+        return false;
+    }
+    return operation == other_exp->operation;
 }
 
 void Expression_v2::set_container_sizes(const resolved_type &s,
@@ -86,11 +92,17 @@ void Expression_v2::propagate_expression(const qualified_identifier &constant_id
 }
 
 bool operator==(const Expression_v2 &lhs, const Expression_v2 &rhs) {
-    bool ret = true;
-    ret &= *lhs.lhs == *rhs.lhs;
-    ret &= *lhs.rhs == *rhs.rhs;
-    ret &= lhs.operation == rhs.operation;
-    return ret;
+    if (lhs.lhs && rhs.lhs) {
+        if (!(*lhs.lhs == *rhs.lhs)) return false;
+    } else if (lhs.lhs || rhs.lhs) {
+        return false;
+    }
+    if (lhs.rhs && rhs.rhs) {
+        if (!(*lhs.rhs == *rhs.rhs)) return false;
+    } else if (lhs.rhs || rhs.rhs) {
+        return false;
+    }
+    return lhs.operation == rhs.operation;
 }
 
 int64_t Expression_v2::get_size() {
@@ -120,7 +132,10 @@ std::optional<resolved_parameter> Expression_v2::evaluate(
     std::optional<resolved_parameter> r_val, l_val;
     resolved_parameter ret_val;
 
-    if (operation == none && lhs && !rhs) return lhs->evaluate(context);
+    if (operation == none) {
+        if (lhs && !rhs) return lhs->evaluate(context);
+        return std::nullopt;
+    }
 
     if (lhs) l_val = lhs->evaluate(context);
     if (rhs) r_val = rhs->evaluate(context);

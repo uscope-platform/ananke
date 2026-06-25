@@ -88,6 +88,8 @@ public:
     void set_rhs(const std::shared_ptr<Parameter_value_base> &comp) {rhs = comp;}
     std::shared_ptr<Parameter_value_base> get_lhs(){return lhs;}
     std::shared_ptr<Parameter_value_base> get_rhs(){return rhs;}
+    [[nodiscard]] std::shared_ptr<const Parameter_value_base> get_lhs() const {return lhs;}
+    [[nodiscard]] std::shared_ptr<const Parameter_value_base> get_rhs() const {return rhs;}
     void set_operation(const expression_operator &op) {operation = op;}
     [[nodiscard]] expression_operator get_operation() const {return operation;}
 
@@ -112,7 +114,7 @@ private:
 
     std::shared_ptr<Parameter_value_base> lhs;
     std::shared_ptr<Parameter_value_base> rhs;
-    expression_operator operation;
+    expression_operator operation = none;
 
     uint64_t current_size=0;
 };

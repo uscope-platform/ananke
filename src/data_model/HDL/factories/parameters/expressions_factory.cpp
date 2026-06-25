@@ -15,7 +15,7 @@
 
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 
-static Expression_v2::expression_operator map_operator(Token::sv_operators op) {
+Expression_v2::expression_operator expressions_factory::map_operator(Token::sv_operators op) {
     switch (op) {
         case Token::logic_neg: return Expression_v2::logic_neg;
         case Token::bitwise_neg: return Expression_v2::bitwise_neg;
@@ -124,6 +124,11 @@ void expressions_factory::stop_bit_selection() {
 void expressions_factory::add_component(const Token &ec) {
     if (bit_select_active) {
         if (ec.is_operator()) {
+            if (bit_select_v2.get_lhs() && bit_select_v2.get_rhs()) {
+                auto nested = bit_select_v2;
+                bit_select_v2 = Expression_v2();
+                bit_select_v2.set_lhs(std::make_shared<Expression_v2>(nested));
+            }
             bit_select_v2.set_operation(map_operator(ec.get_operation()));
         } else if (!bit_select_v2.get_lhs()) {
             bit_select_v2.set_lhs(std::make_shared<Token>(ec));

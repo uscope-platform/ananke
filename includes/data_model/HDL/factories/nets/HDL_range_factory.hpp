@@ -39,6 +39,8 @@ private:
         range
     } factory_state = idle;
 
+    void add_to_current(const Token &tok);
+
     HDL_range current_range;
     std::vector<HDL_range> ranges_stack;
 };

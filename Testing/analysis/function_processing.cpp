@@ -160,7 +160,7 @@ TEST(function_processing, simple_loop_function) {
 
     metadata.add_assignment(a);
     check_f.add_loop_metadata(metadata);
-     EXPECT_EQ(check_f,result);
+    EXPECT_EQ(check_f, result);
 }
 
 

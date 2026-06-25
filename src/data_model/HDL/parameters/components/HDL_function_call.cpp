@@ -119,10 +119,15 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector(const std::
                 auto la = loop_assignments[i].clone();
                 auto ctx = context;
                 ctx[loop_var] = resolved_parameter(l);
-                auto idx_val = la.get_index().value()->evaluate(ctx).value().get_integer();
-
-                value_sizes[idx_val.get_value()] = la.get_value()->get_size();
+                auto idx_opt = la.get_index();
+                if(!idx_opt.has_value()) continue;
+                auto idx = idx_opt.value()->evaluate(ctx);
+                if(!idx.has_value()) continue;
+                if(!idx.value().is_integer()) continue;
+                auto idx_val = idx.value().get_integer();
                 auto var = la.get_value()->evaluate(ctx);
+                if(!var.has_value()) continue;
+                value_sizes[idx_val.get_value()] = var.value().get_integer().get_size();
                 values[idx_val.get_value()] = var.value().get_integer();
             }
         }

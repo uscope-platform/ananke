@@ -20,13 +20,13 @@
 #include<string>
 #include <nlohmann/json.hpp>
 
-#include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 
 
 struct HDL_replication {
-    Expression target;
-    Expression size;
+    Expression_v2 target;
+    Expression_v2 size;
     template<class Archive>
     void serialize( Archive & ar ) {
         ar(size, target);
@@ -45,8 +45,8 @@ struct HDL_replication {
 
 
 struct HDL_range {
-    Expression accessor;
-    Expression range;
+    Expression_v2 accessor;
+    Expression_v2 range;
     enum range_type_t{ explicit_range, increasing_range, decreasing_range};
     range_type_t type = explicit_range;
 
@@ -71,27 +71,28 @@ class HDL_net {
 public:
     HDL_net();
     explicit HDL_net(const std::string &s);
-    bool empty() const {return name.empty() && range.accessor.empty() && replication.size.empty();}
+    bool empty() const {return name.empty() && !has_range_accessor() && !has_replication_size();}
 
     std::string get_full_name() const;
     std::string get_base_name() {return name;}
 
     bool is_replication() {
-        return !replication.size.empty();
+        return has_replication_size();
     }
     bool is_array() {
-        return !range.accessor.empty() || !index->as<Expression>().empty();
+        return has_range_accessor() || !index.empty();
     }
 
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name,index, range,replication);
+        ar(name, index, range, replication);
     }
 
     friend bool operator==(const HDL_net &lhs, const HDL_net &rhs) {
         bool retval =true;
         retval &= lhs.name == rhs.name;
+        retval &= lhs.index == rhs.index;
         retval &= lhs.range == rhs.range;
         retval &= lhs.replication == rhs.replication;
         return retval;
@@ -100,13 +101,12 @@ public:
         return name;
     }
     std::shared_ptr<Parameter_value_base> get_index_at(uint32_t i) {
-        if (!index->is<Expression>()) {
-            spdlog::error("Non expression indexes for hdl nets are not supported");
-            return nullptr;
+        if (i < index.size()) {
+            return Expression_v2::unwrap(index[i]);
         }
-        return index->as<Expression>().components[i];
+        return nullptr;
     }
-    std::shared_ptr<Parameter_value_base> get_index() const {return index;}
+    std::vector<Expression_v2> get_index() const {return index;}
     HDL_range get_range() const {return range;}
     HDL_replication get_replication() const {return replication;}
     void evaluate(const std::map<qualified_identifier, resolved_parameter> &context);
@@ -114,32 +114,52 @@ public:
     void set_name(const std::string &s) {
         name = s;
     }
-    void set_index(std::shared_ptr<Parameter_value_base> i) {
+    void set_index(const std::vector<Expression_v2> &i) {
         index = i;
     }
     void add_index_component(const std::string &ec) {
-        index->as<Expression>().emplace_back(ec, Token::get_type(ec));
+        Expression_v2 idx_expr;
+        idx_expr.set_lhs(std::make_shared<Token>(ec, Token::get_type(ec)));
+        index.push_back(idx_expr);
     }
     void add_index_component(const Token &ec) {
-        index->as<Expression>().push_back(ec);
+        Expression_v2 idx_expr;
+        idx_expr.set_lhs(std::make_shared<Token>(ec));
+        index.push_back(idx_expr);
     }
     void set_range(HDL_range r) {
         range = r;
     }
     void add_relication_size(const std::string &ec) {
-        replication.size.emplace_back(ec, Token::get_type(ec));
+        Token tok(ec, Token::get_type(ec));
+        if (!replication.size.get_lhs()) {
+            replication.size.set_lhs(std::make_shared<Token>(tok));
+        }
     }
     void add_relication_target(const std::string &ec) {
-        replication.target.emplace_back(ec, Token::get_type(ec));
+        Token tok(ec, Token::get_type(ec));
+        if (!replication.target.get_lhs()) {
+            replication.target.set_lhs(std::make_shared<Token>(tok));
+        }
     }
     void set_replication(HDL_replication r) {
         replication = r;
     }
 
     virtual nlohmann::json dump();
+
+    bool has_empty_index() const {
+        return index.empty();
+    }
+    bool has_range_accessor() const {
+        return range.accessor.get_lhs() != nullptr || range.range.get_lhs() != nullptr;
+    }
+    bool has_replication_size() const {
+        return replication.size.get_lhs() != nullptr;
+    }
 private:
     std::string name;
-    std::shared_ptr<Parameter_value_base> index;
+    std::vector<Expression_v2> index;
     HDL_range range;
     HDL_replication replication;
 };

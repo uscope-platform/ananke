@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "frontend/analysis/sv_analyzer.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 TEST(port_extraction, regular_port) {
     auto test_pattern = R"(
@@ -34,9 +35,13 @@ TEST(port_extraction, regular_port) {
 
     auto inst = analyzer.analyze("", test_pattern)[0].get_dependencies()[0];
     auto ports = inst.get_ports();
+
     std::unordered_map<std::string, std::vector<HDL_net>> check_ports;
     check_ports["clock"] = {HDL_net("clock")};
     check_ports["stream_in"] = {HDL_net("buck_merged")};
+
+    ASSERT_TRUE(check_ports["clock"][0].get_name() == HDL_net("clock").get_name());
+    ASSERT_TRUE(check_ports["clock"][0] == HDL_net("clock"));
 
     ASSERT_EQ(ports, check_ports);
     ASSERT_EQ(check_ports["clock"][0].get_full_name(), "clock");
@@ -91,7 +96,9 @@ TEST(port_extraction, array_port) {
     check_ports["clock"] = {HDL_net("clock")};
     check_ports["stream_in"] = {HDL_net("stream")};
 
-    check_ports["stream_in"][0].set_index({std::make_shared<Token>("5", Token::number)});
+    Expression_v2 idx;
+    idx.set_lhs(std::make_shared<Token>("5", Token::number));
+    check_ports["stream_in"][0].set_index({idx});
 
     ASSERT_EQ(ports, check_ports);
     ASSERT_EQ(check_ports["clock"][0].get_full_name(), "clock");
@@ -119,8 +126,16 @@ TEST(port_extraction, array_range_port) {
     check_ports["stream_in"] = {HDL_net("S_AXI_AWADDR")};
 
     HDL_range range;
-    range.accessor = {Token("3", Token::number)};
-    range.range = {Token("1", Token::number)};
+    {
+        Expression_v2 acc;
+        acc.set_lhs(std::make_shared<Token>("3", Token::number));
+        range.accessor = acc;
+    }
+    {
+        Expression_v2 rng;
+        rng.set_lhs(std::make_shared<Token>("1", Token::number));
+        range.range = rng;
+    }
     range.type = HDL_range::increasing_range;
     check_ports["stream_in"][0].set_range(range);
     ASSERT_EQ(ports, check_ports);
@@ -176,8 +191,16 @@ TEST(port_extraction, concat_simple_slicing) {
     check_ports["clock"] = {HDL_net("clock")};
     check_ports["stream_in"] = {HDL_net("m_wdata"), HDL_net("m_wstrb")};
 
-    check_ports["stream_in"][0].set_index({std::make_shared<Token>("N", Token::identifier)});
-    check_ports["stream_in"][1].set_index({std::make_shared<Token>("N", Token::identifier)});
+    {
+        Expression_v2 idx;
+        idx.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        check_ports["stream_in"][0].set_index({idx});
+    }
+    {
+        Expression_v2 idx;
+        idx.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        check_ports["stream_in"][1].set_index({idx});
+    }
 
     ASSERT_EQ(ports, check_ports);
     ASSERT_EQ(check_ports["clock"][0].get_full_name(), "clock");
@@ -206,14 +229,30 @@ TEST(port_extraction, concat_range) {
     check_ports["stream_in"] = {HDL_net("S_AXI_AWADDR"), HDL_net("S_AXI_AWPROT")};
 
     HDL_range range;
-    range.accessor = {Token("N", Token::identifier)};
-    range.range = {Token("3", Token::number)};
+    {
+        Expression_v2 acc;
+        acc.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        range.accessor = acc;
+    }
+    {
+        Expression_v2 rng;
+        rng.set_lhs(std::make_shared<Token>("3", Token::number));
+        range.range = rng;
+    }
     range.type = HDL_range::increasing_range;
 
     check_ports["stream_in"][0].set_range(range);
 
-    range.accessor = {Token("C", Token::identifier)};
-    range.range = {Token("1", Token::number)};
+    {
+        Expression_v2 acc;
+        acc.set_lhs(std::make_shared<Token>("C", Token::identifier));
+        range.accessor = acc;
+    }
+    {
+        Expression_v2 rng;
+        rng.set_lhs(std::make_shared<Token>("1", Token::number));
+        range.range = rng;
+    }
     range.type = HDL_range::decreasing_range;
 
     check_ports["stream_in"][1].set_range(range);
@@ -246,14 +285,34 @@ TEST(port_extraction,range_concat_expression) {
     check_ports["in_data"] = {HDL_net("S_AXI_AWADDR"), HDL_net("S_AXI_AWPROT")};
 
     HDL_range range;
-    range.accessor = {Token("N", Token::identifier),Token(Token::multiply),Token("ADDR_WIDTH", Token::identifier)};
-    range.range = {Token("ADDR_WIDTH", Token::identifier)};
+    {
+        Expression_v2 acc;
+        acc.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        acc.set_operation(Expression_v2::multiply);
+        acc.set_rhs(std::make_shared<Token>("ADDR_WIDTH", Token::identifier));
+        range.accessor = acc;
+    }
+    {
+        Expression_v2 rng;
+        rng.set_lhs(std::make_shared<Token>("ADDR_WIDTH", Token::identifier));
+        range.range = rng;
+    }
     range.type = HDL_range::increasing_range;
 
     check_ports["in_data"][0].set_range(range);
 
-    range.accessor = {Token("N", Token::identifier),Token(Token::multiply),Token("3", Token::number)};
-    range.range = {Token("3", Token::number)};
+    {
+        Expression_v2 acc;
+        acc.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        acc.set_operation(Expression_v2::multiply);
+        acc.set_rhs(std::make_shared<Token>("3", Token::number));
+        range.accessor = acc;
+    }
+    {
+        Expression_v2 rng;
+        rng.set_lhs(std::make_shared<Token>("3", Token::number));
+        range.range = rng;
+    }
     range.type = HDL_range::increasing_range;
 
     check_ports["in_data"][1].set_range(range);
@@ -287,15 +346,34 @@ TEST(port_extraction, concat_complex_slicing) {
     check_ports["stream_in"] = {HDL_net("S_AXI_AWADDR"), HDL_net("S_AXI_AWPROT")};
 
     HDL_range range;
-    range.accessor = {Token("N", Token::identifier),Token(Token::multiply),Token("ADDR_WIDTH", Token::identifier)};
-    range.range = {Token("ADDR_WIDTH", Token::identifier)};
+    {
+        Expression_v2 acc;
+        acc.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        acc.set_operation(Expression_v2::multiply);
+        acc.set_rhs(std::make_shared<Token>("ADDR_WIDTH", Token::identifier));
+        range.accessor = acc;
+    }
+    {
+        Expression_v2 rng;
+        rng.set_lhs(std::make_shared<Token>("ADDR_WIDTH", Token::identifier));
+        range.range = rng;
+    }
     range.type = HDL_range::increasing_range;
-
 
     check_ports["stream_in"][0].set_range(range);
 
-    range.accessor = {Token("N", Token::identifier),Token(Token::multiply),Token("3", Token::number)};
-    range.range = {Token("3", Token::number)};
+    {
+        Expression_v2 acc;
+        acc.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        acc.set_operation(Expression_v2::multiply);
+        acc.set_rhs(std::make_shared<Token>("3", Token::number));
+        range.accessor = acc;
+    }
+    {
+        Expression_v2 rng;
+        rng.set_lhs(std::make_shared<Token>("3", Token::number));
+        range.range = rng;
+    }
     range.type = HDL_range::increasing_range;
 
     check_ports["stream_in"][1].set_range(range);
@@ -354,8 +432,16 @@ TEST(port_extraction, repetition_port) {
     check_ports["stream_in"] = {HDL_net("")};
 
     HDL_replication rep;
-    rep.size = {Token("5", Token::number)};
-    rep.target = {Token("1'b1", Token::number)};
+    {
+        Expression_v2 sz;
+        sz.set_lhs(std::make_shared<Token>("5", Token::number));
+        rep.size = sz;
+    }
+    {
+        Expression_v2 tgt;
+        tgt.set_lhs(std::make_shared<Token>("1'b1", Token::number));
+        rep.target = tgt;
+    }
     check_ports["stream_in"][0].set_replication(rep);
 
     ASSERT_EQ(ports, check_ports);
@@ -384,11 +470,25 @@ TEST(port_extraction, complex_nested_concat_port) {
     check_ports["clock"] = {HDL_net("clock")};
     check_ports["stream_in"] = {HDL_net("OUTPUT_SIGNED"), HDL_net(""), HDL_net("test")};
 
-    check_ports["stream_in"][0].set_index({std::make_shared<Token>("data_in.dest", Token::identifier)});
+    {
+        Expression_v2 idx;
+        idx.set_lhs(std::make_shared<Token>("data_in.dest", Token::identifier));
+        check_ports["stream_in"][0].set_index({idx});
+    }
 
     HDL_replication rep;
-    rep.size = {Token("DATA_PATH_WIDTH", Token::identifier),Token(Token::subtract),Token("1", Token::number)};
-    rep.target = {Token("1'b0", Token::number)};
+    {
+        Expression_v2 sz;
+        sz.set_lhs(std::make_shared<Token>("DATA_PATH_WIDTH", Token::identifier));
+        sz.set_operation(Expression_v2::subtract);
+        sz.set_rhs(std::make_shared<Token>("1", Token::number));
+        rep.size = sz;
+    }
+    {
+        Expression_v2 tgt;
+        tgt.set_lhs(std::make_shared<Token>("1'b0", Token::number));
+        rep.target = tgt;
+    }
     check_ports["stream_in"][1].set_replication(rep);
 
     ASSERT_EQ(ports, check_ports);
@@ -421,13 +521,31 @@ TEST(port_extraction, concat_of_repetitions) {
 
 
     HDL_replication rep;
-    rep.size =  {Token("3", Token::number)};
-    rep.target = {Token("1'b1", Token::number)};
+    {
+        Expression_v2 sz;
+        sz.set_lhs(std::make_shared<Token>("3", Token::number));
+        rep.size = sz;
+    }
+    {
+        Expression_v2 tgt;
+        tgt.set_lhs(std::make_shared<Token>("1'b1", Token::number));
+        rep.target = tgt;
+    }
 
     check_ports["stream_in"][0].set_replication(rep);
 
-    rep.size = {Token("DATA_PATH_WIDTH", Token::identifier),Token(Token::subtract),Token("1", Token::number)};
-    rep.target = {Token("1'b0", Token::number)};
+    {
+        Expression_v2 sz;
+        sz.set_lhs(std::make_shared<Token>("DATA_PATH_WIDTH", Token::identifier));
+        sz.set_operation(Expression_v2::subtract);
+        sz.set_rhs(std::make_shared<Token>("1", Token::number));
+        rep.size = sz;
+    }
+    {
+        Expression_v2 tgt;
+        tgt.set_lhs(std::make_shared<Token>("1'b0", Token::number));
+        rep.target = tgt;
+    }
 
     check_ports["stream_in"][1].set_replication(rep);
 

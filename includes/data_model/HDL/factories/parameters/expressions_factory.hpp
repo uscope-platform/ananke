@@ -47,6 +47,8 @@ public:
     void consume(const std::shared_ptr<Parameter_value_base>& v);
     bool active() const;
 
+    static Expression_v2::expression_operator map_operator(Token::sv_operators op);
+
 private:
     bool factory_active = false;
     bool paused = false;

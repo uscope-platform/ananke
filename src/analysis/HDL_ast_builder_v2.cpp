@@ -144,14 +144,14 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::specialize_instance(const 
 
     std::string accessor = "[" + idx_name + "]";
 
-    for(auto &[port_name, nets]:specialized_d.get_ports()){
+        for(auto &[port_name, nets]:specialized_d.get_ports()){
         std::vector<HDL_net> port_content;
         for(auto &n:nets){
             if(n.is_array()) {
                 auto new_net = n;
-                Expression n_idx;
-                n_idx.emplace_back(idx);
-                new_net.set_index(std::make_shared<Expression>(n_idx));
+                Expression_v2 n_idx;
+                n_idx.set_lhs(std::make_shared<Token>(std::variant<hdl_integer, double>(idx), 0));
+                new_net.set_index({n_idx});
                 port_content.emplace_back(new_net);
             } else {
                 port_content.push_back(n);

@@ -400,6 +400,9 @@ void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext 
 }
 
 void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
+    if (loops_factory.in_loop() && loops_factory.in_body()) {
+        loops_factory.start_expression(ctx->primary() == nullptr);
+    }
     if(type_engine.active() || type_engine.is_ranging()){
         type_engine.start_expression();
     } else if(params_factory.is_component_relevant()|| params_factory.is_param_assignment() || params_factory.is_param_override()) {
@@ -416,6 +419,9 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
 }
 
 void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
+    if (loops_factory.in_loop() && loops_factory.in_body()) {
+        loops_factory.stop_expression(ctx->primary() == nullptr);
+    }
     if (type_engine.active() || type_engine.is_ranging()) {
         type_engine.stop_expression();
     } else if (params_factory.is_component_relevant() || params_factory.is_param_assignment() || params_factory.is_param_override()) {
@@ -483,7 +489,6 @@ void sv_visitor::exitOperator_plus_minus(sv2017::Operator_plus_minusContext *ctx
         type_engine.set_operation(Expression_v2::expression_operator::add);
         if (loops_factory.in_loop()) loops_factory.set_operation(Expression_v2::expression_operator::add);
         if (f_factory.is_active()) f_factory.set_operation(Expression_v2::expression_operator::add);
-
     }
     if (ctx->MINUS()) {
         params_factory.set_operation(Expression_v2::expression_operator::subtract);
@@ -913,6 +918,9 @@ void sv_visitor::enterConstant_param_expression(sv2017::Constant_param_expressio
 }
 
 void sv_visitor::enterBit_select(sv2017::Bit_selectContext *ctx) {
+    if (loops_factory.in_loop() && loops_factory.in_body()) {
+        loops_factory.start_bit_selection();
+    }
     if (f_factory.is_active()) {
         f_factory.start_bit_selection();
     } else {
@@ -923,6 +931,9 @@ void sv_visitor::enterBit_select(sv2017::Bit_selectContext *ctx) {
 }
 
 void sv_visitor::exitBit_select(sv2017::Bit_selectContext *ctx) {
+    if (loops_factory.in_loop() && loops_factory.in_body()) {
+        loops_factory.stop_bit_selection();
+    }
     if (f_factory.is_active()) {
         f_factory.stop_bit_selection();
     } else {
@@ -1227,6 +1238,10 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
         auto var_name = ctx->package_or_class_scoped_hier_id_with_select()->package_or_class_scoped_path()->getText();
         if(loops_factory.in_loop()) {
             loops_factory.start_assignment(var_name);
+            if (loops_factory.in_body()) {
+                Token var_token(var_name, Token::get_type(var_name));
+                loops_factory.add_component(var_token);
+            }
         } else {
             f_factory.start_assignment(var_name);
         }

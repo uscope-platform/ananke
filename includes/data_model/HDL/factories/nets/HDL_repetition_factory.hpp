@@ -32,11 +32,14 @@ public:
     HDL_replication get_repetition();
 private:
     enum  {
-        size,
-        target
-    } phase = size;
+        size_phase,
+        target_phase
+    } phase = size_phase;
     bool is_active = false;
     HDL_replication repetition;
+
+    void add_to_current(const Token &tok);
+    Expression_v2 current_expression;
 };
 
 

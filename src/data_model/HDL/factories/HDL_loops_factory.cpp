@@ -25,15 +25,25 @@ void HDL_loops_factory::clear() {
     repeated_instances.clear();
     loop_specs = HDL_loop_metadata();
     current_expression = Expression_v2();
+    body_expr_factory = expressions_factory();
+    in_body_bit_selection = false;
     loop_phase = init;
     end_cond_valid = false;
     active = false;
 }
 
+void HDL_loops_factory::set_operation(const Expression_v2::expression_operator &op) {
+    if (loop_phase == body) {
+        body_expr_factory.set_operation(op);
+    } else {
+        current_expression.set_operation(op);
+    }
+}
 
 void HDL_loops_factory::start_assignment(const std::string &name) {
     if(loop_phase == body) {
         expression_valid = true;
+        body_expr_factory.clear_expression();
         loop_specs.add_assignment(assignment(name, {}, {}));
     }
 }
@@ -44,12 +54,22 @@ std::vector<HDL_instance> HDL_loops_factory::get_instances() {
 }
 
 void HDL_loops_factory::add_component(const Token &c) {
-    if (!c.is_operator()) {
-        auto tok = std::make_shared<Token>(c);
-        if (current_expression.get_lhs() == nullptr) {
-            current_expression.set_lhs(tok);
+    if (loop_phase == body) {
+        if (in_body_bit_selection) {
+            body_expr_factory.add_component(c);
+        } else if (c.is_operator()) {
+            body_expr_factory.set_operation(expressions_factory::map_operator(c.get_operation()));
         } else {
-            current_expression.set_rhs(tok);
+            body_expr_factory.add_component(c);
+        }
+    } else {
+        if (!c.is_operator()) {
+            auto tok = std::make_shared<Token>(c);
+            if (current_expression.get_lhs() == nullptr) {
+                current_expression.set_lhs(tok);
+            } else {
+                current_expression.set_rhs(tok);
+            }
         }
     }
 }
@@ -77,25 +97,78 @@ void HDL_loops_factory::set_phase(loop_phase_t p) {
     } else if(p==body) {
         loop_specs.set_iter(current_expression);
         current_expression = Expression_v2();
+        body_expr_factory = expressions_factory();
+        in_body_bit_selection = false;
     }
 }
 
 void HDL_loops_factory::advance_expression() {
     if(expression_valid) {
         auto assignments = loop_specs.get_assignments();
-        assignments.back().set_index(Expression_v2::unwrap(current_expression));
+        auto expr = body_expr_factory.get_expression_v2();
+        if (expr.has_value()) {
+            auto raw = Expression_v2::unwrap(std::move(*expr));
+            if (raw && raw->is<Token>()) {
+                auto &tok = raw->as<Token>();
+                if (tok.is_subscripted()) {
+                    auto indices = tok.get_array_index();
+                    if (indices.size() == 1) {
+                        assignments.back().set_index(indices[0]);
+                    }
+                } else {
+                    assignments.back().set_index(raw);
+                }
+            } else if (raw && raw->is<Expression_v2>()) {
+                assignments.back().set_index(raw);
+            }
+        }
         loop_specs.set_assignments(assignments);
-        current_expression = Expression_v2();
+        body_expr_factory.clear_expression();
     }
 }
 
 void HDL_loops_factory::close_expression() {
     if(expression_valid) {
         auto assignments = loop_specs.get_assignments();
-        assignments.back().set_value(Expression_v2::unwrap(current_expression));
+        auto expr = body_expr_factory.get_expression_v2();
+        if (expr.has_value()) {
+            if (expr->get_operation() != Expression_v2::none) {
+                assignments.back().set_value(Expression_v2::unwrap(std::move(*expr)));
+            } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
+                assignments.back().set_value(lhs);
+            } else if (auto lhs = expr->get_lhs()) {
+                assignments.back().set_value(lhs);
+            }
+        }
         loop_specs.set_assignments(assignments);
         expression_valid = false;
-        current_expression = Expression_v2();
+        body_expr_factory.clear_expression();
+    }
+}
+
+void HDL_loops_factory::start_expression(bool new_expr) {
+    if (loop_phase == body && !in_body_bit_selection) {
+        body_expr_factory.start_expression(new_expr);
+    }
+}
+
+void HDL_loops_factory::stop_expression(bool new_expr) {
+    if (loop_phase == body && !in_body_bit_selection) {
+        body_expr_factory.stop_expression(new_expr);
+    }
+}
+
+void HDL_loops_factory::start_bit_selection() {
+    if (loop_phase == body) {
+        in_body_bit_selection = true;
+        body_expr_factory.start_bit_selection();
+    }
+}
+
+void HDL_loops_factory::stop_bit_selection() {
+    if (loop_phase == body) {
+        in_body_bit_selection = false;
+        body_expr_factory.stop_bit_selection();
     }
 }
 
@@ -117,6 +190,5 @@ void HDL_loops_factory::add_instance(HDL_instance &i) {
     i.add_loop(loop_specs);
     repeated_instances.push_back(i);
 }
-
 
 

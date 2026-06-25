@@ -21,6 +21,7 @@
 #include "data_model/HDL/HDL_loop.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
+#include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 
 class HDL_loops_factory {
 public:
@@ -47,7 +48,13 @@ public:
     void set_phase(loop_phase_t p);
     void advance_expression();
     void close_expression();
-    void set_operation(const Expression_v2::expression_operator &op) {current_expression.set_operation(op);}
+    void set_operation(const Expression_v2::expression_operator &op);
+
+    void start_expression(bool new_expr);
+    void stop_expression(bool new_expr);
+    void start_bit_selection();
+    void stop_bit_selection();
+    bool in_body() const {return active && loop_phase == body;}
 private:
     std::vector<HDL_instance> repeated_instances;
     HDL_loop_metadata loop_specs;
@@ -59,6 +66,8 @@ private:
 
     bool end_cond_valid = false;
     bool active = false;
+    expressions_factory body_expr_factory;
+    bool in_body_bit_selection = false;
 };
 
 
