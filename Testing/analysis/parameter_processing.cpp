@@ -267,7 +267,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     av.set_1d_slice({0,0}, {9,8});
     auto ec = Token(0, 0);
     ec.set_value(av);
-    p->set_raw_value(std::make_shared<Expression>(Expression(ec)));
+    p->set_raw_value(std::make_shared<Token>(ec));
     p->set_name("param_2");
     HDL_simple_type t;
     t = Type_engine::create_primitive_type("implicit")->as<HDL_simple_type>();
@@ -297,7 +297,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p->set_name("p1_t");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     ec = Token("param_2", Token::identifier);
-    ec.add_array_index(std::make_shared<Expression>(Token(0, 1)));
+    ec.add_array_index(std::make_shared<Token>(0, 1));
     p->add_component(ec);
     p->set_value(9);
     check_params.insert(p);
@@ -307,7 +307,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p->set_name("p2_t");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     ec = Token("param_2", Token::identifier);
-    ec.add_array_index(std::make_shared<Expression>(Token(1, 1)));
+    ec.add_array_index(std::make_shared<Token>(1, 1));
     p->add_component(ec);
     p->set_value(8);
     check_params.insert(p);
@@ -451,6 +451,7 @@ TEST(parameter_processing, complex_for_array_parameter) {
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
     auto deps = ast_v2->get_dependencies();
 
+    auto a = deps[0]->get_parameters().get("N_TRIGGER_REGISTERS")->get_numeric_value();
     ASSERT_EQ(deps.size(), 3);
     ASSERT_EQ(deps[0]->get_parameters().get("N_TRIGGER_REGISTERS")->get_numeric_value(), 6);
     ASSERT_EQ(deps[1]->get_parameters().get("N_TRIGGER_REGISTERS")->get_numeric_value(), 2);
@@ -1274,7 +1275,7 @@ TEST(parameter_processing, override_after_function_localparam) {
     auto deps = ast_v2->get_dependencies();
     ASSERT_EQ(deps[0]->get_parameters().get("INITIAL_STOPPED_STATE")->get_numeric_value(), 52);
     auto i_l = deps[0]->get_parameters().get("INITIAL_STOPPED_STATE")->get_expression();
-    ASSERT_FALSE(i_l->as<Expression>().empty());
+    ASSERT_TRUE(i_l->is<Token>());
 }
 
 
@@ -1328,7 +1329,7 @@ TEST(parameter_processing, init_list_override) {
     HDL_parameter p;
     p.set_name("NS");
     p.set_type(Type_engine::create_primitive_type("implicit"));
-    p.set_raw_value(std::make_shared<Expression>(Expression(Token("2", Token::number))));
+    p.set_raw_value(std::make_shared<Token>("2", Token::number));
     p.set_value(2);
     check_params.insert(std::make_shared<HDL_parameter>(p));
     p = HDL_parameter();
@@ -1348,8 +1349,8 @@ TEST(parameter_processing, init_list_override) {
     true});
     Concatenation c;
 
-    c.add_component(std::make_shared<Expression>(Expression(Token(1136656384, 0))));
-    c.add_component(std::make_shared<Expression>(Expression(Token(1136656448, 0))));
+    c.add_component(std::make_shared<Token>(1136656384, 0));
+    c.add_component(std::make_shared<Token>(1136656448, 0));
 
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(c));
@@ -1362,9 +1363,8 @@ TEST(parameter_processing, init_list_override) {
     p = HDL_parameter();
     p.set_name("SLAVE_MASK");
     Replication r;
-    r.set_item(std::make_shared<Expression>(Expression(Token(64, 32))));
-    auto size = std::make_shared<Expression>(Expression(Token(2, 1)));
-    r.set_size(size);
+    r.set_item(std::make_shared<Token>(64, 32));
+    r.set_size(std::make_shared<Token>(2, 1));
     HDL_simple_type param_type_2;
     e.set_lhs(std::make_shared<Token>("NS", Token::identifier));
     e.set_rhs(std::make_shared<Token>("1", Token::number));
@@ -1579,6 +1579,7 @@ endmodule
     EXPECT_TRUE(dep_6->get_parameters().contains("addr2"));
     EXPECT_EQ(dep_6->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 1200);
 }
+
 
 TEST(parameter_processing, override_with_package_ref_in_array_init) {
     auto test_pattern = R"(
