@@ -14,19 +14,17 @@
 //  limitations under the License.
 
 #include "data_model/HDL/parameters/components/Replication.hpp"
-#include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
 
+
 CEREAL_REGISTER_TYPE(Replication)
+
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Replication)
 
-Replication::Replication(const std::shared_ptr<Expression> &size, std::shared_ptr<Parameter_value_base> item)  {
-    repeated_item = std::move(item);
-    repetition_size = size;
-}
 
 Replication::Replication(const Replication &other) {
     repetition_size = other.repetition_size;
@@ -92,9 +90,9 @@ std::optional<resolved_parameter> Replication::evaluate(const std::map<qualified
     if (!raw_size.value().is_integer()) return false;
     auto size = raw_size.value().get_integer().get_value();
     mdarray<hdl_integer>::md_1d_array repeated_value;
-    if (repeated_item->is<Expression>()) {
-        auto item = repeated_item->as<Expression>().evaluate(context);
-        int64_t repeated_size = repeated_item->as<Expression>().get_size();
+    if (repeated_item->is<Expression_v2>()) {
+        auto item = repeated_item->as<Expression_v2>().evaluate(context);
+        int64_t repeated_size = repeated_item->as<Expression_v2>().get_size();
         if (!item.has_value()) return false;
         if (!item.value().is_integer()) throw std::runtime_error("Tried to replicate non integer");
         if (!packing) {

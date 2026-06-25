@@ -257,7 +257,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("param_1");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token(4, 0));
+    p->set_raw_value(std::make_shared<Token>(4, 0));
     p->set_value(4);
 
     check_params.insert(p);
@@ -265,9 +265,9 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p = std::make_shared<HDL_parameter>();
     mdarray<hdl_integer> av;
     av.set_1d_slice({0,0}, {9,8});
-    auto ec = Token(0, 0);
-    ec.set_value(av);
-    p->set_raw_value(std::make_shared<Token>(ec));
+    auto tk = Token(0, 0);
+    tk.set_value(av);
+    p->set_raw_value(std::make_shared<Token>(tk));
     p->set_name("param_2");
     HDL_simple_type t;
     t = Type_engine::create_primitive_type("implicit")->as<HDL_simple_type>();
@@ -283,22 +283,23 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("param_3");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->add_component(Token("(", Token::parenthesis));
-    p->add_component(Token(4, 0));
-    p->add_component(Token(Token::add));
-    p->add_component(Token(7, 3));
-    p->add_component(Token(")", Token::parenthesis));
-    p->add_component(Token(Token::multiply));
-    p->add_component(Token(1, 1));
+    Expression_v2 e1, e2;
+    e2.set_lhs(std::make_shared<Token>(4, 0));
+    e2.set_rhs(std::make_shared<Token>(7, 3));
+    e2.set_operation(Expression_v2::add);
+    e1.set_lhs(std::make_shared<Expression_v2>(e2));
+    e1.set_rhs(std::make_shared<Token>(1,1));
+    e1.set_operation(Expression_v2::multiply);
+    p->set_raw_value(std::make_shared<Expression_v2>(e1));
     p->set_value(11);
     check_params.insert(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("p1_t");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    ec = Token("param_2", Token::identifier);
-    ec.add_array_index(std::make_shared<Token>(0, 1));
-    p->add_component(ec);
+    tk = Token("param_2", Token::identifier);
+    tk.add_array_index(std::make_shared<Token>(0, 1));
+    p->set_raw_value(std::make_shared<Token>(tk));
     p->set_value(9);
     check_params.insert(p);
 
@@ -306,9 +307,9 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("p2_t");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    ec = Token("param_2", Token::identifier);
-    ec.add_array_index(std::make_shared<Token>(1, 1));
-    p->add_component(ec);
+    tk = Token("param_2", Token::identifier);
+    tk.add_array_index(std::make_shared<Token>(1, 1));
+    p->set_raw_value(std::make_shared<Token>(tk));
     p->set_value(8);
     check_params.insert(p);
 
@@ -961,9 +962,9 @@ TEST(parameter_processing, override_with_package_parameter) {
             auto override_param = std::make_shared<HDL_parameter>();
             override_param->set_name("param_1");
             override_param->set_type(Type_engine::create_primitive_type("implicit"));
-            Token ec("base", Token::identifier);
-            ec.set_package_prefix("test_package");
-            override_param->add_component(ec);
+            Token tk("base", Token::identifier);
+            tk.set_package_prefix("test_package");
+            override_param->set_raw_value(std::make_shared<Token>(tk));
             override_param->set_type(param->get_type());
             to_solve.insert(override_param);
         } else {
@@ -1101,9 +1102,9 @@ TEST(parameter_processing, override_package_function) {
             auto override_param = std::make_shared<HDL_parameter>();
             override_param->set_name("param_1");
             override_param->set_type(Type_engine::create_primitive_type("implicit"));
-            Token ec("test_param", Token::identifier);
-            ec.set_package_prefix("test_pack");
-            override_param->add_component(ec);
+            Token tk("test_param", Token::identifier);
+            tk.set_package_prefix("test_pack");
+            override_param->set_raw_value(std::make_shared<Token>(tk));
             override_param->set_type(param->get_type());
             to_solve.insert(override_param);
         } else {
@@ -1508,7 +1509,6 @@ endmodule
     EXPECT_TRUE(dep_6->get_parameters().contains("addr2"));
     EXPECT_EQ(dep_6->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 1200);
 }
-
 
 TEST(parameter_processing, override_parameter_in_loop_index_with_package) {
     auto test_pattern = R"(

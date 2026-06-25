@@ -102,13 +102,6 @@ void PrintTo(const HDL_parameter &param, std::ostream *os) {
     *os << result;
 }
 
-void HDL_parameter::add_component(const Token &component) {
-    if (!raw_value) raw_value = std::make_shared<Expression>();
-    if(raw_value->is<Expression>()) {
-         raw_value->as<Expression>().push_back(component);
-    }
-}
-
 std::string HDL_parameter::to_string() const {
     std::string result = name;
 

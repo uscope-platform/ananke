@@ -23,7 +23,6 @@
 
 #include "data_model/HDL/HDL_loop.hpp"
 
-class Expression;
 
 class HDL_function_def {
 public:

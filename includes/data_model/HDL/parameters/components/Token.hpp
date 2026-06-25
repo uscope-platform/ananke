@@ -32,7 +32,6 @@
 
 #include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
 
-class Expression;
 class HDL_function_call;
 
 class Token : public Parameter_value_base{
