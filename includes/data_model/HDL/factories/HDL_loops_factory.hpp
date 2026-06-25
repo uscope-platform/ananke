@@ -46,6 +46,7 @@ public:
     void add_component(const Token &c);
     void add_loop_variable(const std::string &p);
     void set_phase(loop_phase_t p);
+    void advance_phase();
     void advance_expression();
     void close_expression();
     void set_operation(const Expression_v2::expression_operator &op);

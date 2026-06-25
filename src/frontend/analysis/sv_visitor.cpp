@@ -951,6 +951,7 @@ void sv_visitor::exitLoop_generate_construct(sv2017::Loop_generate_constructCont
 
 void sv_visitor::enterGenvar_initialization(sv2017::Genvar_initializationContext *ctx) {
     std::string id = ctx->identifier()->getText();
+    loops_factory.set_phase(HDL_loops_factory::init);
     params_factory.start_param_assignment();
     params_factory.new_parameter(id);
 }
@@ -959,6 +960,7 @@ void sv_visitor::exitGenvar_initialization(sv2017::Genvar_initializationContext 
     auto param = params_factory.get_parameter();
     params_factory.stop_param_assignment();
     loops_factory.set_identifier(*param);
+    loops_factory.advance_phase();
 }
 
 void sv_visitor::enterGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
@@ -967,6 +969,7 @@ void sv_visitor::enterGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
 }
 
 void sv_visitor::exitGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
+    loops_factory.advance_phase();
     auto param = params_factory.get_parameter();
     auto ex = param->get_expression();
     if (ex) {
@@ -1125,6 +1128,7 @@ void sv_visitor::exitGenvar_iteration(sv2017::Genvar_iterationContext *ctx) {
        }
        loops_factory.add_component(Token("1", Token::number));
    }
+    if (!ctx->genvar_expression()) loops_factory.advance_phase();
 }
 
 

@@ -53,7 +53,7 @@ std::vector<HDL_instance> HDL_loops_factory::get_instances() {
     return repeated_instances;
 }
 
-void HDL_loops_factory::add_component(const Token &c) {
+void HDL_loops_factory:: add_component(const Token &c) {
     if (loop_phase == body) {
         if (in_body_bit_selection) {
             body_expr_factory.add_component(c);
@@ -96,6 +96,12 @@ void HDL_loops_factory::set_phase(loop_phase_t p) {
         body_expr_factory = expressions_factory();
         in_body_bit_selection = false;
     }
+}
+
+void HDL_loops_factory::advance_phase() {
+    if (loop_phase == init) set_phase(end);
+    else if (loop_phase == end) set_phase(step);
+    else if (loop_phase == step) set_phase(body);
 }
 
 void HDL_loops_factory::advance_expression() {
@@ -169,17 +175,7 @@ void HDL_loops_factory::stop_bit_selection() {
 }
 
 void HDL_loops_factory::add_expression(const Expression_v2 &e) {
-    if(loop_phase == step) {
-        current_expression = e;
-    } else {
-        if(end_cond_valid){
-            loop_specs.set_iter(e);
-        } else {
-            loop_specs.set_end_c(e);
-            end_cond_valid = true;
-        }
-    }
-
+    current_expression = e;
 }
 
 void HDL_loops_factory::add_instance(HDL_instance &i) {

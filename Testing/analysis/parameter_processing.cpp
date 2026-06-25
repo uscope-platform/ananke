@@ -1188,6 +1188,75 @@ TEST(parameter_processing, parameter_with_for_loop) {
 
 }
 
+TEST(parameter_processing, parameter_with_for_loop_incr) {
+    auto test_pattern = R"(
+
+        module dependency #(
+            parameter DMA_BASE_ADDRESS = 4
+        )();
+
+            parameter p1_t = DMA_BASE_ADDRESS+2;
+
+        endmodule
+
+        module test_mod #(
+            parameter N_CORES = 2
+        )();
+          	localparam N_REGISTERS = 4;
+
+            typedef logic [31:0] ctrl_addr_init_t [N_REGISTERS-1:0];
+            function ctrl_addr_init_t CTRL_ADDR_CALC();
+                CTRL_ADDR_CALC[0] = 100;
+                CTRL_ADDR_CALC[1] = 130;
+                CTRL_ADDR_CALC[2] = 356;
+                CTRL_ADDR_CALC[3] = 62;
+            endfunction
+
+            parameter ctrl_addr_init_t AXI_ADDRESSES = CTRL_ADDR_CALC();
+            genvar n;
+            for(n = 0; n<N_CORES; n++)begin
+                dependency #(
+                    .DMA_BASE_ADDRESS(AXI_ADDRESSES[(N_CORES+1)-n])
+                ) dep ();
+            end
+        endmodule
+    )";
+
+
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+
+    d_store->store_hdl_entity(resources, "", "");
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+    auto deps = ast_v2->get_dependencies();
+
+    std::vector<hdl_integer> param_1;
+    std::vector<hdl_integer> p1_t;
+
+    for(auto dep : deps) {
+        auto val_1 = dep->get_parameters().get("DMA_BASE_ADDRESS")->get_numeric_value();
+        auto val_2 =  dep->get_parameters().get("p1_t")->get_numeric_value();
+        ASSERT_TRUE(val_1.has_value());
+        param_1.push_back(val_1.value());
+        ASSERT_TRUE(val_2.has_value());
+        p1_t.push_back(val_2.value());
+    }
+
+    std::vector<hdl_integer> expected_param_1 = {62, 356};
+    EXPECT_EQ(param_1, expected_param_1);
+    std::vector<hdl_integer> expected_p1_t = {64, 358};
+    EXPECT_EQ(p1_t, expected_p1_t);
+
+}
+
+
 
 
 TEST(parameter_processing, parent_parameter_collision) {
