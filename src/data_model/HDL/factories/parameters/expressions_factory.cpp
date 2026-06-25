@@ -93,23 +93,19 @@ void expressions_factory::stop_bit_selection() {
 
 void expressions_factory::add_component(const Token &ec) {
     if (bit_select_active) {
-        if (!ec.is_operator()) {
-            if (!bit_select_v2.get_lhs()) {
-                bit_select_v2.set_lhs(std::make_shared<Token>(ec));
-            } else {
-                bit_select_v2.set_rhs(std::make_shared<Token>(ec));
-            }
+        if (!bit_select_v2.get_lhs()) {
+            bit_select_v2.set_lhs(std::make_shared<Token>(ec));
+        } else {
+            bit_select_v2.set_rhs(std::make_shared<Token>(ec));
         }
         return;
     }
 
-    if (!ec.is_operator()) {
-        auto tok = std::make_shared<Token>(ec);
-        if (current_v2.get_lhs() == nullptr) {
-            current_v2.set_lhs(tok);
-        } else {
-            current_v2.set_rhs(tok);
-        }
+    auto tok = std::make_shared<Token>(ec);
+    if (current_v2.get_lhs() == nullptr) {
+        current_v2.set_lhs(tok);
+    } else {
+        current_v2.set_rhs(tok);
     }
     if (paused) paused = false;
 }

@@ -18,42 +18,49 @@
 #include <gtest/gtest.h>
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/parameters/components/Token.hpp"
+
 
 
 
 TEST(Token, sized_binary_sv_constant_parsing){
     Token ec("8'b10110", Token::number);
 
-    ASSERT_TRUE(ec.is_numeric());
-    ASSERT_EQ(ec.get_value().value().get_integer(), 22);
-    ASSERT_EQ(ec.get_binary_size(), 8);
+    Token check;
+    check.set_binary_size(8);
+    check.set_value(22);
+    EXPECT_EQ(check, ec);
 }
 
 
 TEST(Token, sized_octal_sv_constant_parsing){
     Token ec("12'o547", Token::number);
 
-    ASSERT_TRUE(ec.is_numeric());
-    ASSERT_EQ(ec.get_value().value().get_integer(), 359);
-    ASSERT_EQ(ec.get_binary_size(), 12);
+    Token check;
+    check.set_binary_size(12);
+    check.set_value(359);
+    EXPECT_EQ(check, ec);
 }
 
 
 TEST(Token, sized_decimal_sv_constant_parsing){
     Token ec("14'd1542", Token::number);
 
-    ASSERT_TRUE(ec.is_numeric());
-    ASSERT_EQ(ec.get_value().value().get_integer(), 1542);
-    ASSERT_EQ(ec.get_binary_size(), 14);
+    Token check;
+    check.set_binary_size(14);
+    check.set_value(1542);
+    EXPECT_EQ(check, ec);
 }
 
 
 TEST(Token, sized_hexadecimal_sv_constant_parsing){
     Token ec("20'hCA54", Token::number);
 
-    ASSERT_TRUE(ec.is_numeric());
-    ASSERT_EQ(ec.get_value().value().get_integer(), 51796);
-    ASSERT_EQ(ec.get_binary_size(), 20);
+    Token check;
+    check.set_binary_size(20);
+    check.set_value(51796);
+    EXPECT_EQ(check, ec);
+
 }
 
 
@@ -61,44 +68,52 @@ TEST(Token, sized_hexadecimal_sv_constant_parsing){
 TEST(Token, unsized_binary_sv_constant_parsing){
     Token ec("'b10110", Token::number);
 
-    ASSERT_TRUE(ec.is_numeric());
-    ASSERT_EQ(ec.get_value().value().get_integer(), 22);
-    ASSERT_EQ(ec.get_binary_size(), 5);
+    Token check;
+    check.set_binary_size(5);
+    check.set_value(22);
+    EXPECT_EQ(check, ec);
+
 }
 
 
 TEST(Token, unsized_octal_sv_constant_parsing){
     Token ec("'o547", Token::number);
 
-    ASSERT_TRUE(ec.is_numeric());
-    ASSERT_EQ(ec.get_value().value().get_integer(), 359);
-    ASSERT_EQ(ec.get_binary_size(), 9);
+
+    Token check;
+    check.set_binary_size(9);
+    check.set_value(359);
+    EXPECT_EQ(check, ec);
+
 }
 
 
 TEST(Token, unsized_decimal_sv_constant_parsing){
     Token ec("'d1542", Token::number);
 
-    ASSERT_TRUE(ec.is_numeric());
-    ASSERT_EQ(ec.get_value().value().get_integer(), 1542);
-    ASSERT_EQ(ec.get_binary_size(), 11);
+    Token check;
+    check.set_binary_size(11);
+    check.set_value(1542);
+    EXPECT_EQ(check, ec);
+
 }
 
 
 TEST(Token, unsized_hexadecimal_sv_constant_parsing){
     Token ec("'hCA54", Token::number);
 
-    ASSERT_TRUE(ec.is_numeric());
-    ASSERT_EQ(ec.get_value().value().get_integer(), 51796);
-    ASSERT_EQ(ec.get_binary_size(), 16);
+
+    Token check;
+    check.set_binary_size(16);
+    check.set_value(51796);
+    EXPECT_EQ(check, ec);
+
 }
 
 
 TEST(Token, string){
     Token ec("\"FALSE\"", Token::string);
 
-    ASSERT_TRUE(ec.is_string());
-    ASSERT_FALSE(ec.is_identifier());
     ASSERT_EQ(ec.get_value().value().get_string(), "\"FALSE\"");
 }
 
@@ -106,8 +121,6 @@ TEST(Token, string){
 TEST(Token, identifier){
     Token ec("FALSE", Token::identifier);
 
-    ASSERT_TRUE(ec.is_identifier());
-    ASSERT_FALSE(ec.is_string());
     ASSERT_EQ(ec.get_value().value().get_string(), "FALSE");
 }
 

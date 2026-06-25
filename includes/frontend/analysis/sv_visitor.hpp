@@ -100,9 +100,6 @@ public:
     void enterNamed_parameter_assignment(sv2017::Named_parameter_assignmentContext *ctx) override;
     void exitNamed_parameter_assignment(sv2017::Named_parameter_assignmentContext *ctx) override;
 
-    void enterPrimaryPar(sv2017::PrimaryParContext *ctx) override;
-    void exitPrimaryPar(sv2017::PrimaryParContext *ctx) override;
-
     void enterAssignment_pattern(sv2017::Assignment_patternContext *ctx) override;
     void exitAssignment_pattern(sv2017::Assignment_patternContext *ctx) override;
 

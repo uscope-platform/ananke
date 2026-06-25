@@ -61,13 +61,11 @@ void HDL_loops_factory::add_component(const Token &c) {
             body_expr_factory.add_component(c);
         }
     } else {
-        if (!c.is_operator()) {
-            auto tok = std::make_shared<Token>(c);
-            if (current_expression.get_lhs() == nullptr) {
-                current_expression.set_lhs(tok);
-            } else {
-                current_expression.set_rhs(tok);
-            }
+        auto tok = std::make_shared<Token>(c);
+        if (current_expression.get_lhs() == nullptr) {
+            current_expression.set_lhs(tok);
+        } else {
+            current_expression.set_rhs(tok);
         }
     }
 }

@@ -31,23 +31,17 @@ Token::Token(const Token &c) {
     array_index = c.array_index;
     package_prefix = c.package_prefix;
     instance_prefix = c.instance_prefix;
-    operator_value = c.operator_value;
     binary_size = c.binary_size;
     type = c.type;
     if (c.call) call = std::make_shared<HDL_function_call>(*c.call);
 }
 
-Token::Token(const sv_operators &op) {
-    type = operation;
-    operator_value = op;
-}
 
 Token::Token() {
     value = 0;
 }
 
 Token::Token(const std::string &s, const token_type &t) {
-    if (t == operation) throw std::runtime_error("wrong_constructor");
     value = s;
     type = t;
     if(t == number) {
@@ -137,21 +131,10 @@ std::optional<resolved_parameter> Token::evaluate(const std::map<qualified_ident
     return value;
 }
 
-bool Token::is_right_associative() {
-    if(type != operation) throw std::runtime_error("Error: attempted to get the associativity of a non operator");
-    return right_associative_set.contains(operator_value);
-}
-
-int64_t Token::get_operator_precedence() {
-    if(type != operation) throw std::runtime_error("Error: attempted to get the precedence of a non operator");
-    return operators_precedence[operator_value];
-}
 
 std::string Token::print() const {
     std::string ret_val;
-    if (type == operation) {
-        ret_val = print_operator.at(operator_value);
-    } else if(is_numeric()){
+    if(is_numeric()){
         if (value.is_real()) ret_val = std::to_string(value.get_real());
         else ret_val = std::to_string(value.get_integer());
     } else {
@@ -214,15 +197,9 @@ std::pair<resolved_parameter, int64_t> Token::process_number(const std::string &
     return std::make_pair(ret_value, ret_size);
 }
 
-Token::operator_type_t Token::get_operator_type() {
-    if(type != operation) throw std::runtime_error("Error: attempted to get the type of a non operator");
-    if (operator_value == logic_neg || operator_value == bitwise_neg) return unary_operator;
-    return binary_operator;
-}
 
 Token::token_type Token::get_type(const std::string &s) {
     if(ctre::match<R"(^\d+$)">(s) || ctre::search<R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))">(s)|| ctre::match<R"(^[+\-]?(\d+\.\d*|\.\d+)([eE][+\-]?\d+)?$|^[+\-]?\d+[eE][+\-]?\d+$)">(s)) return number;
-    if(is_string_parenthesis(s)) return parenthesis;
     if(s.starts_with("\"") | ctre::match<R"(\d+(\.\d+)?(s|ms|us|ns|ps|fs))">(s)) return string;
     return identifier;
 }
@@ -238,7 +215,6 @@ std::string Token::print_index(const std::vector<std::shared_ptr<Parameter_value
 bool Token::isEqual(const Parameter_value_base& other) const {
     const auto& rhs = static_cast<const Token&>(other);
     bool res = std::tie(type, value, package_prefix, instance_prefix, binary_size) == std::tie(rhs.type, rhs.value, rhs.package_prefix, rhs.instance_prefix, rhs.binary_size);
-    if (type == operation) res &= operator_value == rhs.operator_value;
     if (call == nullptr ^ rhs.call == nullptr) return false;
     if (!(call == nullptr && rhs.call == nullptr)) res &= *call == *rhs.call;
     if (array_index.size() != rhs.array_index.size()) return false;
@@ -255,7 +231,6 @@ bool operator==(const Token &lhs, const Token &rhs) {
     ret_val &= lhs.array_index == rhs.array_index;
     ret_val &= lhs.package_prefix == rhs.package_prefix;
     ret_val &= lhs.instance_prefix == rhs.instance_prefix;
-    if (lhs.type == Token::operation) ret_val &= lhs.operator_value == rhs.operator_value;
     ret_val &= lhs.binary_size == rhs.binary_size;
     if (lhs.call == nullptr ^ rhs.call == nullptr) return false;
     if (!(lhs.call == nullptr && rhs.call == nullptr)) ret_val &= *lhs.call == *rhs.call;

@@ -17,7 +17,6 @@
 #ifndef ANANKE_REPLICATION_HPP
 #define ANANKE_REPLICATION_HPP
 
-#include "Expression.hpp"
 #include "Concatenation.hpp"
 #include "Parameter_value_base.hpp"
 

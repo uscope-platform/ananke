@@ -17,7 +17,6 @@
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
 
 #include "analysis/loop_solver.hpp"
-#include "data_model/HDL/parameters/components/Expression.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"

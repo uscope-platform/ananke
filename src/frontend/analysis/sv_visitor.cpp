@@ -52,9 +52,6 @@ void sv_visitor::route_expression_component(const Token& ec) {
     } else if(params_factory.is_component_relevant()){
         params_factory.add_component(ec);
     }
-    if(deps_factory.is_valid_dependency() && ec.is_operator()){
-        deps_factory.add_connection_element(ec);
-    }
 }
 
 
@@ -699,18 +696,6 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
     }
 }
 
-
-void sv_visitor::enterPrimaryPar(sv2017::PrimaryParContext *ctx) {
-    auto ec = Token("(", Token::parenthesis);
-    if (type_engine.active() || type_engine.is_ranging())
-        type_engine.add_component(ec);
-}
-
-void sv_visitor::exitPrimaryPar(sv2017::PrimaryParContext *ctx) {
-    auto ec = Token(")", Token::parenthesis);
-    if (type_engine.active() || type_engine.is_ranging())
-        type_engine.add_component(ec);
-}
 
 void sv_visitor::enterAssignment_pattern(sv2017::Assignment_patternContext *ctx) {
     if (!ctx->replication_assignment()) params_factory.start_initialization_list();
