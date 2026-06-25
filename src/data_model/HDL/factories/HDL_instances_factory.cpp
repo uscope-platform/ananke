@@ -123,3 +123,7 @@ void HDL_instances_factory::add_array_quantifier(const std::shared_ptr<HDL_param
 void HDL_instances_factory::change_array_name(const std::string &s){
     net_factory.set_name(s);
 }
+
+void HDL_instances_factory::set_operation(Expression_v2::expression_operator op) {
+    net_factory.set_operation(op);
+}

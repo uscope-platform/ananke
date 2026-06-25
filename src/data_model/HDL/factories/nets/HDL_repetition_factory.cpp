@@ -15,7 +15,6 @@
 
 
 #include "data_model/HDL/factories/nets/HDL_repetition_factory.hpp"
-#include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 
 void HDL_repetition_factory::stop_repetition() {
     if (current_expression.get_lhs()) {
@@ -28,19 +27,8 @@ void HDL_repetition_factory::stop_repetition() {
     phase = size_phase;
 }
 
-void HDL_repetition_factory::add_component(const std::string &c) {
-    Token tok(c, Token::get_type(c));
-    add_to_current(tok);
-}
-
-void HDL_repetition_factory::add_component(const Token &ec) {
-    add_to_current(ec);
-}
-
-void HDL_repetition_factory::add_to_current(const Token &tok) {
-    if (tok.is_operator() && current_expression.get_lhs() && current_expression.get_operation() == Expression_v2::none) {
-        current_expression.set_operation(expressions_factory::map_operator(tok.get_operation()));
-    } else if (!current_expression.get_lhs()) {
+void HDL_repetition_factory::add_component(const Token &tok) {
+    if (!current_expression.get_lhs()) {
         current_expression.set_lhs(std::make_shared<Token>(tok));
     } else if (current_expression.get_lhs() && !current_expression.get_rhs()) {
         current_expression.set_rhs(std::make_shared<Token>(tok));
@@ -62,4 +50,8 @@ HDL_replication HDL_repetition_factory::get_repetition() {
     }
     current_expression = Expression_v2();
     return repetition;
+}
+
+void HDL_repetition_factory::set_operation(Expression_v2::expression_operator op) {
+    current_expression.set_operation(op);
 }

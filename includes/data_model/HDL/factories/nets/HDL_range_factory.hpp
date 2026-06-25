@@ -25,11 +25,12 @@ class HDL_range_factory {
 public:
     void open_range(bool direct);
     void advance_state();
-    void add_component(const std::string &c);
     void add_component(const Token &ec);
     void set_range_type(HDL_range::range_type_t t);
     HDL_range get_range();
     bool is_active() const;
+
+    void set_operation(Expression_v2::expression_operator op);
 private:
 
     enum  {
@@ -38,8 +39,6 @@ private:
         accessor,
         range
     } factory_state = idle;
-
-    void add_to_current(const Token &tok);
 
     HDL_range current_range;
     std::vector<HDL_range> ranges_stack;

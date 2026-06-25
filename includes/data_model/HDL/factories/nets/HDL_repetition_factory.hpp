@@ -26,10 +26,11 @@ public:
     void stop_repetition();
     bool is_in_repetition() const {return is_active;}
 
-    void add_component(const std::string &c);
     void add_component(const Token &ec);
     void advance_phase();
     HDL_replication get_repetition();
+
+    void set_operation(Expression_v2::expression_operator op);
 private:
     enum  {
         size_phase,
@@ -38,7 +39,6 @@ private:
     bool is_active = false;
     HDL_replication repetition;
 
-    void add_to_current(const Token &tok);
     Expression_v2 current_expression;
 };
 

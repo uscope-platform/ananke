@@ -174,7 +174,6 @@ void HDL_parameters_factory::stop_expression_new(bool new_expr) {
 }
 
 void HDL_parameters_factory::set_operation(const Expression_v2::expression_operator &op) {
-    if (in_bit_selection) return;
     expr_factory.set_operation(op);
 }
 

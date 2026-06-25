@@ -61,6 +61,7 @@ public:
 
     void change_array_name(const std::string &s);
 
+    void set_operation(Expression_v2::expression_operator op);
 
 private:
     bool in_port = false;

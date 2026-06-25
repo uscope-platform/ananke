@@ -39,14 +39,15 @@ void HDL_net_factory::close_range() {
 }
 
 void HDL_net_factory::add_component(const std::string &c) {
+    Token tok(c, Token::get_type(c));
     if(repetition_factory.is_in_repetition()) {
-        repetition_factory.add_component(c);
+        repetition_factory.add_component(tok);
     }
     if(in_array) {
         current_net.add_index_component(c);
     }
     if(range_factory.is_active()) {
-        range_factory.add_component(c);
+        range_factory.add_component(tok);
     }
     if(in_concatenation) {
         if(current_net.get_name().empty() && !repetition_factory.is_in_repetition()) {
@@ -102,6 +103,11 @@ void HDL_net_factory::stop_repetition() {
     auto rep = repetition_factory.get_repetition();
     repetition_factory.stop_repetition();
     current_net.set_replication(rep);
+}
+
+void HDL_net_factory::set_operation(Expression_v2::expression_operator op) {
+    repetition_factory.set_operation(op);
+    range_factory.set_operation(op);
 }
 
 void HDL_net_factory::add_replication_target(const std::string &c) {

@@ -215,6 +215,7 @@ public:
 private:
     void route_expression_component(const std::string& text);
     void route_expression_component(const Token& ec);
+    void process_operation(Expression_v2::expression_operator op);
 
     bool in_param_declaration = false;
     bool in_class = false;

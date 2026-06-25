@@ -57,8 +57,6 @@ void HDL_loops_factory::add_component(const Token &c) {
     if (loop_phase == body) {
         if (in_body_bit_selection) {
             body_expr_factory.add_component(c);
-        } else if (c.is_operator()) {
-            body_expr_factory.set_operation(expressions_factory::map_operator(c.get_operation()));
         } else {
             body_expr_factory.add_component(c);
         }
