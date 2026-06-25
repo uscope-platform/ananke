@@ -1100,15 +1100,16 @@ void sv_visitor::enterGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
 void sv_visitor::exitGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
     auto param = params_factory.get_parameter();
     auto ex = param->get_expression();
-    if (ex->is<Expression_v2>()) {
-        loops_factory.add_expression(ex->as<Expression_v2>());
-    } else if (ex->is<Token>()) {
-        Expression_v2 e;
-        e.set_lhs(ex);
-        loops_factory.add_expression(e);
-    } else if (!ex->is<Cast>()) {
-        throw std::runtime_error("Concatenations or replications are not allowed in loop declarations");
+    if (ex) {
+        if (ex->is<Expression_v2>()) {
+            loops_factory.add_expression(ex->as<Expression_v2>());
+        } else {
+            Expression_v2 e;
+            e.set_lhs(ex);
+            loops_factory.add_expression(e);
+        }
     }
+    params_factory.stop_param_assignment();
 }
 
 void sv_visitor::enterUntyped_function_declaration(sv2017::Untyped_function_declarationContext *ctx) {
