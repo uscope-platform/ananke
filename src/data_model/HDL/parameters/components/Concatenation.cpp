@@ -82,18 +82,21 @@ std::optional<resolved_parameter> Concatenation::evaluate(const std::map<qualifi
         for (int i = 0;i<concat_size; i++) {
 
             auto value_opt = components[concat_size-i-1]->evaluate(context);
+            if (!value_opt.has_value()) return std::nullopt;
+            auto raw_value = value_opt.value();
+            if (!raw_value.is_integer()) throw std::runtime_error("packing concatenations of arrays is unsupported");
+            values[i] = raw_value.get_integer();
+
             if (!fields_sizes.empty()) {
                 sizes[i] = 1;
                 for (auto &ps : fields_sizes[concat_size-i-1].packed_sizes) sizes[i] *= ps;
             } else {
                 sizes[i] = components[concat_size-i-1]->get_size();
             }
-            if (!value_opt.has_value()) return std::nullopt;
-            auto raw_value = value_opt.value();
-            if (!raw_value.is_integer()) throw std::runtime_error("packing concatenations of arrays is unsupported");
-            values[i] = raw_value.get_integer();
         }
         result = pack_values(values, sizes);
+        uint64_t mask = (container_size >= 64) ? ~0ULL : (1ULL << container_size) - 1;
+        result = hdl_integer(result->get_integer().get_value() & mask);
     } else {
         if (components.empty())return std::nullopt;
         auto v = components[0]->evaluate(context);

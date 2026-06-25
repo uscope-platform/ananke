@@ -1614,7 +1614,7 @@ TEST(parameter_processing, override_with_package_ref_in_array_init) {
     auto inst = ast_v2->get_dependencies()[0];
     EXPECT_TRUE(inst->get_parameters().contains("X"));
     EXPECT_TRUE(inst->get_parameters().get("X")->get_numeric_value().has_value());
-    EXPECT_EQ(inst->get_parameters().get("X")->get_numeric_value().value(), 30);
+    EXPECT_EQ(inst->get_parameters().get("X")->get_numeric_value().value().get_value(), 30);
 }
 
 TEST(parameter_processing, intermediate_interface_param) {

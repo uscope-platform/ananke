@@ -66,9 +66,10 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
         }
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
-        current_resource.set_type(current_type);
-        current_resource.set_raw_value(result);
-    }
+            current_resource.set_type(current_type);
+            expr_factory.clear_expression();
+            current_resource.set_raw_value(result);
+        }
 }
 
 
@@ -182,7 +183,7 @@ void HDL_parameters_factory::start_packed_assignment() {
 }
 
 void HDL_parameters_factory::start_concatenation() {
-    if(ctx == param_context::declaration || ctx == param_context::packed_dim){
+    if(ctx == param_context::declaration || ctx == param_context::override || ctx == param_context::packed_dim){
         expr_factory.push_level();
         auto concat = std::make_unique<concatenation_factory>();
         concat->start_concatenation();

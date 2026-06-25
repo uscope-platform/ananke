@@ -87,7 +87,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(value, type, array_index, instance_prefix, package_prefix, binary_size);
+        ar(value, type, array_index, instance_prefix, package_prefix, binary_size, container_size);
     }
 
 private:
@@ -110,6 +110,7 @@ private:
     std::string instance_prefix;
 
     int64_t binary_size = 0;
+    int64_t container_size = 0;
 
     std::vector<std::shared_ptr<Parameter_value_base>> array_index;
 

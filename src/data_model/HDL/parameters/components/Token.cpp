@@ -148,10 +148,14 @@ std::string Token::print() const {
 }
 
 int64_t Token::get_size() {
-    return binary_size;
+    if (binary_size != 0) return binary_size;
+    return container_size;
 }
 
 void Token::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
+    container_size = 1;
+    for (auto &ps : s.packed_sizes) container_size *= ps;
+    for (auto &us : s.unpacked_sizes) container_size *= us;
 }
 
 std::pair<resolved_parameter, int64_t> Token::process_number(const std::string &s) {
