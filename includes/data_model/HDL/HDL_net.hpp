@@ -127,6 +127,9 @@ public:
         idx_expr.set_lhs(std::make_shared<Token>(ec));
         index.push_back(idx_expr);
     }
+    void add_index_expression(const Expression_v2 &expr) {
+        index.push_back(expr);
+    }
     void set_range(HDL_range r) {
         range = r;
     }

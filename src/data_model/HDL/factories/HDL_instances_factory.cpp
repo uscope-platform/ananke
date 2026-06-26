@@ -78,10 +78,23 @@ void HDL_instances_factory::add_connection_element(const Token &ec) {
 
 void HDL_instances_factory::start_bit_selection() {
     net_factory.start_array();
+    if(valid_instance) {
+        expr_factory.start_expression(false);
+    }
 }
 
 void HDL_instances_factory::stop_bit_selection() {
     net_factory.stop_array();
+    if(valid_instance) {
+        expr_factory.stop_expression(false);
+        if(!expr_factory.active()) {
+            auto expr = expr_factory.get_expression_v2();
+            if(expr.has_value()) {
+                net_factory.push_index_expression(expr.value());
+            }
+            expr_factory.clear_expression();
+        }
+    }
 }
 
 void HDL_instances_factory::start_replication() {

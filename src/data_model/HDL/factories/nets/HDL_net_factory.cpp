@@ -107,6 +107,10 @@ void HDL_net_factory::push_expression(const Expression_v2 &e) {
     range_factory.set_expression_part(e);
 }
 
+void HDL_net_factory::push_index_expression(const Expression_v2 &e) {
+    current_net.add_index_expression(e);
+}
+
 void HDL_net_factory::add_replication_target(const std::string &c) {
     current_net.add_relication_target(c);
 }

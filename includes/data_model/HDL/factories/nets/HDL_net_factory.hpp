@@ -54,6 +54,7 @@ public:
 
     void set_operation(Expression_v2::expression_operator op);
     void push_expression(const Expression_v2 &e);
+    void push_index_expression(const Expression_v2 &e);
 private:
     bool in_concatenation = false;
     bool in_array = false;
