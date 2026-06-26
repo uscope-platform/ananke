@@ -65,7 +65,11 @@ void HDL_instances_factory::add_concatenation_net() {
 
 
 void HDL_instances_factory::add_connection_element(const std::string &s) {
-    net_factory.add_component(s);
+    if(expr_factory.active()) {
+        expr_factory.add_component(Token(s, Token::get_type(s)));
+    } else {
+        net_factory.add_component(s);
+    }
 }
 
 void HDL_instances_factory::add_connection_element(const Token &ec) {
@@ -125,5 +129,27 @@ void HDL_instances_factory::change_array_name(const std::string &s){
 }
 
 void HDL_instances_factory::set_operation(Expression_v2::expression_operator op) {
-    net_factory.set_operation(op);
+    if(expr_factory.active()) {
+        expr_factory.set_operation(op);
+    } else {
+        net_factory.set_operation(op);
+    }
+}
+
+void HDL_instances_factory::start_expression(bool new_expr) {
+    if(net_factory.is_in_range()) {
+        expr_factory.start_expression(new_expr);
+    }
+}
+
+void HDL_instances_factory::stop_expression(bool new_expr) {
+    if(net_factory.is_in_range()) {
+        expr_factory.stop_expression(new_expr);
+        if(!expr_factory.active()) {
+            auto expr = expr_factory.get_expression_v2();
+            if(expr.has_value()) {
+                net_factory.push_expression(expr.value());
+            }
+        }
+    }
 }

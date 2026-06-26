@@ -25,12 +25,11 @@ class HDL_range_factory {
 public:
     void open_range(bool direct);
     void advance_state();
-    void add_component(const Token &ec);
     void set_range_type(HDL_range::range_type_t t);
     HDL_range get_range();
     bool is_active() const;
 
-    void set_operation(Expression_v2::expression_operator op);
+    void set_expression_part(const Expression_v2 &e);
 private:
 
     enum  {

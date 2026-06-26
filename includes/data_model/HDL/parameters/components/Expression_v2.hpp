@@ -82,6 +82,20 @@ public:
         {logical_or, "||"}
     };
 
+    inline static const std::map<expression_operator, int> op_precedence = {
+        {power, 10},
+        {multiply, 8}, {divide, 8}, {modulo, 8},
+        {add, 7}, {subtract, 7},
+        {logic_shift_left, 6}, {logic_shift_right, 6},
+        {arithmetic_shift_left, 6}, {arithmetic_shift_right, 6},
+        {greater, 5}, {greater_equal, 5}, {less, 5}, {less_equal, 5},
+        {equal, 4}, {not_equal, 4},
+        {bitwise_and, 3},
+        {bitwise_xor, 2}, {bitwise_xnor, 2},
+        {bitwise_or, 1},
+        {logical_and, 0}, {logical_or, 0}
+    };
+
     Expression_v2() = default;
     static std::shared_ptr<Parameter_value_base> unwrap(Expression_v2 expr);
     void set_lhs(const std::shared_ptr<Parameter_value_base> &comp){lhs = comp;}

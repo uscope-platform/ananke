@@ -31,28 +31,6 @@ void HDL_range_factory::advance_state() {
     }
 }
 
-void HDL_range_factory::add_component(const Token &tok) {
-    if(factory_state == wait_name) {
-        factory_state = accessor;
-        return;
-    }
-
-    Expression_v2 *target = nullptr;
-    if(factory_state == accessor) {
-        target = &current_range.accessor;
-    } else if(factory_state == range) {
-        target = &current_range.range;
-    } else {
-        return;
-    }
-
-    if (!target->get_lhs()) {
-        target->set_lhs(std::make_shared<Token>(tok));
-    } else if (target->get_lhs() && !target->get_rhs()) {
-        target->set_rhs(std::make_shared<Token>(tok));
-    }
-}
-
 void HDL_range_factory::set_range_type(HDL_range::range_type_t t) {
     current_range.type = t;
     advance_state();
@@ -72,16 +50,11 @@ bool HDL_range_factory::is_active() const {
     return factory_state != idle;
 }
 
-void HDL_range_factory::set_operation(Expression_v2::expression_operator op) {
-
-    Expression_v2 *target = nullptr;
+void HDL_range_factory::set_expression_part(const Expression_v2 &e) {
     if(factory_state == accessor) {
-        target = &current_range.accessor;
+        current_range.accessor = e;
     } else if(factory_state == range) {
-        target = &current_range.range;
-    } else {
-        return;
+        current_range.range = e;
     }
-    target->set_operation(op);
 }
 

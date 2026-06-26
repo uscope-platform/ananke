@@ -413,6 +413,9 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
     } else if (f_factory.is_active()) {
             f_factory.start_expression();
     }
+    if (deps_factory.is_valid_dependency()) {
+        deps_factory.start_expression(ctx->primary() == nullptr);
+    }
 }
 
 void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
@@ -433,7 +436,9 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
     }else if (f_factory.is_active()) {
         f_factory.stop_expression();
     }
-
+    if (deps_factory.is_valid_dependency()) {
+        deps_factory.stop_expression(ctx->primary() == nullptr);
+    }
 }
 
 void sv_visitor::exitPrimaryLit(sv2017::PrimaryLitContext *ctx) {

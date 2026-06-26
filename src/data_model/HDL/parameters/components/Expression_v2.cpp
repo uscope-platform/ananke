@@ -46,15 +46,30 @@ std::string Expression_v2::print() const {
         return op_str(operation) + (operand ? operand->print() : "");
     }
 
+    auto needs_parens = [&](const std::shared_ptr<Parameter_value_base> &side, bool is_lhs_side) {
+        if (!side->is<Expression_v2>()) return false;
+        auto inner_op = static_cast<const Expression_v2 &>(*side).get_operation();
+        if (inner_op == none) return false;
+        if (!op_precedence.contains(inner_op) || !op_precedence.contains(operation)) return true;
+        if (is_lhs_side)
+            return op_precedence.at(inner_op) < op_precedence.at(operation);
+        else
+            return op_precedence.at(inner_op) <= op_precedence.at(operation);
+    };
+
     std::ostringstream oss;
     if (lhs) {
-        if (lhs->is<Expression_v2>()) oss << "(" << lhs->print() << ")";
-        else oss << lhs->print();
+        if (needs_parens(lhs, true))
+            oss << "(" << lhs->print() << ")";
+        else
+            oss << lhs->print();
     }
     oss << op_str(operation);
     if (rhs) {
-        if (rhs->is<Expression_v2>()) oss << "(" << rhs->print() << ")";
-        else oss << rhs->print();
+        if (needs_parens(rhs, false))
+            oss << "(" << rhs->print() << ")";
+        else
+            oss << rhs->print();
     }
     return oss.str();
 }

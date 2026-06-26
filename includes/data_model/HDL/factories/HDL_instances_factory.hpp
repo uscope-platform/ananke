@@ -17,6 +17,7 @@
 #define ANANKE_HDL_INSTANCES_FACTORY_HPP
 
 #include "data_model/HDL/HDL_instance.hpp"
+#include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "nets/HDL_range_factory.hpp"
 #include "nets/HDL_net_factory.hpp"
 #include "nets/HDL_concat_factory.hpp"
@@ -62,12 +63,15 @@ public:
     void change_array_name(const std::string &s);
 
     void set_operation(Expression_v2::expression_operator op);
+    void start_expression(bool new_expr);
+    void stop_expression(bool new_expr);
 
 private:
     bool in_port = false;
     bool in_interface = false;
 
     HDL_net_factory net_factory;
+    expressions_factory expr_factory;
     std::string port_name;
 
     HDL_instance current_instance;
