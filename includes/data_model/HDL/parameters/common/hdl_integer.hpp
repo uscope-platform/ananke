@@ -22,6 +22,59 @@
 #include <string>
 #include <nlohmann/json.hpp>
 
+#include "third_party/uintwide_t.h"
+
+using int1024_t = ::math::wide_integer::int1024_t;
+namespace math {
+    namespace wide_integer {
+        inline void to_json(nlohmann::json& j, const int1024_t& val) {
+            std::stringstream ss;
+            // Check sign manually because stream formatting can vary by library version
+            if (val < 0) {
+                // Negate to print absolute value safely
+                int1024_t abs_val = -val;
+                ss << "-0x" << std::hex << abs_val;
+            } else {
+                ss << "0x" << std::hex << val;
+            }
+            j = ss.str();
+        }
+
+        inline void from_json(const nlohmann::json& j, int1024_t& val) {
+            std::string s = j.get<std::string>();
+            bool is_negative = false;
+
+            if (s.rfind("-", 0) == 0) {
+                is_negative = true;
+                s = s.substr(1);
+            }
+            if (s.rfind("0x", 0) == 0 || s.rfind("0X", 0) == 0) {
+                s = s.substr(2);
+            }
+
+            val = int1024_t(("0x" + s).c_str());
+            if (is_negative) {
+                val = -val;
+            }
+        }
+
+        template <class Archive>
+            void save(Archive& ar, const int1024_t& val) {
+            std::stringstream ss;
+            ss << std::hex << val;
+            std::string s = ss.str();
+            ar(s); // Save it safely as a string
+        }
+
+        template <class Archive>
+        void load(Archive& ar, int1024_t& val) {
+            std::string s;
+            ar(s); // Load the string representation
+            val = int1024_t(("0x" + s).c_str());
+        }
+    }
+}
+
 class hdl_integer {
 
 public:
@@ -94,11 +147,13 @@ public:
 
     template<class Archive>
     void serialize(Archive &ar) {
-        ar(value, size, signedness);
+        ar(value, size, signedness, wide_value);
     }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(hdl_integer, value, size, signedness);
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(hdl_integer, value, size, signedness, wide_value);
 private:
+
     int64_t value = 0;
+    int1024_t wide_value = 0;
     uint64_t size = 0;
     bool signedness = false;
 };
