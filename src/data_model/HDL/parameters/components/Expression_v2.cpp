@@ -94,6 +94,10 @@ void Expression_v2::set_container_sizes(const resolved_type &s,
     const std::map<qualified_identifier, resolved_parameter> &context) {
     current_size = 1;
     for (auto &size:s.packed_sizes) current_size *= size;
+    resolved_type r;
+    r.packed_sizes.push_back(64);
+    if (lhs) lhs->set_container_sizes(r);
+    if (rhs) rhs->set_container_sizes(r);
 }
 
 void Expression_v2::propagate_expression(const qualified_identifier &constant_id,

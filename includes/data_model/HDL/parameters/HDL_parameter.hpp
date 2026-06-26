@@ -81,7 +81,7 @@ public:
     [[nodiscard]] std::optional<resolved_parameter> get_value() const {return solved_value;}
 
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context);
-
+    std::optional<resolved_parameter> cast_result(const  std::optional<resolved_parameter> &in, const std::optional<resolved_type> &sizes);
     void propagate_function(const HDL_function_def &def);
     explicit operator std::string();
 

@@ -26,13 +26,17 @@ class hdl_integer {
 
 public:
     hdl_integer() = default;
-    hdl_integer(int64_t val){value = val;}
+    hdl_integer(int64_t val) {
+        if (val<0) signedness = true;
+        value = val;
+    }
     void set_size(const int64_t s) {size = s;}
     void set_value(const uint64_t v) {value = v;}
     void set_signed(const bool s) {signedness = s;}
     [[nodiscard]] int64_t get_value() const {return  value;}
 
     uint64_t get_size();
+    bool get_signed(){return signedness;}
 
     hdl_integer operator+(const hdl_integer &o) const;
     hdl_integer operator-(const hdl_integer &o) const;

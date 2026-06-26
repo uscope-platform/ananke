@@ -350,11 +350,10 @@ TEST(parameter_extraction, multiple_type_cast) {
 TEST(parameter_extraction, cast_in_binary_expression) {
     auto test_pattern = R"(
         module test_mod #()();
-            parameter integer x = -1;
+            parameter integer x = -2;
             parameter integer y = 'hfffffffa;
             parameter integer A = unsigned'(x) + 1;
             parameter integer B = signed'(y) - 2;
-
         endmodule
     )";
 
@@ -369,7 +368,7 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     p->set_name("x");
     p->set_type(Type_engine::create_primitive_type("integer"));
     Expression_v2 e;
-    e.set_lhs(std::make_shared<Token>("1", Token::number));
+    e.set_lhs(std::make_shared<Token>("2", Token::number));
     e.set_operation(Expression_v2::subtract);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_params.insert(p);
@@ -416,9 +415,9 @@ TEST(parameter_extraction, cast_in_binary_expression) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {{"","", "x"}, -1},
-        {{"","", "y"}, static_cast<uint64_t>(4294967290)},
-        {{"","", "A"}, static_cast<uint64_t>(4294967294)},
+        {{"","", "x"}, -2},
+        {{"","", "y"}, -6},
+        {{"","", "A"}, -1},
         {{"","", "B"}, -8},
     };
 

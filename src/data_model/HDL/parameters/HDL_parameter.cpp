@@ -69,8 +69,32 @@ std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualifi
     auto container_size = type->evaluate_type(context);
     if (!container_size) return std::nullopt;
     raw_value->set_container_sizes(container_size.value(), context);
+    auto val = raw_value->evaluate(context);
+    if (type->is<HDL_simple_type>()) {
+        return cast_result(val, container_size);
+    } else {
+        return val;
+    }
+}
 
-    return raw_value->evaluate(context);
+std::optional<resolved_parameter> HDL_parameter::cast_result(
+    const std::optional<resolved_parameter> &in,
+    const std::optional<resolved_type> &sizes
+    ) {
+    auto t = type->as<HDL_simple_type>();
+    if (in->is_integer()) {
+        if (t.get_signed() && !in->get_integer().get_signed()) {
+            if (sizes->packed_sizes[0] == 32) {
+                uint32_t truncated_val = in->get_integer().get_value() & 0xFFFFFFFF;
+                return static_cast<int32_t>(truncated_val);
+            }
+        }
+        if (t.get_signed() && !in->get_integer().get_signed()) {
+            int i = 0;
+        }
+    }
+    return in;
+
 }
 
 
