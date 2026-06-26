@@ -80,7 +80,7 @@ class hdl_integer {
 public:
     hdl_integer() = default;
     hdl_integer(int64_t val) {
-        if (val<0) signedness = true;
+        signedness = true;
         value = val;
     }
     void set_size(const int64_t s) {size = s;}

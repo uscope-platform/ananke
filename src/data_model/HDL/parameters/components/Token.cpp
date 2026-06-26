@@ -158,54 +158,87 @@ void Token::set_container_sizes(const resolved_type &s, const std::map<qualified
     for (auto &us : s.unpacked_sizes) container_size *= us;
 }
 
-std::pair<resolved_parameter, int64_t> Token::process_number(const std::string &s) {
-    int64_t ret_size;
-    resolved_parameter ret_value;
-
-    if(ctre::match<R"(^[+\-]?(\d+\.\d*|\.\d+)([eE][+\-]?\d+)?$|^[+\-]?\d+[eE][+\-]?\d+$)">(s)) {
-        ret_size = 64;
-        ret_value = std::stod(s);
-    } else if(ctre::match<R"(^\d+$)">(s)) {
-        ret_value = static_cast<hdl_integer>(std::stoul(s));
-        ret_size = ret_value.get_integer().get_size();
-    } else if(ctre::search<R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))">(s)){
-        auto sv_match = ctre::search<R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))">(s);
-        std::string base;
-        std::string str_value;
-        if (sv_match.get<1>()) {
-            base = sv_match.get<2>().str();
-            str_value = sv_match.get<3>().str();
-        } else {
-            base = sv_match.get<2>().str();
-            str_value = sv_match.get<3>().str();
-        }
-        if(base =="h"){
-            ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 16));
-        } else if(base =="d") {
-            ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 10));
-        } else if(base =="o") {
-            ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 8));
-        } else if(base =="b") {
-            ret_value = static_cast<hdl_integer>(std::stoul(str_value, nullptr, 2));
-        }
-
-        auto size_match = ctre::search<R"(^(\d*)'[0-9a-zA-Z]+)">(s);
-        if(size_match){
-            if(!size_match.get<1>().str().empty()) {
-                ret_size = std::stoll(size_match.get<1>().str());
-            } else {
-                ret_size = ret_value.get_integer().get_size();
-            }
-        }
-    }
-    return std::make_pair(ret_value, ret_size);
-}
-
 
 Token::token_type Token::get_type(const std::string &s) {
     if(ctre::match<R"(^\d+$)">(s) || ctre::search<R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))">(s)|| ctre::match<R"(^[+\-]?(\d+\.\d*|\.\d+)([eE][+\-]?\d+)?$|^[+\-]?\d+[eE][+\-]?\d+$)">(s)) return number;
     if(s.starts_with("\"") | ctre::match<R"(\d+(\.\d+)?(s|ms|us|ns|ps|fs))">(s)) return string;
     return identifier;
+}
+
+std::pair<resolved_parameter, int64_t> Token::process_number(const std::string &s) {
+    std::string_view raw_number = s;
+    int explicit_size = -1;
+    bool signed_number = false;
+    bool negative_number =  s.starts_with("-");
+
+    if( s.starts_with("+") || negative_number) {
+        raw_number = raw_number.substr(1);
+        signed_number = true;
+    }
+
+    std::string_view raw_value;
+    if (raw_number.contains('\'')) {
+        raw_value = raw_number.substr(raw_number.find_first_of('\'')+1);
+        auto size_str = raw_number.substr(0, raw_number.find_first_of('\''));
+        std::from_chars(size_str.data(), size_str.data() + size_str.size(), explicit_size, 10);
+    } else {
+        raw_value = raw_number;
+    }
+
+    if (raw_value.starts_with('s')) {
+        raw_value = raw_value.substr(1);
+        signed_number = true;
+    }
+
+    int base = 10;
+    if (raw_value.starts_with("d")) {
+        base = 10;
+        raw_value = raw_value.substr(1);
+    }
+    if (raw_value.starts_with("b")) {
+        base = 2;
+        raw_value = raw_value.substr(1);
+    }
+    if (raw_value.starts_with("o")) {
+        base = 8;
+        raw_value = raw_value.substr(1);
+    }
+    if (raw_value.starts_with("h")) {
+        base = 16;
+        raw_value = raw_value.substr(1);
+    }
+    std::string purged_value(raw_value);
+    std::erase(purged_value, '_');
+
+    if (signed_number) {
+        int64_t value;
+        auto [ptr, ec] = std::from_chars(purged_value.data(), purged_value.data() + purged_value.size(), value, base);
+        if (ec == std::errc::result_out_of_range) {
+            return process_wide_integer(purged_value, base, signed_number);
+        } else {
+            hdl_integer ret(value);
+            ret.set_signed(true);
+            if (explicit_size<0) explicit_size = ret.get_size();
+            return{ret, explicit_size};
+        }
+    } else {
+        uint64_t value;
+        auto [ptr, ec] = std::from_chars(purged_value.data(), purged_value.data() + purged_value.size(), value, base);
+        if (ec == std::errc::result_out_of_range) {
+            return process_wide_integer(purged_value, base, signed_number);
+        } else {
+            hdl_integer ret;
+            ret.set_value(value);
+            ret.set_signed(true);
+            if (explicit_size<0) explicit_size = ret.get_size();
+            return{ret, explicit_size};
+        }
+    }
+}
+
+std::pair<resolved_parameter, int64_t> Token::process_wide_integer(const std::string_view &raw_string, uint8_t base, bool signed_number) {
+
+    return {0, 0};
 }
 
 std::string Token::print_index(const std::vector<std::shared_ptr<Parameter_value_base>> &index) const {

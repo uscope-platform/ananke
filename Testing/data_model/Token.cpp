@@ -124,3 +124,59 @@ TEST(Token, identifier){
     ASSERT_EQ(ec.get_value().value().get_string(), "FALSE");
 }
 
+
+TEST(Token, signed_sized_hex_with_separator){
+    Token ec("-8'sh1_F", Token::number);
+
+    Token check;
+    check.set_binary_size(8);
+    check.set_value(31);
+    EXPECT_EQ(check, ec);
+}
+
+
+;
+
+TEST(Token, wide_input_decimal_processing) {
+
+    Token test_token("19446743180356354048", Token::number);
+
+    auto val = test_token.get_value();
+
+    ASSERT_TRUE(val.has_value());
+    ASSERT_TRUE(val.value().is_integer());
+}
+
+
+TEST(Token, narrow_input_zero_padded) {
+
+    Token test_token("00099974318035635404", Token::number);
+
+    auto val = test_token.get_value();
+
+    ASSERT_TRUE(val.has_value());
+    ASSERT_TRUE(val.value().is_integer());
+    EXPECT_EQ(val.value().get_integer().get_value(), 99974318035635404);
+}
+
+
+TEST(Token, wide_input_sized_processing) {
+
+    Token test_token("72'hCAFEBEBEDEADBEEFCAFE", Token::number);
+
+    auto val = test_token.get_value();
+
+    ASSERT_TRUE(val.has_value());
+    ASSERT_TRUE(val.value().is_integer());
+}
+
+
+TEST(Token, wide_input_auto_sized_processing) {
+
+    Token test_token("'hCAFEBEBEDEADBEEFCAF", Token::number);
+
+    auto val = test_token.get_value();
+
+    ASSERT_TRUE(val.has_value());
+    ASSERT_TRUE(val.value().is_integer());
+}
