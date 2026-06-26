@@ -29,7 +29,7 @@ void documentation_analyzer::process_documentation(Parameters_map parameters) {
     std::vector<nlohmann::json> documentation_comments;
 
     for(auto &content:raw_documentation_comments){
-
+        if (!(content.contains('{') && content.contains('}'))) continue;
         nlohmann::json obj;
         std::istringstream ss(content);
         try {
