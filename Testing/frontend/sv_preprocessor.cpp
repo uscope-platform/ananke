@@ -1257,3 +1257,22 @@ TEST(preprocessor, translate_on_off) {
 
     EXPECT_EQ(result, check_string);
 }
+
+TEST(preprocessor, complex_macro_substitution) {
+    auto test_pattern = R"{(
+`define ASSERT(__name, __prop, __clk = test_clk, __rst = test_rst ) \
+  __name: assert property (@(posedge __clk) disable iff ((__rst) !== '0) (__prop))       \
+`endif
+`ASSERT(en2addrHit, (reg_we || reg_re) |-> $onehot0(addr_hit))
+){";
+
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = "\nen2addrHit: assert property (@(posedge test_clk) disable iff ((test_rst) !== '0) ((reg_we || reg_re) |-> $onehot0(addr_hit)))       `endif";
+
+    EXPECT_EQ(result, check_string);
+}
+

@@ -71,6 +71,7 @@ namespace preprocessor {
         );
         std::string get_define_replacement(const std::string_view &identifier);
         static std::string_view ltrim(const std::string_view &in);
+        static std::string_view trim(const std::string_view &in);
         void set_path(const std::string &p) {path = p;}
         void set_line_number(const unsigned int &n) {line_number = n;}
 

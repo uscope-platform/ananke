@@ -142,13 +142,23 @@ namespace preprocessor {
         return in.substr(start);
     }
 
+    std::string_view macro_processor::trim(const std::string_view &in) {
+        if (in.empty())
+            return in;
+        const auto start = in.find_first_not_of(" \t");
+        if (start == std::string_view::npos)
+            return "";
+        const auto end = in.find_last_not_of(" \t\r\n");
+        return in.substr(start, end - start + 1);
+    }
+
 
     std::optional<std::string> macro_processor::replace_function_macro(const std::vector<std::string_view> &args, const function_macro &macro) {
         std::unordered_map<std::string_view, std::string> arguments_map;
         bool full_default = true;
         for (int i = 0; i<macro.arguments.size(); i++) {
             full_default &= macro.arguments[i].has_default;
-            if (args.empty() || args[i].empty()) {
+            if (i >= args.size() || args[i].empty()) {
                 arguments_map[macro.arguments[i].name] = macro.arguments[i].default_value;
             } else {
                 arguments_map[macro.arguments[i].name] = std::string(args[i]);
@@ -160,6 +170,9 @@ namespace preprocessor {
 
         std::string_view body = macro.value;
         if (body.empty()) return "";
+        while (!body.empty() && (body.back() == ' ' || body.back() == '\t' || body.back() == '\r' || body.back() == '\n' || body.back() == '\\')) {
+            body.remove_suffix(1);
+        }
         std::vector<std::string_view> tokens;
 
         auto is_valid_id_char = [](char c) {
@@ -208,6 +221,11 @@ namespace preprocessor {
         } else if (purged_identifier == "__LINE__"){
             replacement = std::to_string(line_number);
         } else {
+            // Prevent embedded structural directives from being evaluated as substitution macros
+            if (purged_identifier == "ifdef" || purged_identifier == "ifndef" ||
+                purged_identifier == "else"  || purged_identifier == "elsif"  || purged_identifier == "endif") {
+                return std::string(identifier);
+            }
             auto id = std::string(purged_identifier);
             if (!definitions.contains(id)) {
                 throw std::runtime_error(fmt::format("{}:{} MACRO {} is not defined", path, line_number, id));
@@ -228,10 +246,10 @@ namespace preprocessor {
             function_macro_argument arg;
             if (m.contains('=')) {
                 arg.has_default = true;
-                arg.default_value = ltrim(m.substr(m.find_first_of('=')+1));
-                arg.name = m.substr(0, m.find_first_of('='));
+                arg.default_value = trim(m.substr(m.find_first_of('=')+1));
+                arg.name = trim(m.substr(0, m.find_first_of('=')));
             } else {
-                arg.name = m;
+                arg.name = trim(m);
                 arg.has_default = false;
             }
             macro.arguments.emplace_back(arg);
