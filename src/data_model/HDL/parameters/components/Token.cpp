@@ -165,7 +165,7 @@ Token::token_type Token::get_type(const std::string &s) {
     return identifier;
 }
 
-std::pair<resolved_parameter, int64_t> Token::process_number(const std::string &s) {
+std::pair<resolved_parameter, int64_t> Token::process_number(const std::string_view &s) {
     std::string_view raw_number = s;
     int explicit_size = -1;
     bool signed_number = false;

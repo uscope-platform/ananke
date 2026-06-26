@@ -93,7 +93,7 @@ public:
 private:
     std::string print_index(const std::vector<std::shared_ptr<Parameter_value_base>> &index) const;
 
-    static std::pair<resolved_parameter, int64_t> process_number(const std::string &s);
+    static std::pair<resolved_parameter, int64_t> process_number(const std::string_view &s);
     static std::pair<resolved_parameter, int64_t> process_wide_integer(const std::string_view &s, uint8_t base, bool signed_number);
 
 
