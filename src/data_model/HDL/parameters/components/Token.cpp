@@ -237,8 +237,10 @@ std::pair<resolved_parameter, int64_t> Token::process_number(const std::string_v
 }
 
 std::pair<resolved_parameter, int64_t> Token::process_wide_integer(const std::string_view &raw_string, uint8_t base, bool signed_number) {
-
-    return {0, 0};
+    hdl_integer res;
+    std::string val_string(raw_string);
+    res.set_value(int1024_t(val_string.c_str()));
+    return {res, 0};
 }
 
 std::string Token::print_index(const std::vector<std::shared_ptr<Parameter_value_base>> &index) const {

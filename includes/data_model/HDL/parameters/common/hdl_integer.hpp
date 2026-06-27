@@ -25,6 +25,7 @@
 #include "third_party/uintwide_t.h"
 
 using int1024_t = ::math::wide_integer::int1024_t;
+
 namespace math {
     namespace wide_integer {
         inline void to_json(nlohmann::json& j, const int1024_t& val) {
@@ -79,12 +80,48 @@ class hdl_integer {
 
 public:
     hdl_integer() = default;
+
+    hdl_integer(const hdl_integer &other)
+        : value(other.value),
+          wide_value(other.wide_value),
+          size(other.size),
+          signedness(other.signedness) {
+    }
+
+    hdl_integer(hdl_integer &&other) noexcept
+        : value(other.value),
+          wide_value(std::move(other.wide_value)),
+          size(other.size),
+          signedness(other.signedness) {
+    }
+
+    hdl_integer & operator=(const hdl_integer &other) {
+        if (this == &other)
+            return *this;
+        value = other.value;
+        wide_value = other.wide_value;
+        size = other.size;
+        signedness = other.signedness;
+        return *this;
+    }
+
+    hdl_integer & operator=(hdl_integer &&other) noexcept {
+        if (this == &other)
+            return *this;
+        value = other.value;
+        wide_value = std::move(other.wide_value);
+        size = other.size;
+        signedness = other.signedness;
+        return *this;
+    }
+
     hdl_integer(int64_t val) {
         signedness = true;
         value = val;
     }
     void set_size(const int64_t s) {size = s;}
     void set_value(const uint64_t v) {value = v;}
+    void set_value(const int1024_t v) {wide_value = v;}
     void set_signed(const bool s) {signedness = s;}
     [[nodiscard]] int64_t get_value() const {return  value;}
 
@@ -123,9 +160,12 @@ public:
     }
 
     friend bool operator==(const hdl_integer &lhs, const hdl_integer &rhs) {
-        return lhs.value == rhs.value
-               && lhs.size == rhs.size
-               && lhs.signedness == rhs.signedness;
+        bool ret = true;
+        ret &= lhs.value == rhs.value;
+        ret &= lhs.size == rhs.size;
+        ret &= lhs.signedness == rhs.signedness;
+        ret &= lhs.wide_value == rhs.wide_value;
+        return ret;
     }
 
 

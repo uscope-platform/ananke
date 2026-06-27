@@ -138,13 +138,20 @@ TEST(Token, signed_sized_hex_with_separator){
 ;
 
 TEST(Token, wide_input_decimal_processing) {
-
-    Token test_token("19446743180356354048", Token::number);
+    auto test_str = "19446743180356354048";
+    Token test_token(test_str, Token::number);
 
     auto val = test_token.get_value();
 
     ASSERT_TRUE(val.has_value());
     ASSERT_TRUE(val.value().is_integer());
+
+    Token check;
+    hdl_integer check_val;
+    check_val.set_value(int1024_t(test_str));
+    check_val.set_signed(false);
+    check.set_value(check_val);
+    EXPECT_EQ(check, test_token);
 }
 
 
