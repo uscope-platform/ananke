@@ -116,7 +116,6 @@ public:
     }
 
     hdl_integer(int64_t val) {
-        signedness = true;
         value = val;
     }
     void set_size(const int64_t s) {size = s;}

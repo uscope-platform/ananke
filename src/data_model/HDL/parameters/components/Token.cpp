@@ -171,6 +171,12 @@ std::pair<resolved_parameter, int64_t> Token::process_number(const std::string_v
     bool signed_number = false;
     bool negative_number =  s.starts_with("-");
 
+    if (s.contains('.')) {
+        double value;
+        std::from_chars(s.data(), s.data() + s.size(), value);
+        return {value, 64};
+    }
+
     if( s.starts_with("+") || negative_number) {
         raw_number = raw_number.substr(1);
         signed_number = true;
@@ -217,7 +223,7 @@ std::pair<resolved_parameter, int64_t> Token::process_number(const std::string_v
             return process_wide_integer(purged_value, base, signed_number);
         } else {
             hdl_integer ret(value);
-            ret.set_signed(true);
+            ret.set_signed(signed_number);
             if (explicit_size<0) explicit_size = ret.get_size();
             return{ret, explicit_size};
         }
@@ -229,7 +235,7 @@ std::pair<resolved_parameter, int64_t> Token::process_number(const std::string_v
         } else {
             hdl_integer ret;
             ret.set_value(value);
-            ret.set_signed(true);
+            ret.set_signed(signed_number);
             if (explicit_size<0) explicit_size = ret.get_size();
             return{ret, explicit_size};
         }

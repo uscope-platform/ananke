@@ -130,7 +130,10 @@ TEST(Token, signed_sized_hex_with_separator){
 
     Token check;
     check.set_binary_size(8);
-    check.set_value(31);
+    hdl_integer i;
+    i.set_value(31);
+    i.set_signed(true);
+    check.set_value(i);
     EXPECT_EQ(check, ec);
 }
 
@@ -175,6 +178,13 @@ TEST(Token, wide_input_sized_processing) {
 
     ASSERT_TRUE(val.has_value());
     ASSERT_TRUE(val.value().is_integer());
+
+    Token check;
+    hdl_integer check_val;
+    check_val.set_value(int1024_t("CAFEBEBEDEADBEEFCAFE"));
+    check_val.set_signed(false);
+    check.set_value(check_val);
+    EXPECT_EQ(check, test_token);
 }
 
 

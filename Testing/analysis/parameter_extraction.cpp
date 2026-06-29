@@ -2849,8 +2849,11 @@ TEST(parameter_extraction, negative_number_parameters) {
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {8, 32});
 
+    hdl_integer v;
+    v.set_value( -32767);
+    v.set_signed(true);
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "negative_param"}, -32767}
+        {{"","", "negative_param"}, v}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2971,7 +2974,13 @@ TEST(parameter_extraction, negative_number_array_init) {
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     mdarray<hdl_integer> av;
-    av.set_1d_slice({0, 0}, {32767, -32767});
+    hdl_integer a;
+    a.set_value(32767);
+    a.set_signed(true);
+    hdl_integer b;
+    b.set_value(-32767);
+    b.set_signed(true);
+    av.set_1d_slice({0, 0}, {a, b});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "negative_array_param"}, av}

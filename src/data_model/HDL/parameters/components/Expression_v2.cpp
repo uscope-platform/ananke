@@ -202,44 +202,43 @@ std::variant<hdl_integer, double> Expression_v2::evaluate_binary_expression(reso
     double d_a, d_b;
     hdl_integer i_a = 0;
     hdl_integer i_b = 0;
-
+    bool output_signed = false;
+    if (int_exec) {
+        output_signed = op_a.get_integer().get_signed() || op_b.get_integer().get_signed();
+    }
     if(op_a.is_real())  d_a = op_a.get_real();
     else d_a = static_cast<double>(op_a.get_integer().get_value());
     if(op_b.is_real())  d_b = op_b.get_real();
     else d_b = static_cast<double>(op_b.get_integer().get_value());
     if(op_a.is_integer()) i_a =  op_a.get_integer();
     if(op_b.is_integer()) i_b =  op_b.get_integer();
+    
+    hdl_integer result_i;
+    double result_d;
     if(operation == add){
-        if(int_exec) return i_a + i_b;
-        return d_a + d_b;
-    }
-    if(operation == subtract){
-        if(int_exec) return i_a - i_b;
-        return d_a - d_b;
-    }
-    if(operation == multiply){
-        if(int_exec) return i_a * i_b;
-        return d_a * d_b;
-    }
-    if(operation == power){
-        if(int_exec) return std::pow(i_a, i_b);
-        return std::pow(d_a, d_b);
-    }
-    if(operation == divide){
-        if(int_exec) return i_a / i_b;
-        return d_a / d_b;
-    }
-    if(operation == modulo){
-        if(int_exec) return i_a % i_b;
+        if(int_exec) result_i = i_a + i_b;
+        else result_d = d_a + d_b;
+    }else if(operation == subtract){
+        if(int_exec) result_i =i_a - i_b;
+         else result_d = d_a - d_b;
+    }else if(operation == multiply){
+        if(int_exec) result_i =i_a * i_b;
+         else result_d = d_a * d_b;
+    }else if(operation == power){
+        if(int_exec) result_i =std::pow(i_a, i_b);
+        result_d = std::pow(d_a, d_b);
+    }else if(operation == divide){
+        if(int_exec) result_i =i_a / i_b;
+        else result_d = d_a / d_b;
+    }else if(operation == modulo){
+        if(int_exec) result_i =i_a % i_b;
         spdlog::warn("The modulus operator is only defined between integers");
-        return 0;
-    }
-    if(operation == logic_shift_left){
-        if(int_exec) return i_a << i_b;
+        result_d = 0;
+    }else if(operation == logic_shift_left){
+        if(int_exec) result_i =i_a << i_b;
         spdlog::warn("The shift operator is only defined between integers");
-        return 0;
-    }
-    if(operation == logic_shift_right){
+        result_d = 0;
+    }else if(operation == logic_shift_right){
         if(int_exec) {
             uint64_t u_a = static_cast<uint64_t>(i_a.get_value());
             if(current_size > 0 && current_size < 64) {
@@ -251,58 +250,50 @@ std::variant<hdl_integer, double> Expression_v2::evaluate_binary_expression(reso
         }
         spdlog::warn("The shift operator is only defined between integers");
         return 0;
-    }
-    if(operation == arithmetic_shift_left){
-        if(int_exec) return i_a << i_b;
+    } else if(operation == arithmetic_shift_left){
+        if(int_exec) result_i =i_a << i_b;
         spdlog::warn("The shift operator is only defined between integers");
-        return 0;
-    }
-
-    if(operation == arithmetic_shift_right){
-        if(int_exec) return i_a >> i_b;
+        result_d = 0;
+    } else if(operation == arithmetic_shift_right){
+        if(int_exec) result_i =i_a >> i_b;
         spdlog::warn("The shift operator is only defined between integers");
-        return 0;
+        result_d = 0;
+    }else if(operation == greater){
+        if(int_exec) result_i =i_a > i_b;
+        else result_d = d_a > d_b;
+    }else if(operation == greater_equal){
+        if(int_exec) result_i =i_a >= i_b;
+        else result_d = d_a >= d_b;
+    } else if(operation == less){
+        if(int_exec) result_i =i_a < i_b;
+        else result_d = d_a < d_b;
+    } else if(operation == less_equal){
+        if(int_exec) result_i =i_a <= i_b;
+        else result_d = d_a <= d_b;
+    } else if(operation == bitwise_and){
+        result_i = i_a & i_b;
+    } else if(operation == bitwise_or){
+        result_i = i_a | i_b;
+    } else if(operation == bitwise_xor){
+        result_i = i_a ^ i_b;
+    } else if(operation == bitwise_xnor){
+        result_i = ~(i_a ^ i_b);
+    } else if(operation == logical_and){
+        if(int_exec) result_i =i_a && i_b;
+        result_d = d_a && d_b;
+    } else if(operation == logical_or){
+        if(int_exec)  result_i = i_a || i_b;
+        result_d = d_a || d_b;
+    } else {
+        throw std::runtime_error("Error: Attempted evaluation of an unsupported binary expression expression ");
     }
 
-    if(operation == greater){
-        if(int_exec) return i_a > i_b;
-        return d_a > d_b;
+    if (int_exec) {
+        result_i.set_signed(output_signed);
+        return result_i;
     }
-
-    if(operation == greater_equal){
-        if(int_exec) return i_a >= i_b;
-        return d_a >= d_b;
-
-    }
-    if(operation == less){
-        if(int_exec) return i_a < i_b;
-        return d_a < d_b;
-    }
-    if(operation == less_equal){
-        if(int_exec) return i_a <= i_b;
-        return d_a <= d_b;
-    }
-    if(operation == bitwise_and){
-        return i_a & i_b;
-    }
-    if(operation == bitwise_or){
-        return i_a | i_b;
-    }
-    if(operation == bitwise_xor){
-        return i_a ^ i_b;
-    }
-    if(operation == bitwise_xnor){
-        return ~(i_a ^ i_b);
-    }
-    if(operation == logical_and){
-        if(int_exec) return i_a && i_b;
-        return static_cast<double>(d_a && d_b);
-    }
-    if(operation == logical_or){
-        if(int_exec)  return i_a || i_b;
-        return static_cast<double>(d_a || d_b);
-    }
-    throw std::runtime_error("Error: Attempted evaluation of an unsupported binary expression expression ");
+    return result_d;
+    
 }
 
 std::variant<hdl_integer, double> Expression_v2::evaluate_unary_expression(resolved_parameter operand) {
