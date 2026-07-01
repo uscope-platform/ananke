@@ -181,7 +181,7 @@ TEST(Token, wide_input_sized_processing) {
 
     Token check;
     hdl_integer check_val;
-    check_val.set_value(int1024_t("CAFEBEBEDEADBEEFCAFE"));
+    check_val.set_value(int1024_t("0xCAFEBEBEDEADBEEFCAFE"));
     check_val.set_signed(false);
     check.set_value(check_val);
     EXPECT_EQ(check, test_token);
@@ -190,7 +190,7 @@ TEST(Token, wide_input_sized_processing) {
 
 TEST(Token, wide_input_auto_sized_processing) {
 
-    Token test_token("'hCAFEBEBEDEADBEEFCAF", Token::number);
+    Token test_token("'hCAFEBEBEDEADBEEFCAFE", Token::number);
 
     auto val = test_token.get_value();
 
@@ -199,7 +199,7 @@ TEST(Token, wide_input_auto_sized_processing) {
 
     Token check;
     hdl_integer check_val;
-    check_val.set_value(int1024_t("CAFEBEBEDEADBEEFCAFE"));
+    check_val.set_value(int1024_t("0xCAFEBEBEDEADBEEFCAFE"));
     check_val.set_signed(false);
     check.set_value(check_val);
     EXPECT_EQ(check, test_token);
