@@ -19,7 +19,6 @@
 #include <set>
 #include <string>
 #include <vector>
-#include <bitset>
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"
 #include "data_model/mdarray.hpp"
