@@ -27,27 +27,19 @@ Concatenation::Concatenation(const Concatenation &other) {
     container_size = other.container_size;
     default_initialization = other.default_initialization;
     packing = other.packing;
+    fields_sizes = other.fields_sizes;
     unpacked_dimension = other.unpacked_dimension;
 }
 
 Concatenation::Concatenation(Concatenation &&other) noexcept {
     components = other.components;
+    fields_sizes = other.fields_sizes;
     container_size = other.container_size;
     default_initialization = other.default_initialization;
     packing = other.packing;
     unpacked_dimension = other.unpacked_dimension;
 }
 
-Concatenation Concatenation::clone()  const{
-    Concatenation ret;
-
-    ret.components = components;
-    ret.packing = packing;
-    ret.default_initialization = default_initialization;
-    ret.unpacked_dimension = unpacked_dimension;
-    ret.container_size = container_size;
-    return ret;
-}
 
 std::set<qualified_identifier> Concatenation::get_dependencies() const{
     std::set<qualified_identifier> result;

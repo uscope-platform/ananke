@@ -26,16 +26,11 @@ public:
     Concatenation() {
         components = {};
     };
-    Concatenation(std::initializer_list<std::shared_ptr<Parameter_value_base>> list)
-        : components(list) {
-        components = {};
-    }
     void add_component(const std::shared_ptr<Parameter_value_base> &expr) {components.push_back(expr);}
 
     Concatenation(const Concatenation &other);
     Concatenation(Concatenation &&other) noexcept;
 
-    Concatenation clone() const;
 
     void set_default_init() {default_initialization = true;}
 
@@ -56,7 +51,7 @@ public:
             unpacked_dimension = other.unpacked_dimension;
             packing = other.packing;
             default_initialization = other.default_initialization;
-            components = other.components;
+            components = std::move(other.components);
         }
         return *this;
     }
@@ -104,9 +99,11 @@ private:
     std::vector<std::shared_ptr<Parameter_value_base>> components;
 
     bool isEqual(const Parameter_value_base& other) const override {
+
+        auto ret = true;
         const auto& rhs = static_cast<const Concatenation&>(other);
 
-        return std::ranges::equal(
+        ret &= std::ranges::equal(
             components, rhs.components,
             [](const std::shared_ptr<Parameter_value_base>& a,
                const std::shared_ptr<Parameter_value_base>& b) {
@@ -114,6 +111,14 @@ private:
                 return resp; // Triggers the polymorphic equality check
             }
         );
+
+        if(components.size() != rhs.components.size()) return false;
+        ret &= container_size == rhs.container_size;
+        ret &= packing == rhs.packing;
+        ret &= default_initialization == rhs.default_initialization;
+        ret &= unpacked_dimension == rhs.unpacked_dimension;
+
+        return ret;
     }
 };
 

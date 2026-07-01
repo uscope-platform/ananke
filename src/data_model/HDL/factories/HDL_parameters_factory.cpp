@@ -354,13 +354,12 @@ void HDL_parameters_factory::stop_function_call() {
         auto call = consumer_stack.top()->result();
         consumer_stack.pop();
         expr_factory.pop_level();
-        Token ec(call);
         if (top_as<function_calls_factory>()) {
             consumer_stack.top()->consume(call);
         } else if (top_as<ternary_factory>()) {
             consumer_stack.top()->consume(call);
         } else if(expr_factory.active()) {
-            expr_factory.add_component(ec);
+            expr_factory.consume(call);
         } else if (top_as<concatenation_factory>()) {
             consumer_stack.top()->consume(call);
         } else if (top_as<replication_factory>()) {

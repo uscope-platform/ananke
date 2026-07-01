@@ -32,7 +32,6 @@ public:
 
 private:
     bool factory_active = false;
-    std::vector<Parameter_value_base> concat_components;
     Concatenation new_concatenation;
 };
 

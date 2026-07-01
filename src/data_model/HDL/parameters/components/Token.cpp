@@ -16,7 +16,6 @@
 #include <bitset>
 
 #include "data_model/HDL/parameters/components/Token.hpp"
-#include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
@@ -33,7 +32,6 @@ Token::Token(const Token &c) {
     instance_prefix = c.instance_prefix;
     binary_size = c.binary_size;
     type = c.type;
-    if (c.call) call = std::make_shared<HDL_function_call>(*c.call);
 }
 
 
@@ -61,13 +59,6 @@ Token::Token(std::variant<hdl_integer, double> n, int64_t b_s) {
     type = number;
 }
 
-Token::Token(const std::shared_ptr<Parameter_value_base> &param) {
-    if (!param->is<HDL_function_call>()) {
-        throw std::invalid_argument("Only functions are supported as expression components");
-    }
-    call = std::make_shared<HDL_function_call>(param->as<HDL_function_call>());
-    type = function;
-}
 
 std::set<qualified_identifier> Token::get_dependencies() const {
     std::set<qualified_identifier> result;
@@ -78,10 +69,6 @@ std::set<qualified_identifier> Token::get_dependencies() const {
         auto idx_deps = idx->get_dependencies();
         result.insert(idx_deps.begin(), idx_deps.end());
     }
-    if (type == function && call) {
-        auto call_deps = call->get_dependencies();
-        result.insert(call_deps.begin(), call_deps.end());
-    }
     return result;
 }
 
@@ -89,13 +76,9 @@ void Token::propagate_function(const HDL_function_def &def) {
     for (auto &component : array_index) {
         component->propagate_function(def);
     }
-    if (call) call->propagate_function(def);
 }
 
 std::optional<resolved_parameter> Token::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
-    if (type == function && call) {
-        return call->evaluate(context);
-    }
     if (type == identifier) {
         qualified_identifier id{package_prefix, instance_prefix, value.get_string()};
         auto it = context.find(id);
@@ -270,8 +253,6 @@ std::string Token::print_index(const std::vector<std::shared_ptr<Parameter_value
 bool Token::isEqual(const Parameter_value_base& other) const {
     const auto& rhs = static_cast<const Token&>(other);
     bool res = std::tie(type, value, package_prefix, instance_prefix, binary_size) == std::tie(rhs.type, rhs.value, rhs.package_prefix, rhs.instance_prefix, rhs.binary_size);
-    if (call == nullptr ^ rhs.call == nullptr) return false;
-    if (!(call == nullptr && rhs.call == nullptr)) res &= *call == *rhs.call;
     if (array_index.size() != rhs.array_index.size()) return false;
     for (size_t i = 0; i < array_index.size(); i++) {
         res &= *array_index[i] == *rhs.array_index[i];
@@ -287,8 +268,6 @@ bool operator==(const Token &lhs, const Token &rhs) {
     ret_val &= lhs.package_prefix == rhs.package_prefix;
     ret_val &= lhs.instance_prefix == rhs.instance_prefix;
     ret_val &= lhs.binary_size == rhs.binary_size;
-    if (lhs.call == nullptr ^ rhs.call == nullptr) return false;
-    if (!(lhs.call == nullptr && rhs.call == nullptr)) ret_val &= *lhs.call == *rhs.call;
     return ret_val;
 }
 

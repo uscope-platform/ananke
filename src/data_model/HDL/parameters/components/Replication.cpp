@@ -36,14 +36,6 @@ Replication::Replication(Replication &&other) noexcept {
     repeated_item = other.repeated_item;
 }
 
-Replication Replication::clone()  const{
-    Replication result;
-    result.repetition_size = repetition_size;
-    result.repeated_item = repeated_item;
-    return result;
-}
-
-
 Replication & Replication::operator=(const Replication &other) {
     if (this != &other) {
         repetition_size = other.repetition_size;

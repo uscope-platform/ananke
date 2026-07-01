@@ -21,6 +21,7 @@
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "data_model/HDL/parameters/components/Replication.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 #include "data_model/HDL/parameters/components/Ternary.hpp"
 #include "data_model/HDL/parameters/components/Token.hpp"
 

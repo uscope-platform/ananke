@@ -30,7 +30,6 @@
 
 #include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
 
-class HDL_function_call;
 
 class Token : public Parameter_value_base{
 public:
@@ -41,13 +40,11 @@ public:
     enum token_type {
         number,
         string,
-        identifier,
-        function
+        identifier
     };
 
     explicit Token(const std::string &s, const token_type &t);
     explicit Token(std::variant<hdl_integer, double> n, int64_t b_s);
-    explicit Token(const std::shared_ptr<Parameter_value_base> &param);
 
     std::set<qualified_identifier> get_dependencies() const override;
     void propagate_function(const HDL_function_def &def) override;
@@ -105,8 +102,6 @@ private:
     token_type type = number;
 
     resolved_parameter value;
-
-    std::shared_ptr<HDL_function_call> call;
 
     std::string package_prefix;
     std::string instance_prefix;

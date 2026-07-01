@@ -29,8 +29,6 @@ public:
 
     Replication(Replication &&other) noexcept;
 
-    Replication clone() const;
-
     Replication &operator=(const Replication &other);
 
     Replication &operator=(Replication &&other) noexcept;
@@ -49,10 +47,13 @@ public:
 
     std::string print() const override;
     friend bool operator==(const Replication &lhs, const Replication &rhs) {
-        if(lhs.repeated_item == nullptr &&  lhs.repeated_item == nullptr ) return true;
-        if(lhs.repeated_item == nullptr || lhs.repeated_item == nullptr) return false;
+        if(lhs.repeated_item == nullptr &&  rhs.repeated_item == nullptr ) return true;
+        if(lhs.repeated_item == nullptr ^ rhs.repeated_item == nullptr) return false;
 
-        return std::tie(lhs.repetition_size, *lhs.repeated_item) ==  std::tie(rhs.repetition_size, *rhs.repeated_item);
+        if(lhs.repetition_size == nullptr &&  rhs.repetition_size == nullptr ) return true;
+        if(lhs.repetition_size == nullptr ^ rhs.repetition_size == nullptr) return false;
+
+        return std::tie(*lhs.repetition_size, *lhs.repeated_item) ==  std::tie(*rhs.repetition_size, *rhs.repeated_item);
     }
 
 

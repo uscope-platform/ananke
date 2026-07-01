@@ -2683,7 +2683,7 @@ TEST(parameter_extraction, multpidim_packed_array) {
     c.add_component(std::make_shared<Token>("1'b0", Token::number));
     c.add_component(std::make_shared<Token>("1'b1", Token::number));
     c2.add_component(std::make_shared<Concatenation>(c));
-    c = Concatenation({});
+    c = Concatenation();
     c.add_component(std::make_shared<Token>("1'b1", Token::number));
     c.add_component(std::make_shared<Token>("1'b1", Token::number));
     c.add_component(std::make_shared<Token>("1'b0", Token::number));

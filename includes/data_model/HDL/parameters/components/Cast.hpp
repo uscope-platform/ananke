@@ -31,6 +31,7 @@ public:
         Parameter_value_base::operator =(other);
         content = other.content;
         type_cast = other.type_cast;
+        container_size = other.container_size;
         target_type = other.target_type;
         size = other.size;
         return *this;
@@ -42,6 +43,7 @@ public:
         Parameter_value_base::operator =(std::move(other));
         type_cast = other.type_cast;
         target_type = other.target_type;
+        container_size = other.container_size;
         if (other.content != nullptr) content = std::move(other.content);
         size = std::move(other.size);
         return *this;
@@ -78,7 +80,6 @@ private:
     std::shared_ptr<Parameter_value_base> content;
     std::shared_ptr<Parameter_value_base> size;
     std::optional<resolved_type> container_size = std::nullopt;
-    bool packing = false;
 };
 
 
