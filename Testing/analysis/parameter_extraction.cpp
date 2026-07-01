@@ -4700,3 +4700,55 @@ TEST(parameter_extraction, anonymous_unpacked_struct_parameter) {
     EXPECT_EQ(defaults[sid], array_value);
 }
 
+
+
+TEST(parameter_extraction, wide_int_parameter) {
+    auto test_pattern = R"(
+        module test_mod #(
+            )();
+            parameter [72:0] TEST_PARAM = 72'hCAFEBEBEDEADBEEFCAFE + 5;
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+    p->set_name("TEST_PARAM");
+
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Token>("72'hCAFEBEBEDEADBEEFCAFE", Token::number));
+    e.set_rhs(std::make_shared<Token>("5", Token::number));
+    e.set_operation(Expression_v2::add);
+    auto param_type = HDL_simple_type();
+    param_type.add_dimension({
+          std::make_shared<Token>("72", Token::number),
+          std::make_shared<Token>("0", Token::number),
+          true
+      });
+    p->set_type(std::make_shared<HDL_simple_type>(param_type));
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
+    check_params.insert(p);
+
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
+    }
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+
+    int1024_t res_int("0xCAFEBEBEDEADBEEFCB03");
+    hdl_integer res;
+    res.set_value(res_int);
+    auto param = defaults.at({"","", "TEST_PARAM"});
+
+    ASSERT_EQ(res, param.get_integer());
+}

@@ -244,8 +244,18 @@ std::pair<resolved_parameter, int64_t> Token::process_number(const std::string_v
 
 std::pair<resolved_parameter, int64_t> Token::process_wide_integer(const std::string_view &raw_string, uint8_t base, bool signed_number) {
     hdl_integer res;
-    std::string val_string(raw_string);
-    res.set_value(int1024_t(val_string.c_str()));
+
+    std::string prefixed_string;
+    switch (base) {
+        case 16: prefixed_string = "0x" + std::string(raw_string); break;
+        case 10: prefixed_string = std::string(raw_string); break;
+        case 8: prefixed_string = '0' + std::string(raw_string); break;
+        case 2: prefixed_string = "0b" + std::string(raw_string); break;
+
+    }
+    int1024_t wide_num(prefixed_string.c_str());
+
+    res.set_value(wide_num);
     return {res, 0};
 }
 

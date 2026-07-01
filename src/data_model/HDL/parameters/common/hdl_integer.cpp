@@ -16,6 +16,21 @@
 
 #include "data_model/HDL/parameters/common/hdl_integer.hpp"
 
+void hdl_integer::set_size(const int64_t v) {
+    value = v;
+    wide = false;
+}
+
+void hdl_integer::set_value(const uint64_t v) {
+    value = v;
+    wide = false;
+}
+
+void hdl_integer::set_value(const int1024_t v) {
+    wide_value = v;
+    wide = true;
+}
+
 uint64_t hdl_integer::get_size() {
     if(value == 0) return 1;
     auto n_bits = std::log2(value);
@@ -29,7 +44,20 @@ uint64_t hdl_integer::get_size() {
 }
 
 hdl_integer hdl_integer::operator+(const hdl_integer &o) const {
-    return o.value + value;
+    hdl_integer res;
+    if (o.wide && wide) {
+        auto res_val = o.wide_value + wide_value;
+        res.set_value(res_val);
+    }else if (o.wide && !wide) {
+        auto res_val = o.wide_value + int1024_t(value);
+        res.set_value(res_val);
+    }else if (!o.wide && wide) {
+        auto res_val = int1024_t(o.value) + wide_value;
+        res.set_value(res_val);
+    }else if (!o.wide && !wide) {
+        return o.value + value;
+    }
+    return res;
 }
 
 hdl_integer hdl_integer::operator-(const hdl_integer &o) const {

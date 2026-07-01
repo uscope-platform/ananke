@@ -45,7 +45,7 @@ namespace math {
             std::string s = j.get<std::string>();
             bool is_negative = false;
 
-            if (s.rfind("-", 0) == 0) {
+            if (s.rfind('-', 0) == 0) {
                 is_negative = true;
                 s = s.substr(1);
             }
@@ -85,14 +85,16 @@ public:
         : value(other.value),
           wide_value(other.wide_value),
           size(other.size),
-          signedness(other.signedness) {
+          signedness(other.signedness),
+          wide(other.wide) {
     }
 
     hdl_integer(hdl_integer &&other) noexcept
         : value(other.value),
           wide_value(std::move(other.wide_value)),
           size(other.size),
-          signedness(other.signedness) {
+          signedness(other.signedness),
+          wide(other.wide)  {
     }
 
     hdl_integer & operator=(const hdl_integer &other) {
@@ -102,6 +104,7 @@ public:
         wide_value = other.wide_value;
         size = other.size;
         signedness = other.signedness;
+        wide = other.wide;
         return *this;
     }
 
@@ -112,17 +115,19 @@ public:
         wide_value = std::move(other.wide_value);
         size = other.size;
         signedness = other.signedness;
+        wide = other.wide;
         return *this;
     }
 
     hdl_integer(int64_t val) {
         value = val;
     }
-    void set_size(const int64_t s) {size = s;}
-    void set_value(const uint64_t v) {value = v;}
-    void set_value(const int1024_t v) {wide_value = v;}
+    void set_size(const int64_t s);
+    void set_value(const uint64_t v);
+    void set_value(const int1024_t v);
     void set_signed(const bool s) {signedness = s;}
     [[nodiscard]] int64_t get_value() const {return  value;}
+    [[nodiscard]] int1024_t get_wide() const {return  wide_value;}
 
     uint64_t get_size();
     bool get_signed(){return signedness;}
@@ -186,15 +191,16 @@ public:
 
     template<class Archive>
     void serialize(Archive &ar) {
-        ar(value, size, signedness, wide_value);
+        ar(value, size, signedness, wide_value, wide);
     }
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(hdl_integer, value, size, signedness, wide_value);
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(hdl_integer, value, size, signedness, wide_value, wide);
 private:
 
     int64_t value = 0;
     int1024_t wide_value = 0;
     uint64_t size = 0;
     bool signedness = false;
+    bool wide = false;
 };
 namespace std {
 
