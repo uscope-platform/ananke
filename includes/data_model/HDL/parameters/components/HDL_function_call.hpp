@@ -63,7 +63,6 @@ public:
 
 private:
     std::string function_name;
-    bool packing = false;
     std::vector<std::shared_ptr<Parameter_value_base>> arguments;
 
 
