@@ -20,6 +20,7 @@ HDL_instance::HDL_instance(const HDL_instance &c) {
     ports_map = c.ports_map;
     dep_class = c.dep_class;
     type = c.type;
+    wildcard_assignment = c.wildcard_assignment;
     name = c.name;
     groups = c.groups;
     loop_specs = c.loop_specs;
@@ -33,6 +34,7 @@ HDL_instance HDL_instance::clone() {
     c.dep_class = dep_class;
     c.type = type;
     c.name = name;
+    c.wildcard_assignment = wildcard_assignment;
     c.groups = groups;
     c.array_quantifier = array_quantifier;
 
@@ -65,6 +67,7 @@ bool operator==(const HDL_instance &lhs, const HDL_instance &rhs) {
     ret &= lhs.name == rhs.name;
     ret &= lhs.type == rhs.type;
     ret &= lhs.dep_class == rhs.dep_class;
+    ret &= lhs.wildcard_assignment == rhs.wildcard_assignment;
     ret &= lhs.ports_map == rhs.ports_map;
     ret &= lhs.parameters == rhs.parameters;
     ret &= lhs.groups == rhs.groups;
@@ -95,6 +98,7 @@ nlohmann::json HDL_instance::dump() {
 
     ret["instance_name"] = name;
     ret["instance_type"] = type;
+    ret["wildcard_assignment"] = wildcard_assignment;
 
     std::unordered_map<std::string, std::vector<std::string>> port_map_dump = {};
     for(auto &[name, nets] :ports_map) {

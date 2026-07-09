@@ -36,8 +36,6 @@
 
 #include <spdlog/spdlog.h>
 
-//FORWARD DECLARATIONS
-class HDL_Resource;
 
 class HDL_instance {
 public:
@@ -54,6 +52,8 @@ public:
     bool has_parameter(const std::string &s){return parameters.contains(s);};
     std::shared_ptr<HDL_parameter> get_parameter_value(const std::string& parameter_name) {return parameters.get(parameter_name);};
 
+    void set_wildcard(bool w){wildcard_assignment = true;}
+    bool get_wildcard() const {return  wildcard_assignment;}
 
     void add_port_connection(const std::string& port_name, std::vector<HDL_net> value);
     void set_ports(const std::unordered_map<std::string, std::vector<HDL_net>> &p) {
@@ -109,6 +109,7 @@ protected:
 
     Parameters_map parameters;
     std::unordered_map<std::string, std::vector<HDL_net>> ports_map;
+    bool wildcard_assignment = false;
     dependency_class dep_class;
     std::string type;
     std::string name;
