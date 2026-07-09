@@ -508,8 +508,6 @@ TEST(parameter_processing, complex_vector_function_parameter) {
 
 }
 
-/*
- *TODO: FIX THIS ENDIANNESS CRAP
 TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch) {
     auto test_pattern = R"(
         module test_mod #(
@@ -540,21 +538,20 @@ TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch)
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze()[0];
+    std::vector<HDL_Resource> resource = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resource);
+    d_store->store_hdl_entity(resource,"", "");
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
 
     auto param = ast_v2->get_parameters().get("AXI_ADDRESSES");
-    auto param_value = param->get_array_value().get_1d_slice({0, 0});
-    mdarray<hd>::md_1d_array reference = {667, 300, 200, 100, 44};
+    auto param_value = param->get_int_array_value().value().get_1d_slice({0, 0});
+    mdarray<hdl_integer>::md_1d_array reference = {667, 300, 200, 100, 44};
     ASSERT_EQ(param_value, reference);
 
 }
-*/
 
 TEST(parameter_processing, simple_package_in_function_initialization) {
     auto test_pattern = R"(

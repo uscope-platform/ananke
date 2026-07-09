@@ -118,6 +118,7 @@ void Cast::set_container_sizes(const resolved_type &s, const std::map<qualified_
         if (!cast_size.has_value()) return;
         resolved_type t;
         t.packed_sizes.push_back(cast_size.value().get_integer().get_value());
+        t.packed_ascending.push_back(true);
         content->set_container_sizes(t, context);
     }
 }

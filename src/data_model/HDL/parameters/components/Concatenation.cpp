@@ -168,14 +168,19 @@ void Concatenation::set_container_sizes(const resolved_type &s, const std::map<q
             return;
         };
         if (!s.unpacked_sizes.empty()) {
-            if (s.unpacked_sizes.size()>1) content_sizes.unpacked_sizes.insert(content_sizes.unpacked_sizes.end(), s.unpacked_sizes.begin(), s.unpacked_sizes.end()-1);
+            if (s.unpacked_sizes.size()>1) {
+                content_sizes.unpacked_sizes.insert(content_sizes.unpacked_sizes.end(), s.unpacked_sizes.begin(), s.unpacked_sizes.end()-1);
+                content_sizes.unpacked_ascending.insert(content_sizes.unpacked_ascending.end(), s.unpacked_ascending.begin(), s.unpacked_ascending.end()-1);
+            }
             content_sizes.packed_sizes = s.packed_sizes;
+            content_sizes.packed_ascending = s.packed_ascending;
             container_size = s.unpacked_sizes.back();
             packing = false;
         } else {
             container_size = s.packed_sizes.back();
             packing = true;
             content_sizes.packed_sizes.insert(content_sizes.packed_sizes.end(), s.packed_sizes.begin(), s.packed_sizes.end());
+            content_sizes.packed_ascending.insert(content_sizes.packed_ascending.end(), s.packed_ascending.begin(), s.packed_ascending.end());
         }
         for (auto &item:components) {
             item->set_container_sizes(content_sizes, context);

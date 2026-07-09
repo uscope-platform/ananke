@@ -30,6 +30,12 @@ public:
 
     void add_instance(const HDL_instance &i);
     void add_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type);
+    bool has_typedef(const std::string &name) {
+        return current_resource.get_typedefs().contains(name);
+    }
+    std::shared_ptr<hdl_type> get_typedef(const std::string &name) {
+        return current_resource.get_typedefs().at(name);
+    }
     void add_struct_def(const std::string & name, const std::shared_ptr<hdl_type> & hdl_struct);
 
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);

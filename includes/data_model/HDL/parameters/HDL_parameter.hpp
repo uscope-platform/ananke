@@ -35,9 +35,10 @@ public:
         : name(std::move(other.name)),
           type(other.type),
           raw_value(std::move(other.raw_value)),
-          solved_value(std::move(other.solved_value)){
+          solved_value(std::move(other.solved_value)),
+          return_unpacked_range_left(std::move(other.return_unpacked_range_left)),
+          return_unpacked_range_right(std::move(other.return_unpacked_range_right)){
     }
-
     HDL_parameter & operator=(const HDL_parameter &other) {
         if (this == &other)
             return *this;
@@ -45,6 +46,8 @@ public:
         type = other.type;
         raw_value = other.raw_value;
         solved_value = other.solved_value;
+        return_unpacked_range_left = other.return_unpacked_range_left;
+        return_unpacked_range_right = other.return_unpacked_range_right;
         return *this;
     }
 
@@ -55,6 +58,8 @@ public:
         type = std::move(other.type);
         raw_value = std::move(other.raw_value);
         solved_value = std::move(other.solved_value);
+        return_unpacked_range_left = std::move(other.return_unpacked_range_left);
+        return_unpacked_range_right = std::move(other.return_unpacked_range_right);
         return *this;
     }
 
@@ -125,6 +130,9 @@ private:
 
     std::shared_ptr<Parameter_value_base> raw_value;
     std::optional<resolved_parameter> solved_value;
+
+    std::shared_ptr<Parameter_value_base> return_unpacked_range_left;
+    std::shared_ptr<Parameter_value_base> return_unpacked_range_right;
 
 };
 

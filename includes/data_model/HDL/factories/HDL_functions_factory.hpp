@@ -43,6 +43,7 @@ public:
     void close_assignment();
     void add_loop(const HDL_loop_metadata &md){f.add_loop_metadata(md);}
     HDL_function_def get_function();
+    void set_return_type_name(const std::string &n) { f.set_return_type_name(n); }
     bool is_active()const{return active;}
     bool is_raw_body()const{return consumer_stack.empty();}
 

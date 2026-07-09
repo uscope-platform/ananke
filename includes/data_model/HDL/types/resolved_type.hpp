@@ -19,6 +19,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <optional>
 
 struct struct_member_resolved_type {
     std::vector<uint64_t> unpacked_sizes;
@@ -27,9 +28,12 @@ struct struct_member_resolved_type {
 
 struct resolved_type {
     std::vector<uint64_t> unpacked_sizes;
+    std::vector<bool> unpacked_ascending;
     std::vector<uint64_t> packed_sizes;
+    std::vector<bool> packed_ascending;
     std::vector<struct_member_resolved_type> struct_sizes;
     bool packed_struct = false;
+    std::optional<bool> return_unpacked_ascending;
 };
 
 #endif //ANANKE_RESOLVED_TYPE_HPP

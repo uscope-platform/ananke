@@ -42,6 +42,16 @@ bool HDL_Resource::is_interface() {
 
 void HDL_Resource::process_calls() {
     for(auto &function: functions | std::views::values) {
+        if (!function.get_return_type_name().empty()) {
+            auto it = typedefs.find(function.get_return_type_name());
+            if (it != typedefs.end() && it->second->is<HDL_simple_type>()) {
+                auto& simple = it->second->as<HDL_simple_type>();
+                auto udims = simple.get_unpacked_dimensions();
+                if (!udims.empty()) {
+                    function.set_return_unpacked_bounds(udims[0].first_bound, udims[0].second_bound);
+                }
+            }
+        }
         for(const auto &[param_name, param]:parameters_spec) {
             param->propagate_function(function);
         }

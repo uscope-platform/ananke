@@ -38,6 +38,7 @@ std::optional<resolved_type> HDL_struct_type::evaluate_type(
         global_size +=member_width;
     }
     result.packed_sizes.push_back(global_size);
+    result.packed_ascending.push_back(true);
     result.packed_struct = packed;
     return result;
 }

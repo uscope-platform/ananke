@@ -66,6 +66,7 @@ std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<quali
         if (!(f_b.has_value() && s_b.has_value())) return std::nullopt;
         auto diff = std::abs(f_b.value().get_integer() - s_b.value().get_integer())+1;
         result.unpacked_sizes.push_back(diff.get_value());
+        result.unpacked_ascending.push_back(f_b.value().get_integer() < s_b.value().get_integer());
     }
     for (auto &dim: packed_dimensions) {
         auto f_b = dim.first_bound->evaluate(context);
@@ -73,6 +74,7 @@ std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<quali
         if (!(f_b.has_value() && s_b.has_value())) return std::nullopt;
         auto diff = std::abs(f_b.value().get_integer() - s_b.value().get_integer())+1;
         result.packed_sizes.push_back(diff.get_value());
+        result.packed_ascending.push_back(f_b.value().get_integer() < s_b.value().get_integer());
     }
 
     return result;

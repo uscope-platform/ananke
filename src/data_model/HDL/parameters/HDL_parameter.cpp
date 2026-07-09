@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 
 
 HDL_parameter::HDL_parameter(const HDL_parameter &c) {
@@ -23,6 +24,8 @@ HDL_parameter::HDL_parameter(const HDL_parameter &c) {
     solved_value = c.solved_value;
 
     raw_value = c.raw_value;
+    return_unpacked_range_left = c.return_unpacked_range_left;
+    return_unpacked_range_right = c.return_unpacked_range_right;
 }
 
 
@@ -60,6 +63,8 @@ std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
     par.type = type;
     par.solved_value = solved_value;
     par.raw_value = raw_value;
+    par.return_unpacked_range_left = return_unpacked_range_left;
+    par.return_unpacked_range_right = return_unpacked_range_right;
     return std::make_shared<HDL_parameter>(par);
 }
 
@@ -68,6 +73,13 @@ std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualifi
     if (!type) return std::nullopt;
     auto container_size = type->evaluate_type(context);
     if (!container_size) return std::nullopt;
+    if (return_unpacked_range_left && return_unpacked_range_right) {
+        auto lower = return_unpacked_range_left->evaluate(context);
+        auto upper = return_unpacked_range_right->evaluate(context);
+        if (lower && upper && lower->is_integer() && upper->is_integer()) {
+            container_size->return_unpacked_ascending = lower->get_integer() < upper->get_integer();
+        }
+    }
     raw_value->set_container_sizes(container_size.value(), context);
     auto val = raw_value->evaluate(context);
     if (type->is<HDL_simple_type>()) {
@@ -100,6 +112,11 @@ std::optional<resolved_parameter> HDL_parameter::cast_result(
 
 void HDL_parameter::propagate_function(const HDL_function_def &def) {
     if (raw_value) raw_value->propagate_function(def);
+    auto call = std::dynamic_pointer_cast<HDL_function_call>(raw_value);
+    if (call && call->get_name() == def.get_name()) {
+        return_unpacked_range_left = def.get_return_unpacked_range_left();
+        return_unpacked_range_right = def.get_return_unpacked_range_right();
+    }
 }
 
 HDL_parameter::operator std::string() {

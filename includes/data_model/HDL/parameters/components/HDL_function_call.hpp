@@ -40,6 +40,11 @@ public:
     std::optional<resolved_parameter> evaluate_scalar(const std::map<qualified_identifier, resolved_parameter> &context);
     std::optional<resolved_parameter> evaluate_vector(const std::map<qualified_identifier, resolved_parameter> &context);
     std::optional<resolved_parameter> evaluate_system_task(const std::map<qualified_identifier, resolved_parameter> &context);
+    void apply_return_order_reversal(
+        std::vector<hdl_integer> &values,
+        std::vector<int64_t> &value_sizes,
+        const std::map<qualified_identifier, resolved_parameter> &context
+    );
 
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
 
@@ -65,9 +70,13 @@ private:
     std::string function_name;
     std::vector<std::shared_ptr<Parameter_value_base>> arguments;
 
-
     std::vector<assignment> assignments;
     std::optional<HDL_loop_metadata> loop_metadata;
+
+    bool packing = false;
+    bool container_unpacked_ascending = false;
+    bool has_return_unpacked_ascending = false;
+    bool return_unpacked_ascending = false;
 
     bool isEqual(const Parameter_value_base& other) const override;
 

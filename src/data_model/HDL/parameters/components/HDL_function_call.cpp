@@ -20,6 +20,7 @@
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
+#include <algorithm>
 
 
 CEREAL_REGISTER_TYPE(HDL_function_call)
@@ -132,12 +133,26 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector(const std::
         }
     }
 
+    apply_return_order_reversal(values, value_sizes, context);
+
     mdarray<hdl_integer> result;
     result.set_1d_slice({0, 0}, values);
     if (packing) {
         result.set_1d_slice({0,0}, {pack_values(values, value_sizes)});
     }
     return result;
+}
+
+void HDL_function_call::apply_return_order_reversal(
+    std::vector<hdl_integer> &values,
+    std::vector<int64_t> &value_sizes,
+    const std::map<qualified_identifier, resolved_parameter> &context
+) {
+    if (packing || !has_return_unpacked_ascending) return;
+    if (return_unpacked_ascending != container_unpacked_ascending) {
+        std::reverse(values.begin(), values.end());
+        std::reverse(value_sizes.begin(), value_sizes.end());
+    }
 }
 
 std::optional<resolved_parameter> HDL_function_call::evaluate_system_task(const std::map<qualified_identifier, resolved_parameter> &context) {
@@ -198,6 +213,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_system_task(const 
 
 void HDL_function_call::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
     packing = s.unpacked_sizes.empty();
+    container_unpacked_ascending = s.unpacked_ascending.empty() ? true : s.unpacked_ascending[0];
     if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) {
         if (assignments.size()==1 && !loop_metadata.has_value()){
             assignments[0].set_container_size(s, context);
@@ -213,6 +229,11 @@ void HDL_function_call::set_container_sizes(const resolved_type &s, const std::m
                 lower_container_size.packed_sizes.begin(),
                 s.packed_sizes.begin(),
                 s.packed_sizes.end()-1
+            );
+            lower_container_size.packed_ascending.insert(
+                lower_container_size.packed_ascending.begin(),
+                s.packed_ascending.begin(),
+                s.packed_ascending.end()-1
             );
             for (auto &a:assignments) {
                 a.set_container_size(lower_container_size, context);
@@ -232,10 +253,16 @@ void HDL_function_call::set_container_sizes(const resolved_type &s, const std::m
         } else {
             resolved_type lower_container_size;
             lower_container_size.packed_sizes = s.unpacked_sizes;
+            lower_container_size.packed_ascending = s.unpacked_ascending;
             lower_container_size.unpacked_sizes.insert(
                 lower_container_size.unpacked_sizes.begin(),
                 s.unpacked_sizes.begin(),
                 s.unpacked_sizes.end()-1
+            );
+            lower_container_size.unpacked_ascending.insert(
+                lower_container_size.unpacked_ascending.begin(),
+                s.unpacked_ascending.begin(),
+                s.unpacked_ascending.end()-1
             );
             for (auto &a:assignments) {
                 a.set_container_size(lower_container_size, context);
@@ -250,6 +277,10 @@ void HDL_function_call::set_container_sizes(const resolved_type &s, const std::m
             }
         }
 
+    }
+    if (s.return_unpacked_ascending.has_value()) {
+        return_unpacked_ascending = s.return_unpacked_ascending.value();
+        has_return_unpacked_ascending = true;
     }
 }
 

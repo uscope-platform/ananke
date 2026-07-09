@@ -31,6 +31,7 @@ HDL_function_def HDL_function_def::clone() {
         def.loop_metadata =  loop_metadata->clone();
     else
         def.loop_metadata = std::nullopt;
+    def.return_type_name = return_type_name;
     return def;
 }
 
@@ -56,6 +57,7 @@ bool HDL_function_def::operator==(const HDL_function_def &rhs) const {
     retval &= assignments == rhs.assignments;
     retval &= loop_metadata == rhs.loop_metadata;
     retval &= argument_names == rhs.argument_names;
+    retval &= return_type_name == rhs.return_type_name;
     return retval;
 }
 

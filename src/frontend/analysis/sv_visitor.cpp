@@ -995,6 +995,16 @@ void sv_visitor::enterUntyped_function_declaration(sv2017::Untyped_function_decl
 }
 
 void sv_visitor::exitFunction_declaration(sv2017::Function_declarationContext *ctx) {
+    auto func_type = ctx->function_data_type_or_implicit();
+    if (func_type) {
+        auto dv = func_type->data_type_or_void();
+        if (dv && !dv->KW_VOID()) {
+            auto dt = dv->data_type();
+            if (dt && dt->package_or_class_scoped_path()) {
+                f_factory.set_return_type_name(dt->package_or_class_scoped_path()->getText());
+            }
+        }
+    }
     modules_factory.add_function( f_factory.get_function());
 }
 
