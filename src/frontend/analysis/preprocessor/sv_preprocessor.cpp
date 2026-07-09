@@ -284,6 +284,20 @@ namespace preprocessor {
                 }
                 result.push_back('\"');
                 cursor++;
+            } else if (trigger == '`'){
+                if (cursor + 1 < content.size() && content[cursor + 1] == '"') {
+                    result.append("`\"");
+                    cursor += 2;
+                    continue;
+                }
+
+                // This is your original backtick logic that handles `define
+                auto directive = content.substr(cursor);
+                if (directive.starts_with("`define")) {
+                    in_macro = true;
+                }
+                result.push_back('`');
+                cursor++;
             } else if (trigger == '\\') {
                 if (cursor + 1 < content.size()) {
                     char next = content[cursor + 1];

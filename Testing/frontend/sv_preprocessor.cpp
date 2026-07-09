@@ -1359,3 +1359,27 @@ endmodule
     auto check_string = "\nmodule test;\n  end end\nendmodule";
     EXPECT_EQ(result, check_string);
 }
+
+TEST(preprocessor, macro_stringification_token_handling) {
+    // Verifies that `" does not toggle the regular string tracking state,
+    // allowing subsequent lines and macro calls to be parsed correctly.
+    auto test_pattern = R"(
+`define SV_RAND_CHECK(r) \
+  $display("\"%s\"", `"r`");
+module test;
+  initial begin
+    `SV_RAND_CHECK(1)
+  end
+endmodule
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/stringification_test.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+
+    // If the fix works, the module tokens, begin, and end tags expand cleanly.
+    // If it fails, the parser gets stuck "inside a string" and corrupts the output.
+    auto check_string = "\nmodule test;\n  initial begin\n    $display(\"\\\"%s\\\"\", \"1\");\n  end\nendmodule";
+    EXPECT_EQ(result, check_string);
+}

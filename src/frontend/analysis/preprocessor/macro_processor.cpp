@@ -183,6 +183,17 @@ namespace preprocessor {
         bool in_token = is_valid_id_char(body[0]);
         int current_token_start = 0;
         for (int i = 0; i<body.size(); i++){
+            if (body[i] == '`' && i + 1 < body.size() && body[i + 1] == '"') {
+                if (i > current_token_start) {
+                    tokens.push_back(body.substr(current_token_start, i - current_token_start));
+                }
+                tokens.push_back(body.substr(i, 2));
+                i++; // Advance loop pointer past the double quote
+                current_token_start = i + 1;
+                if (current_token_start < body.size()) in_token = is_valid_id_char(body[current_token_start]);
+                continue;
+            }
+
             bool current_char_valid = is_valid_id_char(body[i]);
 
 
@@ -207,12 +218,18 @@ namespace preprocessor {
             if (arguments_map.contains(t)) {
                 expanded_tokens.push_back(arguments_map[t]);
             } else {
-                expanded_tokens.push_back(std::string(t));
+                expanded_tokens.emplace_back(t);
             }
         }
 
         std::string result;
         for (size_t i = 0; i < expanded_tokens.size(); ++i) {
+            // Evaluates the cleanly isolated stringification token sequence back into standard quotes
+            if (expanded_tokens[i] == "`\"") {
+                result.push_back('"');
+                continue;
+            }
+
             if (expanded_tokens[i] == "``") {
                 // Trim trailing whitespace from the result accumulated so far
                 while (!result.empty() && (result.back() == ' ' || result.back() == '\t')) {
