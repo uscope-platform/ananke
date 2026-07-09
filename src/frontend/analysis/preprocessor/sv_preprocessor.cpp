@@ -111,66 +111,7 @@ namespace preprocessor {
                     }
 
                     // 1. Expand the macro normally
-                    output_line = macro_engine.process_macro(uncommented_line) + '\n';
-
-                    // 2. Check if the expanded macro contains any embedded conditional directives
-                    if (output_line.contains("`ifdef") || output_line.contains("`ifndef") ||
-                        output_line.contains("`elsif") || output_line.contains("`else") ||
-                        output_line.contains("`endif")) {
-
-                        // 3. Format the line to isolate embedded directives onto their own separate lines
-                        std::string formatted;
-                        size_t i = 0;
-                        while (i < output_line.size()) {
-                            if (output_line[i] == '`') {
-                                std::string_view sub = std::string_view(output_line).substr(i);
-                                std::string directive = "";
-                                size_t dir_len = 0;
-                                bool has_arg = false;
-
-                                if (sub.starts_with("`ifdef"))       { directive = "`ifdef";  dir_len = 6; has_arg = true; }
-                                else if (sub.starts_with("`ifndef")) { directive = "`ifndef"; dir_len = 7; has_arg = true; }
-                                else if (sub.starts_with("`elsif"))  { directive = "`elsif";  dir_len = 6; has_arg = true; }
-                                else if (sub.starts_with("`else"))   { directive = "`else";   dir_len = 5; has_arg = false; }
-                                else if (sub.starts_with("`endif"))  { directive = "`endif";  dir_len = 6; has_arg = false; }
-
-                                if (!directive.empty()) {
-                                    if (!formatted.empty() && formatted.back() != '\n') {
-                                        formatted.push_back('\n');
-                                    }
-                                    formatted.append(directive);
-                                    i += dir_len;
-
-                                    if (has_arg) {
-                                        while (i < output_line.size() && (output_line[i] == ' ' || output_line[i] == '\t')) {
-                                            formatted.push_back(output_line[i]);
-                                            i++;
-                                        }
-                                        while (i < output_line.size() && (std::isalnum(output_line[i]) || output_line[i] == '_' || output_line[i] == '$')) {
-                                            formatted.push_back(output_line[i]);
-                                            i++;
-                                        }
-                                    }
-                                    formatted.push_back('\n');
-                                    continue;
-                                }
-                            }
-                            formatted.push_back(output_line[i]);
-                            i++;
-                        }
-
-                        // 4. Instantiate a nested preprocessor step with pre-populated definitions
-                        sv_preprocessor nested_preproc;
-                        nested_preproc.definitions = definitions;
-                        nested_preproc.include_directories = include_directories;
-                        nested_preproc.path = path;
-
-                        // Evaluate the conditional branches cleanly using the existing rules
-                        output_line = nested_preproc.preprocess(formatted, output_line_n) + '\n';
-
-                        // Synchronize definitions state back to the parent instance
-                        definitions = nested_preproc.definitions;
-                    }
+                    output_line =  post_process_macro_expansion(macro_engine.process_macro(uncommented_line) + '\n');
                 }
                 output_line_n += std::count(output_line.begin(), output_line.end(), '\n');
                 out << output_line;
@@ -404,6 +345,67 @@ namespace preprocessor {
         return result;
     }
 
+    std::string sv_preprocessor::post_process_macro_expansion(const std::string &text) {
+        std::string output_line = text;
+        if (output_line.contains("`ifdef") || output_line.contains("`ifndef") ||
+        output_line.contains("`elsif") || output_line.contains("`else") ||
+        output_line.contains("`endif")) {
+
+            // 3. Format the line to isolate embedded directives onto their own separate lines
+            std::string formatted;
+            size_t i = 0;
+            while (i < output_line.size()) {
+                if (output_line[i] == '`') {
+                    std::string_view sub = std::string_view(output_line).substr(i);
+                    std::string directive = "";
+                    size_t dir_len = 0;
+                    bool has_arg = false;
+
+                    if (sub.starts_with("`ifdef"))       { directive = "`ifdef";  dir_len = 6; has_arg = true; }
+                    else if (sub.starts_with("`ifndef")) { directive = "`ifndef"; dir_len = 7; has_arg = true; }
+                    else if (sub.starts_with("`elsif"))  { directive = "`elsif";  dir_len = 6; has_arg = true; }
+                    else if (sub.starts_with("`else"))   { directive = "`else";   dir_len = 5; has_arg = false; }
+                    else if (sub.starts_with("`endif"))  { directive = "`endif";  dir_len = 6; has_arg = false; }
+
+                    if (!directive.empty()) {
+                        if (!formatted.empty() && formatted.back() != '\n') {
+                            formatted.push_back('\n');
+                        }
+                        formatted.append(directive);
+                        i += dir_len;
+
+                        if (has_arg) {
+                            while (i < output_line.size() && (output_line[i] == ' ' || output_line[i] == '\t')) {
+                                formatted.push_back(output_line[i]);
+                                i++;
+                            }
+                            while (i < output_line.size() && (std::isalnum(output_line[i]) || output_line[i] == '_' || output_line[i] == '$')) {
+                                formatted.push_back(output_line[i]);
+                                i++;
+                            }
+                        }
+                        formatted.push_back('\n');
+                        continue;
+                    }
+                }
+                formatted.push_back(output_line[i]);
+                i++;
+            }
+
+            // 4. Instantiate a nested preprocessor step with pre-populated definitions
+            sv_preprocessor nested_preproc;
+            nested_preproc.definitions = definitions;
+            nested_preproc.include_directories = include_directories;
+            nested_preproc.path = path;
+
+            // Evaluate the conditional branches cleanly using the existing rules
+            output_line = nested_preproc.preprocess(formatted, output_line_n) + '\n';
+
+            definitions = nested_preproc.definitions;
+        }
+
+        return output_line;
+    }
     std::string sv_preprocessor::gather_multi_line_macro(const std::string &first_line, std::istringstream &iss) {
         std::string accumulated = first_line;
 
