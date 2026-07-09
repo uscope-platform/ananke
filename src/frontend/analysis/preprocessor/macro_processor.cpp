@@ -194,6 +194,17 @@ namespace preprocessor {
                 continue;
             }
 
+            if (body[i] == '`' && i + 1 < body.size() && body[i + 1] == '`') {
+                if (i > current_token_start) {
+                    tokens.push_back(body.substr(current_token_start, i - current_token_start));
+                }
+                tokens.push_back(body.substr(i, 2));
+                i++; // Advance loop pointer past the second backtick
+                current_token_start = i + 1;
+                if (current_token_start < body.size()) in_token = is_valid_id_char(body[current_token_start]);
+                continue;
+            }
+
             bool current_char_valid = is_valid_id_char(body[i]);
 
 

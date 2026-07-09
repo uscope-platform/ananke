@@ -1454,6 +1454,6 @@ endmodule
     auto result = preproc.preprocess(test_pattern);
 
     // The block comment is entirely stripped away by the preprocessor
-    auto check_string = "\nmodule test;\nassert((a || b)) ;\nendmodule";
+    auto check_string = "module test;\nassert((a || b)) ;\nendmodule";
     EXPECT_EQ(result, check_string);
 }

@@ -403,7 +403,25 @@ namespace preprocessor {
 
             definitions = nested_preproc.definitions;
         }
-
+        if (output_line.contains("/*")) {
+            std::string stripped;
+            stripped.reserve(output_line.size());
+            size_t pos = 0;
+            while (pos < output_line.size()) {
+                if (pos + 1 < output_line.size() && output_line[pos] == '/' && output_line[pos + 1] == '*') {
+                    size_t end_pos = output_line.find("*/", pos + 2);
+                    if (end_pos != std::string::npos) {
+                        pos = end_pos + 2;
+                    } else {
+                        pos = output_line.size(); // Malformed/unclosed comment case
+                    }
+                } else {
+                    stripped.push_back(output_line[pos]);
+                    pos++;
+                }
+            }
+            output_line = stripped;
+        }
         return output_line;
     }
     std::string sv_preprocessor::gather_multi_line_macro(const std::string &first_line, std::istringstream &iss) {
