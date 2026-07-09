@@ -1440,3 +1440,20 @@ endmodule
     auto check_string = "\nmodule test;\n assert ((a || b) |-> c)\n;\nendmodule";
     EXPECT_EQ(result, check_string);
 }
+
+TEST(preprocessor, multi_line_macro_with_synopsys_pragma_minimal) {
+    auto test_pattern = R"(`define COMPACT_ASSERT(prop) assert(prop) /``* synopsys sync_set_reset `"clk`" *``/
+module test;
+`COMPACT_ASSERT((a || b));
+endmodule
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/minimal_test.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+
+    // The block comment is entirely stripped away by the preprocessor
+    auto check_string = "\nmodule test;\nassert((a || b)) ;\nendmodule";
+    EXPECT_EQ(result, check_string);
+}
