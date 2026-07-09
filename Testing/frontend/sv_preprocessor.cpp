@@ -1296,3 +1296,22 @@ TEST(preprocessor, macro_string_concat) {
     )";
     EXPECT_EQ(result, check_string);
 }
+
+TEST(preprocessor, macro_call_with_spaces_before_paren) {
+    // SV Standard allows spaces between the macro name and the parenthesis.
+    auto test_pattern = R"(
+`define AXI_LITE_TYPEDEF_R_CHAN_T(r_chan_t, data_t) \
+    typedef struct packed { data_t data; } r_chan_t;
+module test_module ();
+    `AXI_LITE_TYPEDEF_R_CHAN_T (my_chan_t, logic [31:0])
+endmodule
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+
+    auto check_string = "\nmodule test_module ();\n    typedef struct packed { logic [31:0] data; } my_chan_t;\nendmodule";
+    EXPECT_EQ(result, check_string);
+}

@@ -36,7 +36,8 @@ namespace preprocessor {
             while (auto match = identifier_pattern(remaining)) {
                 result.append(remaining.begin(), match.begin());
                 if (match.view().back() == '(') {
-                    auto id = std::string(match.view().substr(1, match.size()-2));
+                    auto id_view = match.view().substr(1, match.size()-2);
+                    auto id = std::string(trim(id_view));
                     size_t start_pos = (match.data() + match.size()) - remaining.data();
                     auto args_text = remaining.substr(start_pos);
                     auto [args, rest_of_line] = get_call_arguments(args_text);
