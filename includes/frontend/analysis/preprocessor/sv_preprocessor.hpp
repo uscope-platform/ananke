@@ -44,6 +44,7 @@ namespace preprocessor {
         std::vector<std::string> get_documentation_comments() {return documentation_comments;}
         source_map_t get_source_map() const {return  source_map.get_map();}
     private:
+        std::string gather_multi_line_macro(const std::string &first_line, std::istringstream &iss);
         typedef std::unordered_map<std::string, std::variant<std::string, function_macro>> definitions_map;
         std::optional<std::string> parse_include_path(const std::string_view &v);
         std::string get_define_replacement(const std::string_view &v);

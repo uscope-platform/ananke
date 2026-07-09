@@ -1315,3 +1315,24 @@ endmodule
     auto check_string = "\nmodule test_module ();\n    typedef struct packed { logic [31:0] data; } my_chan_t;\nendmodule";
     EXPECT_EQ(result, check_string);
 }
+
+TEST(preprocessor, multi_line_macro_call_no_backslashes) {
+    // Arbitrary SV allows a macro invocation's argument list to be split over multiple lines
+    // without requiring trailing line continuation backslashes (\).
+    auto test_pattern = R"(
+`define AXI_TYPEDEF_ALL(__name, __addr_t, __id_t) \
+  typedef struct packed { __id_t id; __addr_t addr; } __name``_t;
+
+`AXI_TYPEDEF_ALL(axi_slave,
+                 logic [31:0],
+                 logic [3:0])
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/multi_line_macro_test.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+
+    auto check_string = "\n\ntypedef struct packed { \n                 logic [3:0] id; \n                 logic [31:0] addr; } axi_slave_t;";
+    EXPECT_EQ(result, check_string);
+}

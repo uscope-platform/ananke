@@ -52,14 +52,14 @@ namespace preprocessor {
             if (line.contains("//")) {
                 uncommented_line = line.substr(0, line.find("//"));
                 auto comment = line.substr(line.find("//"));
-                if (comment.contains("pragma translate_off"))disable_preprocessor = true;
+                if (comment.contains("pragma translate_off")) disable_preprocessor = true;
                 if (comment.contains("pragma translate_on")) disable_preprocessor = false;
             }
             if (disable_preprocessor) uncommented_line = "";
 
             if (trimmed_line.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed_line, 7);
-            } else if (trimmed_line.starts_with("`include")&& c_solver.is_active()) {
+            } else if (trimmed_line.starts_with("`include") && c_solver.is_active()) {
 
                 auto included_file = parse_include_path(trimmed_line);
                 if (included_file.has_value()) {
@@ -106,6 +106,10 @@ namespace preprocessor {
                 if (uncommented_line.empty()) {
                     output_line = '\n';
                 } else {
+                    if (uncommented_line.contains('`')) {
+                        uncommented_line = gather_multi_line_macro(uncommented_line, iss);
+                    }
+
                     output_line = macro_engine.process_macro(uncommented_line) + '\n';
                 }
                 output_line_n += std::count(output_line.begin(), output_line.end(), '\n');
@@ -309,4 +313,41 @@ namespace preprocessor {
 
         return result;
     }
+
+    std::string sv_preprocessor::gather_multi_line_macro(const std::string &first_line, std::istringstream &iss) {
+        std::string accumulated = first_line;
+
+        // Lambda to evaluate unescaped structural parenthesis balance
+        auto count_paren_balance = [](const std::string &str) {
+            int balance = 0;
+            bool in_string = false;
+            for (size_t i = 0; i < str.size(); ++i) {
+                if (str[i] == '"' && (i == 0 || str[i-1] != '\\')) {
+                    in_string = !in_string;
+                }
+                if (!in_string) {
+                    if (str[i] == '(') balance++;
+                    if (str[i] == ')') balance--;
+                }
+            }
+            return balance;
+        };
+
+        std::string next_line;
+        // Continue pulling raw lines from the stream as long as parentheses are unbalanced
+        while (count_paren_balance(accumulated) > 0 && std::getline(iss, next_line)) {
+            line_number++; // Crucial: Keeps the preprocessor line tracking 1:1 with the file
+
+            // Strip single-line comments from the lookahead segment before combining
+            std::string uncommented_next = next_line;
+            if (next_line.contains("//")) {
+                uncommented_next = next_line.substr(0, next_line.find("//"));
+            }
+
+            accumulated += "\n" + uncommented_next;
+        }
+
+        return accumulated;
+    }
+
 }
