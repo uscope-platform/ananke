@@ -38,6 +38,7 @@ public:
         if (this != &other) {
             container_size = other.container_size;
             unpacked_dimension = other.unpacked_dimension;
+            unpacked_ascending = other.unpacked_ascending;
             packing = other.packing;
             default_initialization = other.default_initialization;
             components = other.components;
@@ -49,6 +50,7 @@ public:
         if (this != &other) {
             container_size = other.container_size;
             unpacked_dimension = other.unpacked_dimension;
+            unpacked_ascending = other.unpacked_ascending;
             packing = other.packing;
             default_initialization = other.default_initialization;
             components = std::move(other.components);
@@ -71,6 +73,7 @@ public:
         ret &= lhs.packing == rhs.packing;
         ret &= lhs.default_initialization == rhs.default_initialization;
         ret &= lhs.unpacked_dimension == rhs.unpacked_dimension;
+        ret &= lhs.unpacked_ascending == rhs.unpacked_ascending;
         for(int i = 0; i < lhs.components.size(); i++) {
             ret &= *lhs.components[i] == *rhs.components[i];
         }
@@ -93,6 +96,7 @@ private:
     bool packing = false;
     bool default_initialization = false;
     std::vector<uint64_t> unpacked_dimension  = {};
+    std::vector<bool> unpacked_ascending = {};
     std::vector<struct_member_resolved_type> fields_sizes;
     int64_t container_size = 0;
 
@@ -117,6 +121,7 @@ private:
         ret &= packing == rhs.packing;
         ret &= default_initialization == rhs.default_initialization;
         ret &= unpacked_dimension == rhs.unpacked_dimension;
+        ret &= unpacked_ascending == rhs.unpacked_ascending;
 
         return ret;
     }

@@ -29,6 +29,7 @@ Concatenation::Concatenation(const Concatenation &other) {
     packing = other.packing;
     fields_sizes = other.fields_sizes;
     unpacked_dimension = other.unpacked_dimension;
+    unpacked_ascending = other.unpacked_ascending;
 }
 
 Concatenation::Concatenation(Concatenation &&other) noexcept {
@@ -38,6 +39,7 @@ Concatenation::Concatenation(Concatenation &&other) noexcept {
     default_initialization = other.default_initialization;
     packing = other.packing;
     unpacked_dimension = other.unpacked_dimension;
+    unpacked_ascending = other.unpacked_ascending;
 }
 
 
@@ -91,11 +93,15 @@ std::optional<resolved_parameter> Concatenation::evaluate(const std::map<qualifi
         result = hdl_integer(result->get_integer().get_value() & mask);
     } else {
         if (components.empty())return std::nullopt;
+
+        bool reverse_order = unpacked_ascending.empty() || !unpacked_ascending.back();
+
         auto v = components[0]->evaluate(context);
         if (v.value().is_string()) {
             mdarray<std::string> result_string;
             for (int64_t i = 0;i<concat_size; i++) {
-                auto value_opt = components[concat_size-i-1]->evaluate(context);
+                int64_t idx = reverse_order ? concat_size - i - 1 : i;
+                auto value_opt = components[idx]->evaluate(context);
                 if (!value_opt.has_value()) return std::nullopt;
                 mdarray<std::string> to_concat;
                 to_concat.set_value(0,value_opt.value().get_string());
@@ -105,7 +111,8 @@ std::optional<resolved_parameter> Concatenation::evaluate(const std::map<qualifi
         } else {
             mdarray<hdl_integer> result_array;
             for (int64_t i = 0;i<concat_size; i++) {
-                auto value_opt = components[concat_size-i-1]->evaluate(context);
+                int64_t idx = reverse_order ? concat_size - i - 1 : i;
+                auto value_opt = components[idx]->evaluate(context);
                 if (!value_opt.has_value()) return std::nullopt;
                 if (value_opt.value().is_integer()) {
                     mdarray<hdl_integer> to_concat;
@@ -162,6 +169,7 @@ void Concatenation::set_container_sizes(const resolved_type &s, const std::map<q
 
         resolved_type content_sizes;
         unpacked_dimension = s.unpacked_sizes;
+        unpacked_ascending = s.unpacked_ascending;
         if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) {
             container_size = 32;
             packing = true;

@@ -1989,6 +1989,67 @@ TEST(parameter_extraction, array_parameter) {
     }
 }
 
+
+TEST(parameter_extraction, array_parameter_ascending) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter [31:0] array_parameter [0:1] = '{32, 5}
+        )();
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+
+    p->set_name("array_parameter");
+
+
+
+    dimension_t d;
+    d.first_bound = std::make_shared<Token>("31", Token::number);
+    d.second_bound = std::make_shared<Token>("0", Token::number);
+    d.packed = true;
+    auto param_type = HDL_simple_type();
+    param_type.add_dimension(d);
+    d.first_bound = std::make_shared<Token>("0", Token::number);
+    d.second_bound = std::make_shared<Token>("1", Token::number);
+    d.packed = false;
+    param_type.add_dimension(d);
+    Concatenation c;
+    c.add_component(std::make_shared<Token>("32", Token::number));
+    c.add_component(std::make_shared<Token>("5", Token::number));
+    p->set_type(std::make_shared<HDL_simple_type>(param_type));
+    p->set_raw_value(std::make_shared<Concatenation>(c));
+
+
+    check_params.insert(p);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
+    }
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    mdarray<hdl_integer> array_value;
+    array_value.set_1d_slice({0, 0}, {32, 5});
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {{"","", "array_parameter"}, array_value}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
 TEST(parameter_extraction, integer_localparams) {
     auto test_pattern = R"(
         module test_mod #(
@@ -2115,6 +2176,89 @@ TEST(parameter_extraction, simple_array_propagation) {
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {{"","", "array_parameter"}, array_value},
         {{"","", "array_parameter_expr_p"}, 37},
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+
+TEST(parameter_extraction, simple_ascending_array_propagation) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter [31:0] array_parameter [0:1] = '{32, 5}
+        )();
+            parameter array_parameter_expr_p = array_parameter[0] - array_parameter[1];
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto parameters = resource.get_parameters();
+
+    Parameters_map check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+
+    p->set_name("array_parameter");
+
+
+
+    dimension_t d;
+    d.first_bound = std::make_shared<Token>("31", Token::number);
+    d.second_bound = std::make_shared<Token>("0", Token::number);
+    d.packed = true;
+    auto param_type = HDL_simple_type();
+    param_type.add_dimension(d);
+    d.first_bound = std::make_shared<Token>("0", Token::number);
+    d.second_bound = std::make_shared<Token>("1", Token::number);
+    d.packed = false;
+    param_type.add_dimension(d);
+    Concatenation c;
+    c.add_component(std::make_shared<Token>("32", Token::number));
+    c.add_component(std::make_shared<Token>("5", Token::number));
+    p->set_type(std::make_shared<HDL_simple_type>(param_type));
+    p->set_raw_value(std::make_shared<Concatenation>(c));
+
+
+    check_params.insert(p);
+
+
+    p = std::make_shared<HDL_parameter>();
+
+    p->set_name("array_parameter_expr_p");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    Expression_v2 e;
+    Token t = Token("array_parameter", Token::identifier);
+    std::vector<std::shared_ptr<Parameter_value_base>> ai;
+    ai.push_back(std::make_shared<Token>("0", Token::number));
+    t.set_array_index(ai);
+    e.set_lhs(std::make_shared<Token>(t));
+    t = Token("array_parameter", Token::identifier);
+    ai.clear();
+    ai.push_back(std::make_shared<Token>("1", Token::number));
+    t.set_array_index(ai);
+    e.set_rhs(std::make_shared<Token>(t));
+    e.set_operation(Expression_v2::subtract);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
+    check_params.insert(p);
+
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
+    }
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    mdarray<hdl_integer> array_value;
+    array_value.set_1d_slice({0, 0}, {32, 5});
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {{"","", "array_parameter"}, array_value},
+        {{"","", "array_parameter_expr_p"}, 27},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
