@@ -18,6 +18,9 @@
 
 namespace preprocessor {
     void conditional_solver::close_loop() {
+        if (loop_level == 0) {
+            return;
+        }
         loop_level--;
         if (loop_level == 0) {
             solver_active = false;

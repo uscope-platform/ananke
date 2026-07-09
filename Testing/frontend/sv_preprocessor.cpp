@@ -1261,8 +1261,7 @@ TEST(preprocessor, translate_on_off) {
 TEST(preprocessor, complex_macro_substitution) {
     auto test_pattern = R"{(
 `define ASSERT(__name, __prop, __clk = test_clk, __rst = test_rst ) \
-  __name: assert property (@(posedge __clk) disable iff ((__rst) !== '0) (__prop))       \
-`endif
+  __name: assert property (@(posedge __clk) disable iff ((__rst) !== '0) (__prop))
 `ASSERT(en2addrHit, (reg_we || reg_re) |-> $onehot0(addr_hit))
 ){";
 
@@ -1271,7 +1270,7 @@ TEST(preprocessor, complex_macro_substitution) {
     preproc.set_path("/tmp/file.sv");
 
     auto result = preproc.preprocess(test_pattern);
-    auto check_string = "\nen2addrHit: assert property (@(posedge test_clk) disable iff ((test_rst) !== '0) ((reg_we || reg_re) |-> $onehot0(addr_hit)))       `endif";
+    auto check_string = "\nen2addrHit: assert property (@(posedge test_clk) disable iff ((test_rst) !== '0) ((reg_we || reg_re) |-> $onehot0(addr_hit)))";
 
     EXPECT_EQ(result, check_string);
 }
@@ -1421,5 +1420,23 @@ endmodule
     auto result = preproc.preprocess(test_pattern);
 
     auto check_string = "\nmodule test;\n    (x || y) |-> z == 42;\nendmodule";
+    EXPECT_EQ(result, check_string);
+}
+
+TEST(preprocessor, macro_with_embedded_ifdef_taken) {
+    auto test_pattern = R"(
+`define INC_ASSERT
+`define ASSERT(name, prop) `ifdef INC_ASSERT assert (prop)`endif
+module test;
+`ASSERT(check, (a || b) |-> c);
+endmodule
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/macro_ifdef_test.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+
+    auto check_string = "\nmodule test;\n assert ((a || b) |-> c)\n;\nendmodule";
     EXPECT_EQ(result, check_string);
 }
