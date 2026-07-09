@@ -54,8 +54,7 @@ namespace preprocessor {
 
     };
 
-    static constexpr auto identifier_pattern = ctre::search<R"(`([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()*)">;
-
+    static constexpr auto identifier_pattern = ctre::search<R"(`([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()?)">;
 
     class macro_processor {
     public:

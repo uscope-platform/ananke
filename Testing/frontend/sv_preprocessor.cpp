@@ -1405,3 +1405,21 @@ endmodule
     auto check_string = "\nmodule test;\n  initial begin\n    $display(\"line1 line2\");\n  end\nendmodule";
     EXPECT_EQ(result, check_string);
 }
+
+TEST(preprocessor, parenthesis_starting_macro_argument) {
+    auto test_pattern = R"(
+`define DEF_VAL 42
+`define FOO(a, b = `DEF_VAL) a == b
+module test;
+    `FOO((x || y) |-> z);
+endmodule
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/minimal_precedence_test.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+
+    auto check_string = "\nmodule test;\n    (x || y) |-> z == 42;\nendmodule";
+    EXPECT_EQ(result, check_string);
+}
