@@ -1336,3 +1336,26 @@ TEST(preprocessor, multi_line_macro_call_no_backslashes) {
     auto check_string = "\n\ntypedef struct packed { \n                 logic [3:0] id; \n                 logic [31:0] addr; } axi_slave_t;";
     EXPECT_EQ(result, check_string);
 }
+
+TEST(preprocessor, macro_flatten_basic_word_boundary) {
+    // Verifies that a line continuation backslash immediately followed by a newline
+    // inserts a space to prevent distinct tokens from merging together.
+    auto test_pattern = R"(
+`define BASIC_MACRO \
+end\
+end
+module test;
+  `BASIC_MACRO
+endmodule
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/basic_boundary_test.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+
+    // The output should cleanly evaluate "end end" separated by a space
+    // instead of merging them into the invalid token "endend".
+    auto check_string = "\nmodule test;\n  end end\nendmodule";
+    EXPECT_EQ(result, check_string);
+}

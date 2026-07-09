@@ -282,7 +282,7 @@ namespace preprocessor {
                 } else {
                     in_string = true;
                 }
-                result.push_back('"');
+                result.push_back('\"');
                 cursor++;
             } else if (trigger == '\\') {
                 if (cursor + 1 < content.size()) {
@@ -291,8 +291,24 @@ namespace preprocessor {
                     // skip backslash and newline when necessary
                     if (next == '\n' || next == '\r') {
                         if (in_macro || in_string) {
-                            cursor += (next == '\r' && content[cursor+2] == '\n') ? 3 : 2;
+                            size_t skip_len = (next == '\r' && content[cursor+2] == '\n') ? 3 : 2;
 
+                            if (cursor + skip_len < content.size()) {
+                                char next_char = content[cursor + skip_len];
+
+                                // Check if BOTH flanking sides are valid identifier characters
+                                bool left_is_word = !result.empty() && (std::isalnum(static_cast<unsigned char>(result.back())) || result.back() == '_');
+                                bool right_is_word = std::isalnum(static_cast<unsigned char>(next_char)) || next_char == '_';
+
+                                // Check that the character before the backslash isn't already whitespace
+                                bool already_has_space = !result.empty() && (result.back() == ' ' || result.back() == '\t');
+
+                                if (left_is_word && right_is_word && !already_has_space) {
+                                    result.push_back(' ');
+                                }
+                            }
+
+                            cursor += skip_len;
                             continue;
                         }
                     }
@@ -300,7 +316,7 @@ namespace preprocessor {
                     //keep escaped quotes as is
                     if (in_string && next == '"') {
                         result.push_back('\\');
-                        result.push_back('"');
+                        result.push_back('\"');
                         cursor += 2;
                         continue;
                     }
