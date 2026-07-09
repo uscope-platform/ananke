@@ -22,6 +22,7 @@
 #include <vector>
 #include <unordered_map>
 #include <variant>
+#include <algorithm>
 #include <ctre.hpp>
 #include <utility>
 #include <memory>

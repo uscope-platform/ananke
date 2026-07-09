@@ -224,7 +224,7 @@ namespace preprocessor {
 
         std::string result;
         for (size_t i = 0; i < expanded_tokens.size(); ++i) {
-            // Evaluates the cleanly isolated stringification token sequence back into standard quotes
+            // Evaluates the isolated stringification token sequence back into standard quotes
             if (expanded_tokens[i] == "`\"") {
                 result.push_back('"');
                 continue;
@@ -246,7 +246,21 @@ namespace preprocessor {
                     }
                 }
             } else {
-                result.append(expanded_tokens[i]);
+
+                std::string token_to_append = expanded_tokens[i];
+
+                size_t quote_count = std::count(result.begin(), result.end(), '"');
+                bool currently_in_string = (quote_count % 2 != 0);
+
+                if (currently_in_string) {
+                    for (char &c : token_to_append) {
+                        if (c == '\n' || c == '\r') {
+                            c = ' '; // Flatten the newline into a harmless space inside the string literal
+                        }
+                    }
+                }
+
+                result.append(token_to_append);
             }
         }
         return result;

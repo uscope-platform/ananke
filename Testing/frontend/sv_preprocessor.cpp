@@ -1383,3 +1383,25 @@ endmodule
     auto check_string = "\nmodule test;\n  initial begin\n    $display(\"\\\"%s\\\"\", \"1\");\n  end\nendmodule";
     EXPECT_EQ(result, check_string);
 }
+
+TEST(preprocessor, macro_stringification_multiline_minimal) {
+    // Verifies that a multiline argument flattened inside a `" context
+    // converts destructive newlines to spaces, keeping the string literal legal.
+    auto test_pattern = R"(
+`define STR(x) `"x`"
+module test;
+  initial begin
+    $display(`STR(line1
+line2));
+  end
+endmodule
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/stringification_minimal_test.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+
+    auto check_string = "\nmodule test;\n  initial begin\n    $display(\"line1 line2\");\n  end\nendmodule";
+    EXPECT_EQ(result, check_string);
+}
