@@ -17,6 +17,8 @@
 #define ANANKE_DATA_ACQUISITION_ANALYSIS_HPP
 
 #include <memory>
+#include <spdlog/spdlog.h>
+#include <bitset>
 
 #include "data_model/HDL/HDL_instance_AST.hpp"
 #include "data_model/bus_mapping/bus_specs_manager.hpp"

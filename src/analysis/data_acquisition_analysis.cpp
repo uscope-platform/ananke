@@ -15,7 +15,7 @@
 
 #include "analysis/data_acquisition_analysis.hpp"
 
-#include <spdlog/spdlog.h>
+
 
 data_acquisition_analysis::data_acquisition_analysis(bool logging) : specs_manager("axi_stream"){
     log = logging;
