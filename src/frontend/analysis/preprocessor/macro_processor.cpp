@@ -199,12 +199,36 @@ namespace preprocessor {
         if (current_token_start < body.size()) {
             tokens.push_back(body.substr(current_token_start));
         }
-        std::string result;
+
+        std::vector<std::string> expanded_tokens;
+        expanded_tokens.reserve(tokens.size());
         for (const auto &t: tokens) {
             if (arguments_map.contains(t)) {
-                result.append(arguments_map[t]);
+                expanded_tokens.push_back(arguments_map[t]);
             } else {
-                result.append(t);
+                expanded_tokens.push_back(std::string(t));
+            }
+        }
+
+        std::string result;
+        for (size_t i = 0; i < expanded_tokens.size(); ++i) {
+            if (expanded_tokens[i] == "``") {
+                // Trim trailing whitespace from the result accumulated so far
+                while (!result.empty() && (result.back() == ' ' || result.back() == '\t')) {
+                    result.pop_back();
+                }
+
+                // Skip the `` operator and any immediate whitespace following it
+                while (i + 1 < expanded_tokens.size()) {
+                    const auto& next_tok = expanded_tokens[i + 1];
+                    if (next_tok.find_first_not_of(" \t") == std::string::npos) {
+                        i++; // consume whitespace token
+                    } else {
+                        break;
+                    }
+                }
+            } else {
+                result.append(expanded_tokens[i]);
             }
         }
         return result;

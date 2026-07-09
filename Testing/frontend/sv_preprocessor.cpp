@@ -1276,3 +1276,23 @@ TEST(preprocessor, complex_macro_substitution) {
     EXPECT_EQ(result, check_string);
 }
 
+
+TEST(preprocessor, macro_string_concat) {
+    auto test_pattern = R"(
+        `define  CONCAT(a)  a``_req_t
+        module test_module ();
+            parameter TEST_PARAM = `CONCAT(test);
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            parameter TEST_PARAM = test_req_t;
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+}
