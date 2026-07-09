@@ -77,6 +77,8 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
             try {
                 sv_analyzer analyzer;
                 mm_file file(target);
+                auto includes = s_store->get_default_includes();;
+                analyzer.set_include_directories(includes);
                 auto resources = analyzer.analyze(target, file.view());
                 std::unordered_map<std::string, std::string> res_map;
                 for (auto &res:resources) {
