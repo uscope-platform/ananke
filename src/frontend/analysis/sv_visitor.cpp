@@ -618,7 +618,11 @@ void sv_visitor::enterNamed_port_connection(sv2017::Named_port_connectionContext
 
 void sv_visitor::exitNamed_port_connection(sv2017::Named_port_connectionContext *ctx) {
     if (!ctx->identifier()) {
-        throw std::runtime_error("Encountered a named port connection without an identifier, this is not supported yet");
+        if (ctx->MUL()) {
+            deps_factory.set_wildcard(true);
+            return;
+        }
+        else throw std::runtime_error("Encountered a named port connection without an identifier, this is not supported yet");
     }
     auto port_name = ctx->identifier()->getText();
 

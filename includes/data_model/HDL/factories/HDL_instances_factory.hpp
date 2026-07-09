@@ -66,6 +66,8 @@ public:
     void start_expression(bool new_expr);
     void stop_expression(bool new_expr);
 
+    void set_wildcard(bool cond);
+
 private:
     bool in_port = false;
     bool in_interface = false;

@@ -166,3 +166,7 @@ void HDL_instances_factory::stop_expression(bool new_expr) {
         }
     }
 }
+
+void HDL_instances_factory::set_wildcard(bool cond) {
+    current_instance.set_wildcard(cond);
+}

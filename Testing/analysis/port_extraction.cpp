@@ -48,6 +48,32 @@ TEST(port_extraction, regular_port) {
     ASSERT_EQ(check_ports["stream_in"][0].get_full_name(), "buck_merged");
 }
 
+
+
+TEST(port_extraction, wildcard_ports) {
+    auto test_pattern = R"(
+        module test_mod #()();
+
+            axi_stream_combiner #(
+            ) scope_combinator (
+                .*
+            );
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto inst = analyzer.analyze("", test_pattern)[0].get_dependencies()[0];
+    auto ports = inst.get_ports();
+
+    std::unordered_map<std::string, std::vector<HDL_net>> check_ports;
+    check_ports["clock"] = {HDL_net("clock")};
+    check_ports["stream_in"] = {HDL_net("buck_merged")};
+
+    ASSERT_TRUE(ports.empty());
+    ASSERT_TRUE(inst.get_wildcard());
+}
+
 TEST(port_extraction, concat_port) {
     auto test_pattern = R"(
         module test_mod #()();
