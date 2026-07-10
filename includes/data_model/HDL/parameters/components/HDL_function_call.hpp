@@ -31,6 +31,7 @@ public:
     void set_name(const std::string &n){function_name = n;}
     std::string get_name(){return function_name;}
     void add_argument(const std::shared_ptr<Parameter_value_base> &p);
+    void add_package_prefix(const std::string &p){package_prefix = p;}
     void add_assignment(const assignment &a) {assignments.push_back(a);}
     void set_loop(const HDL_loop_metadata &l){loop_metadata = l;}
     std::set<qualified_identifier> get_dependencies()const  override;
@@ -63,16 +64,18 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(function_name, arguments, assignments, loop_metadata);
+        ar(function_name, arguments, assignments, loop_metadata, package_prefix);
     }
 
 private:
     std::string function_name;
+    std::string package_prefix;
     std::vector<std::shared_ptr<Parameter_value_base>> arguments;
 
     std::vector<assignment> assignments;
     std::optional<HDL_loop_metadata> loop_metadata;
 
+    // VOLATILE ATTRIBUTES
     bool packing = false;
     bool container_unpacked_ascending = false;
     bool has_return_unpacked_ascending = false;

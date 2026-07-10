@@ -287,6 +287,7 @@ void HDL_function_call::set_container_sizes(const resolved_type &s, const std::m
 
 std::string HDL_function_call::print() const {
     std::ostringstream result;
+    if (!package_prefix.empty()) result<< package_prefix << "::";
     result << function_name << "(";
     for(int i = 0; i< arguments.size(); i++) {
         result << arguments[i]->print();
@@ -317,5 +318,6 @@ bool HDL_function_call::isEqual(const Parameter_value_base &other) const {
     }
     is_equal &= loop_metadata == rhs.loop_metadata;
     is_equal &= assignments == rhs.assignments;
+    is_equal &= package_prefix == rhs.package_prefix;
     return is_equal;
 }
