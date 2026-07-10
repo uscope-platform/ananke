@@ -15,12 +15,26 @@
 
 #include "main.hpp"
 
+#include <signal.h>
+#include <execinfo.h>
+
+void sigsegv_handler(int sig) {
+    std::cerr << "\nSEGFAULT - Backtrace:" << std::endl;
+    void* bt[32];
+    int n = backtrace(bt, 32);
+    backtrace_symbols_fd(bt, n, STDERR_FILENO);
+    std::cerr << std::endl;
+    _exit(1);
+}
+
 struct MainProfiler {
     MainProfiler() { LOG_TIMEPOINT("Application Start"); }
     ~MainProfiler() { LOG_TIMEPOINT("Application end"); }
 };
 
 int main(int argc, char *argv[]){
+
+    signal(SIGSEGV, sigsegv_handler);
 
     // Command line interface
 

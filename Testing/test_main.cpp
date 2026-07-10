@@ -16,7 +16,20 @@
 #include <gtest/gtest.h>
 #include <spdlog/spdlog.h>
 
+#include <signal.h>
+#include <execinfo.h>
+
+void test_sigsegv_handler(int sig) {
+    std::cerr << "\nSEGFAULT - Backtrace:" << std::endl;
+    void* bt[32];
+    int n = backtrace(bt, 32);
+    backtrace_symbols_fd(bt, n, STDERR_FILENO);
+    std::cerr << std::endl;
+    _exit(1);
+}
+
 int main(int argc, char **argv) {
+    signal(SIGSEGV, test_sigsegv_handler);
     spdlog::set_level(spdlog::level::trace);
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
