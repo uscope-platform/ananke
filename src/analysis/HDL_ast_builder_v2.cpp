@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "analysis/HDL_ast_builder_v2.hpp"
+#include "crash_context.hpp"
 
 #include "analysis/loop_solver.hpp"
 
@@ -68,7 +69,7 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                     std::cerr << "ERROR:\n HDL entity: " + type + " Not found\n";
                 }
                 auto res = d_store->get_HDL_resource(type);
-
+                crash_ctx.set(type, res.get_path());
 
                 spdlog::trace("Processing dependency {} in module {}",working_instance->get_name(), type);
                 auto current_param_values = parameter_solver::override_parameters(wo, d_store);
