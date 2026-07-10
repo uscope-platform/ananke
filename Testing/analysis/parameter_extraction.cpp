@@ -3734,16 +3734,11 @@ TEST(parameter_extraction, simple_function_parameter) {
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Token>("CTRL_ADDR_CALC", Token::identifier));
     HDL_function_call call("CTRL_ADDR_CALC");
-    assignment a(
-        "CTRL_ADDR_CALC",
-        std::nullopt,
-        std::make_shared<Token>("100", Token::number)
-    );
-    call.add_body({a},std::nullopt);
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
 
     ASSERT_EQ(p, *param);
 
+    parameter_solver::propagate_functions(resource, nullptr);
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -3784,20 +3779,11 @@ TEST(parameter_extraction, concat_in_function) {
     call.add_argument(std::make_shared<Token>("11", Token::number));
     call.add_argument(std::make_shared<Token>("1'b1", Token::number));
     call.add_argument(std::make_shared<Token>("1'b0", Token::number));
-    assignment a("get_axis_metadata", std::nullopt, nullptr);
-
-    Concatenation concat;
-    concat.add_component(std::make_shared<Token>("10'h0", Token::number));
-    concat.add_component(std::make_shared<Token>("1'b0", Token::number));
-    concat.add_component(std::make_shared<Token>("1'b1", Token::number));
-    concat.add_component(std::make_shared<Token>("1'b1", Token::number));
-
-    a.set_value(std::make_shared<Concatenation>(concat));
-    call.add_body({a},std::nullopt);
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
 
     EXPECT_EQ(p, *param);
 
+    parameter_solver::propagate_functions(resource, nullptr);
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -3841,24 +3827,11 @@ TEST(parameter_extraction, replication_in_function) {
     call.add_argument(std::make_shared<Token>("11", Token::number));
     call.add_argument(std::make_shared<Token>("1'b1", Token::number));
     call.add_argument(std::make_shared<Token>("1'b0", Token::number));
-    assignment a("get_axis_metadata", std::nullopt, nullptr);
-    Cast c;
-    c.set_size(std::make_shared<Token>("4", Token::number));
-    Expression_v2 e;
-    e.set_lhs(std::make_shared<Token>("11", Token::number));
-    e.set_rhs(std::make_shared<Token>("8", Token::number));
-    e.set_operation(Expression_v2::subtract);
-    c.set_content(std::make_shared<Expression_v2>(e));
-    Replication repl;
-    auto size = std::make_shared<Token>("4", Token::number);
-    repl.set_size(size);
-    repl.set_item(std::make_shared<Token>("1'b1", Token::number));
-    a.set_value(std::make_shared<Replication>(repl));
-    call.add_body({a},std::nullopt);
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
 
     EXPECT_EQ(p, *param);
 
+    parameter_solver::propagate_functions(resource, nullptr);
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -3901,26 +3874,11 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     call.add_argument(std::make_shared<Token>("11", Token::number));
     call.add_argument(std::make_shared<Token>("1'b1", Token::number));
     call.add_argument(std::make_shared<Token>("1'b0", Token::number));
-    assignment a("get_axis_metadata", std::nullopt, nullptr);
-    Cast c;
-    c.set_size(std::make_shared<Token>("4", Token::number));
-    Expression_v2 e;
-    e.set_lhs(std::make_shared<Token>("11", Token::number));
-    e.set_rhs(std::make_shared<Token>("8", Token::number));
-    e.set_operation(Expression_v2::subtract);
-    c.set_content(std::make_shared<Expression_v2>(e));
-    Concatenation concat;
-    concat.add_component(std::make_shared<Token>("10'h0", Token::number));
-    concat.add_component(std::make_shared<Token>("1'b0", Token::number));
-    concat.add_component(std::make_shared<Token>("1'b1", Token::number));
-    concat.add_component(std::make_shared<Cast>(c));
-
-    a.set_value(std::make_shared<Concatenation>(concat));
-    call.add_body({a},std::nullopt);
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
 
     EXPECT_EQ(p, *param);
 
+    parameter_solver::propagate_functions(resource, nullptr);
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -4027,16 +3985,11 @@ TEST(parameter_extraction, loop_function_parameter) {
     e.set_lhs(std::make_shared<Token>("100", Token::number));
     e.set_rhs(std::make_shared<Token>("i", Token::identifier));
     e.set_operation(Expression_v2::multiply);
-    assignment a(
-    "CTRL_ADDR_CALC",
-        std::make_shared<Token>("i", Token::identifier),
-        std::make_shared<Expression_v2>(e));
-    loop.add_assignment(a);
-    call.add_body({},loop);
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
 
     ASSERT_EQ(p, *param);
 
+    parameter_solver::propagate_functions(resource, nullptr);
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     mdarray<hdl_integer> av;
@@ -4101,14 +4054,7 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     e.set_lhs(std::make_shared<Token>("OFFSET", Token::identifier));
     e.set_rhs(std::make_shared<Token>("i", Token::identifier));
     e.set_operation(Expression_v2::multiply);
-    assignment a(
-        "CTRL_ADDR_CALC",
-        std::make_shared<Token>("i", Token::identifier),
-        std::make_shared<Expression_v2>(e)
-    );
-    loop.add_assignment(a);
 
-    call.add_body({},loop);
     auto param_type = HDL_simple_type();
     param_type.add_dimension({
          std::make_shared<Token>("31", Token::number),
@@ -4124,6 +4070,8 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
 
     ASSERT_EQ(p, *param);
+
+    parameter_solver::propagate_functions(resource, nullptr);
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     mdarray<hdl_integer> av;
@@ -4170,7 +4118,6 @@ TEST(parameter_extraction, function_with_arguments) {
     e.set_lhs(std::make_shared<Token>(5, 3));
     e.set_rhs(std::make_shared<Token>(7, 3));
     e.set_operation(Expression_v2::add);
-    call.add_assignment({"add",std::nullopt, std::make_shared<Expression_v2>(e) });
     auto param_type = HDL_simple_type();
     param_type.add_dimension({
         std::make_shared<Token>("31", Token::number),
@@ -4182,6 +4129,7 @@ TEST(parameter_extraction, function_with_arguments) {
 
     ASSERT_EQ(p, *param);
 
+    parameter_solver::propagate_functions(resource, nullptr);
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
 

@@ -67,7 +67,7 @@ public:
     HDL_loop_metadata & operator=(const HDL_loop_metadata &other);
 
     HDL_loop_metadata & operator=(HDL_loop_metadata &&other) noexcept;
-    std::set<qualified_identifier> get_dependencies() const;
+    parameter_deps_t get_dependencies() const;
 
     void set_init(const HDL_parameter &p);
     void set_end_c(const Expression_v2 &e);

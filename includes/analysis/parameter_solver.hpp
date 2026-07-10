@@ -46,6 +46,7 @@ public:
         );
 
     static std::map<qualified_identifier, resolved_parameter> override_parameters(work_order &work, const std::shared_ptr<data_store> &d_store);
+    static void propagate_functions(HDL_Resource &resource, const std::shared_ptr<data_store> &d_store);
     static std::map<qualified_identifier, resolved_parameter> retrieve_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store);
 
     static std::map<qualified_identifier, resolved_parameter> solve_complex_overrides(

@@ -31,20 +31,18 @@ void HDL_function_call::add_argument(const std::shared_ptr<Parameter_value_base>
     arguments.push_back(p);
 }
 
-std::set<qualified_identifier> HDL_function_call::get_dependencies() const {
-    std::set<qualified_identifier> retval;
+parameter_deps_t HDL_function_call::get_dependencies() const {
+    parameter_deps_t retval;
     for (auto &arg:arguments) {
-        auto deps = arg->get_dependencies();
-        retval.insert(deps.begin(), deps.end());
+        retval.merge(arg->get_dependencies());
     }
     for(auto &a:assignments) {
-        auto deps = a.get_value()->get_dependencies();
-        retval.insert(deps.begin(), deps.end());
+        retval.merge(a.get_value()->get_dependencies());
     }
     if(loop_metadata.has_value()) {
-        auto loop_deps = loop_metadata.value().get_dependencies();
-        retval.insert(loop_deps.begin(), loop_deps.end());
+        retval.merge(loop_metadata.value().get_dependencies());
     }
+    retval.functions.insert({package_prefix, "", function_name});
     return retval;
 }
 

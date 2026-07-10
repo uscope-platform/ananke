@@ -52,9 +52,6 @@ void HDL_Resource::process_calls() {
                 }
             }
         }
-        for(const auto &[param_name, param]:parameters_spec) {
-            param->propagate_function(function);
-        }
     }
 }
 

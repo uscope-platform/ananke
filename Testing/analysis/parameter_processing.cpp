@@ -599,6 +599,7 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
         ctx[{"hil_address_space", "", id.name}] = val;
     }
 
+    parameter_solver::propagate_functions(mod, nullptr);
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
 
     auto param = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
@@ -650,6 +651,7 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
         ctx[{"hil_address_space", "", id.name}] = val;
     }
 
+    parameter_solver::propagate_functions(mod, nullptr);
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
 
     auto param = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
@@ -677,6 +679,7 @@ TEST(parameter_processing, function_in_package_initialization) {
     auto resources = analyzer.analyze("", test_pattern);
     auto& pkg = resources[0];
 
+    parameter_solver::propagate_functions(pkg, nullptr);
     auto solved = parameter_solver::process_parameters(pkg.get_parameters(), {});
     auto param = solved.at({"", "", "RESULT"}).get_integer();
     ASSERT_EQ(param, 42);
@@ -703,7 +706,12 @@ TEST(parameter_processing, package_function_called_from_module) {
 
     sv_analyzer analyzer;
 
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+
+
     auto resources = analyzer.analyze("", test_pattern);
+    d_store->store_hdl_entity(resources, "", "");
     auto& pkg = resources[0];
     auto& mod = resources[1];
 
@@ -724,6 +732,7 @@ TEST(parameter_processing, package_function_called_from_module) {
         ctx[{"test_pkg", "", id.name}] = val;
     }
 
+    parameter_solver::propagate_functions(mod, d_store);
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
     auto solve_param = solved.at({"", "", "RESULT"}).get_integer();
     ASSERT_EQ(solve_param, 42);
@@ -1157,6 +1166,8 @@ TEST(parameter_processing, override_package_function) {
     auto& pkg = resources[0];
     auto& dep = resources[1];
 
+    parameter_solver::propagate_functions(pkg, nullptr);
+    parameter_solver::propagate_functions(dep, nullptr);
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(),  {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {

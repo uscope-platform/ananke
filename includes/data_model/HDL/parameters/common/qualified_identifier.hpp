@@ -20,6 +20,8 @@
 #include <string>
 #include "data_model/mdarray.hpp"
 
+
+
 struct qualified_identifier {
     qualified_identifier() = default;
     qualified_identifier(const std::string &p,const std::string &i, const std::string &n) {
@@ -44,6 +46,27 @@ struct qualified_identifier {
     template<class Archive>
     void serialize( Archive & ar ) {
         ar(name, instance, prefix);
+    }
+};
+
+struct parameter_deps_t {
+    std::set<qualified_identifier> data;
+    std::set<qualified_identifier> functions;
+    [[nodiscard]] bool empty() const {
+        return data.empty() && functions.empty();
+    }
+    void merge (const parameter_deps_t &p) {
+        data.insert(p.data.begin(), p.data.end());
+        functions.insert(p.functions.begin(), p.functions.end());
+    }
+
+    friend bool operator==(const parameter_deps_t &lhs, const parameter_deps_t &rhs) {
+        return lhs.data == rhs.data
+               && lhs.functions == rhs.functions;
+    }
+
+    friend bool operator!=(const parameter_deps_t &lhs, const parameter_deps_t &rhs) {
+        return !(lhs == rhs);
     }
 };
 

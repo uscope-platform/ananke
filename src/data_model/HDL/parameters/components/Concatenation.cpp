@@ -43,11 +43,10 @@ Concatenation::Concatenation(Concatenation &&other) noexcept {
 }
 
 
-std::set<qualified_identifier> Concatenation::get_dependencies() const{
-    std::set<qualified_identifier> result;
+parameter_deps_t Concatenation::get_dependencies() const{
+    parameter_deps_t result;
     for (auto &comp:components) {
-        auto comp_deps = comp->get_dependencies();
-        result.insert(comp_deps.begin(), comp_deps.end());
+        result.merge(comp->get_dependencies());
     }
     return result;
 }

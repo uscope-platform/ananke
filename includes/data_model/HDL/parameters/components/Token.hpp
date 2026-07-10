@@ -46,7 +46,7 @@ public:
     explicit Token(const std::string &s, const token_type &t);
     explicit Token(std::variant<hdl_integer, double> n, int64_t b_s);
 
-    std::set<qualified_identifier> get_dependencies() const override;
+    parameter_deps_t get_dependencies() const override;
     void propagate_function(const HDL_function_def &def) override;
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
 

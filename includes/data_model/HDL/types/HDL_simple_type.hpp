@@ -93,7 +93,7 @@ public:
     [[nodiscard]] bool get_real() const {return is_real;}
     void set_implicit(bool i) {is_implicit = i;}
     [[nodiscard]] bool get_implicit() const {return is_implicit;}
-    std::set<qualified_identifier> get_dependencies() override;
+    parameter_deps_t get_dependencies() override;
 
 
     std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) override;

@@ -133,15 +133,13 @@ int64_t Expression_v2::get_size() {
     return 0;
 }
 
-std::set<qualified_identifier> Expression_v2::get_dependencies() const {
-    std::set<qualified_identifier> deps;
+parameter_deps_t Expression_v2::get_dependencies() const {
+    parameter_deps_t deps;
     if (lhs) {
-        auto lhs_deps = lhs->get_dependencies();
-        deps.insert(lhs_deps.begin(), lhs_deps.end());
+        deps.merge(lhs->get_dependencies());
     }
     if (rhs) {
-        auto rhs_deps = rhs->get_dependencies();
-        deps.insert(rhs_deps.begin(), rhs_deps.end());
+        deps.merge(rhs->get_dependencies());
     }
     return deps;
 }

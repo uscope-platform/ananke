@@ -128,6 +128,7 @@ class HDL_Resource {
             functions[f.name] = f;
         }
         std::unordered_map<std::string, HDL_function_def> get_functions() {return functions;};
+        HDL_function_def get_function(const std::string &fname){return functions[fname];}
 
         void set_documentation(module_documentation &d) {
             doc= d;

@@ -24,7 +24,7 @@ void topological_sorter::analyze(const Parameters_map &p, const std::map<qualifi
 
         auto deps_list = parameter->get_dependencies();
         topo_map.insert({{"", "", name},{}});
-        for (auto &dep:deps_list) {
+        for (auto &dep:deps_list.data) {
 
             if (!context.contains(dep)) {
                 qualified_identifier effective_dep = dep;

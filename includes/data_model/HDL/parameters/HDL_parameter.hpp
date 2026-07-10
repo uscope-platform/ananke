@@ -111,7 +111,7 @@ public:
 
     friend void PrintTo(const HDL_parameter& point, std::ostream* os);
 
-    std::set<qualified_identifier> get_dependencies();
+    parameter_deps_t get_dependencies();
 
     template<class Archive>
     void serialize( Archive & ar ) {

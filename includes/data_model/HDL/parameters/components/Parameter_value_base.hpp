@@ -26,12 +26,13 @@
 
 class HDL_function_def;
 
+
 class Parameter_value_base {
 public:
 
     virtual ~Parameter_value_base() = default;
 
-    virtual std::set<qualified_identifier> get_dependencies()const {return {};}
+    virtual parameter_deps_t get_dependencies()const {return {};}
     virtual void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value){}
     virtual void propagate_function(const HDL_function_def &def) {}
     virtual std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {return std::nullopt;}

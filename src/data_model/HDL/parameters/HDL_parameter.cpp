@@ -165,16 +165,11 @@ std::string HDL_parameter::to_string() const {
     return result;
 }
 
-std::set<qualified_identifier> HDL_parameter::get_dependencies() {
-    std::set<qualified_identifier> result;
-    if (type) {
-        result = type->get_dependencies();
-    }
+parameter_deps_t HDL_parameter::get_dependencies() {
+    parameter_deps_t result;
+    if (type) result.merge(type->get_dependencies());
 
-    if (raw_value) {
-        std::set<qualified_identifier> deps = raw_value->get_dependencies();
-        result.insert(deps.begin(), deps.end());
-    }
+    if (raw_value)  result.merge(raw_value->get_dependencies());
     return result;
 }
 

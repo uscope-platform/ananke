@@ -23,16 +23,12 @@ CEREAL_REGISTER_TYPE(Ternary)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Ternary)
 
 
-std::set<qualified_identifier> Ternary::get_dependencies() const {
-    std::set<qualified_identifier> ret_val;
-    auto cond_deps = condition->get_dependencies();
-    ret_val.insert(cond_deps.begin(), cond_deps.end());
+parameter_deps_t Ternary::get_dependencies() const {
+    parameter_deps_t ret_val;
+    ret_val.merge(condition->get_dependencies());
+    ret_val.merge(true_value->get_dependencies());
+    ret_val.merge(false_value->get_dependencies());
 
-    auto true_deps = true_value->get_dependencies();
-    ret_val.insert(true_deps.begin(), true_deps.end());
-
-    auto false_deps = false_value->get_dependencies();
-    ret_val.insert(false_deps.begin(), false_deps.end());
     return ret_val;
 }
 

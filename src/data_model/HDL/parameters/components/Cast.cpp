@@ -35,13 +35,10 @@ Cast::Cast(Cast &&other) noexcept {
     content = other.content;
 }
 
-std::set<qualified_identifier> Cast::get_dependencies() const {
-    std::set<qualified_identifier> deps;
-    auto content_deps = content->get_dependencies();
-    deps.insert(content_deps.begin(), content_deps.end());
-    std::set<qualified_identifier> size_deps;
-    if (size) size_deps = size->get_dependencies();
-    deps.insert(size_deps.begin(), size_deps.end());
+parameter_deps_t Cast::get_dependencies() const {
+    parameter_deps_t deps;
+    deps.merge(content->get_dependencies());
+    if (size) deps.merge(size->get_dependencies());
     return deps;
 }
 

@@ -38,7 +38,7 @@ public:
         return dynamic_cast<const T*>(this) != nullptr;
     }
 
-    virtual std::set<qualified_identifier> get_dependencies() = 0;
+    virtual parameter_deps_t get_dependencies() = 0;
     [[nodiscard]] virtual bool is_scalar()const = 0;
      virtual std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) = 0;
     [[nodiscard]] virtual std::string to_print() const = 0;

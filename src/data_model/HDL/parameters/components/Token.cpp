@@ -60,14 +60,13 @@ Token::Token(std::variant<hdl_integer, double> n, int64_t b_s) {
 }
 
 
-std::set<qualified_identifier> Token::get_dependencies() const {
-    std::set<qualified_identifier> result;
+parameter_deps_t Token::get_dependencies() const {
+    parameter_deps_t result;
     if (is_identifier()){
-        result.insert({package_prefix, instance_prefix, value.get_string()});
+        result.data.insert({package_prefix, instance_prefix, value.get_string()});
     }
     for (const auto &idx : array_index) {
-        auto idx_deps = idx->get_dependencies();
-        result.insert(idx_deps.begin(), idx_deps.end());
+        result.merge(idx->get_dependencies());
     }
     return result;
 }

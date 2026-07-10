@@ -54,12 +54,10 @@ Replication & Replication::operator=(Replication &&other) noexcept {
 
 void Replication::set_size(const std::shared_ptr<Parameter_value_base> &size) { repetition_size = size;}
 
-std::set<qualified_identifier> Replication::get_dependencies()const {
-    std::set<qualified_identifier> result, deps;
-    deps = repetition_size->get_dependencies();
-    result.insert(deps.begin(), deps.end());
-    deps = repeated_item->get_dependencies();
-    result.insert(deps.begin(), deps.end());
+parameter_deps_t Replication::get_dependencies()const {
+    parameter_deps_t result;
+    result.merge(repetition_size->get_dependencies());
+    result.merge(repeated_item->get_dependencies());
     return result;
 }
 

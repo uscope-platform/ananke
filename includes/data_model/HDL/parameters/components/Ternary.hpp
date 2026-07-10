@@ -29,7 +29,7 @@ public:
     void set_true_value(const std::shared_ptr<Parameter_value_base> &v) {true_value = v;}
     void set_false_value(const std::shared_ptr<Parameter_value_base> &v) {false_value =v;}
 
-    [[nodiscard]] std::set<qualified_identifier> get_dependencies()const override;
+    [[nodiscard]] parameter_deps_t get_dependencies()const override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
     [[nodiscard]] std::string print() const override;

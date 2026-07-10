@@ -16,6 +16,8 @@
 #include "analysis/parameter_solver.hpp"
 #include "crash_context.hpp"
 
+#include <set>
+
 
 
 void parameter_solver::resolve_interface_chain(
@@ -159,8 +161,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     for (const auto &[name, param] : node_overrides) {
         combined_params.insert(param);
     }
-    auto solved_parameters = retrieve_package_parameters(combined_params, d_store);
 
+    propagate_functions(node_spec, d_store);
+
+    auto solved_parameters = retrieve_package_parameters(combined_params, d_store);
     auto solution = solve_complex_overrides(work, d_store, solved_parameters);
     solved_parameters.insert(solution.begin(), solution.end());
 
@@ -171,7 +175,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
 std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store) {
     std::map<qualified_identifier, resolved_parameter> package_parameters;
     for (auto &[p_name, param]: node_parameters) {
-        for (const auto& dep: param->get_dependencies()) {
+        for (const auto& dep: param->get_dependencies().data) {
             if (!dep.prefix.empty() && !package_parameters.contains(dep)) {
                 auto package = d_store->get_HDL_resource(dep.prefix);
                 auto pkg_solved = process_parameters(package.get_parameters(), {});
@@ -183,6 +187,24 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
         }
     }
     return package_parameters;
+}
+
+void parameter_solver::propagate_functions(HDL_Resource &resource, const std::shared_ptr<data_store> &d_store) {
+
+    for (auto &[_, param] : resource.get_parameters()) {
+
+        auto deps = param->get_dependencies();
+        for (const auto& fcn:deps.functions) {
+            if (!fcn.prefix.empty()) {
+                auto res = d_store->get_HDL_resource(fcn.prefix);
+                auto fcn_def = res.get_function(fcn.name);
+                param->propagate_function(fcn_def);
+            } else {
+                param->propagate_function(resource.get_function(fcn.name));
+            }
+        }
+
+    }
 }
 
 std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_complex_overrides(
@@ -214,7 +236,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     ctx.insert(node_defaults.begin(), node_defaults.end());
 
     for(auto &[override_name, param]:node_overrides) {
-        for(auto &dep: param->get_dependencies()) {
+        for(auto &dep: param->get_dependencies().data) {
             if (ctx.contains(dep)) continue;
             if (!dep.instance.empty()) {
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);
@@ -232,7 +254,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     for (const auto &[p_name, param] : node_parameters) {
         auto p_id = param->get_identifier();
         if (ctx.contains(p_id)) continue;
-        for (auto &dep : param->get_dependencies()) {
+        for (auto &dep : param->get_dependencies().data) {
             if (!dep.instance.empty() && !ctx.contains(dep)) {
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);
             }

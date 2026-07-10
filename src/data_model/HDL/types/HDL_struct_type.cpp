@@ -43,12 +43,11 @@ std::optional<resolved_type> HDL_struct_type::evaluate_type(
     return result;
 }
 
-std::set<qualified_identifier> HDL_struct_type::get_dependencies() {
-    std::set<qualified_identifier> result;
+parameter_deps_t HDL_struct_type::get_dependencies() {
+    parameter_deps_t result;
     for (auto &m: member) {
         if (m.type) {
-            auto deps = m.type->get_dependencies();
-            result.insert(deps.begin(), deps.end());
+            result.merge(m.type->get_dependencies());
         }
     }
     return result;

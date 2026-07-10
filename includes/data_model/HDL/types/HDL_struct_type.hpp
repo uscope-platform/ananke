@@ -67,7 +67,7 @@ public:
     std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) override;
 
     [[nodiscard]] bool is_scalar()const override {return packed;}
-    std::set<qualified_identifier> get_dependencies() override;
+    parameter_deps_t get_dependencies() override;
 
     [[nodiscard]] std::string to_print() const override;
 

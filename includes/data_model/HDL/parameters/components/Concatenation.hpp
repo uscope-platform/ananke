@@ -58,7 +58,7 @@ public:
         return *this;
     }
 
-    std::set<qualified_identifier> get_dependencies()const override;
+    parameter_deps_t get_dependencies()const override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
 
     void propagate_function(const HDL_function_def &def) override;

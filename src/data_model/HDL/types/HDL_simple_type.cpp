@@ -40,20 +40,16 @@ void HDL_simple_type::set_unpacked_dimensions(const std::vector<dimension_t> &d)
     unpacked_dimensions.insert(unpacked_dimensions.end(), d.begin(), d.end());
 }
 
-std::set<qualified_identifier> HDL_simple_type::get_dependencies() {
-    std::set<qualified_identifier> result;
+parameter_deps_t HDL_simple_type::get_dependencies() {
+    parameter_deps_t result;
     for (auto &dim:unpacked_dimensions) {
-        auto deps = dim.first_bound->get_dependencies();
-        result.insert(deps.begin(), deps.end());
-        deps = dim.second_bound->get_dependencies();
-        result.insert(deps.begin(), deps.end());
+        result.merge(dim.first_bound->get_dependencies());
+        result.merge(dim.second_bound->get_dependencies());
     }
 
     for (auto &dim:packed_dimensions) {
-        auto deps = dim.first_bound->get_dependencies();
-        result.insert(deps.begin(), deps.end());
-        deps = dim.second_bound->get_dependencies();
-        result.insert(deps.begin(), deps.end());
+        result.merge(dim.first_bound->get_dependencies());
+        result.merge(dim.second_bound->get_dependencies());
     }
     return result;
 }
