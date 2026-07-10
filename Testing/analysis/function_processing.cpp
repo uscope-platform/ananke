@@ -341,6 +341,49 @@ TEST(function_processing, parametrized_function) {
 }
 
 
+TEST(function_processing, function_in_package) {
+    auto test_pattern = R"(
+        package test_pkg;
+
+            function logic[31:0] CTRL_ADDR_CALC();
+                CTRL_ADDR_CALC[0] = 67;
+                CTRL_ADDR_CALC[1] = 100;
+            endfunction
+
+        endpackage
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    auto& pkg = resources[0];
+
+    EXPECT_EQ(pkg.get_type(), package);
+    EXPECT_EQ(pkg.getName(), "test_pkg");
+    auto functions = pkg.get_functions();
+
+    EXPECT_EQ(functions.size(), 1);
+    EXPECT_TRUE(functions.contains("CTRL_ADDR_CALC"));
+    auto result = functions["CTRL_ADDR_CALC"];
+
+    HDL_function_def check_f;
+    check_f.set_name("CTRL_ADDR_CALC");
+    assignment a = {
+        "CTRL_ADDR_CALC",
+        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Token>("67", Token::number)
+    };
+    check_f.add_assignment(a);
+    a = {
+        "CTRL_ADDR_CALC",
+        std::make_shared<Token>("1", Token::number),
+        std::make_shared<Token>("100", Token::number)
+    };
+    check_f.add_assignment(a);
+    EXPECT_EQ(check_f,result);
+}
+
+
 TEST(function_processing, package_assignment) {
     auto test_pattern = R"(
         module test_mod ();
