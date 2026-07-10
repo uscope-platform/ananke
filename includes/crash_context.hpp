@@ -28,6 +28,7 @@ struct crash_context {
 
     std::string entity;
     std::string file;
+    std::string parameter;
 };
 
 inline thread_local crash_context crash_ctx;
@@ -39,7 +40,12 @@ inline void install_crash_handler() {
         write(STDERR_FILENO, crash_ctx.entity.data(), crash_ctx.entity.size());
         write(STDERR_FILENO, " (", 2);
         write(STDERR_FILENO, crash_ctx.file.data(), crash_ctx.file.size());
-        write(STDERR_FILENO, ")\n", 2);
+        write(STDERR_FILENO, ")", 1);
+        if (!crash_ctx.parameter.empty()) {
+            write(STDERR_FILENO, " parameter: ", 12);
+            write(STDERR_FILENO, crash_ctx.parameter.data(), crash_ctx.parameter.size());
+        }
+        write(STDERR_FILENO, "\n", 1);
         _exit(1);
     };
     sigaction(SIGSEGV, &sa, nullptr);

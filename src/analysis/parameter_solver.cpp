@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "analysis/parameter_solver.hpp"
+#include "crash_context.hpp"
 
 
 
@@ -67,6 +68,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
 
     while (auto next = s.get_next()) {
         auto param = map_in.const_get(next.value().name);
+        crash_ctx.parameter = next.value().name;
         auto res = param->evaluate(ctx);
         if (res) {
             ctx[next.value()] = res.value();
