@@ -23,6 +23,7 @@
 class function_calls_factory : public factory_base{
 public:
     void start_function(const std::string& name);
+    void set_package_prefix(const std::string &p);
 
     void consume(const std::shared_ptr<Parameter_value_base> &arg) override;
     bool active() const override;

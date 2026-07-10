@@ -21,6 +21,10 @@ void function_calls_factory::start_function(const std::string &name) {
     state = build_phase::arguments;
 }
 
+void function_calls_factory::set_package_prefix(const std::string &p) {
+    new_call.add_package_prefix(p);
+}
+
 
 void function_calls_factory::consume(const std::shared_ptr<Parameter_value_base> &arg) {
     new_call.add_argument(arg);

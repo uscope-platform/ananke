@@ -766,7 +766,16 @@ void sv_visitor::enterReplication_value(sv2017::Replication_valueContext *ctx) {
 
 void sv_visitor::enterPrimaryCall(sv2017::PrimaryCallContext *ctx) {
     if(params_factory.is_component_relevant()) {
-        params_factory.start_function_assignment(ctx->primary()->getText());
+        std::string call_text = ctx->primary()->getText();
+        auto pos = call_text.find("::");
+        if (pos != std::string::npos) {
+            std::string prefix = call_text.substr(0, pos);
+            std::string func_name = call_text.substr(pos + 2);
+            params_factory.start_function_assignment(func_name);
+            params_factory.set_function_package_prefix(prefix);
+        } else {
+            params_factory.start_function_assignment(call_text);
+        }
     }
 }
 

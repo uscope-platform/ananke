@@ -326,6 +326,12 @@ void HDL_parameters_factory::start_function_assignment(const std::string &f_name
     expr_factory.clear_expression();
 }
 
+void HDL_parameters_factory::set_function_package_prefix(const std::string &p) {
+    if (auto* fcf = top_as<function_calls_factory>()) {
+        fcf->set_package_prefix(p);
+    }
+}
+
 void HDL_parameters_factory::stop_function_assignment() {
     if (top_as<function_calls_factory>()) {
         auto result = consumer_stack.top()->result();

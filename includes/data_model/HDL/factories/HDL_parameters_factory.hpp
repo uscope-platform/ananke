@@ -72,6 +72,7 @@ public:
 
     void start_function_assignment(const std::string &f_name);
     void stop_function_assignment();
+    void set_function_package_prefix(const std::string &p);
 
     void start_function_call(const std::string &f_name);
     void stop_function_call();

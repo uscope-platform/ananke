@@ -707,6 +707,17 @@ TEST(parameter_processing, package_function_called_from_module) {
     auto& pkg = resources[0];
     auto& mod = resources[1];
 
+    ASSERT_TRUE(mod.get_parameters().contains("RESULT"));
+    auto param = mod.get_parameters().get("RESULT");
+
+    HDL_parameter p;
+    p.set_name("RESULT");
+    p.set_type(Type_engine::create_primitive_type("integer"));
+    HDL_function_call c;
+    c.set_name("CALC");
+    c.add_package_prefix("test_pkg");
+    p.set_raw_value(std::make_shared<HDL_function_call>(c));
+    ASSERT_EQ(p, *param);
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
@@ -714,8 +725,8 @@ TEST(parameter_processing, package_function_called_from_module) {
     }
 
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
-    auto param = solved.at({"", "", "RESULT"}).get_integer();
-    ASSERT_EQ(param, 42);
+    auto solve_param = solved.at({"", "", "RESULT"}).get_integer();
+    ASSERT_EQ(solve_param, 42);
 }
 
 
