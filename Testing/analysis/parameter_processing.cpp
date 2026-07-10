@@ -659,6 +659,66 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
 }
 
 
+TEST(parameter_processing, function_in_package_initialization) {
+    auto test_pattern = R"(
+        package test_pkg;
+
+            function integer CALC();
+                CALC = 42;
+            endfunction
+
+            localparam integer RESULT = CALC();
+
+        endpackage
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    auto& pkg = resources[0];
+
+    auto solved = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    auto param = solved.at({"", "", "RESULT"}).get_integer();
+    ASSERT_EQ(param, 42);
+}
+
+
+TEST(parameter_processing, package_function_called_from_module) {
+    auto test_pattern = R"(
+        package test_pkg;
+
+            function integer CALC();
+                CALC = 42;
+            endfunction
+
+        endpackage
+
+        module test_mod #(
+        )();
+
+            localparam integer RESULT = test_pkg::CALC();
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resources = analyzer.analyze("", test_pattern);
+    auto& pkg = resources[0];
+    auto& mod = resources[1];
+
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto& [id, val] : pkg_defaults) {
+        ctx[{"test_pkg", "", id.name}] = val;
+    }
+
+    auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
+    auto param = solved.at({"", "", "RESULT"}).get_integer();
+    ASSERT_EQ(param, 42);
+}
+
+
 TEST(parameter_processing, override_with_system_task) {
     auto test_pattern = R"(
 
