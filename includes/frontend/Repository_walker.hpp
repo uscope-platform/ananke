@@ -33,8 +33,8 @@
 #include "data_model/Constraints.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/DataFile.hpp"
-#include "analysis/sv_analyzer.hpp"
-#include "analysis/vhdl_analyzer.hpp"
+#include "analysis/system_verilog/sv_analyzer.hpp"
+#include "analysis/vhdl/vhdl_analyzer.hpp"
 #include "third_party/thread_pool.hpp"
 
 template<typename  T>

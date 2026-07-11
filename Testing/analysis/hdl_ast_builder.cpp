@@ -19,7 +19,7 @@
 #include <filesystem>
 
 #include "data_model/mm_file.hpp"
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "analysis/HDL_ast_builder_v2.hpp"
 
 TEST( hdl_ast_builder, pid_ast_build) {

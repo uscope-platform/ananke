@@ -17,7 +17,7 @@
 
 #include <gtest/gtest.h>
 
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "analysis/parameter_solver.hpp"
@@ -737,6 +737,64 @@ TEST(parameter_processing, package_function_called_from_module) {
     auto solve_param = solved.at({"", "", "RESULT"}).get_integer();
     ASSERT_EQ(solve_param, 42);
 }
+
+
+
+TEST(parameter_processing, package_function_called_from_module_and_typedef) {
+    auto test_pattern = R"(
+        package test_pkg;
+            typedef logic [31:0] test_type [15:0];
+        endpackage
+
+        package test_pkg_2;
+            function integer build_config();
+                CALC = 42;
+            endfunction
+
+        endpackage
+
+        module test_mod #(
+            parameter test_pkg::test_type RESULT = test_pkg_2::build_config()
+        )();
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+
+
+    auto resources = analyzer.analyze("", test_pattern);
+    d_store->store_hdl_entity(resources, "", "");
+    auto& pkg = resources[0];
+    auto& pkg2 = resources[1];
+    auto& mod = resources[2];
+
+    ASSERT_TRUE(mod.get_parameters().contains("RESULT"));
+    auto param = mod.get_parameters().get("RESULT");
+
+    HDL_parameter p;
+    p.set_name("RESULT");
+    p.set_type(Type_engine::create_primitive_type("integer"));
+    HDL_function_call c;
+    c.set_name("CALC");
+    c.add_package_prefix("test_pkg");
+    p.set_raw_value(std::make_shared<HDL_function_call>(c));
+    ASSERT_EQ(p, *param);
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto& [id, val] : pkg_defaults) {
+        ctx[{"test_pkg", "", id.name}] = val;
+    }
+
+    parameter_solver::propagate_functions(mod, d_store);
+    auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
+    auto solve_param = solved.at({"", "", "RESULT"}).get_integer();
+    ASSERT_EQ(solve_param, 42);
+}
+
 
 
 TEST(parameter_processing, override_with_system_task) {

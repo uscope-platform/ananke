@@ -16,8 +16,8 @@
 
 #include <gtest/gtest.h>
 
-#include "frontend/analysis/sv_analyzer.hpp"
-#include "frontend/analysis/type_engine.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "analysis/parameter_solver.hpp"
 #include "data_model/HDL/parameters/components/Replication.hpp"

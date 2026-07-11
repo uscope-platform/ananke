@@ -18,7 +18,7 @@
 #include <gtest/gtest.h>
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "analysis/parameter_solver.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"

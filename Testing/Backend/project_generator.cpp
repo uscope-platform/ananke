@@ -16,7 +16,7 @@
 #include <gtest/gtest.h>
 #include "Backend/Xilinx/xilinx_project_generator.hpp"
 
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "Backend/Dependency_resolver.hpp"
 

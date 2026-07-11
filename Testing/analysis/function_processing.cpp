@@ -17,7 +17,7 @@
 
 #include <gtest/gtest.h>
 
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 

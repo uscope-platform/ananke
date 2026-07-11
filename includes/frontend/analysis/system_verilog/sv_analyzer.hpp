@@ -1,17 +1,17 @@
-// Copyright 2021 University of Nottingham Ningbo China
-// Author: Filippo Savi <filssavi@gmail.com>
+//  Copyright 2026 Filippo Savi
+//  Author: Filippo Savi <filssavi@gmail.com>
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
 
 #ifndef ANANKE_SV_ANALYZER_HPP
 #define ANANKE_SV_ANALYZER_HPP
@@ -25,12 +25,12 @@
 #include "data_model/HDL/HDL_Resource.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
-#include "frontend/analysis/preprocessor/sv_preprocessor.hpp"
-#include "frontend/analysis/documentation_analyzer.hpp"
+#include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
+#include "documentation_analyzer.hpp"
 
 #include "mgp_sv/sv2017Lexer.h"
 #include "mgp_sv/sv2017.h"
-#include "frontend/analysis/sv_visitor.hpp"
+#include "sv_visitor.hpp"
 #include "antlr4-runtime.h"
 
 class sv_analyzer {

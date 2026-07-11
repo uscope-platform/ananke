@@ -15,9 +15,9 @@
 
 
 
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 
-#include "frontend/analysis/preprocessor/sv_preprocessor.hpp"
+#include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
 
 
 std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const std::string &path, const std::string_view &content) {

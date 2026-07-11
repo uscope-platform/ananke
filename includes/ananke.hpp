@@ -28,7 +28,7 @@
 #include "data_model/data_store.hpp"
 #include "Backend/new_app_generator.hpp"
 #include "frontend/Repository_walker.hpp"
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "Backend/python_script_runner.hpp"
 #include "Backend/Auxiliary_resolver.hpp"
 #include "data_model/Depfile/Depfile.hpp"

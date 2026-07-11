@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "frontend/analysis/preprocessor/sv_preprocessor.hpp"
+#include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
 
 
 using namespace preprocessor;

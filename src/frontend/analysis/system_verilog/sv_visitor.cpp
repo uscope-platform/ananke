@@ -1,22 +1,22 @@
-// Copyright 2021 University of Nottingham Ningbo China
-// Author: Filippo Savi <filssavi@gmail.com>
+//  Copyright 2026 Filippo Savi
+//  Author: Filippo Savi <filssavi@gmail.com>
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
 
 #include <algorithm>
 #include <ctre.hpp>
 
-#include "frontend/analysis/sv_visitor.hpp"
+#include "frontend/analysis/system_verilog/sv_visitor.hpp"
 
 sv_visitor::sv_visitor(std::string p) {
     path = std::move(p);
@@ -389,6 +389,8 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
     }
     type_engine.start_range();
     current_parameter = ctx->list_of_param_assignments()[0].param_assignment()[0]->identifier()->getText();
+    package_prefix.clear();
+    package_item.clear();
 }
 
 void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
@@ -949,6 +951,8 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
         params_factory.set_type(implicit);
         type_engine.set_base_type(implicit);
     }
+    package_prefix.clear();
+    package_item.clear();
 }
 
 void sv_visitor::exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {

@@ -1,17 +1,17 @@
-// Copyright 2021 University of Nottingham Ningbo China
-// Author: Filippo Savi <filssavi@gmail.com>
+//  Copyright 2026 Filippo Savi
+//  Author: Filippo Savi <filssavi@gmail.com>
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
 
 #ifndef ANANKE_SV_VISITOR_HPP
 #define ANANKE_SV_VISITOR_HPP
@@ -21,7 +21,7 @@
 
 #include "data_model/HDL/factories/HDL_parameters_factory.hpp"
 #include "data_model/HDL/factories/HDL_modules_factory.hpp"
-#include "frontend/analysis/type_engine.hpp"
+#include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/factories/HDL_interfaces_factory.hpp"
 #include "data_model/HDL/factories/HDL_instances_factory.hpp"
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"

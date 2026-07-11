@@ -14,7 +14,7 @@
 //  limitations under the License.
 
 
-#include "frontend/analysis/preprocessor/source_mapper.hpp"
+#include "frontend/analysis/system_verilog/preprocessor/source_mapper.hpp"
 
 
 std::optional<std::string> source_mapper::get_path(unsigned int line_n, std::vector<source_range>map) {

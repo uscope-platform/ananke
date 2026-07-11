@@ -13,7 +13,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "frontend/analysis/type_engine.hpp"
+#include "frontend/analysis/system_verilog/type_engine.hpp"
 
 void Type_engine::start_composite_type_declaration(type_kind k) {
     kind = k;

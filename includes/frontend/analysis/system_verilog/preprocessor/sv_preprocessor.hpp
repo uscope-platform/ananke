@@ -27,9 +27,9 @@
 #include <iterator>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
-#include "frontend/analysis/preprocessor/conditional_solver.hpp"
-#include "frontend/analysis/preprocessor/source_mapper.hpp"
-#include "frontend/analysis/preprocessor/macro_processor.hpp"
+#include "frontend/analysis/system_verilog/preprocessor/conditional_solver.hpp"
+#include "frontend/analysis/system_verilog/preprocessor/source_mapper.hpp"
+#include "frontend/analysis/system_verilog/preprocessor/macro_processor.hpp"
 #include "data_model/mm_file.hpp"
 
 namespace preprocessor {

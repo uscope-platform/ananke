@@ -19,7 +19,7 @@
 #include "data_model/Depfile/Depfile.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/settings_store.hpp"
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "analysis/control_bus_analysis.hpp"
 #include "Backend/uplatform/peripheral_definition_generator.hpp"

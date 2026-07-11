@@ -19,7 +19,7 @@
 #include <filesystem>
 
 
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "analysis/control_bus_analysis.hpp"
 

@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 TEST(port_extraction, regular_port) {

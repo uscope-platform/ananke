@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "frontend/analysis/sv_analyzer.hpp"
+#include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 
 TEST(typedef_parsing, mixed_packing_array) {
     auto test_pattern = R"(

@@ -16,7 +16,7 @@
 #include <gtest/gtest.h>
 #include <fstream>
 
-#include "frontend/analysis/documentation_analyzer.hpp"
+#include "frontend/analysis/system_verilog/documentation_analyzer.hpp"
 
 
 TEST( documentation_analyzer , simple_peripheral) {
