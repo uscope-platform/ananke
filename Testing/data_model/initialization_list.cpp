@@ -516,8 +516,8 @@ TEST(Initialization_list, get_array_dependencies) {
     auto deps_c = params.get("VARIABLE_INITIAL_VALUES")->get_dependencies();
 
     parameter_deps_t check_a, check_b;
-    check_a.data = {{"","","VARIABLE_INITIAL_VALUES"}, {"","", "N_REGISTERS"}, {"","", "FIXED_REGISTER_VALUES"}};
-    check_b.data = {{"","", "SS_POLARITY_DEFAULT"}};
+    check_a.data = {qualified_identifier("VARIABLE_INITIAL_VALUES"), qualified_identifier("N_REGISTERS"), qualified_identifier("FIXED_REGISTER_VALUES")};
+    check_b.data = {qualified_identifier("SS_POLARITY_DEFAULT")};
     EXPECT_EQ(deps_a, check_a);
     EXPECT_EQ(deps_b, check_b);
     EXPECT_TRUE(deps_c.empty());
@@ -552,7 +552,7 @@ TEST(Initialization_list, concatenation_of_packed_arrays) {
     auto resource = analyzer.analyze("",test_pattern)[0];
 
     auto p = parameter_solver::process_parameters(resource.get_parameters(), {});
-    auto param = p[{"","", "INITIAL_REGISTER_VALUES"}];
+    auto param = p[qualified_identifier("INITIAL_REGISTER_VALUES")];
     mdarray<hdl_integer>::md_1d_array check_array = {224,1,0,0,2,2,2};
     auto result = param.get_int_array().get_1d_slice({0,0});
 

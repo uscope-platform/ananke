@@ -42,7 +42,7 @@ parameter_deps_t HDL_function_call::get_dependencies() const {
     if(loop_metadata.has_value()) {
         retval.merge(loop_metadata.value().get_dependencies());
     }
-    retval.functions.insert({package_prefix, "", function_name});
+    retval.functions.insert(qualified_identifier(package_prefix, function_name));
     return retval;
 }
 

@@ -24,7 +24,10 @@
 
 #include "data_model/HDL/types/resolved_type.hpp"
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"
-#include "data_model/HDL/parameters/common/qualified_identifier.hpp"
+
+class qualified_identifier;
+class parameter_deps_t;
+struct resolved_type;
 
 class hdl_type {
 public:

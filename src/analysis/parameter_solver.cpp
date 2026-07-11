@@ -69,8 +69,8 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
     s.analyze(map_in, ctx);
 
     while (auto next = s.get_next()) {
-        auto param = map_in.const_get(next.value().name);
-        crash_ctx.parameter = next.value().name;
+        auto param = map_in.const_get(next.value().get_name());
+        crash_ctx.parameter = next.value().get_name();
         auto res = param->evaluate(ctx);
         if (res) {
             ctx[next.value()] = res.value();
@@ -80,7 +80,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
             ctx.insert(struct_fields.begin(), struct_fields.end());
             solved_parameters.insert(struct_fields.begin(), struct_fields.end());
         } else {
-            spdlog::warn("The parameter {} can't be solved, defaulting to 0",  next.value().name);
+            spdlog::warn("The parameter {} can't be solved, defaulting to 0",  next.value().get_name());
             ctx[next.value()] = 0;
             solved_parameters[next.value()] = 0;
         }
@@ -117,14 +117,14 @@ resolved_parameter parameter_solver::resolve_instance_dependency(
     work_order &work,
     const std::shared_ptr<data_store> &d_store
 ) {
-    auto instance_name = dep.instance;
+    auto instance_name = dep.get_instance();
     std::shared_ptr<HDL_instance_AST> examined_node = work.node;
 
     auto current_ports = work.node->get_ports();
-    if (current_ports.contains(dep.instance)) {
-        instance_name = current_ports.at(dep.instance)[0].get_name();
+    if (current_ports.contains(dep.get_instance())) {
+        instance_name = current_ports.at(dep.get_instance())[0].get_name();
         examined_node = work.node->get_parent();
-    } else if (work.interfaces_map.contains(dep.instance)) {
+    } else if (work.interfaces_map.contains(dep.get_instance())) {
         resolve_interface_chain(work, d_store, examined_node, instance_name);
     } else if (examined_node) {
         examined_node = examined_node->get_parent();
@@ -133,19 +133,19 @@ resolved_parameter parameter_solver::resolve_instance_dependency(
     if (examined_node) {
         for (const auto &brother_inst : examined_node->get_dependencies()) {
             if (brother_inst->get_name() == instance_name) {
-                auto inst_param = brother_inst->get_parameters().get(dep.name);
+                auto inst_param = brother_inst->get_parameters().get(dep.get_name());
                 auto val = inst_param->get_numeric_value();
                 if (val.has_value()) {
                     return val.value();
                 }
-                spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.instance, dep.name);
+                spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.get_instance(), dep.get_name());
                 return resolved_parameter(0);
             }
         }
     }
 
     auto path = get_full_path(work.node);
-    spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.instance, dep.name);
+    spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.get_instance(), dep.get_name());
     resolved_parameter value;
     value.set_undefined();
     return value;
@@ -176,11 +176,11 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
     std::map<qualified_identifier, resolved_parameter> package_parameters;
     for (auto &[p_name, param]: node_parameters) {
         for (const auto& dep: param->get_dependencies().data) {
-            if (!dep.prefix.empty() && !package_parameters.contains(dep)) {
-                auto package = d_store->get_HDL_resource(dep.prefix);
+            if (!dep.get_package_prefix().empty() && !package_parameters.contains(dep)) {
+                auto package = d_store->get_HDL_resource(dep.get_package_prefix().back());
                 auto pkg_solved = process_parameters(package.get_parameters(), {});
                 for (auto &[pkg_id, pkg_val]: pkg_solved) {
-                    qualified_identifier qid{dep.prefix, "", pkg_id.name};
+                    qualified_identifier qid{dep.get_package_prefix().back(), "", pkg_id.get_name()};
                     package_parameters[qid] = pkg_val;
                 }
             }
@@ -195,12 +195,12 @@ void parameter_solver::propagate_functions(HDL_Resource &resource, const std::sh
 
         auto deps = param->get_dependencies();
         for (const auto& fcn:deps.functions) {
-            if (!fcn.prefix.empty()) {
-                auto res = d_store->get_HDL_resource(fcn.prefix);
-                auto fcn_def = res.get_function(fcn.name);
+            if (!fcn.get_package_prefix().empty()) {
+                auto res = d_store->get_HDL_resource(fcn.get_package_prefix().back());
+                auto fcn_def = res.get_function(fcn.get_name());
                 param->propagate_function(fcn_def);
             } else {
-                param->propagate_function(resource.get_function(fcn.name));
+                param->propagate_function(resource.get_function(fcn.get_name()));
             }
         }
 
@@ -238,12 +238,12 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     for(auto &[override_name, param]:node_overrides) {
         for(auto &dep: param->get_dependencies().data) {
             if (ctx.contains(dep)) continue;
-            if (!dep.instance.empty()) {
+            if (!dep.get_instance().empty()) {
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);
-            } else if (dep.prefix.empty() && dep.instance.empty() && to_solve.contains(dep.name)) {
+            } else if (!dep.get_package_prefix().empty() && dep.get_package_prefix().back().empty() && dep.get_instance().empty() && to_solve.contains(dep.get_name())) {
                 continue;
-            } else if(!node_overrides.contains(dep.name)) {
-                spdlog::warn("Parameter {}::{} is not defined in the design", dep.prefix, dep.name);
+            } else if(!node_overrides.contains(dep.get_name())) {
+                spdlog::warn("Parameter {}::{} is not defined in the design", dep.get_package_prefix().back(), dep.get_name());
                 resolved_parameter value;
                 value.set_undefined();
                 ctx[dep] = value;
@@ -255,7 +255,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         auto p_id = param->get_identifier();
         if (ctx.contains(p_id)) continue;
         for (auto &dep : param->get_dependencies().data) {
-            if (!dep.instance.empty() && !ctx.contains(dep)) {
+            if (!dep.get_instance().empty() && !ctx.contains(dep)) {
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);
             }
         }
@@ -299,7 +299,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_str
                 for (auto &ps : type_info->struct_sizes[i].packed_sizes) w *= ps;
                 uint64_t mask = (w >= 64) ? ~0ULL : (1ULL << w) - 1;
                 hdl_integer field_val = static_cast<uint64_t>((raw >> offset) & mask);
-                fields[qualified_identifier{"", id.name, st.member[i].name}] = field_val;
+                qualified_identifier new_identifier(st.member[i].name);
+                new_identifier.set_instance_prefix({id.get_name()});
+                fields[new_identifier] = field_val;
                 offset += w;
             }
         }
@@ -309,7 +311,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_str
             int arr_idx = st.member.size() - 1 - i;
             auto field_val = arr.get_value({static_cast<int64_t>(arr_idx)});
             if (field_val) {
-                fields[qualified_identifier{"", id.name, st.member[i].name}] = field_val.value();
+                qualified_identifier new_identifier(st.member[i].name);
+                new_identifier.set_instance_prefix({id.get_name()});
+                fields[new_identifier] = field_val.value();
             }
         }
     }

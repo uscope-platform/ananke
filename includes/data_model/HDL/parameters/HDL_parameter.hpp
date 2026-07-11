@@ -93,7 +93,7 @@ public:
     bool is_array() const{return type && !type->is_scalar();}
 
     std::string get_name() const {return name;}
-    qualified_identifier get_identifier(){return {"", "", name};}
+    qualified_identifier get_identifier(){return qualified_identifier(name);}
 
     std::shared_ptr<hdl_type> get_type()const {return type;}
     void set_type(const std::shared_ptr<hdl_type> &t){type = t;}

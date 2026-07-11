@@ -161,12 +161,12 @@ TEST(parameter_processing, package_parameters_in_array_init) {
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
-        ctx[{"test_package", "", id.name}] = val;
+        ctx[qualified_identifier("test_package",  id.get_name())] = val;
     }
 
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
 
-    auto param_val = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
+    auto param_val = solved.at(qualified_identifier("AXI_ADDRESSES")).get_int_array();
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0,0}, {3,2,1});
@@ -198,13 +198,13 @@ TEST(parameter_processing, package_parameters_use) {
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
-        ctx[{"test_package", "", id.name}] = val;
+        ctx[qualified_identifier("test_package", id.get_name())] = val;
     }
 
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
 
-    ASSERT_TRUE(solved.contains({"", "", "package_param"}));
-    ASSERT_EQ(67, solved.at({"", "", "package_param"}).get_integer());
+    ASSERT_TRUE(solved.contains(qualified_identifier("package_param")));
+    ASSERT_EQ(67, solved.at(qualified_identifier("package_param")).get_integer());
 }
 
 
@@ -596,13 +596,13 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
-        ctx[{"hil_address_space", "", id.name}] = val;
+        ctx[qualified_identifier("hil_address_space",  id.get_name())] = val;
     }
 
     parameter_solver::propagate_functions(mod, nullptr);
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
 
-    auto param = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
+    auto param = solved.at(qualified_identifier("AXI_ADDRESSES")).get_int_array();
     auto param_value = param.get_1d_slice({0, 0});
     mdarray<hdl_integer>::md_1d_array reference = {0x43c00000,0x43c30004};
     ASSERT_EQ(param_value, reference);
@@ -648,13 +648,13 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
-        ctx[{"hil_address_space", "", id.name}] = val;
+        ctx[qualified_identifier("hil_address_space", id.get_name())] = val;
     }
 
     parameter_solver::propagate_functions(mod, nullptr);
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
 
-    auto param = solved.at({"", "", "AXI_ADDRESSES"}).get_int_array();
+    auto param = solved.at(qualified_identifier("AXI_ADDRESSES")).get_int_array();
     auto param_value = param.get_1d_slice({0, 0});
     mdarray<hdl_integer>::md_1d_array reference = {0x43c00000,0x43c30004};
     ASSERT_EQ(param_value, reference);
@@ -681,7 +681,7 @@ TEST(parameter_processing, function_in_package_initialization) {
 
     parameter_solver::propagate_functions(pkg, nullptr);
     auto solved = parameter_solver::process_parameters(pkg.get_parameters(), {});
-    auto param = solved.at({"", "", "RESULT"}).get_integer();
+    auto param = solved.at(qualified_identifier("RESULT")).get_integer();
     ASSERT_EQ(param, 42);
 }
 
@@ -729,12 +729,12 @@ TEST(parameter_processing, package_function_called_from_module) {
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
-        ctx[{"test_pkg", "", id.name}] = val;
+        ctx[qualified_identifier("test_pkg", id.get_name())] = val;
     }
 
     parameter_solver::propagate_functions(mod, d_store);
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
-    auto solve_param = solved.at({"", "", "RESULT"}).get_integer();
+    auto solve_param = solved.at(qualified_identifier("RESULT")).get_integer();
     ASSERT_EQ(solve_param, 42);
 }
 
@@ -786,12 +786,12 @@ TEST(parameter_processing, package_function_called_from_module_and_typedef) {
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
-        ctx[{"test_pkg", "", id.name}] = val;
+        ctx[qualified_identifier("test_pkg", id.get_name())] = val;
     }
 
     parameter_solver::propagate_functions(mod, d_store);
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
-    auto solve_param = solved.at({"", "", "RESULT"}).get_integer();
+    auto solve_param = solved.at(qualified_identifier("RESULT")).get_integer();
     ASSERT_EQ(solve_param, 42);
 }
 
@@ -1087,7 +1087,7 @@ TEST(parameter_processing, override_with_package_parameter) {
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(),  {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
-        ctx[{"test_package", "", id.name}] = val;
+        ctx[qualified_identifier("test_package", id.get_name())] = val;
     }
 
     auto dep_params = dep.get_parameters();
@@ -1109,8 +1109,8 @@ TEST(parameter_processing, override_with_package_parameter) {
 
     auto solved = parameter_solver::process_parameters(to_solve, ctx);
 
-    EXPECT_EQ(33, solved.at({"", "", "param_1"}).get_integer());
-    EXPECT_EQ(35, solved.at({"", "", "p1_t"}).get_integer());
+    EXPECT_EQ(33, solved.at(qualified_identifier("param_1")).get_integer());
+    EXPECT_EQ(35, solved.at(qualified_identifier("p1_t")).get_integer());
 }
 
 
@@ -1229,7 +1229,7 @@ TEST(parameter_processing, override_package_function) {
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(),  {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
-        ctx[{"test_pack", "", id.name}] = val;
+        ctx[qualified_identifier("test_pack", id.get_name())] = val;
     }
 
     auto dep_params = dep.get_parameters();
@@ -1253,7 +1253,7 @@ TEST(parameter_processing, override_package_function) {
 
     mdarray<hdl_integer>av;
     av.set_1d_slice({0,0}, {0, 100, 200});
-    EXPECT_EQ(solved.at({"", "", "p1_t"}).get_int_array(), av);
+    EXPECT_EQ(solved.at(qualified_identifier("p1_t")).get_int_array(), av);
 }
 
 

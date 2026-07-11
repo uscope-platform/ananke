@@ -74,8 +74,8 @@ TEST(parameter_extraction, init_list_after_reg) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {{"","", "low_control_p"}, 15},
-        {{"","", "low_control_n"}, 48}
+        {qualified_identifier("low_control_p"), 15},
+        {qualified_identifier("low_control_n"), 48}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -119,7 +119,7 @@ TEST(parameter_extraction, size_cast) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
-    ASSERT_EQ(3, defaults.at({"","", "TEST_PARAM"}).get_integer());
+    ASSERT_EQ(3, defaults.at(qualified_identifier("TEST_PARAM")).get_integer());
 }
 
 TEST(parameter_extraction, paretesized_cast) {
@@ -165,7 +165,7 @@ TEST(parameter_extraction, paretesized_cast) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
-    ASSERT_EQ(3, defaults.at({"","", "TEST_PARAM"}).get_integer());
+    ASSERT_EQ(3, defaults.at(qualified_identifier("TEST_PARAM")).get_integer());
 }
 
 
@@ -216,7 +216,7 @@ TEST(parameter_extraction, type_cast) {
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
-    ASSERT_EQ(251, defaults.at({"","", "TEST_PARAM"}).get_integer());
+    ASSERT_EQ(251, defaults.at(qualified_identifier("TEST_PARAM")).get_integer());
 }
 
 
@@ -278,7 +278,7 @@ TEST(parameter_extraction, nested_type_cast) {
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
-    ASSERT_EQ(11, defaults.at({"","", "TEST_PARAM"}).get_integer());
+    ASSERT_EQ(11, defaults.at(qualified_identifier("TEST_PARAM")).get_integer());
 }
 
 
@@ -343,8 +343,8 @@ TEST(parameter_extraction, multiple_type_cast) {
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
-    ASSERT_EQ(251, defaults.at({"","", "TEST_PARAM"}).get_integer());
-    ASSERT_EQ(3, defaults.at({"","", "TEST_PARAM_2"}).get_integer());
+    ASSERT_EQ(251, defaults.at(qualified_identifier("TEST_PARAM")).get_integer());
+    ASSERT_EQ(3, defaults.at(qualified_identifier("TEST_PARAM_2")).get_integer());
 }
 
 TEST(parameter_extraction, cast_in_binary_expression) {
@@ -415,10 +415,10 @@ TEST(parameter_extraction, cast_in_binary_expression) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {{"","", "x"}, -2},
-        {{"","", "y"}, -6},
-        {{"","", "A"}, -1},
-        {{"","", "B"}, -8},
+        {qualified_identifier("x"), -2},
+        {qualified_identifier("y"), -6},
+        {qualified_identifier("A"), -1},
+        {qualified_identifier("B"), -8},
     };
 
     for(const auto& [name, value]:check_defaults){
@@ -460,7 +460,7 @@ TEST(parameter_extraction,time_literal) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
-    ASSERT_EQ("10ns", defaults.at({"","", "TEST_PARAM"}).get_string());
+    ASSERT_EQ("10ns", defaults.at(qualified_identifier("TEST_PARAM")).get_string());
 }
 
 TEST(parameter_extraction, cast_in_concat) {
@@ -510,7 +510,7 @@ TEST(parameter_extraction, cast_in_concat) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
-    ASSERT_EQ(35, defaults.at({"","", "TEST_PARAM"}).get_integer());
+    ASSERT_EQ(35, defaults.at(qualified_identifier("TEST_PARAM")).get_integer());
 }
 
 
@@ -567,8 +567,8 @@ TEST(parameter_extraction, strings_dafault_init) {
     mdarray<std::string> tti_val;
     tti_val.set_1d_slice({0, 0}, {"\"FILE\"", "\"FILE\"", "\"FILE\"", "\"FILE\""});
 
-    ASSERT_EQ(3, defaults.at({"","", "N_CORES"}).get_integer());
-    ASSERT_EQ(tti_val, defaults.at({"","", "TRANSLATION_TABLE_INIT"}).get_string_array());
+    ASSERT_EQ(3, defaults.at(qualified_identifier("N_CORES")).get_integer());
+    ASSERT_EQ(tti_val, defaults.at(qualified_identifier("TRANSLATION_TABLE_INIT")).get_string_array());
 }
 
 
@@ -631,8 +631,8 @@ TEST(parameter_extraction, string_array_selection) {
     mdarray<std::string> tti_val;
     tti_val.set_1d_slice({0, 0}, {"\"FILE\"", "\"FILE\"", "\"FILE\"", "\"FILE\""});
 
-    ASSERT_EQ(3, defaults.at({"","", "N_CORES"}).get_integer());
-    ASSERT_EQ(tti_val, defaults.at({"","", "TRANSLATION_TABLE_INIT"}).get_string_array());
+    ASSERT_EQ(3, defaults.at(qualified_identifier("N_CORES")).get_integer());
+    ASSERT_EQ(tti_val, defaults.at(qualified_identifier("TRANSLATION_TABLE_INIT")).get_string_array());
 }
 
 TEST(parameter_extraction, strings_array) {
@@ -694,8 +694,8 @@ TEST(parameter_extraction, strings_array) {
     mdarray<std::string> tti_val;
     tti_val.set_1d_slice({0, 0}, {"\"FILE\"", "\"FILE\"", "\"FILE\""});
 
-    ASSERT_EQ(3,defaults.at({"","", "N_CORES"}).get_integer());
-    ASSERT_EQ(tti_val, defaults.at({"","", "TRANSLATION_TABLE_INIT"}).get_string_array());
+    ASSERT_EQ(3,defaults.at(qualified_identifier("N_CORES")).get_integer());
+    ASSERT_EQ(tti_val, defaults.at(qualified_identifier("TRANSLATION_TABLE_INIT")).get_string_array());
 }
 
 
@@ -748,12 +748,12 @@ TEST(parameter_extraction, float_parameter) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {{"","", "LUT_DEPTH"}, 9},
-        {{"","", "STEP"}, 0.17453292519943295f}
+        {qualified_identifier("LUT_DEPTH"), 9},
+        {qualified_identifier("STEP"), 0.17453292519943295f}
     };
 
-    ASSERT_EQ(9, defaults.at({"","", "LUT_DEPTH"}).get_integer());
-    ASSERT_FLOAT_EQ(0.17453292519943295,defaults.at({"","", "STEP"}).get_real());
+    ASSERT_EQ(9, defaults.at(qualified_identifier("LUT_DEPTH")).get_integer());
+    ASSERT_FLOAT_EQ(0.17453292519943295,defaults.at(qualified_identifier("STEP")).get_real());
 }
 
 TEST(parameter_extraction, simple_system_task) {
@@ -793,7 +793,7 @@ TEST(parameter_extraction, simple_system_task) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {{"","", "CAST"}, 17},
+        {qualified_identifier("CAST"), 17},
     };
 
     for(const auto& [name, value]:check_defaults){
@@ -852,8 +852,8 @@ TEST(parameter_extraction, multiple_system_task) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {{"","", "CAST"}, 17},
-        {{"","", "CAST_2"}, 12},
+        {qualified_identifier("CAST"), 17},
+        {qualified_identifier("CAST_2"), 12},
     };
 
     for(const auto& [name, value]:check_defaults){
@@ -910,7 +910,7 @@ TEST(parameter_extraction, system_task_propagation) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {{"","", "CAST"}, 17},
+        {qualified_identifier("CAST"), 17},
     };
 
     for(const auto& [name, value]:check_defaults){
@@ -968,8 +968,8 @@ TEST(parameter_extraction, nested_system_task) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {{"","", "PARAMETER_1"}, 46},
-        {{"","", "CAST"}, 3}
+        {qualified_identifier("PARAMETER_1"), 46},
+        {qualified_identifier("CAST"), 3}
     };
 
     for(const auto& [name, value]:check_defaults){
@@ -1063,11 +1063,11 @@ TEST(parameter_extraction, package_parameters) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {{"","", "bus_base"}, 0x43c00000},
-        {{"","", "timebase"}, 0x43c00000},
-        {{"","", "gpio"}, 0x43c01001},
-        {{"","", "modulo_parameter"}, 1},
-        {{"","", "subtraction_parameter"}, 2}
+        {qualified_identifier("bus_base"), 0x43c00000},
+        {qualified_identifier("timebase"), 0x43c00000},
+        {qualified_identifier("gpio"), 0x43c01001},
+        {qualified_identifier("modulo_parameter"), 1},
+        {qualified_identifier("subtraction_parameter"), 2}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1140,12 +1140,12 @@ TEST(parameter_extraction, simple_parameters) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {{"","", "simple_numeric_p"}, 32},
-        {{"","", "local_p"}, 74},
-        {{"","", "sv_numeric_p"}, 8},
-        {{"","", "dimensionless_sv_numeric_p"}, 63},
-        {{"","", "string_p"}, R"("423")"s},
-        {{"","", "nested_p"}, R"("423")"s}
+        {qualified_identifier("simple_numeric_p"), 32},
+        {qualified_identifier("local_p"), 74},
+        {qualified_identifier("sv_numeric_p"), 8},
+        {qualified_identifier("dimensionless_sv_numeric_p"), 63},
+        {qualified_identifier("string_p"), R"("423")"s},
+        {qualified_identifier("nested_p"), R"("423")"s}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1313,18 +1313,18 @@ TEST(parameter_extraction, simple_expressions) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "simple_numeric_p"}, 32},
-        {{"", "", "sv_numeric_p"}, 8},
-        {{"", "", "dimensionless_sv_numeric_p"}, 63},
-        {{"", "", "simple_log_expr_p"},6},
-        {{"", "", "add_expr_p"}, 40},
-        {{"", "", "sub_expr_p"}, 24},
-        {{"", "", "mul_expr_p"}, 256},
-        {{"", "", "div_expr_p"}, 4},
-        {{"", "", "chained_expression"}, 1320},
-        {{"", "", "modulo_expr_p"}, 0},
-        {{"", "", "complex_log_expr_p"}, 6},
-        {{"", "", "parenthesised_expr_p"}, 1480}
+        {qualified_identifier( "simple_numeric_p"), 32},
+        {qualified_identifier("sv_numeric_p"), 8},
+        {qualified_identifier("dimensionless_sv_numeric_p"), 63},
+        {qualified_identifier("simple_log_expr_p"),6},
+        {qualified_identifier("add_expr_p"), 40},
+        {qualified_identifier("sub_expr_p"), 24},
+        {qualified_identifier("mul_expr_p"), 256},
+        {qualified_identifier("div_expr_p"), 4},
+        {qualified_identifier("chained_expression"), 1320},
+        {qualified_identifier("modulo_expr_p"), 0},
+        {qualified_identifier("complex_log_expr_p"), 6},
+        {qualified_identifier("parenthesised_expr_p"), 1480}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1423,13 +1423,13 @@ TEST(parameter_extraction, bitwise_expressions) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "op_a"}, 9},
-        {{"", "", "op_b"}, 12},
-        {{"", "", "b_and_p"}, 8},
-        {{"", "", "b_or_p"},13},
-        {{"", "", "b_xor_p"}, 5},
-        {{"", "", "b_xnor_p"}, -6},
-        {{"", "", "b_xnor2_p"}, -6}
+        {qualified_identifier("op_a"), 9},
+        {qualified_identifier("op_b"), 12},
+        {qualified_identifier("b_and_p"), 8},
+        {qualified_identifier("b_or_p"),13},
+        {qualified_identifier("b_xor_p"), 5},
+        {qualified_identifier("b_xnor_p"), -6},
+        {qualified_identifier("b_xnor2_p"), -6}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1487,9 +1487,9 @@ TEST(parameter_extraction, power_expression) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "op_a"}, 2},
-        {{"", "", "op_b"}, 5},
-        {{"", "", "pow_expr"},32},
+        {qualified_identifier("op_a"), 2},
+        {qualified_identifier("op_b"), 5},
+        {qualified_identifier("pow_expr"),32},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1546,9 +1546,9 @@ TEST(parameter_extraction, arithmetic_shift_left) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     // 3 <<< 2 = 12
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "op_a"}, 3},
-        {{"", "", "op_b"}, 2},
-        {{"", "", "shl_expr"},12},
+        {qualified_identifier("op_a"), 3},
+        {qualified_identifier("op_b"), 2},
+        {qualified_identifier("shl_expr"),12},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1618,10 +1618,10 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "op_a"}, -8},
-        {{"", "", "op_b"}, 2},
-        {{"", "", "shr_a_expr"}, -2},
-        {{"", "", "shr_l_expr"}, 1073741822},
+        {qualified_identifier("op_a"), -8},
+        {qualified_identifier("op_b"), 2},
+        {qualified_identifier("shr_a_expr"), -2},
+        {qualified_identifier("shr_l_expr"), 1073741822},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1709,12 +1709,12 @@ TEST(parameter_extraction, logical_and_or) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "op_a"}, 3},
-        {{"", "", "op_b"}, 0},
-        {{"", "", "op_c"}, 5},
-        {{"", "", "log_and_expr"}, 0},
-        {{"", "", "log_or_expr"}, 1},
-        {{"", "", "mixed_expr"}, 1},
+        {qualified_identifier("op_a"), 3},
+        {qualified_identifier("op_b"), 0},
+        {qualified_identifier("op_c"), 5},
+        {qualified_identifier("log_and_expr"), 0},
+        {qualified_identifier("log_or_expr"), 1},
+        {qualified_identifier("mixed_expr"), 1},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1787,9 +1787,9 @@ TEST(parameter_extraction, array_assignment) {
     av.set_1d_slice({0, 0}, {8, 32});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "simple_numeric_p"}, 32},
-        {{"", "", "sv_numeric_p"}, 8},
-        {{"", "", "concatenation"}, av}
+        {qualified_identifier("simple_numeric_p"), 32},
+        {qualified_identifier("sv_numeric_p"), 8},
+        {qualified_identifier("concatenation"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1848,7 +1848,7 @@ TEST(parameter_extraction, default_assign) {
     av.set_1d_slice({0, 0}, {5, 5});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "test_array"}, av}
+        {qualified_identifier("test_array"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1919,9 +1919,9 @@ TEST(parameter_extraction, array_concatenation) {
     av.set_1d_slice({0, 0}, {8,32});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "simple_numeric_p"}, 32},
-        {{"", "", "sv_numeric_p"}, 8},
-        {{"", "", "concatenation"}, av}
+        {qualified_identifier("simple_numeric_p"), 32},
+        {qualified_identifier("sv_numeric_p"), 8},
+        {qualified_identifier("concatenation"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -1981,7 +1981,7 @@ TEST(parameter_extraction, array_parameter) {
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "array_parameter"}, array_value}
+        {qualified_identifier("array_parameter"), array_value}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2042,7 +2042,7 @@ TEST(parameter_extraction, array_parameter_ascending) {
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {32, 5});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "array_parameter"}, array_value}
+        {qualified_identifier("array_parameter"), array_value}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2092,8 +2092,8 @@ TEST(parameter_extraction, integer_localparams) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "serial_msb_out_first"}, 0},
-        {{"","", "serial_lsb_out_first"}, 1},
+        {qualified_identifier("serial_msb_out_first"), 0},
+        {qualified_identifier("serial_lsb_out_first"), 1},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2174,8 +2174,8 @@ TEST(parameter_extraction, simple_array_propagation) {
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "array_parameter"}, array_value},
-        {{"","", "array_parameter_expr_p"}, 37},
+        {qualified_identifier("array_parameter"), array_value},
+        {qualified_identifier("array_parameter_expr_p"), 37},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2257,8 +2257,8 @@ TEST(parameter_extraction, simple_ascending_array_propagation) {
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {32, 5});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "array_parameter"}, array_value},
-        {{"","", "array_parameter_expr_p"}, 27},
+        {qualified_identifier("array_parameter"), array_value},
+        {qualified_identifier("array_parameter_expr_p"), 27},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2349,9 +2349,9 @@ TEST(parameter_extraction, array_expression) {
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "array_parameter"}, array_value},
-        {{"","", "array_parameter_expr_p"}, 37},
-        {{"","", "sv_numeric_p"}, 1},
+        {qualified_identifier("array_parameter"), array_value},
+        {qualified_identifier("array_parameter_expr_p"), 37},
+        {qualified_identifier("sv_numeric_p"), 1},
 
     };
     for(const auto& [name, value]:check_defaults){
@@ -2402,7 +2402,7 @@ TEST(parameter_extraction, int_concat_initialization) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "test_parameter"}, 7}
+        {qualified_identifier("test_parameter"), 7}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2453,7 +2453,7 @@ TEST(parameter_extraction, implicit_type_concatenation) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "test_parameter"}, 7}
+        {qualified_identifier("test_parameter"), 7}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2520,8 +2520,8 @@ TEST(parameter_extraction, simple_repetition_initialization) {
     av.set_2d_slice({0}, {{1,1}});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "repetition_size"}, 2},
-        {{"","", "repetition_parameter_1"}, av}
+        {qualified_identifier("repetition_size"), 2},
+        {qualified_identifier("repetition_parameter_1"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2583,8 +2583,8 @@ TEST(parameter_extraction, packed_repetition_initialization) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "repetition_size"}, 2},
-        {{"", "","repetition_parameter_1"}, 3}
+        {qualified_identifier("repetition_size"), 2},
+        {qualified_identifier("repetition_parameter_1"), 3}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2716,11 +2716,11 @@ TEST(parameter_extraction, repetition_initialization) {
     av4.set_2d_slice({0}, {{4, 4, 2, 1}});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "repetition_size"}, 2},
-        {{"","", "repetition_parameter_1"}, av},
-        {{"","", "repetition_parameter_2"}, av2},
-        {{"","", "multi_repetition_parameter"}, av3},
-        {{"","", "mixed_repetition_parameter"}, av4}
+        {qualified_identifier("repetition_size"), 2},
+        {qualified_identifier("repetition_parameter_1"), av},
+        {qualified_identifier("repetition_parameter_2"), av2},
+        {qualified_identifier("multi_repetition_parameter"), av3},
+        {qualified_identifier("mixed_repetition_parameter"), av4}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2782,7 +2782,7 @@ TEST(parameter_extraction, packed_array) {
 
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "packed_param"}, 169}
+        {qualified_identifier("packed_param"), 169}
     };
 
     for(const auto& [name, value]:check_defaults){
@@ -2856,7 +2856,7 @@ TEST(parameter_extraction, multpidim_packed_array) {
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {201, 169});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "packed_param"}, av }
+        {qualified_identifier("packed_param"), av }
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2907,11 +2907,11 @@ TEST(parameter_extraction, package_parameters_use) {
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> pkg_ctx;
     for (auto &[id, val] : pkg_defaults) {
-        pkg_ctx[{"test_package", "", id.name}] = val;
+        pkg_ctx[qualified_identifier("test_package", id.get_name())] = val;
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), pkg_ctx);
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "package_param"}, 67}
+        {qualified_identifier("package_param"), 67}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -2997,7 +2997,7 @@ TEST(parameter_extraction, negative_number_parameters) {
     v.set_value( -32767);
     v.set_signed(true);
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "negative_param"}, v}
+        {qualified_identifier("negative_param"), v}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3068,8 +3068,8 @@ TEST(parameter_extraction, packed_bit_access) {
     av.set_1d_slice({0, 0}, {8, 32});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "param_a"}, -1},
-        {{"","", "param_b"}, 1}
+        {qualified_identifier("param_a"), -1},
+        {qualified_identifier("param_b"), 1}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3127,7 +3127,7 @@ TEST(parameter_extraction, negative_number_array_init) {
     av.set_1d_slice({0, 0}, {a, b});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "negative_array_param"}, av}
+        {qualified_identifier("negative_array_param"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3185,7 +3185,7 @@ TEST(parameter_extraction, expression_array_init) {
     av.set_1d_slice({0, 0}, {42, 9});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "expression_array_param"}, av}
+        {qualified_identifier("expression_array_param"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3289,8 +3289,8 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
     av2.set_1d_slice({0, 0}, {0, 255});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "param_a"}, av},
-        {{"", "", "param_a"}, av2}
+        {qualified_identifier("param_a"), av},
+        {qualified_identifier("param_a"), av2}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3459,8 +3459,8 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
     av.set_1d_slice({0, 0}, {0x27e0, 0xe0, 3 , 3, 3});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "SS_POLARITY_DEFAULT"}, 0},
-        {{"", "", "FIXED_REGISTER_VALUES"}, av}
+        {qualified_identifier("SS_POLARITY_DEFAULT"), 0},
+        {qualified_identifier("FIXED_REGISTER_VALUES"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3569,7 +3569,7 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     av.set_1d_slice({0, 1}, {29, 226});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "param_a"}, av}
+        {qualified_identifier("param_a"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3623,7 +3623,7 @@ TEST(parameter_extraction, packed_replication_init) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "test_parameter"}, 31}
+        {qualified_identifier("test_parameter"), 31}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3687,7 +3687,7 @@ TEST(parameter_extraction, array_initialization_default) {
     av.set_1d_slice({0, 2}, {3, 3});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "test_parameter"}, av}
+        {qualified_identifier("test_parameter"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3742,7 +3742,7 @@ TEST(parameter_extraction, simple_function_parameter) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "TEST_PARAM"}, 100}
+        {qualified_identifier("TEST_PARAM"), 100}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3787,7 +3787,7 @@ TEST(parameter_extraction, concat_in_function) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "TEST_PARAM"}, 3}
+        {qualified_identifier("TEST_PARAM"), 3}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3835,7 +3835,7 @@ TEST(parameter_extraction, replication_in_function) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "TEST_PARAM"}, 15}
+        {qualified_identifier("TEST_PARAM"), 15}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3882,7 +3882,7 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "TEST_PARAM"}, 19}
+        {qualified_identifier("TEST_PARAM"), 19}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -3996,7 +3996,7 @@ TEST(parameter_extraction, loop_function_parameter) {
     av.set_1d_slice({0, 0}, {0, 100, 200});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "TEST_PARAM"}, av}
+        {qualified_identifier("TEST_PARAM"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -4078,7 +4078,7 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     av.set_1d_slice({0, 0}, {0, 100, 200});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "TEST_PARAM"}, av}
+        {qualified_identifier("TEST_PARAM"), av}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -4134,7 +4134,7 @@ TEST(parameter_extraction, function_with_arguments) {
 
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"", "", "TEST_PARAM"}, 12}
+        {qualified_identifier("TEST_PARAM"), 12}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -4208,9 +4208,9 @@ TEST(parameter_extraction, interface_parameters) {
     av.set_1d_slice({0, 0}, {8, 32});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "DATA_WIDTH"}, 32},
-        {{"","", "USER_WIDTH"}, 24},
-        {{"", "", "DEST_WIDTH"}, 8}
+        {qualified_identifier("DATA_WIDTH"), 32},
+        {qualified_identifier("USER_WIDTH"), 24},
+        {qualified_identifier("DEST_WIDTH"), 8}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -4345,9 +4345,9 @@ TEST(parameter_extraction, param_ternary_conditional) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "condition"}, 2},
-        {{"","", "test_positive"}, 12},
-        {{"","", "test_negative"}, 34},
+        {qualified_identifier("condition"), 2},
+        {qualified_identifier("test_positive"), 12},
+        {qualified_identifier("test_negative"), 34},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -4416,8 +4416,8 @@ TEST(parameter_extraction, nested_ternary_conditional) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "condition"}, 2},
-        {{"","", "test_positive"}, 96},
+        {qualified_identifier("condition"), 2},
+        {qualified_identifier("test_positive"), 96},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -4479,8 +4479,8 @@ TEST(parameter_extraction, complex_ternary_conditional) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "NM"}, 4},
-        {{"","", "LGNM"}, 2},
+        {qualified_identifier("NM"), 4},
+        {qualified_identifier("LGNM"), 2},
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -4507,7 +4507,7 @@ TEST(parameter_extraction, typedef_parameter) {
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {5, 32});
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "array_parameter"}, array_value}
+        {qualified_identifier("array_parameter"), array_value}
     };
     for(const auto& [name, value]:check_defaults){
         ASSERT_TRUE(defaults.contains(name));
@@ -4555,7 +4555,7 @@ TEST(parameter_extraction, struct_typed_parameter) {
     EXPECT_EQ(p->get_expression()->as<Concatenation>(), c);
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
-    qualified_identifier check_id = {"","", "struct_param"};
+    qualified_identifier check_id = qualified_identifier("struct_param");
     EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(180388626449));
 }
 
@@ -4576,7 +4576,7 @@ TEST(parameter_extraction, packed_struct_access_initialization) {
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
-    qualified_identifier check_id = {"","", "struct_access_param"};
+    qualified_identifier check_id = qualified_identifier("struct_access_param");
     EXPECT_EQ(defaults[check_id], 17);
 }
 
@@ -4623,10 +4623,11 @@ TEST(parameter_extraction, struct_unpacked_parameter) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {17, 42});
+
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
-        {{"","", "struct_param"}, array_value},
-        {{"","struct_param", "field_a"}, hdl_integer(42)},
-        {{"","struct_param", "field_b"}, hdl_integer(17)}
+        {qualified_identifier("struct_param"), array_value},
+        {qualified_identifier("","struct_param", "field_a"), hdl_integer(42)},
+        {qualified_identifier("","struct_param", "field_b"), hdl_integer(17)}
     };
     EXPECT_EQ(defaults, check_defaults);
 }
@@ -4650,7 +4651,7 @@ TEST(parameter_extraction, unpacked_struct_access_initialization) {
     auto resource = analyzer.analyze("", test_pattern)[0];
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
-    qualified_identifier check_id = {"","", "struct_access_param"};
+    qualified_identifier check_id = qualified_identifier("struct_access_param");
     EXPECT_EQ(defaults[check_id], 32);
 
 }
@@ -4674,11 +4675,11 @@ TEST(parameter_extraction, packed_struct_parametrized_member_width) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
-    qualified_identifier s_id = {"","", "s"};
+    qualified_identifier s_id = qualified_identifier("s");
     ASSERT_TRUE(defaults.contains(s_id));
     EXPECT_EQ(defaults[s_id], static_cast<uint64_t>(10769));
 
-    qualified_identifier ext_id = {"","", "extracted"};
+    qualified_identifier ext_id = qualified_identifier("extracted");
     ASSERT_TRUE(defaults.contains(ext_id));
     EXPECT_EQ(defaults[ext_id], 17);
 }
@@ -4702,21 +4703,23 @@ TEST(parameter_extraction, packed_struct_parametrized_member_width_wide) {
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
 
-    qualified_identifier s_id = {"","", "s"};
+    qualified_identifier s_id = qualified_identifier("s");
     ASSERT_TRUE(defaults.contains(s_id));
     uint64_t expected = 65586000;
     EXPECT_EQ(defaults[s_id], expected);
 
-    qualified_identifier ext_id = {"","", "extracted"};
+    qualified_identifier ext_id = qualified_identifier("extracted");
     ASSERT_TRUE(defaults.contains(ext_id));
     EXPECT_EQ(defaults[ext_id], 1000);
 
     // Verify struct field entries in solved parameters
-    qualified_identifier fa_id = {"","s", "field_a"};
+    qualified_identifier fa_id("field_a");
+    fa_id.set_instance_prefix({"s"});
     ASSERT_TRUE(defaults.contains(fa_id));
     EXPECT_EQ(defaults[fa_id], 1000);
 
-    qualified_identifier fb_id = {"","s", "field_b"};
+    qualified_identifier fb_id("field_b");
+    fa_id.set_instance_prefix({"s"});
     ASSERT_TRUE(defaults.contains(fb_id));
     EXPECT_EQ(defaults[fb_id], 50000);
 }
@@ -4755,7 +4758,7 @@ TEST(parameter_extraction, anonymous_packed_struct_typed_parameter) {
     ASSERT_EQ(st.member[1].type->as<HDL_simple_type>().get_packed_dimensions()[0],check_dim);
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
-    qualified_identifier check_id = {"","", "anon_struct"};
+    qualified_identifier check_id = qualified_identifier("anon_struct");
     EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(180388626449));
 }
 
@@ -4788,7 +4791,7 @@ TEST(parameter_extraction, anonymous_unpacked_struct_parameter) {
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {17, 42});
-    qualified_identifier sid = {"","", "anon_struct"};
+    qualified_identifier sid = qualified_identifier("anon_struct");
     EXPECT_EQ(defaults[sid], array_value);
 }
 
@@ -4840,7 +4843,7 @@ TEST(parameter_extraction, wide_int_parameter) {
     int1024_t res_int("0xCAFEBEBEDEADBEEFCB03");
     hdl_integer res;
     res.set_value(res_int);
-    auto param = defaults.at({"","", "TEST_PARAM"});
+    auto param = defaults.at(qualified_identifier("TEST_PARAM"));
 
     ASSERT_EQ(res, param.get_integer());
 }

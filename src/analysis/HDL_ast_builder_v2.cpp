@@ -103,7 +103,7 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                                 auto specialized_child = specialize_instance(*new_child, idx, child->get_inner_loop().get_init().get_name());
                                 working_instance->add_child(specialized_child);
                                 auto parent_params = current_param_values;
-                                parent_params[{"", "", child->get_inner_loop().get_init().get_name()}] = resolved_parameter(idx);
+                                parent_params[qualified_identifier(child->get_inner_loop().get_init().get_name())] = resolved_parameter(idx);
                                 child_wo.push_back({
                                     specialized_child,
                                     parent_params,
@@ -178,7 +178,7 @@ std::map<qualified_identifier, resolved_parameter> HDL_ast_builder_v2::process_r
     for ( auto &[name, value]: parameters) {
         if (value.is_string()) {
             if (value.get_string() == "__RUNTIME_ONLY_PARAMETER__") {
-                auto raw_param = res.get_parameters().get(name.name);
+                auto raw_param = res.get_parameters().get(name.get_name());
                 auto val = raw_param->evaluate({});
                 if (val.has_value()) runtime_parameters.insert({name, val.value()});
             }

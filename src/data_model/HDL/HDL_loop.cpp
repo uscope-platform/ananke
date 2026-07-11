@@ -55,9 +55,9 @@ std::shared_ptr<Parameter_value_base> assignment::get_value() const {
 void assignment::propagate_argument(const std::string &name, const std::shared_ptr<Parameter_value_base> &arg_value) {
 
     if (index.has_value()) {
-        index.value()->propagate_expression({"", "", name},arg_value);
+        index.value()->propagate_expression(qualified_identifier(name),arg_value);
     }
-    value->propagate_expression({"", "", name}, arg_value);
+    value->propagate_expression(qualified_identifier(name), arg_value);
 }
 
 assignment assignment::clone() const {
@@ -128,7 +128,7 @@ parameter_deps_t HDL_loop_metadata::get_dependencies() const {
     for(auto &a:assignments) {
         deps.merge(a.get_value()->get_dependencies());
     }
-    deps.data.erase({"","",  loop_var});
+    deps.data.erase(qualified_identifier(loop_var));
     return deps;
 
 }

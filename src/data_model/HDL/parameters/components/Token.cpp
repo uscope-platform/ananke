@@ -63,7 +63,10 @@ Token::Token(std::variant<hdl_integer, double> n, int64_t b_s) {
 parameter_deps_t Token::get_dependencies() const {
     parameter_deps_t result;
     if (is_identifier()){
-        result.data.insert({package_prefix, instance_prefix, value.get_string()});
+        qualified_identifier i(value.get_string());
+        if (!package_prefix.empty()) i.set_package_prefix({package_prefix});
+        if (!instance_prefix.empty()) i.set_instance_prefix({instance_prefix});
+        result.data.insert(i);
     }
     for (const auto &idx : array_index) {
         result.merge(idx->get_dependencies());
@@ -79,7 +82,9 @@ void Token::propagate_function(const HDL_function_def &def) {
 
 std::optional<resolved_parameter> Token::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     if (type == identifier) {
-        qualified_identifier id{package_prefix, instance_prefix, value.get_string()};
+        qualified_identifier id(value.get_string());
+        if (!package_prefix.empty()) id.set_package_prefix({package_prefix});
+        if (!instance_prefix.empty()) id.set_instance_prefix({instance_prefix});
         auto it = context.find(id);
         if (it != context.end()) {
             const auto &resolved = it->second;
@@ -275,7 +280,7 @@ bool Token::try_replace_identifier(std::shared_ptr<Parameter_value_base> &slot,
                                     const std::shared_ptr<Parameter_value_base> &value) {
     if (slot->is<Token>() && slot->as<Token>().is_identifier()) {
         auto tok_val = slot->as<Token>().get_value();
-        if (tok_val.has_value() && tok_val.value().get_string() == constant_id.name) {
+        if (tok_val.has_value() && tok_val.value().get_string() == constant_id.get_name()) {
             slot = value;
             return true;
         }

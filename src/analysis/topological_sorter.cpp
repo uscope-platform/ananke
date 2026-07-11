@@ -23,19 +23,19 @@ void topological_sorter::analyze(const Parameters_map &p, const std::map<qualifi
     for (auto &[name, parameter]:p) {
 
         auto deps_list = parameter->get_dependencies();
-        topo_map.insert({{"", "", name},{}});
+        if (!topo_map.contains(qualified_identifier(name))) topo_map[qualified_identifier(name)] = {};
         for (auto &dep:deps_list.data) {
 
             if (!context.contains(dep)) {
                 qualified_identifier effective_dep = dep;
-                if (!dep.instance.empty() && p.contains(dep.instance)) {
-                    auto sp = p.const_get(dep.instance);
+                if (!dep.get_instance().empty() && p.contains(dep.get_instance())) {
+                    auto sp = p.const_get(dep.get_instance());
                     if (sp && sp->get_type() && sp->get_type()->is<HDL_struct_type>()) {
-                        effective_dep = {"", "", dep.instance};
+                        effective_dep = qualified_identifier(dep.get_instance());
                     }
                 }
-                topo_map[effective_dep].dependents.insert({"", "", name});
-                topo_map[{"", "", name}].dependencies.insert(effective_dep);
+                topo_map[effective_dep].dependents.insert(qualified_identifier(name));
+                topo_map[qualified_identifier(name)].dependencies.insert(effective_dep);
             }
 
         }

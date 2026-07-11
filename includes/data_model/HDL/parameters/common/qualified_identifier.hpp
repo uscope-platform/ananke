@@ -18,35 +18,60 @@
 #define ANANKE_QUALIFIED_IDENTIFIER_HPP
 
 #include <string>
+#include <set>
 #include "data_model/mdarray.hpp"
 
 
-
-struct qualified_identifier {
+class qualified_identifier {
+public:
     qualified_identifier() = default;
-    qualified_identifier(const std::string &p,const std::string &i, const std::string &n) {
-        prefix = p;
-        instance = i;
-        name = n;
+
+    template <typename T>
+    qualified_identifier(std::initializer_list<T>) = delete;
+
+    explicit qualified_identifier(const std::string n) {
+        _name = n;
+        _instance = {};
+        _package_prefix = {};
+        _package_prefix = {};
     }
 
-    std::string prefix;
-    std::string instance;
-    std::string name;
+    qualified_identifier(const std::string &p, const std::string &n) {
+        if (!p.empty()) _package_prefix = {p};
+        _instance = {};
+        _name = n;
+    }
+
+    explicit qualified_identifier(const std::string &p,const std::string &i, const std::string &n) {
+        if (!p.empty()) _package_prefix = {p};
+        _instance = i;
+        _name = n;
+    }
+    void set_package_prefix(const std::vector<std::string> &p){_package_prefix = p;}
+    void set_instance_prefix(const std::vector<std::string> &i){_instance = i.back();}
+    std::string get_name() const {return _name;}
+    std::string get_instance() const {return _instance;}
+    std::vector<std::string> get_package_prefix() const {return _package_prefix;}
 
     friend bool operator==(const qualified_identifier &lhs, const qualified_identifier &rhs) {
-        return std::tie(lhs.prefix, lhs.name, lhs.instance) == std::tie(rhs.prefix, rhs.name, rhs.instance);
+        return std::tie(lhs._package_prefix, lhs._name, lhs._instance) == std::tie(rhs._package_prefix, rhs._name, rhs._instance);
     }
 
 
     bool operator<(const qualified_identifier& other) const {
-        return std::tie(prefix,instance, name) < std::tie(other.prefix,other.instance, other.name);
+        return std::tie(_package_prefix,_instance, _name) < std::tie(other._package_prefix,other._instance, other._name);
     }
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name, instance, prefix);
+        ar(_name, _instance, _package_prefix);
     }
+
+private:
+    std::vector<std::string> _package_prefix;
+    std::string _instance;
+    std::string _name;
+
 };
 
 struct parameter_deps_t {
