@@ -218,6 +218,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
 
     Parameters_map to_solve;
     for(const auto &[p_name, param]: node_parameters) {
+        auto i = p_name;
         if (node_overrides.contains(p_name)) {
             to_solve.insert(node_overrides.get(p_name));
         } else {
@@ -240,7 +241,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             if (ctx.contains(dep)) continue;
             if (!dep.get_instance().empty()) {
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);
-            } else if (!dep.get_package_prefix().empty() && dep.get_package_prefix().back().empty() && dep.get_instance().empty() && to_solve.contains(dep.get_name())) {
+            } else if (dep.get_package_prefix().empty() && dep.get_instance().empty() && to_solve.contains(dep.get_name())) {
                 continue;
             } else if(!node_overrides.contains(dep.get_name())) {
                 spdlog::warn("Parameter {}::{} is not defined in the design", dep.get_package_prefix().back(), dep.get_name());

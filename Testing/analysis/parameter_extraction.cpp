@@ -4719,7 +4719,7 @@ TEST(parameter_extraction, packed_struct_parametrized_member_width_wide) {
     EXPECT_EQ(defaults[fa_id], 1000);
 
     qualified_identifier fb_id("field_b");
-    fa_id.set_instance_prefix({"s"});
+    fb_id.set_instance_prefix({"s"});
     ASSERT_TRUE(defaults.contains(fb_id));
     EXPECT_EQ(defaults[fb_id], 50000);
 }
