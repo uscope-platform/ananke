@@ -117,14 +117,14 @@ resolved_parameter parameter_solver::resolve_instance_dependency(
     work_order &work,
     const std::shared_ptr<data_store> &d_store
 ) {
-    auto instance_name = dep.get_instance();
+    auto instance_name = dep.get_instance().back();
     std::shared_ptr<HDL_instance_AST> examined_node = work.node;
 
     auto current_ports = work.node->get_ports();
-    if (current_ports.contains(dep.get_instance())) {
-        instance_name = current_ports.at(dep.get_instance())[0].get_name();
+    if (current_ports.contains(dep.get_instance().back())) {
+        instance_name = current_ports.at(dep.get_instance().back())[0].get_name();
         examined_node = work.node->get_parent();
-    } else if (work.interfaces_map.contains(dep.get_instance())) {
+    } else if (work.interfaces_map.contains(dep.get_instance().back())) {
         resolve_interface_chain(work, d_store, examined_node, instance_name);
     } else if (examined_node) {
         examined_node = examined_node->get_parent();
@@ -138,14 +138,14 @@ resolved_parameter parameter_solver::resolve_instance_dependency(
                 if (val.has_value()) {
                     return val.value();
                 }
-                spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.get_instance(), dep.get_name());
+                spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.get_instance().back(), dep.get_name());
                 return resolved_parameter(0);
             }
         }
     }
 
     auto path = get_full_path(work.node);
-    spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.get_instance(), dep.get_name());
+    spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.get_instance().back(), dep.get_name());
     resolved_parameter value;
     value.set_undefined();
     return value;

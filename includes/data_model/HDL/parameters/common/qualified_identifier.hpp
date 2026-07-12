@@ -31,45 +31,45 @@ public:
 
     explicit qualified_identifier(const std::string n) {
         _name = n;
-        _instance = {};
+        _instance_prefix = {};
         _package_prefix = {};
         _package_prefix = {};
     }
 
     qualified_identifier(const std::string &p, const std::string &n) {
         if (!p.empty()) _package_prefix = {p};
-        _instance = {};
+        _instance_prefix = {};
         _name = n;
     }
 
     explicit qualified_identifier(const std::string &p,const std::string &i, const std::string &n) {
         if (!p.empty()) _package_prefix = {p};
-        _instance = i;
+        if (!i.empty()) _instance_prefix = {i};
         _name = n;
     }
     void set_package_prefix(const std::vector<std::string> &p){_package_prefix = p;}
-    void set_instance_prefix(const std::vector<std::string> &i){_instance = i.back();}
+    void set_instance_prefix(const std::vector<std::string> &i){_instance_prefix = i;}
     std::string get_name() const {return _name;}
-    std::string get_instance() const {return _instance;}
+    std::vector<std::string>  get_instance() const {return _instance_prefix;}
     std::vector<std::string> get_package_prefix() const {return _package_prefix;}
 
     friend bool operator==(const qualified_identifier &lhs, const qualified_identifier &rhs) {
-        return std::tie(lhs._package_prefix, lhs._name, lhs._instance) == std::tie(rhs._package_prefix, rhs._name, rhs._instance);
+        return std::tie(lhs._package_prefix, lhs._name, lhs._instance_prefix) == std::tie(rhs._package_prefix, rhs._name, rhs._instance_prefix);
     }
 
 
     bool operator<(const qualified_identifier& other) const {
-        return std::tie(_package_prefix,_instance, _name) < std::tie(other._package_prefix,other._instance, other._name);
+        return std::tie(_package_prefix,_instance_prefix, _name) < std::tie(other._package_prefix,other._instance_prefix, other._name);
     }
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(_name, _instance, _package_prefix);
+        ar(_name, _instance_prefix, _package_prefix);
     }
 
 private:
     std::vector<std::string> _package_prefix;
-    std::string _instance;
+    std::vector<std::string> _instance_prefix;
     std::string _name;
 
 };
