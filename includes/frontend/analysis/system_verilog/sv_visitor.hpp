@@ -233,9 +233,7 @@ private:
     bool in_anonymous_struct = false;
     std::shared_ptr<hdl_type> pending_anon_struct_type;
 
-    std::string package_prefix;
     std::string instance_prefix;
-    std::string package_item;
     std::string instance_item;
 };
 

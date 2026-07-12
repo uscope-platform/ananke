@@ -81,6 +81,7 @@ target_sources(ananke_lib
     data_model/Script.cpp
     data_model/Constraints.cpp
         frontend/analysis/system_verilog/sv_visitor.cpp
+        frontend/analysis/system_verilog/sv_parsing_helpers.cpp
         frontend/analysis/system_verilog/sv_analyzer.cpp
     frontend/Repository_walker.cpp
         frontend/analysis/vhdl/vhdl_analyzer.cpp

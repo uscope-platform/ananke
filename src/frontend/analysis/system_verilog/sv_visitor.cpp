@@ -17,6 +17,7 @@
 #include <ctre.hpp>
 
 #include "frontend/analysis/system_verilog/sv_visitor.hpp"
+#include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 
 sv_visitor::sv_visitor(std::string p) {
     path = std::move(p);
@@ -239,16 +240,17 @@ void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
             params_factory.start_function_call(call_name);
         }
         if(ctx->data_type()){
-            if(!package_prefix.empty()){
-                Token ec(package_item, Token::get_type(package_item));
-                ec.set_package_prefix(package_prefix);
+            auto scoped_ctx = ctx->data_type()->package_or_class_scoped_path();
+            if (scoped_ctx && !scoped_ctx->DOUBLE_COLON().empty()) {
+                auto qi = sv_parsing_helpers::parse_qualified_identifier(scoped_ctx);
+                Token ec(qi.get_name(), Token::get_type(qi.get_name()));
+                if (!qi.get_package_prefix().empty())
+                    ec.set_package_prefix(qi.get_package_prefix().back());
                 if (f_factory.is_active()) {
                     f_factory.add_component(ec);
-                }else {
+                } else {
                     params_factory.add_component(ec);
                 }
-                package_prefix.clear();
-                package_item.clear();
             } else{
                 auto text = ctx->data_type()->getText();
                 if (f_factory.is_active()) {
@@ -358,9 +360,10 @@ void sv_visitor::exitPackage_declaration(sv2017::Package_declarationContext *ctx
 
 void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scoped_pathContext *ctx) {
     if(!ctx->DOUBLE_COLON().empty()){
-        package_prefix = ctx->package_or_class_scoped_path_item()[0]->identifier()->getText();
-        package_item = ctx->package_or_class_scoped_path_item()[1]->identifier()->getText();
-        HDL_instance dep(package_item, package_prefix, package);
+        auto qi = sv_parsing_helpers::parse_qualified_identifier(ctx);
+        auto pkg_prefix = qi.get_package_prefix();
+        std::string prefix_str = pkg_prefix.empty() ? "" : pkg_prefix.back();
+        HDL_instance dep(qi.get_name(), prefix_str, package);
         modules_factory.add_instance(dep);
     }
 }
@@ -389,8 +392,6 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
     }
     type_engine.start_range();
     current_parameter = ctx->list_of_param_assignments()[0].param_assignment()[0]->identifier()->getText();
-    package_prefix.clear();
-    package_item.clear();
 }
 
 void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
@@ -467,11 +468,12 @@ void sv_visitor::enterPrimaryPath(sv2017::PrimaryPathContext *ctx) {
 void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
     Token ec;
 
-    if(!package_prefix.empty()) {
-        ec = Token(package_item, Token::get_type(package_item));
-        ec.set_package_prefix(package_prefix);
-        package_prefix.clear();
-        package_item.clear();
+    auto scoped_ctx = ctx->package_or_class_scoped_path();
+    if (scoped_ctx && !scoped_ctx->DOUBLE_COLON().empty()) {
+        auto qi = sv_parsing_helpers::parse_qualified_identifier(scoped_ctx);
+        ec = Token(qi.get_name(), Token::get_type(qi.get_name()));
+        if (!qi.get_package_prefix().empty())
+            ec.set_package_prefix(qi.get_package_prefix().back());
     } else if (!instance_prefix.empty()){
         ec = Token(instance_item, Token::get_type(instance_item));
         ec.set_instance_prefix(instance_prefix);
@@ -679,17 +681,9 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
         params_factory.start_packed_assignment();
         params_factory.stop_packed_assignment();
     } else {
-        if(!package_prefix.empty()){
-            Token ec(package_item, Token::get_type(package_item));
-            ec.set_package_prefix(package_prefix);
-            params_factory.add_component(ec);
-            package_prefix.clear();
-            package_item.clear();
-        } else{
-            if (ctx->constant_param_expression()) {
-                auto val = ctx->constant_param_expression()->getText();
-                params_factory.add_component(Token(val, Token::get_type(val)));
-            }
+        if (ctx->constant_param_expression()) {
+            auto val = ctx->constant_param_expression()->getText();
+            params_factory.add_component(Token(val, Token::get_type(val)));
         }
     }
     if (!in_class) {
@@ -951,8 +945,6 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
         params_factory.set_type(implicit);
         type_engine.set_base_type(implicit);
     }
-    package_prefix.clear();
-    package_item.clear();
 }
 
 void sv_visitor::exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
