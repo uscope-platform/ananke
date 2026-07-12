@@ -67,6 +67,18 @@ public:
         ar(_name, _instance_prefix, _package_prefix);
     }
 
+    std::string print() const {
+        std::string ret;
+        for (auto &prefix: _package_prefix) {
+            ret += prefix + "::";
+        }
+        for (auto &inst: _instance_prefix) {
+            ret += inst + ".";
+        }
+        ret += _name;
+        return ret;
+    }
+
 private:
     std::vector<std::string> _package_prefix;
     std::vector<std::string> _instance_prefix;

@@ -14,7 +14,7 @@ target_sources(ananke_lib
     analysis/data_acquisition_analysis.cpp
     analysis/control_bus_analysis.cpp
     analysis/type_cast_engine.cpp
-        frontend/analysis/system_verilog/type_engine.cpp
+    frontend/analysis/system_verilog/type_engine.cpp
     analysis/loop_solver.cpp
     analysis/proxy_bus_analysis.cpp
     Backend/Dependency_resolver.cpp
@@ -50,6 +50,9 @@ target_sources(ananke_lib
     data_model/HDL/parameters/components/Replication.cpp
     data_model/HDL/parameters/components/Cast.cpp
     data_model/HDL/parameters/components/Token.cpp
+        data_model/HDL/parameters/components/token/Identifier_token.cpp
+        data_model/HDL/parameters/components/token/Numeric_token.cpp
+        data_model/HDL/parameters/components/token/String_token.cpp
     data_model/HDL/parameters/components/HDL_function_def.cpp
     data_model/HDL/parameters/components/HDL_function_call.cpp
     data_model/HDL/factories/HDL_functions_factory.cpp
@@ -80,17 +83,17 @@ target_sources(ananke_lib
     data_model/Depfile.cpp
     data_model/Script.cpp
     data_model/Constraints.cpp
-        frontend/analysis/system_verilog/sv_visitor.cpp
-        frontend/analysis/system_verilog/sv_parsing_helpers.cpp
-        frontend/analysis/system_verilog/sv_analyzer.cpp
+    frontend/analysis/system_verilog/sv_visitor.cpp
+    frontend/analysis/system_verilog/sv_parsing_helpers.cpp
+    frontend/analysis/system_verilog/sv_analyzer.cpp
     frontend/Repository_walker.cpp
-        frontend/analysis/vhdl/vhdl_analyzer.cpp
-        frontend/analysis/system_verilog/documentation_analyzer.cpp
-        frontend/analysis/vhdl/vhdl_visitor.cpp
-        frontend/analysis/system_verilog/preprocessor/sv_preprocessor.cpp
-        frontend/analysis/system_verilog/preprocessor/source_mapper.cpp
-        frontend/analysis/system_verilog/preprocessor/conditional_solver.cpp
-        frontend/analysis/system_verilog/preprocessor/macro_processor.cpp
+    frontend/analysis/vhdl/vhdl_analyzer.cpp
+    frontend/analysis/system_verilog/documentation_analyzer.cpp
+    frontend/analysis/vhdl/vhdl_visitor.cpp
+    frontend/analysis/system_verilog/preprocessor/sv_preprocessor.cpp
+    frontend/analysis/system_verilog/preprocessor/source_mapper.cpp
+    frontend/analysis/system_verilog/preprocessor/conditional_solver.cpp
+    frontend/analysis/system_verilog/preprocessor/macro_processor.cpp
 )
 
 target_link_libraries(ananke_lib PUBLIC
