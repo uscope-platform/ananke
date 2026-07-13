@@ -66,10 +66,14 @@ void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
         }
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
+        if (!consumer_stack.empty()) {
+            consumer_stack.top()->consume(result);
+        } else {
             current_resource.set_type(current_type);
             expr_factory.clear_expression();
             current_resource.set_raw_value(result);
         }
+    }
 }
 
 

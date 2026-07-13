@@ -4609,6 +4609,54 @@ TEST(parameter_extraction, struct_typed_parameter) {
 }
 
 
+
+
+TEST(parameter_extraction, nested_struct_parameter) {
+    auto test_pattern = R"(
+        module test_mod #()();
+
+            typedef struct packed {
+              reg [7:0] field_a;
+              reg [7:0] field_b;
+            } inner_struct;
+
+            typedef struct packed {
+                inner_struct nested;
+              reg [15:0] field_c;
+            } outer_struct;
+
+            parameter outer_struct struct_param = '{'{8'hCA, 8'hFE},16'hBEBE};
+
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern)[0];
+
+    auto parameters = resource.get_parameters();
+    ASSERT_TRUE(parameters.contains("struct_param"));
+
+    auto p = parameters.get("struct_param");
+
+
+    ASSERT_TRUE(p->get_type()->is<HDL_struct_type>());
+    ASSERT_EQ(p->get_type()->as<HDL_struct_type>().member[0].name, "nested");
+    ASSERT_TRUE(p->get_type()->as<HDL_struct_type>().member[0].type->is<HDL_struct_type>());
+
+    Concatenation outer_c, inner_c;
+    inner_c.add_component(std::make_shared<Numeric_token>("8'hCA"));
+    inner_c.add_component(std::make_shared<Numeric_token>("8'hFE"));
+    outer_c.add_component(std::make_shared<Concatenation>(inner_c));
+    outer_c.add_component(std::make_shared<Numeric_token>("16'hBEBE"));
+    EXPECT_TRUE(p->get_expression()->is<Concatenation>());
+    EXPECT_EQ(p->get_expression()->as<Concatenation>(), outer_c);
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    qualified_identifier check_id = qualified_identifier("struct_param");
+    EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(3405692606));
+}
+
+
 TEST(parameter_extraction, packed_struct_access_initialization) {
     auto test_pattern = R"(
         module test_mod #()();
