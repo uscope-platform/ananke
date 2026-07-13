@@ -31,15 +31,15 @@ TEST(Initialization_list, get_values_1d_unpacked)  {
     HDL_simple_type param_type;
 
     param_type.add_dimension({
-        std::make_shared<Token>("4", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("4"),
+        std::make_shared<Numeric_token>("0"),
     false});
     Concatenation c;
-    c.add_component(std::make_shared<Token>("5", Token::number));
-    c.add_component(std::make_shared<Token>("3", Token::number));
-    c.add_component(std::make_shared<Token>("4", Token::number));
-    c.add_component(std::make_shared<Token>("6", Token::number));
-    c.add_component(std::make_shared<Token>("69", Token::number));
+    c.add_component(std::make_shared<Numeric_token>("5"));
+    c.add_component(std::make_shared<Numeric_token>("3"));
+    c.add_component(std::make_shared<Numeric_token>("4"));
+    c.add_component(std::make_shared<Numeric_token>("6"));
+    c.add_component(std::make_shared<Numeric_token>("69"));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -60,25 +60,25 @@ TEST(Initialization_list, get_values_2d_unpacked) {
     HDL_simple_type param_type;
 
     param_type.add_dimension({
-        std::make_shared<Token>("2", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("2"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
     param_type.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
     Concatenation outer_c;
     Concatenation c;
-    c.add_component(std::make_shared<Token>("5", Token::number));
-    c.add_component(std::make_shared<Token>("3", Token::number));
-    c.add_component(std::make_shared<Token>("4", Token::number));
+    c.add_component(std::make_shared<Numeric_token>("5"));
+    c.add_component(std::make_shared<Numeric_token>("3"));
+    c.add_component(std::make_shared<Numeric_token>("4"));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     c = Concatenation();
-    c.add_component(std::make_shared<Token>("6", Token::number));
-    c.add_component(std::make_shared<Token>("69", Token::number));
-    c.add_component(std::make_shared<Token>("54", Token::number));
+    c.add_component(std::make_shared<Numeric_token>("6"));
+    c.add_component(std::make_shared<Numeric_token>("69"));
+    c.add_component(std::make_shared<Numeric_token>("54"));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(outer_c));
@@ -101,42 +101,42 @@ TEST(Initialization_list, get_values_3d_unpacked) {
     HDL_simple_type param_type;
 
     param_type.add_dimension({
-        std::make_shared<Token>("2", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("2"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
     param_type.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
     param_type.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
 
     Concatenation c_inner, c_outer, c_top;
-    c_inner.add_component(std::make_shared<Token>("5", Token::number));
-    c_inner.add_component(std::make_shared<Token>("3", Token::number));
-    c_inner.add_component(std::make_shared<Token>("4", Token::number));
+    c_inner.add_component(std::make_shared<Numeric_token>("5"));
+    c_inner.add_component(std::make_shared<Numeric_token>("3"));
+    c_inner.add_component(std::make_shared<Numeric_token>("4"));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_inner = Concatenation();
-    c_inner.add_component(std::make_shared<Token>("6", Token::number));
-    c_inner.add_component(std::make_shared<Token>("69", Token::number));
-    c_inner.add_component(std::make_shared<Token>("54", Token::number));
+    c_inner.add_component(std::make_shared<Numeric_token>("6"));
+    c_inner.add_component(std::make_shared<Numeric_token>("69"));
+    c_inner.add_component(std::make_shared<Numeric_token>("54"));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
     c_inner = Concatenation();
     c_outer = Concatenation();
-    c_inner.add_component(std::make_shared<Token>("57", Token::number));
-    c_inner.add_component(std::make_shared<Token>("13", Token::number));
-    c_inner.add_component(std::make_shared<Token>("24", Token::number));
+    c_inner.add_component(std::make_shared<Numeric_token>("57"));
+    c_inner.add_component(std::make_shared<Numeric_token>("13"));
+    c_inner.add_component(std::make_shared<Numeric_token>("24"));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_inner = Concatenation();
-    c_inner.add_component(std::make_shared<Token>("43", Token::number));
-    c_inner.add_component(std::make_shared<Token>("82", Token::number));
-    c_inner.add_component(std::make_shared<Token>("11", Token::number));
+    c_inner.add_component(std::make_shared<Numeric_token>("43"));
+    c_inner.add_component(std::make_shared<Numeric_token>("82"));
+    c_inner.add_component(std::make_shared<Numeric_token>("11"));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
 
@@ -161,19 +161,19 @@ TEST(Initialization_list, packed_concatenation) {
     HDL_simple_type param_type;
 
     param_type.add_dimension({
-        std::make_shared<Token>("7", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("7"),
+        std::make_shared<Numeric_token>("0"),
         true
     });
     Concatenation c;
-    c.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c.add_component(std::make_shared<Numeric_token>("1'b1"));
 
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(c));
@@ -193,41 +193,41 @@ TEST(Initialization_list, get_values_1d_packed) {
     HDL_parameter p("param");
     HDL_simple_type param_type;
     param_type.add_dimension({
-        std::make_shared<Token>("2", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("2"),
+        std::make_shared<Numeric_token>("0"),
         true
     });
 
     param_type.add_dimension({
-        std::make_shared<Token>("4", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("4"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
 
     Concatenation inner_c, outer_c;
-    inner_c.add_component(std::make_shared<Token>("1'b1", Token::number));
-    inner_c.add_component(std::make_shared<Token>("1'b0", Token::number));
-    inner_c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b1"));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b0"));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b1"));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c = Concatenation();
-    inner_c.add_component(std::make_shared<Token>("1'b0", Token::number));
-    inner_c.add_component(std::make_shared<Token>("1'b1", Token::number));
-    inner_c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b0"));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b1"));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b0"));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c = Concatenation();
-    inner_c.add_component(std::make_shared<Token>("1'b1", Token::number));
-    inner_c.add_component(std::make_shared<Token>("1'b0", Token::number));
-    inner_c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b1"));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b0"));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b1"));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c = Concatenation();
-    inner_c.add_component(std::make_shared<Token>("1'b1", Token::number));
-    inner_c.add_component(std::make_shared<Token>("1'b1", Token::number));
-    inner_c.add_component(std::make_shared<Token>("1'b0", Token::number));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b1"));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b1"));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b0"));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     inner_c = Concatenation();
-    inner_c.add_component(std::make_shared<Token>("1'b0", Token::number));
-    inner_c.add_component(std::make_shared<Token>("1'b0", Token::number));
-    inner_c.add_component(std::make_shared<Token>("1'b1", Token::number));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b0"));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b0"));
+    inner_c.add_component(std::make_shared<Numeric_token>("1'b1"));
     outer_c.add_component(std::make_shared<Concatenation>(inner_c));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(outer_c));
@@ -250,47 +250,47 @@ TEST(Initialization_list, get_values_2d_packed) {
     HDL_parameter p("param");
     HDL_simple_type param_type;
     param_type.add_dimension({
-        std::make_shared<Token>("2", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("2"),
+        std::make_shared<Numeric_token>("0"),
         true
     });
 
     param_type.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
 
 
     param_type.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
 
 
 
     Concatenation c_inner, c_outer, c_top;
-    c_inner.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c_inner.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c_inner.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b1"));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_inner = Concatenation();
-    c_inner.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c_inner.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c_inner.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b0"));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
     c_inner = Concatenation();
     c_outer = Concatenation();
-    c_inner.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c_inner.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c_inner.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b1"));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_inner = Concatenation();
-    c_inner.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c_inner.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c_inner.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c_inner.add_component(std::make_shared<Numeric_token>("1'b0"));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
@@ -314,69 +314,69 @@ TEST(Initialization_list, get_values_3d_packed) {
     HDL_parameter p("param");
     HDL_simple_type param_type;
     param_type.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number), true
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"), true
         });
 
     param_type.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
 
 
     param_type.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
 
     param_type.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
 
 
     Concatenation c_pack, c_inner, c_outer,c_top;
-    c_pack.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c_pack.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b1"));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_pack = Concatenation();
-    c_pack.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c_pack.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b0"));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_pack = Concatenation();
     c_inner = Concatenation();
-    c_pack.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c_pack.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b0"));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_pack = Concatenation();
-    c_pack.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c_pack.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b1"));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
     c_pack = Concatenation();
     c_inner = Concatenation();
     c_outer = Concatenation();
-    c_pack.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c_pack.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b1"));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_pack = Concatenation();
-    c_pack.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c_pack.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b0"));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_pack = Concatenation();
     c_inner = Concatenation();
-    c_pack.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c_pack.add_component(std::make_shared<Token>("1'b0", Token::number));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b0"));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_pack = Concatenation();
-    c_pack.add_component(std::make_shared<Token>("1'b0", Token::number));
-    c_pack.add_component(std::make_shared<Token>("1'b1", Token::number));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b0"));
+    c_pack.add_component(std::make_shared<Numeric_token>("1'b1"));
     c_inner.add_component(std::make_shared<Concatenation>(c_pack));
     c_outer.add_component(std::make_shared<Concatenation>(c_inner));
     c_top.add_component(std::make_shared<Concatenation>(c_outer));
@@ -415,19 +415,19 @@ TEST(Initialization_list, get_values_concatenation_initialization) {
     HDL_parameter p("param");
     HDL_simple_type param_type;
     param_type.add_dimension({
-        std::make_shared<Token>("31", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("31"),
+        std::make_shared<Numeric_token>("0"),
         true
     });
     param_type.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
 
     Concatenation c;
-    c.add_component(std::make_shared<Token>("31", Token::number));
-    c.add_component(std::make_shared<Token>("43", Token::number));
+    c.add_component(std::make_shared<Numeric_token>("31"));
+    c.add_component(std::make_shared<Numeric_token>("43"));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(c));
 
@@ -447,33 +447,33 @@ TEST(Initialization_list, get_values_1d_mixed_packed_unpacked) {
     HDL_simple_type param_type;
     Concatenation outer_c;
     param_type.add_dimension({
-        std::make_shared<Token>("31", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("31"),
+        std::make_shared<Numeric_token>("0"),
         true
     });
     param_type.add_dimension({
-        std::make_shared<Token>("4", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("4"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
-    outer_c.add_component(std::make_shared<Token>("3", Token::number));
-    outer_c.add_component(std::make_shared<Token>("3", Token::number));
-    outer_c.add_component(std::make_shared<Token>("3", Token::number));
+    outer_c.add_component(std::make_shared<Numeric_token>("3"));
+    outer_c.add_component(std::make_shared<Numeric_token>("3"));
+    outer_c.add_component(std::make_shared<Numeric_token>("3"));
 
     Concatenation c;
-    c.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c.add_component(std::make_shared<Token>("3'b0", Token::number));
-    c.add_component(std::make_shared<Token>("1'b1", Token::number));
-    c.add_component(std::make_shared<Token>("5'b0", Token::number));
-    c.add_component(std::make_shared<Token>("4'hE", Token::number));
-    c.add_component(std::make_shared<Token>("4'b0", Token::number));
+    c.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c.add_component(std::make_shared<Numeric_token>("3'b0"));
+    c.add_component(std::make_shared<Numeric_token>("1'b1"));
+    c.add_component(std::make_shared<Numeric_token>("5'b0"));
+    c.add_component(std::make_shared<Numeric_token>("4'hE"));
+    c.add_component(std::make_shared<Numeric_token>("4'b0"));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     c = Concatenation();
-    c.add_component(std::make_shared<Token>("2'h2", Token::number));
-    c.add_component(std::make_shared<Token>("2'b1", Token::number));
-    c.add_component(std::make_shared<Token>("2'h3", Token::number));
-    c.add_component(std::make_shared<Token>("4'hE", Token::number));
-    c.add_component(std::make_shared<Token>("4'b0", Token::number));
+    c.add_component(std::make_shared<Numeric_token>("2'h2"));
+    c.add_component(std::make_shared<Numeric_token>("2'b1"));
+    c.add_component(std::make_shared<Numeric_token>("2'h3"));
+    c.add_component(std::make_shared<Numeric_token>("4'hE"));
+    c.add_component(std::make_shared<Numeric_token>("4'b0"));
     outer_c.add_component(std::make_shared<Concatenation>(c));
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(outer_c));

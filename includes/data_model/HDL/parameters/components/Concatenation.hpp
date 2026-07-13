@@ -18,7 +18,6 @@
 #define ANANKE_CONCATENATION_HPP
 
 #include "Parameter_value_base.hpp"
-#include "data_model/HDL/parameters/components/Token.hpp"
 #include <cereal/types/vector.hpp>
 
 class Concatenation : public Parameter_value_base {

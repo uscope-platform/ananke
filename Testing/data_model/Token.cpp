@@ -18,15 +18,15 @@
 #include <gtest/gtest.h>
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
-#include "data_model/HDL/parameters/components/Token.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 
 
 
 
 TEST(Token, sized_binary_sv_constant_parsing){
-    Token ec("8'b10110", Token::number);
+    Numeric_token ec("8'b10110");
 
-    Token check;
+    Numeric_token check;
     check.set_binary_size(8);
     check.set_value(22);
     EXPECT_EQ(check, ec);
@@ -34,9 +34,9 @@ TEST(Token, sized_binary_sv_constant_parsing){
 
 
 TEST(Token, sized_octal_sv_constant_parsing){
-    Token ec("12'o547", Token::number);
+    Numeric_token ec("12'o547");
 
-    Token check;
+    Numeric_token check;
     check.set_binary_size(12);
     check.set_value(359);
     EXPECT_EQ(check, ec);
@@ -44,9 +44,9 @@ TEST(Token, sized_octal_sv_constant_parsing){
 
 
 TEST(Token, sized_decimal_sv_constant_parsing){
-    Token ec("14'd1542", Token::number);
+    Numeric_token ec("14'd1542");
 
-    Token check;
+    Numeric_token check;
     check.set_binary_size(14);
     check.set_value(1542);
     EXPECT_EQ(check, ec);
@@ -54,9 +54,9 @@ TEST(Token, sized_decimal_sv_constant_parsing){
 
 
 TEST(Token, sized_hexadecimal_sv_constant_parsing){
-    Token ec("20'hCA54", Token::number);
+    Numeric_token ec("20'hCA54");
 
-    Token check;
+    Numeric_token check;
     check.set_binary_size(20);
     check.set_value(51796);
     EXPECT_EQ(check, ec);
@@ -66,9 +66,9 @@ TEST(Token, sized_hexadecimal_sv_constant_parsing){
 
 
 TEST(Token, unsized_binary_sv_constant_parsing){
-    Token ec("'b10110", Token::number);
+    Numeric_token ec("'b10110");
 
-    Token check;
+    Numeric_token check;
     check.set_binary_size(5);
     check.set_value(22);
     EXPECT_EQ(check, ec);
@@ -77,10 +77,10 @@ TEST(Token, unsized_binary_sv_constant_parsing){
 
 
 TEST(Token, unsized_octal_sv_constant_parsing){
-    Token ec("'o547", Token::number);
+    Numeric_token ec("'o547");
 
 
-    Token check;
+    Numeric_token check;
     check.set_binary_size(9);
     check.set_value(359);
     EXPECT_EQ(check, ec);
@@ -89,9 +89,9 @@ TEST(Token, unsized_octal_sv_constant_parsing){
 
 
 TEST(Token, unsized_decimal_sv_constant_parsing){
-    Token ec("'d1542", Token::number);
+    Numeric_token ec("'d1542");
 
-    Token check;
+    Numeric_token check;
     check.set_binary_size(11);
     check.set_value(1542);
     EXPECT_EQ(check, ec);
@@ -100,35 +100,20 @@ TEST(Token, unsized_decimal_sv_constant_parsing){
 
 
 TEST(Token, unsized_hexadecimal_sv_constant_parsing){
-    Token ec("'hCA54", Token::number);
+    Numeric_token ec("'hCA54");
 
 
-    Token check;
+    Numeric_token check;
     check.set_binary_size(16);
     check.set_value(51796);
     EXPECT_EQ(check, ec);
 
 }
 
-
-TEST(Token, string){
-    Token ec("\"FALSE\"", Token::string);
-
-    ASSERT_EQ(ec.get_value().value().get_string(), "\"FALSE\"");
-}
-
-
-TEST(Token, identifier){
-    Token ec("FALSE", Token::identifier);
-
-    ASSERT_EQ(ec.get_value().value().get_string(), "FALSE");
-}
-
-
 TEST(Token, signed_sized_hex_with_separator){
-    Token ec("-8'sh1_F", Token::number);
+    Numeric_token ec("-8'sh1_F");
 
-    Token check;
+    Numeric_token check;
     check.set_binary_size(8);
     hdl_integer i;
     i.set_value(31);
@@ -142,14 +127,14 @@ TEST(Token, signed_sized_hex_with_separator){
 
 TEST(Token, wide_input_decimal_processing) {
     auto test_str = "19446743180356354048";
-    Token test_token(test_str, Token::number);
+    Numeric_token test_token(test_str);
 
     auto val = test_token.get_value();
 
     ASSERT_TRUE(val.has_value());
     ASSERT_TRUE(val.value().is_integer());
 
-    Token check;
+    Numeric_token check;
     hdl_integer check_val;
     check_val.set_value(int1024_t(test_str));
     check_val.set_signed(false);
@@ -160,7 +145,7 @@ TEST(Token, wide_input_decimal_processing) {
 
 TEST(Token, narrow_input_zero_padded) {
 
-    Token test_token("00099974318035635404", Token::number);
+    Numeric_token test_token("00099974318035635404");
 
     auto val = test_token.get_value();
 
@@ -172,14 +157,14 @@ TEST(Token, narrow_input_zero_padded) {
 
 TEST(Token, wide_input_sized_processing) {
 
-    Token test_token("72'hCAFEBEBEDEADBEEFCAFE", Token::number);
+    Numeric_token test_token("72'hCAFEBEBEDEADBEEFCAFE");
 
     auto val = test_token.get_value();
 
     ASSERT_TRUE(val.has_value());
     ASSERT_TRUE(val.value().is_integer());
 
-    Token check;
+    Numeric_token check;
     hdl_integer check_val;
     check_val.set_value(int1024_t("0xCAFEBEBEDEADBEEFCAFE"));
     check_val.set_signed(false);
@@ -190,14 +175,14 @@ TEST(Token, wide_input_sized_processing) {
 
 TEST(Token, wide_input_auto_sized_processing) {
 
-    Token test_token("'hCAFEBEBEDEADBEEFCAFE", Token::number);
+    Numeric_token test_token("'hCAFEBEBEDEADBEEFCAFE");
 
     auto val = test_token.get_value();
 
     ASSERT_TRUE(val.has_value());
     ASSERT_TRUE(val.value().is_integer());
 
-    Token check;
+    Numeric_token check;
     hdl_integer check_val;
     check_val.set_value(int1024_t("0xCAFEBEBEDEADBEEFCAFE"));
     check_val.set_signed(false);

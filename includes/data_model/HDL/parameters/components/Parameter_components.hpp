@@ -26,6 +26,5 @@
 #include "token/Identifier_token.hpp"
 #include "token/Numeric_token.hpp"
 #include "token/String_token.hpp"
-#include "data_model/HDL/parameters/components/Token.hpp"
 
 #endif //ANANKE_PARAMETER_COMPONENTS_HPP
