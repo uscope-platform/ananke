@@ -748,8 +748,8 @@ TEST(parameter_processing, package_function_called_from_module_and_typedef) {
         endpackage
 
         package test_pkg_2;
-            function integer build_config();
-                CALC = 42;
+            function test_pkg::test_type build_config();
+                build_config = 42;
             endfunction
 
         endpackage
@@ -790,6 +790,7 @@ TEST(parameter_processing, package_function_called_from_module_and_typedef) {
         ctx[qualified_identifier("test_pkg", id.get_name())] = val;
     }
 
+    parameter_solver::propagate_types(mod, d_store);
     parameter_solver::propagate_functions(mod, d_store);
     auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
     auto solve_param = solved.at(qualified_identifier("RESULT")).get_integer();
