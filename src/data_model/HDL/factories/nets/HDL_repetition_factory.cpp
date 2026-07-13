@@ -27,7 +27,7 @@ void HDL_repetition_factory::stop_repetition() {
     phase = size_phase;
 }
 
-void HDL_repetition_factory::add_component(const std::shared_ptr<Parameter_value_base> &tok) {
+void HDL_repetition_factory::add_component(const std::shared_ptr<Expression_base> &tok) {
     if (!current_expression.get_lhs()) {
         current_expression.set_lhs(tok);
     } else if (current_expression.get_lhs() && !current_expression.get_rhs()) {

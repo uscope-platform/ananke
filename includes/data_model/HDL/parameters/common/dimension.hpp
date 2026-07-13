@@ -17,11 +17,11 @@
 #ifndef ANANKE_DIMENSION_HPP
 #define ANANKE_DIMENSION_HPP
 
-#include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
+#include "data_model/HDL/parameters/components/Expression_base.hpp"
 
 typedef struct dims_struct{
-    std::shared_ptr<Parameter_value_base> first_bound;
-    std::shared_ptr<Parameter_value_base> second_bound;
+    std::shared_ptr<Expression_base> first_bound;
+    std::shared_ptr<Expression_base> second_bound;
     bool packed;
 
     template<class Archive>

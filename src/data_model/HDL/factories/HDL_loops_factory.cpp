@@ -54,7 +54,7 @@ std::vector<HDL_instance> HDL_loops_factory::get_instances() {
     return repeated_instances;
 }
 
-void HDL_loops_factory:: add_component(const std::shared_ptr<Parameter_value_base> &c) {
+void HDL_loops_factory:: add_component(const std::shared_ptr<Expression_base> &c) {
     if (loop_phase == body) {
         if (in_body_bit_selection) {
             body_expr_factory.add_component(c);

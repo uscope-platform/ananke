@@ -26,7 +26,7 @@ void function_calls_factory::set_package_prefix(const std::string &p) {
 }
 
 
-void function_calls_factory::consume(const std::shared_ptr<Parameter_value_base> &arg) {
+void function_calls_factory::consume(const std::shared_ptr<Expression_base> &arg) {
     new_call.add_argument(arg);
 }
 
@@ -34,7 +34,7 @@ bool function_calls_factory::active() const {
     return state != build_phase::inactive;
 }
 
-std::shared_ptr<Parameter_value_base> function_calls_factory::result() {
+std::shared_ptr<Expression_base> function_calls_factory::result() {
     auto call = std::make_shared<HDL_function_call>(new_call);
     new_call = HDL_function_call();
     return call;

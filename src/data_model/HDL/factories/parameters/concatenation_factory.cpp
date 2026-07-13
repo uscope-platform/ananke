@@ -25,7 +25,7 @@ void concatenation_factory::set_default_init() {
     new_concatenation.set_default_init();
 }
 
-void concatenation_factory::consume(const std::shared_ptr<Parameter_value_base> &expr) {
+void concatenation_factory::consume(const std::shared_ptr<Expression_base> &expr) {
     new_concatenation.add_component(expr);
 }
 
@@ -33,7 +33,7 @@ bool concatenation_factory::active() const {
  return factory_active;
 }
 
-std::shared_ptr<Parameter_value_base> concatenation_factory::result() {
+std::shared_ptr<Expression_base> concatenation_factory::result() {
     return std::make_shared<Concatenation>(new_concatenation);
 }
 

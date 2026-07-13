@@ -27,15 +27,15 @@ public:
     void open_range();
     void close_range();
     void advance_stage();
-    void add_expression(const std::shared_ptr<Parameter_value_base>  &e);
+    void add_expression(const std::shared_ptr<Expression_base>  &e);
     void stop();
     void advance_range();
     void clear();
     [[nodiscard]] bool active()const override {return is_active;}
     [[nodiscard]] std::pair<std::vector<dimension_t>,std::vector<dimension_t>> get_dimensions() const;
 
-    void consume(const std::shared_ptr<Parameter_value_base>& v) override;
-    std::shared_ptr<Parameter_value_base> result() override {return nullptr;}
+    void consume(const std::shared_ptr<Expression_base>& v) override;
+    std::shared_ptr<Expression_base> result() override {return nullptr;}
 
 private:
     enum dimensions_stage{

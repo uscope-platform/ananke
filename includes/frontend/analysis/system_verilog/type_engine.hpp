@@ -54,7 +54,7 @@ public:
     void advance_range();
 
     void start_expression();
-    void add_component(const std::shared_ptr<Parameter_value_base> &c);
+    void add_component(const std::shared_ptr<Expression_base> &c);
     void stop_expression();
 
     [[nodiscard]] bool active() const { return kind != simple_type; }

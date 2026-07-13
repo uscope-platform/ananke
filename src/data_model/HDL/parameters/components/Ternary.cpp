@@ -20,7 +20,7 @@
 #include <cereal/archives/binary.hpp>
 
 CEREAL_REGISTER_TYPE(Ternary)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Ternary)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Ternary)
 
 
 parameter_deps_t Ternary::get_dependencies() const {
@@ -34,7 +34,7 @@ parameter_deps_t Ternary::get_dependencies() const {
 
 
 void Ternary::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Parameter_value_base> &value) {
+    const std::shared_ptr<Expression_base> &value) {
     condition->propagate_expression(constant_id, value);
     true_value->propagate_expression(constant_id, value);
     false_value->propagate_expression(constant_id, value);
@@ -62,7 +62,7 @@ std::string Ternary::print() const {
 }
 
 
-bool Ternary::isEqual(const Parameter_value_base &other) const {
+bool Ternary::isEqual(const Expression_base &other) const {
         const auto& rhs = static_cast<const Ternary&>(other);
 
     bool ret_val = true;

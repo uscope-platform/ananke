@@ -26,9 +26,9 @@ public:
 
     [[nodiscard]] bool is_assignment_context() const;
 
-    void consume(const std::shared_ptr<Parameter_value_base>& v) override;
+    void consume(const std::shared_ptr<Expression_base>& v) override;
     bool active() const override;
-    std::shared_ptr<Parameter_value_base> result() override;
+    std::shared_ptr<Expression_base> result() override;
 
 private:
     Replication new_replication;

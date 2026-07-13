@@ -164,7 +164,7 @@ std::pair<resolved_parameter, int64_t> Numeric_token::process_wide_integer(const
     return {res, 0};
 }
 
-bool Numeric_token::isEqual(const Parameter_value_base &other) const {
+bool Numeric_token::isEqual(const Expression_base &other) const {
     const auto& rhs = static_cast<const Numeric_token&>(other);
 
     return std::tie( value, binary_size) == std::tie(rhs.value, rhs.binary_size);

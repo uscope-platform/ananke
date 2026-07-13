@@ -19,9 +19,9 @@
 
 #include <string>
 
-#include "../Parameter_value_base.hpp"
+#include "../Expression_base.hpp"
 
-class String_token: public Parameter_value_base {
+class String_token: public Expression_base {
 public:
     String_token() = default;
     String_token(const String_token &c);
@@ -47,7 +47,7 @@ public:
     friend bool operator==(const String_token &lhs, const String_token &rhs);
 
 private:
-    bool isEqual(const Parameter_value_base& other) const override;
+    bool isEqual(const Expression_base& other) const override;
 
     resolved_parameter value;
 };

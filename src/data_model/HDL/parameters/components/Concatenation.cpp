@@ -20,7 +20,7 @@
 #include <cereal/archives/binary.hpp>
 
 CEREAL_REGISTER_TYPE(Concatenation)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Concatenation)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Concatenation)
 
 Concatenation::Concatenation(const Concatenation &other) {
 
@@ -53,7 +53,7 @@ parameter_deps_t Concatenation::get_dependencies() const{
 }
 
 void Concatenation::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Parameter_value_base> &value) {
+    const std::shared_ptr<Expression_base> &value) {
     for (auto &comp:components) {
         if (comp->is<Identifier_token>() && comp->as<Identifier_token>().get_value() == constant_id) {
             comp = value;

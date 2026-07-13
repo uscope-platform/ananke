@@ -92,7 +92,7 @@ void expressions_factory::stop_bit_selection() {
     }
 }
 
-void expressions_factory::add_component(const std::shared_ptr<Parameter_value_base> &ec) {
+void expressions_factory::add_component(const std::shared_ptr<Expression_base> &ec) {
     if (bit_select_active) {
         if (!bit_select_v2.get_lhs()) {
             bit_select_v2.set_lhs(ec);
@@ -125,8 +125,8 @@ void expressions_factory::set_operation(const Expression_v2::expression_operator
 }
 
 
-void expressions_factory::add_index(const std::shared_ptr<Parameter_value_base>  &idx) {
-    std::shared_ptr<Parameter_value_base> target;
+void expressions_factory::add_index(const std::shared_ptr<Expression_base>  &idx) {
+    std::shared_ptr<Expression_base> target;
     if (current_v2.get_rhs()) {
         target = current_v2.get_rhs();
     } else if (current_v2.get_lhs()) {
@@ -137,7 +137,7 @@ void expressions_factory::add_index(const std::shared_ptr<Parameter_value_base> 
     }
 }
 
-void expressions_factory::consume(const std::shared_ptr<Parameter_value_base> &v) {
+void expressions_factory::consume(const std::shared_ptr<Expression_base> &v) {
     if (current_v2.get_lhs() == nullptr) {
         current_v2.set_lhs(v);
     } else {

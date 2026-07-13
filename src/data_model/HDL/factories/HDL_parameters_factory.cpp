@@ -35,7 +35,7 @@ void HDL_parameters_factory::set_type(const std::shared_ptr<hdl_type> &type) {
     current_type = type;
 }
 
-void HDL_parameters_factory::add_component(const std::shared_ptr<Parameter_value_base> &c, bool is_call_argument) {
+void HDL_parameters_factory::add_component(const std::shared_ptr<Expression_base> &c, bool is_call_argument) {
     if (is_call_argument) {
         if (top_as<function_calls_factory>()) {
             consumer_stack.top()->consume(c);

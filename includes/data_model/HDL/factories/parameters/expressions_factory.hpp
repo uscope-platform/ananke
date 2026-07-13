@@ -36,15 +36,15 @@ public:
     }
     std::optional<Expression_v2> get_expression_v2();
     [[nodiscard]] int get_level() const {return expression_level;}
-    void add_component(const std::shared_ptr<Parameter_value_base> &ec);
+    void add_component(const std::shared_ptr<Expression_base> &ec);
     void set_operation(const Expression_v2::expression_operator &op);
     [[nodiscard]] bool has_operation() const {return operation_set;}
     void pause();
-    void add_index(const std::shared_ptr<Parameter_value_base> &idx);
+    void add_index(const std::shared_ptr<Expression_base> &idx);
     void start_bit_selection();
     void stop_bit_selection();
 
-    void consume(const std::shared_ptr<Parameter_value_base>& v);
+    void consume(const std::shared_ptr<Expression_base>& v);
     bool active() const;
 
 private:

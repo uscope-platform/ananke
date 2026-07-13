@@ -18,11 +18,11 @@
 #define ANANKE_REPLICATION_HPP
 
 #include "Concatenation.hpp"
-#include "Parameter_value_base.hpp"
+#include "Expression_base.hpp"
 
 
 
-class Replication : public Parameter_value_base{
+class Replication : public Expression_base{
 public:
     Replication() = default;
     Replication(const Replication &other);
@@ -34,12 +34,12 @@ public:
     Replication &operator=(Replication &&other) noexcept;
 
 
-    void set_item(std::shared_ptr<Parameter_value_base> item){ repeated_item = std::move(item);}
-    std::shared_ptr<Parameter_value_base> get_item()const { return repeated_item;}
-    void set_size(const std::shared_ptr<Parameter_value_base> &expr);
+    void set_item(std::shared_ptr<Expression_base> item){ repeated_item = std::move(item);}
+    std::shared_ptr<Expression_base> get_item()const { return repeated_item;}
+    void set_size(const std::shared_ptr<Expression_base> &expr);
 
     parameter_deps_t get_dependencies()const override;
-    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
+    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
     void propagate_function(const HDL_function_def &def) override;
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
 
@@ -64,7 +64,7 @@ public:
     void serialize( Archive & ar ) {
         ar(repetition_size, repeated_item);
     }
-    bool isEqual(const Parameter_value_base &other) const override{
+    bool isEqual(const Expression_base &other) const override{
         // Clangd error "No viable conversion" usually means:
         // 1. The compiler thinks 'other' isn't a Parameter_value_base (check headers)
         // 2. Replication isn't fully defined yet.
@@ -77,8 +77,8 @@ public:
     }
 private:
     bool packing = false;
-    std::shared_ptr<Parameter_value_base>  repetition_size;
-    std::shared_ptr<Parameter_value_base> repeated_item;
+    std::shared_ptr<Expression_base>  repetition_size;
+    std::shared_ptr<Expression_base> repeated_item;
 };
 
 

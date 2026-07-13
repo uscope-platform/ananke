@@ -16,7 +16,7 @@
 #include "data_model/HDL/parameters/components/Replication.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
-#include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
+#include "data_model/HDL/parameters/components/Expression_base.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
@@ -24,7 +24,7 @@
 
 CEREAL_REGISTER_TYPE(Replication)
 
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Replication)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Replication)
 
 
 Replication::Replication(const Replication &other) {
@@ -53,7 +53,7 @@ Replication & Replication::operator=(Replication &&other) noexcept {
     return *this;
 }
 
-void Replication::set_size(const std::shared_ptr<Parameter_value_base> &size) { repetition_size = size;}
+void Replication::set_size(const std::shared_ptr<Expression_base> &size) { repetition_size = size;}
 
 parameter_deps_t Replication::get_dependencies()const {
     parameter_deps_t result;
@@ -64,7 +64,7 @@ parameter_deps_t Replication::get_dependencies()const {
 
 
 void Replication::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Parameter_value_base> &value) {
+    const std::shared_ptr<Expression_base> &value) {
     repetition_size->propagate_expression(constant_id, value);
     repeated_item->propagate_expression(constant_id, value);
 }

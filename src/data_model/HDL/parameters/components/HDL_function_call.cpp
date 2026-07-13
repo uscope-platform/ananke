@@ -25,9 +25,9 @@
 
 CEREAL_REGISTER_TYPE(HDL_function_call)
 
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, HDL_function_call)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, HDL_function_call)
 
-void HDL_function_call::add_argument(const std::shared_ptr<Parameter_value_base> &p) {
+void HDL_function_call::add_argument(const std::shared_ptr<Expression_base> &p) {
     arguments.push_back(p);
 }
 
@@ -304,7 +304,7 @@ bool HDL_function_call::empty() const {
     return function_name.empty();
 }
 
-bool HDL_function_call::isEqual(const Parameter_value_base &other) const {
+bool HDL_function_call::isEqual(const Expression_base &other) const {
     bool is_equal = true;
 
 

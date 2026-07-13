@@ -25,9 +25,9 @@ public:
     void start_function(const std::string& name);
     void set_package_prefix(const std::string &p);
 
-    void consume(const std::shared_ptr<Parameter_value_base> &arg) override;
+    void consume(const std::shared_ptr<Expression_base> &arg) override;
     bool active() const override;
-    std::shared_ptr<Parameter_value_base> result() override;
+    std::shared_ptr<Expression_base> result() override;
 
 private:
     HDL_function_call new_call;

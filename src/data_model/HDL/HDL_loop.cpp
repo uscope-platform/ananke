@@ -17,8 +17,8 @@
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
-assignment::assignment(const std::string &n, const std::optional<std::shared_ptr<Parameter_value_base>> &idx,
-                       const std::shared_ptr<Parameter_value_base> &val) {
+assignment::assignment(const std::string &n, const std::optional<std::shared_ptr<Expression_base>> &idx,
+                       const std::shared_ptr<Expression_base> &val) {
     name = n;
     index = idx;
     value = val;
@@ -36,23 +36,23 @@ bool assignment::operator==(const assignment &rhs) const {
     return retval;
 }
 
-void assignment::set_index(const std::shared_ptr<Parameter_value_base> &idx) {
+void assignment::set_index(const std::shared_ptr<Expression_base> &idx) {
     index = idx;
 }
 
-void assignment::set_value(const std::shared_ptr<Parameter_value_base> &val) {
+void assignment::set_value(const std::shared_ptr<Expression_base> &val) {
     value = val;
 }
 
-std::optional<std::shared_ptr<Parameter_value_base>> assignment::get_index() const {
+std::optional<std::shared_ptr<Expression_base>> assignment::get_index() const {
     return index;
 }
 
-std::shared_ptr<Parameter_value_base> assignment::get_value() const {
+std::shared_ptr<Expression_base> assignment::get_value() const {
     return value;
 }
 
-void assignment::propagate_argument(const std::string &name, const std::shared_ptr<Parameter_value_base> &arg_value) {
+void assignment::propagate_argument(const std::string &name, const std::shared_ptr<Expression_base> &arg_value) {
 
     if (index.has_value()) {
         index.value()->propagate_expression(qualified_identifier(name),arg_value);

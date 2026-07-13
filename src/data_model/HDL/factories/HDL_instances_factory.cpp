@@ -72,7 +72,7 @@ void HDL_instances_factory::add_connection_element(const std::string &s) {
     }
 }
 
-void HDL_instances_factory::add_connection_element(const std::shared_ptr<Parameter_value_base> &ec) {
+void HDL_instances_factory::add_connection_element(const std::shared_ptr<Expression_base> &ec) {
     net_factory.add_component(ec);
 }
 

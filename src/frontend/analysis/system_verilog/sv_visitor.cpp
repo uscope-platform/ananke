@@ -44,8 +44,8 @@ void sv_visitor::route_expression_component(const std::string& text) {
     }
 }
 
-void sv_visitor::route_expression_component(const std::shared_ptr<Parameter_value_base> &ec) {
-    auto clone = [](const std::shared_ptr<Parameter_value_base> &src) -> std::shared_ptr<Parameter_value_base> {
+void sv_visitor::route_expression_component(const std::shared_ptr<Expression_base> &ec) {
+    auto clone = [](const std::shared_ptr<Expression_base> &src) -> std::shared_ptr<Expression_base> {
         if (auto id = std::dynamic_pointer_cast<const Identifier_token>(src))
             return std::make_shared<Identifier_token>(*id);
         if (auto num = std::dynamic_pointer_cast<const Numeric_token>(src))
@@ -494,7 +494,7 @@ void sv_visitor::enterPrimaryPath(sv2017::PrimaryPathContext *ctx) {
 
 
 void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
-    std::shared_ptr<Parameter_value_base> ec;
+    std::shared_ptr<Expression_base> ec;
 
     auto scoped_ctx = ctx->package_or_class_scoped_path();
     if (scoped_ctx && !scoped_ctx->DOUBLE_COLON().empty()) {

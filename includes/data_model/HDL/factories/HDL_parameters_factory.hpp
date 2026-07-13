@@ -33,8 +33,8 @@ public:
 
     void set_type(const std::shared_ptr<hdl_type> &type);
 
-    void add_component(const std::shared_ptr<Parameter_value_base> &c){add_component(c, false);}
-    void add_component(const std::shared_ptr<Parameter_value_base> &c, bool is_call_argument);
+    void add_component(const std::shared_ptr<Expression_base> &c){add_component(c, false);}
+    void add_component(const std::shared_ptr<Expression_base> &c, bool is_call_argument);
 
 
     void start_initialization_list();

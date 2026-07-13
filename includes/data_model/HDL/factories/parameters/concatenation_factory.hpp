@@ -26,9 +26,9 @@ public:
     void start_concatenation();
     void set_default_init();
 
-    void consume(const std::shared_ptr<Parameter_value_base>& expr) override;
+    void consume(const std::shared_ptr<Expression_base>& expr) override;
     bool active() const override;
-    std::shared_ptr<Parameter_value_base> result() override;
+    std::shared_ptr<Expression_base> result() override;
 
 private:
     bool factory_active = false;

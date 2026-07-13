@@ -22,9 +22,9 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/variant.hpp>
 
-#include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
+#include "data_model/HDL/parameters/components/Expression_base.hpp"
 
-class Identifier_token :public Parameter_value_base{
+class Identifier_token :public Expression_base{
 public:
     Identifier_token() = default;
     Identifier_token(const Identifier_token &c);
@@ -42,9 +42,9 @@ public:
 
     friend bool operator==(const Identifier_token &lhs, const Identifier_token &rhs);
 
-    void set_array_index(const std::vector<std::shared_ptr<Parameter_value_base>> &v) {array_index = v;}
-    void add_array_index(const std::shared_ptr<Parameter_value_base> &a_i) {array_index.push_back(a_i);}
-    std::vector<std::shared_ptr<Parameter_value_base>> get_array_index() {return array_index;}
+    void set_array_index(const std::vector<std::shared_ptr<Expression_base>> &v) {array_index = v;}
+    void add_array_index(const std::shared_ptr<Expression_base> &a_i) {array_index.push_back(a_i);}
+    std::vector<std::shared_ptr<Expression_base>> get_array_index() {return array_index;}
 
     qualified_identifier get_value() const {return id;}
 
@@ -57,13 +57,13 @@ public:
     }
 
 private:
-    std::string print_index(const std::vector<std::shared_ptr<Parameter_value_base>> &index) const;
+    std::string print_index(const std::vector<std::shared_ptr<Expression_base>> &index) const;
 
-    bool isEqual(const Parameter_value_base& other) const override;
+    bool isEqual(const Expression_base& other) const override;
 
     qualified_identifier id;
     int64_t container_size = 0;
-    std::vector<std::shared_ptr<Parameter_value_base>> array_index;
+    std::vector<std::shared_ptr<Expression_base>> array_index;
 };
 
 

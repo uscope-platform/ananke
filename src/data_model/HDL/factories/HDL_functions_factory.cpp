@@ -36,7 +36,7 @@ void HDL_functions_factory::set_operation(Expression_v2::expression_operator op)
         }
     }
 }
-void HDL_functions_factory::add_component(const std::shared_ptr<Parameter_value_base> &c) {
+void HDL_functions_factory::add_component(const std::shared_ptr<Expression_base> &c) {
     if (phase == body) {
         if (in_bit_selection) {
             if (!bit_index->as<Expression_v2>().get_lhs()) {
@@ -50,7 +50,7 @@ void HDL_functions_factory::add_component(const std::shared_ptr<Parameter_value_
     }
 }
 
-void HDL_functions_factory::add_value(const std::shared_ptr<Parameter_value_base> &v) {
+void HDL_functions_factory::add_value(const std::shared_ptr<Expression_base> &v) {
     if (!consumer_stack.empty()) {
         consumer_stack.top()->consume(v);
     } else {

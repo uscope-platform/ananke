@@ -101,7 +101,7 @@ public:
     std::string get_name() const {
         return name;
     }
-    std::shared_ptr<Parameter_value_base> get_index_at(uint32_t i) {
+    std::shared_ptr<Expression_base> get_index_at(uint32_t i) {
         if (i < index.size()) {
             return Expression_v2::unwrap(index[i]);
         }
@@ -123,7 +123,7 @@ public:
         idx_expr.set_lhs(sv_parsing_helpers::make_value(ec));
         index.push_back(idx_expr);
     }
-    void add_index_component(const std::shared_ptr<Parameter_value_base> &ec) {
+    void add_index_component(const std::shared_ptr<Expression_base> &ec) {
         Expression_v2 idx_expr;
         idx_expr.set_lhs(ec);
         index.push_back(idx_expr);

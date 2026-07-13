@@ -100,9 +100,9 @@ public:
     std::shared_ptr<hdl_type> get_type()const {return type;}
     void set_type(const std::shared_ptr<hdl_type> &t){type = t;}
 
-    void set_raw_value(const std::shared_ptr<Parameter_value_base> &e) { raw_value = e; }
+    void set_raw_value(const std::shared_ptr<Expression_base> &e) { raw_value = e; }
 
-    std::shared_ptr<Parameter_value_base> get_expression() {
+    std::shared_ptr<Expression_base> get_expression() {
         return raw_value;
     }
 
@@ -130,11 +130,11 @@ private:
 
     std::shared_ptr<hdl_type> type = std::make_shared<HDL_simple_type>();
 
-    std::shared_ptr<Parameter_value_base> raw_value;
+    std::shared_ptr<Expression_base> raw_value;
     std::optional<resolved_parameter> solved_value;
 
-    std::shared_ptr<Parameter_value_base> return_unpacked_range_left;
-    std::shared_ptr<Parameter_value_base> return_unpacked_range_right;
+    std::shared_ptr<Expression_base> return_unpacked_range_left;
+    std::shared_ptr<Expression_base> return_unpacked_range_right;
 
 };
 

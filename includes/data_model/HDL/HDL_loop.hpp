@@ -23,7 +23,7 @@
 #include <spdlog/spdlog.h>
 
 #include "parameters/common/qualified_identifier.hpp"
-#include "parameters/components/Parameter_value_base.hpp"
+#include "parameters/components/Expression_base.hpp"
 #include "parameters/components/Expression_v2.hpp"
 
 class HDL_parameter;
@@ -31,7 +31,7 @@ class HDL_parameter;
 
 struct assignment {
     assignment() = default;
-    assignment(const std::string &n,const std::optional<std::shared_ptr<Parameter_value_base>> &idx, const  std::shared_ptr<Parameter_value_base> &val);
+    assignment(const std::string &n,const std::optional<std::shared_ptr<Expression_base>> &idx, const  std::shared_ptr<Expression_base> &val);
     bool operator==(const assignment &rhs) const;
 
     template<class Archive>
@@ -40,15 +40,15 @@ struct assignment {
     }
     assignment clone() const;
     void set_container_size(const resolved_type &r, const std::map<qualified_identifier, resolved_parameter> &context = {}) {value->set_container_sizes(r, context);}
-    void set_index(const std::shared_ptr<Parameter_value_base> &idx);
-    void set_value(const std::shared_ptr<Parameter_value_base> &val);
-    std::optional<std::shared_ptr<Parameter_value_base>> get_index() const;
-    std::shared_ptr<Parameter_value_base> get_value() const;
-    void propagate_argument(const std::string &name, const std::shared_ptr<Parameter_value_base> &value);
+    void set_index(const std::shared_ptr<Expression_base> &idx);
+    void set_value(const std::shared_ptr<Expression_base> &val);
+    std::optional<std::shared_ptr<Expression_base>> get_index() const;
+    std::shared_ptr<Expression_base> get_value() const;
+    void propagate_argument(const std::string &name, const std::shared_ptr<Expression_base> &value);
 private:
     std::string name;
-    std::optional<std::shared_ptr<Parameter_value_base>> index;
-    std::shared_ptr<Parameter_value_base> value;
+    std::optional<std::shared_ptr<Expression_base>> index;
+    std::shared_ptr<Expression_base> value;
 };
 
 class HDL_loop_metadata {

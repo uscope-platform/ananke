@@ -36,7 +36,7 @@ void cast_factory::set_type(const std::string &t) {
 }
 
 
-void cast_factory::consume(const std::shared_ptr<Parameter_value_base> &c) {
+void cast_factory::consume(const std::shared_ptr<Expression_base> &c) {
     if (state == build_phase::size) {
         auto size_val = c;
         if (c->is<Expression_v2>()) {
@@ -60,7 +60,7 @@ bool cast_factory::active() const {
     return state != build_phase::inactive;
 }
 
-std::shared_ptr<Parameter_value_base> cast_factory::result() {
+std::shared_ptr<Expression_base> cast_factory::result() {
     auto cast = new_cast;
     state = build_phase::inactive;
     return std::make_shared<Cast>(cast);

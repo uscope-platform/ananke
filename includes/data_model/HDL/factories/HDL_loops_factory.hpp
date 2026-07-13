@@ -43,7 +43,7 @@ public:
     bool in_end_condition() const {return active && loop_phase == end;}
     bool in_step_expression() const {return active && loop_phase == step;}
     bool in_definition() const {return active && (in_step_expression()|| in_initialization()||in_end_condition());}
-    void add_component(const std::shared_ptr<Parameter_value_base> &c);
+    void add_component(const std::shared_ptr<Expression_base> &c);
     void add_loop_variable(const std::string &p);
     void set_phase(loop_phase_t p);
     void advance_phase();

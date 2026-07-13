@@ -54,7 +54,7 @@ namespace sv_parsing_helpers {
         return qi;
     }
 
-    std::shared_ptr<Parameter_value_base> make_value(const std::string &s) {
+    std::shared_ptr<Expression_base> make_value(const std::string &s) {
         if (ctre::match<R"(^\d+$)">(s)
             || ctre::search<R"(^\d*'(s)?(h|d|o|b)([0-9a-fA-F]+))">(s)
             || ctre::match<R"(^[+\-]?(\d+\.\d*|\.\d+)([eE][+\-]?\d+)?$|^[+\-]?\d+[eE][+\-]?\d+$)">(s)

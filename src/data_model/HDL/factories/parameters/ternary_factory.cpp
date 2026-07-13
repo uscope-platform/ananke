@@ -21,7 +21,7 @@ void ternary_factory::start_conditional() {
     state = build_phase::condition;
 }
 
-void ternary_factory::consume(const std::shared_ptr<Parameter_value_base> &component) {
+void ternary_factory::consume(const std::shared_ptr<Expression_base> &component) {
     if (state == build_phase::condition) {
         current.set_condition(component);
         state = build_phase::true_assignment;
@@ -37,7 +37,7 @@ bool ternary_factory::active() const {
     return state != build_phase::inactive;
 }
 
-std::shared_ptr<Parameter_value_base> ternary_factory::result() {
+std::shared_ptr<Expression_base> ternary_factory::result() {
     auto ret = std::make_shared<Ternary>(current);
     current = Ternary();
     state = build_phase::inactive;

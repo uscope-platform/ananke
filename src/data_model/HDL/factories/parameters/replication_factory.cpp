@@ -22,7 +22,7 @@ void replication_factory::start_replication(bool is_ass) {
 }
 
 
-std::shared_ptr<Parameter_value_base> replication_factory::result() {
+std::shared_ptr<Expression_base> replication_factory::result() {
     auto ret_val = std::make_shared<Replication>(new_replication);
     state = build_phase::inactive;
     return ret_val;
@@ -33,7 +33,7 @@ bool replication_factory::is_assignment_context() const {
     return is_assignment;
 }
 
-void replication_factory::consume(const std::shared_ptr<Parameter_value_base> &expr) {
+void replication_factory::consume(const std::shared_ptr<Expression_base> &expr) {
     if (state == build_phase::size) {
         state = build_phase::item;
         new_replication.set_size(expr);

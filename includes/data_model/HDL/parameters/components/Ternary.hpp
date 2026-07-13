@@ -18,19 +18,19 @@
 #define ANANKE_TERNARY_HPP
 
 #include <memory>
-#include "Parameter_value_base.hpp"
+#include "Expression_base.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 
-class Ternary : public Parameter_value_base{
+class Ternary : public Expression_base{
 public:
     Ternary() = default;
-    void set_condition(const std::shared_ptr<Parameter_value_base> &c) {condition = c;}
-    void set_true_value(const std::shared_ptr<Parameter_value_base> &v) {true_value = v;}
-    void set_false_value(const std::shared_ptr<Parameter_value_base> &v) {false_value =v;}
+    void set_condition(const std::shared_ptr<Expression_base> &c) {condition = c;}
+    void set_true_value(const std::shared_ptr<Expression_base> &v) {true_value = v;}
+    void set_false_value(const std::shared_ptr<Expression_base> &v) {false_value =v;}
 
     [[nodiscard]] parameter_deps_t get_dependencies()const override;
-    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
+    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
     [[nodiscard]] std::string print() const override;
 
@@ -43,12 +43,12 @@ public:
     }
 
 protected:
-    [[nodiscard]] bool isEqual(const Parameter_value_base& other) const override;
+    [[nodiscard]] bool isEqual(const Expression_base& other) const override;
 
 private:
-    std::shared_ptr<Parameter_value_base> condition;
-    std::shared_ptr<Parameter_value_base> true_value;
-    std::shared_ptr<Parameter_value_base> false_value;
+    std::shared_ptr<Expression_base> condition;
+    std::shared_ptr<Expression_base> true_value;
+    std::shared_ptr<Expression_base> false_value;
 
 };
 

@@ -43,7 +43,7 @@ std::pair<std::vector<dimension_t>, std::vector<dimension_t>> ranges_factory::ge
     return {packed_dimensions, unpacked_dimensions};
 }
 
-void ranges_factory::consume(const std::shared_ptr<Parameter_value_base> &v) {
+void ranges_factory::consume(const std::shared_ptr<Expression_base> &v) {
 }
 
 
@@ -63,7 +63,7 @@ void ranges_factory::advance_stage() {
     stage = unpacked;
 }
 
-void ranges_factory::add_expression(const std::shared_ptr<Parameter_value_base> &e) {
+void ranges_factory::add_expression(const std::shared_ptr<Expression_base> &e) {
     if (!is_active) return;
     if (status == first_bound)
         current_dim.first_bound = e;

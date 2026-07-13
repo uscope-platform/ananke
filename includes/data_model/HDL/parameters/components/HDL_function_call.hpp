@@ -17,12 +17,12 @@
 #ifndef ANANKE_HDL_FUNCTION_CALL_HPP
 #define ANANKE_HDL_FUNCTION_CALL_HPP
 
-#include "Parameter_value_base.hpp"
+#include "Expression_base.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
 #include "data_model/HDL/HDL_loop.hpp"
 
 
-class HDL_function_call : public Parameter_value_base{
+class HDL_function_call : public Expression_base{
 public:
     HDL_function_call() = default;
     explicit HDL_function_call(const std::string &n) {
@@ -30,7 +30,7 @@ public:
     }
     void set_name(const std::string &n){function_name = n;}
     std::string get_name(){return function_name;}
-    void add_argument(const std::shared_ptr<Parameter_value_base> &p);
+    void add_argument(const std::shared_ptr<Expression_base> &p);
     void add_package_prefix(const std::string &p){package_prefix = p;}
     std::string get_package_prefix() const {return package_prefix;}
     void add_assignment(const assignment &a) {assignments.push_back(a);}
@@ -71,7 +71,7 @@ public:
 private:
     std::string function_name;
     std::string package_prefix;
-    std::vector<std::shared_ptr<Parameter_value_base>> arguments;
+    std::vector<std::shared_ptr<Expression_base>> arguments;
 
     std::vector<assignment> assignments;
     std::optional<HDL_loop_metadata> loop_metadata;
@@ -82,7 +82,7 @@ private:
     bool has_return_unpacked_ascending = false;
     bool return_unpacked_ascending = false;
 
-    bool isEqual(const Parameter_value_base& other) const override;
+    bool isEqual(const Expression_base& other) const override;
 
 };
 

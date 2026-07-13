@@ -140,7 +140,7 @@ void Type_engine::start_expression() {
     expr_factory.start_expression(false);
 }
 
-void Type_engine::add_component(const std::shared_ptr<Parameter_value_base> &c) {
+void Type_engine::add_component(const std::shared_ptr<Expression_base> &c) {
     expr_factory.add_component(c);
 }
 

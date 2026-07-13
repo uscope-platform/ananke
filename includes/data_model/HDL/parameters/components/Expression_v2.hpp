@@ -20,10 +20,10 @@
 #include <map>
 #include <spdlog/spdlog.h>
 
-#include "Parameter_value_base.hpp"
+#include "Expression_base.hpp"
 
 
-class Expression_v2 : public Parameter_value_base {
+class Expression_v2 : public Expression_base {
 public:
 
     enum expression_operator {
@@ -96,13 +96,13 @@ public:
     };
 
     Expression_v2() = default;
-    static std::shared_ptr<Parameter_value_base> unwrap(Expression_v2 expr);
-    void set_lhs(const std::shared_ptr<Parameter_value_base> &comp){lhs = comp;}
-    void set_rhs(const std::shared_ptr<Parameter_value_base> &comp) {rhs = comp;}
-    std::shared_ptr<Parameter_value_base> get_lhs(){return lhs;}
-    std::shared_ptr<Parameter_value_base> get_rhs(){return rhs;}
-    [[nodiscard]] std::shared_ptr<const Parameter_value_base> get_lhs() const {return lhs;}
-    [[nodiscard]] std::shared_ptr<const Parameter_value_base> get_rhs() const {return rhs;}
+    static std::shared_ptr<Expression_base> unwrap(Expression_v2 expr);
+    void set_lhs(const std::shared_ptr<Expression_base> &comp){lhs = comp;}
+    void set_rhs(const std::shared_ptr<Expression_base> &comp) {rhs = comp;}
+    std::shared_ptr<Expression_base> get_lhs(){return lhs;}
+    std::shared_ptr<Expression_base> get_rhs(){return rhs;}
+    [[nodiscard]] std::shared_ptr<const Expression_base> get_lhs() const {return lhs;}
+    [[nodiscard]] std::shared_ptr<const Expression_base> get_rhs() const {return rhs;}
     void set_operation(const expression_operator &op) {operation = op;}
     [[nodiscard]] expression_operator get_operation() const {return operation;}
 
@@ -112,7 +112,7 @@ public:
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
     int64_t get_size() override;
     parameter_deps_t get_dependencies()const override;
-    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
+    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
 
     template<class Archive>
     void serialize( Archive & ar ) {
@@ -121,12 +121,12 @@ public:
 
 private:
 
-    bool isEqual(const Parameter_value_base& other) const override;
+    bool isEqual(const Expression_base& other) const override;
     std::variant<hdl_integer, double> evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b);
     std::variant<hdl_integer, double> evaluate_unary_expression(resolved_parameter operand);
 
-    std::shared_ptr<Parameter_value_base> lhs;
-    std::shared_ptr<Parameter_value_base> rhs;
+    std::shared_ptr<Expression_base> lhs;
+    std::shared_ptr<Expression_base> rhs;
     expression_operator operation = none;
 
     uint64_t current_size=0;

@@ -27,13 +27,13 @@
 class HDL_function_def;
 
 
-class Parameter_value_base {
+class Expression_base {
 public:
 
-    virtual ~Parameter_value_base() = default;
+    virtual ~Expression_base() = default;
 
     virtual parameter_deps_t get_dependencies()const {return {};}
-    virtual void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value){}
+    virtual void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value){}
     virtual void propagate_function(const HDL_function_def &def) {}
     virtual std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {return std::nullopt;}
     virtual std::string print() const {return "";}
@@ -52,7 +52,7 @@ public:
         return dynamic_cast<const T*>(this) != nullptr;
     }
 
-    bool operator==(const Parameter_value_base& other) const {
+    bool operator==(const Expression_base& other) const {
         return typeid(*this) == typeid(other) && isEqual(other);
     }
 
@@ -76,7 +76,7 @@ public:
     }
 
 protected:
-    virtual bool isEqual(const Parameter_value_base& other) const = 0;
+    virtual bool isEqual(const Expression_base& other) const = 0;
 };
 
 

@@ -22,7 +22,7 @@
 
 
 #include "data_model/HDL/HDL_loop.hpp"
-#include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
+#include "data_model/HDL/parameters/components/Expression_base.hpp"
 
 
 class HDL_function_def {
@@ -33,8 +33,8 @@ public:
     void set_name(const std::string &s) { name = s;}
     [[nodiscard]]std::string get_name()const{return name;}
     void add_argument(const std::string &s){argument_names.push_back(s);}
-    void start_assignment(const std::string &n, const std::shared_ptr<Parameter_value_base> & idx);
-    void close_assignment(const std::shared_ptr<Parameter_value_base> &val);
+    void start_assignment(const std::string &n, const std::shared_ptr<Expression_base> & idx);
+    void close_assignment(const std::shared_ptr<Expression_base> &val);
     void add_assignment(const assignment &a){assignments.push_back(a);}
     void add_loop_metadata(const HDL_loop_metadata &l){loop_metadata = l;}
     bool is_scalar() const;
@@ -47,14 +47,14 @@ public:
     std::string get_return_type_name() const { return return_type_name; }
 
     void set_return_unpacked_bounds(
-        const std::shared_ptr<Parameter_value_base> &left,
-        const std::shared_ptr<Parameter_value_base> &right
+        const std::shared_ptr<Expression_base> &left,
+        const std::shared_ptr<Expression_base> &right
     ) {
         return_unpacked_range_left = left;
         return_unpacked_range_right = right;
     }
-    std::shared_ptr<Parameter_value_base> get_return_unpacked_range_left() const { return return_unpacked_range_left; }
-    std::shared_ptr<Parameter_value_base> get_return_unpacked_range_right() const { return return_unpacked_range_right; }
+    std::shared_ptr<Expression_base> get_return_unpacked_range_left() const { return return_unpacked_range_left; }
+    std::shared_ptr<Expression_base> get_return_unpacked_range_right() const { return return_unpacked_range_right; }
 
     template<class Archive>
     void serialize( Archive & ar ) {
@@ -66,8 +66,8 @@ private:
     std::optional<HDL_loop_metadata> loop_metadata;
     std::vector<std::string> argument_names;
     std::string return_type_name;
-    std::shared_ptr<Parameter_value_base> return_unpacked_range_left;
-    std::shared_ptr<Parameter_value_base> return_unpacked_range_right;
+    std::shared_ptr<Expression_base> return_unpacked_range_left;
+    std::shared_ptr<Expression_base> return_unpacked_range_right;
 };
 
 

@@ -36,8 +36,8 @@ public:
     }
     void start_assignment(const std::string &n);
     void add_argument(const std::string &a);
-    void add_component(const std::shared_ptr<Parameter_value_base> &c);
-    void add_value(const std::shared_ptr<Parameter_value_base> &v);
+    void add_component(const std::shared_ptr<Expression_base> &c);
+    void add_value(const std::shared_ptr<Expression_base> &v);
     void close_lvalue();
     void start_body(){phase = body;}
     void close_assignment();
@@ -66,7 +66,7 @@ public:
     bool is_component_relevant() const;
 
     void start_bit_selection();
-    std::shared_ptr<Parameter_value_base> get_last_value() const { return assignment_value; }
+    std::shared_ptr<Expression_base> get_last_value() const { return assignment_value; }
 
     void stop_bit_selection();
 
@@ -85,14 +85,14 @@ private:
     bool in_bit_selection = false;
     std::stack<std::unique_ptr<factory_base>> consumer_stack;
     HDL_function_def f;
-    std::shared_ptr<Parameter_value_base> bit_index;
+    std::shared_ptr<Expression_base> bit_index;
 
     enum{
         arguments,
         body
     }phase;
     bool ignore_assignment = false;
-    std::shared_ptr<Parameter_value_base> assignment_value;
+    std::shared_ptr<Expression_base> assignment_value;
     std::string current_assigned_variable;
 };
 

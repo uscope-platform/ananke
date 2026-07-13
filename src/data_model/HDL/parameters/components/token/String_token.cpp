@@ -38,7 +38,7 @@ bool operator==(const String_token &lhs, const String_token &rhs) {
     return lhs.value == rhs.value;
 }
 
-bool String_token::isEqual(const Parameter_value_base &other) const {
+bool String_token::isEqual(const Expression_base &other) const {
     const auto& rhs = static_cast<const String_token&>(other);
     return value == rhs.value;
 }

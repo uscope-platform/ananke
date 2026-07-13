@@ -20,9 +20,9 @@
 
 #include <charconv>
 
-#include "../Parameter_value_base.hpp"
+#include "../Expression_base.hpp"
 
-class Numeric_token: public Parameter_value_base {
+class Numeric_token: public Expression_base {
 public:
     Numeric_token() = default;
     Numeric_token(const Numeric_token &c);
@@ -60,7 +60,7 @@ private:
     static std::pair<resolved_parameter, int64_t> process_wide_integer(const std::string_view &s, uint8_t base, bool signed_number);
 
 
-    bool isEqual(const Parameter_value_base& other) const override;
+    bool isEqual(const Expression_base& other) const override;
 
 
     resolved_parameter value = 0;

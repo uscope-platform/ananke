@@ -19,7 +19,7 @@
 #include <cereal/archives/binary.hpp>
 
 CEREAL_REGISTER_TYPE(Cast)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Cast)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Cast)
 
 Cast::Cast(const Cast &other) {
     size = other.size;
@@ -93,7 +93,7 @@ std::string Cast::print() const {
 }
 
 void Cast::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Parameter_value_base> &value) {
+    const std::shared_ptr<Expression_base> &value) {
 
     content->propagate_expression(constant_id, value);
     if (size) size->propagate_expression(constant_id, value);
@@ -121,7 +121,7 @@ void Cast::set_container_sizes(const resolved_type &s, const std::map<qualified_
 }
 
 
-bool Cast::isEqual(const Parameter_value_base &other) const {
+bool Cast::isEqual(const Expression_base &other) const {
 
     const auto& rhs = static_cast<const Cast&>(other);
     bool res = true;

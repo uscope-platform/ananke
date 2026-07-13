@@ -19,16 +19,16 @@
 
 #include "analysis/type_cast_engine.hpp"
 #include <spdlog/spdlog.h>
-#include "Parameter_value_base.hpp"
+#include "Expression_base.hpp"
 
-class Cast : public Parameter_value_base{
+class Cast : public Expression_base{
 public:
     Cast() = default;
 
     Cast & operator=(const Cast &other) {
         if (this == &other)
             return *this;
-        Parameter_value_base::operator =(other);
+        Expression_base::operator =(other);
         content = other.content;
         type_cast = other.type_cast;
         container_size = other.container_size;
@@ -40,7 +40,7 @@ public:
     Cast & operator=(Cast &&other) noexcept {
         if (this == &other)
             return *this;
-        Parameter_value_base::operator =(std::move(other));
+        Expression_base::operator =(std::move(other));
         type_cast = other.type_cast;
         target_type = other.target_type;
         container_size = other.container_size;
@@ -55,11 +55,11 @@ public:
     void set_type_cast(){type_cast = true;}
     void set_target_type(const std::string &tt){target_type = tt;}
 
-    void set_size(const std::shared_ptr<Parameter_value_base> &s){size = s;}
-    void set_content(const std::shared_ptr<Parameter_value_base> &c){content = c;}
+    void set_size(const std::shared_ptr<Expression_base> &s){size = s;}
+    void set_content(const std::shared_ptr<Expression_base> &c){content = c;}
 
     [[nodiscard]] parameter_deps_t get_dependencies()const override;
-    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
+    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
     [[nodiscard]] std::string print() const override;
     int64_t get_size() override;
@@ -72,13 +72,13 @@ public:
     }
 
 protected:
-    [[nodiscard]] bool isEqual(const Parameter_value_base& other) const override;
+    [[nodiscard]] bool isEqual(const Expression_base& other) const override;
 
 private:
     bool type_cast = false;
     std::string target_type;
-    std::shared_ptr<Parameter_value_base> content;
-    std::shared_ptr<Parameter_value_base> size;
+    std::shared_ptr<Expression_base> content;
+    std::shared_ptr<Expression_base> size;
     std::optional<resolved_type> container_size = std::nullopt;
 };
 

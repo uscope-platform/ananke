@@ -17,15 +17,15 @@
 #ifndef ANANKE_CONCATENATION_HPP
 #define ANANKE_CONCATENATION_HPP
 
-#include "Parameter_value_base.hpp"
+#include "Expression_base.hpp"
 #include <cereal/types/vector.hpp>
 
-class Concatenation : public Parameter_value_base {
+class Concatenation : public Expression_base {
 public:
     Concatenation() {
         components = {};
     };
-    void add_component(const std::shared_ptr<Parameter_value_base> &expr) {components.push_back(expr);}
+    void add_component(const std::shared_ptr<Expression_base> &expr) {components.push_back(expr);}
 
     Concatenation(const Concatenation &other);
     Concatenation(Concatenation &&other) noexcept;
@@ -58,7 +58,7 @@ public:
     }
 
     parameter_deps_t get_dependencies()const override;
-    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) override;
+    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
 
     void propagate_function(const HDL_function_def &def) override;
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
@@ -99,17 +99,17 @@ private:
     std::vector<struct_member_resolved_type> fields_sizes;
     int64_t container_size = 0;
 
-    std::vector<std::shared_ptr<Parameter_value_base>> components;
+    std::vector<std::shared_ptr<Expression_base>> components;
 
-    bool isEqual(const Parameter_value_base& other) const override {
+    bool isEqual(const Expression_base& other) const override {
 
         auto ret = true;
         const auto& rhs = static_cast<const Concatenation&>(other);
 
         ret &= std::ranges::equal(
             components, rhs.components,
-            [](const std::shared_ptr<Parameter_value_base>& a,
-               const std::shared_ptr<Parameter_value_base>& b) {
+            [](const std::shared_ptr<Expression_base>& a,
+               const std::shared_ptr<Expression_base>& b) {
                 auto resp = *a == *b;
                 return resp; // Triggers the polymorphic equality check
             }

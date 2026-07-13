@@ -55,7 +55,7 @@ void HDL_net_factory::add_component(const std::string &c) {
     }
 }
 
-void HDL_net_factory::add_component(const std::shared_ptr<Parameter_value_base> &ec) {
+void HDL_net_factory::add_component(const std::shared_ptr<Expression_base> &ec) {
     if(repetition_factory.is_in_repetition()) {
         repetition_factory.add_component(ec);
     }

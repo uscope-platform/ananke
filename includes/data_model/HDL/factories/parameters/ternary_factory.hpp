@@ -16,7 +16,7 @@
 #ifndef ANANKE_TERNARY_FACTORY_HPP
 #define ANANKE_TERNARY_FACTORY_HPP
 
-#include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
+#include "data_model/HDL/parameters/components/Expression_base.hpp"
 #include "data_model/HDL/parameters/components/Ternary.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
 
@@ -24,9 +24,9 @@ class ternary_factory : public factory_base{
 public:
     void start_conditional();
 
-    void consume(const std::shared_ptr<Parameter_value_base>& v) override;
+    void consume(const std::shared_ptr<Expression_base>& v) override;
     bool active() const override;
-    std::shared_ptr<Parameter_value_base> result() override;
+    std::shared_ptr<Expression_base> result() override;
 
 private:
     Ternary current;

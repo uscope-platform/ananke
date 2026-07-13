@@ -618,7 +618,7 @@ TEST(parameter_extraction, string_array_selection) {
 
     p->set_name("SEL");
     auto t = Identifier_token(qualified_identifier("TRANSLATION_TABLE_INIT"));
-    std::vector<std::shared_ptr<Parameter_value_base>> ai;
+    std::vector<std::shared_ptr<Expression_base>> ai;
     ai.push_back(std::make_shared<Numeric_token>("2"));
     t.set_array_index(ai);
     p->set_raw_value(std::make_shared<Identifier_token>(t));
@@ -2153,7 +2153,7 @@ TEST(parameter_extraction, simple_array_propagation) {
     p->set_type(Type_engine::create_primitive_type("implicit"));
     Expression_v2 e;
     auto t = Identifier_token(qualified_identifier("array_parameter"));
-    std::vector<std::shared_ptr<Parameter_value_base>> ai;
+    std::vector<std::shared_ptr<Expression_base>> ai;
     ai.push_back(std::make_shared<Numeric_token>("0"));
     t.set_array_index(ai);
     e.set_lhs(std::make_shared<Identifier_token>(t));
@@ -2236,7 +2236,7 @@ TEST(parameter_extraction, simple_ascending_array_propagation) {
     p->set_type(Type_engine::create_primitive_type("implicit"));
     Expression_v2 e;
     auto t = Identifier_token(qualified_identifier("array_parameter"));
-    std::vector<std::shared_ptr<Parameter_value_base>> ai;
+    std::vector<std::shared_ptr<Expression_base>> ai;
     ai.push_back(std::make_shared<Numeric_token>("0"));
     t.set_array_index(ai);
     e.set_lhs(std::make_shared<Identifier_token>(t));
@@ -2318,7 +2318,7 @@ TEST(parameter_extraction, array_expression) {
     p->set_name("array_parameter_expr_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     auto t = Identifier_token(qualified_identifier("array_parameter"));
-    std::vector<std::shared_ptr<Parameter_value_base>> ai;
+    std::vector<std::shared_ptr<Expression_base>> ai;
     Expression_v2 e;
     e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("sv_numeric_p")));
     e.set_rhs(std::make_shared<Numeric_token>("0"));

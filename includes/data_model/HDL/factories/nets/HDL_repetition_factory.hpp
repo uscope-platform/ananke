@@ -26,7 +26,7 @@ public:
     void stop_repetition();
     bool is_in_repetition() const {return is_active;}
 
-    void add_component(const std::shared_ptr<Parameter_value_base> &ec);
+    void add_component(const std::shared_ptr<Expression_base> &ec);
     void advance_phase();
     HDL_replication get_repetition();
 

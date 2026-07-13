@@ -21,9 +21,9 @@
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 
 CEREAL_REGISTER_TYPE(Expression_v2)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Expression_v2)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Expression_v2)
 
-std::shared_ptr<Parameter_value_base> Expression_v2::unwrap(Expression_v2 expr) {
+std::shared_ptr<Expression_base> Expression_v2::unwrap(Expression_v2 expr) {
     if (expr.lhs && !expr.rhs && expr.operation == none) {
         return expr.lhs;
     }
@@ -47,7 +47,7 @@ std::string Expression_v2::print() const {
         return op_str(operation) + (operand ? operand->print() : "");
     }
 
-    auto needs_parens = [&](const std::shared_ptr<Parameter_value_base> &side, bool is_lhs_side) {
+    auto needs_parens = [&](const std::shared_ptr<Expression_base> &side, bool is_lhs_side) {
         if (!side->is<Expression_v2>()) return false;
         auto inner_op = static_cast<const Expression_v2 &>(*side).get_operation();
         if (inner_op == none) return false;
@@ -75,7 +75,7 @@ std::string Expression_v2::print() const {
     return oss.str();
 }
 
-bool Expression_v2::isEqual(const Parameter_value_base &other) const {
+bool Expression_v2::isEqual(const Expression_base &other) const {
     auto other_exp = dynamic_cast<const Expression_v2*>(&other);
     if (!other_exp) return false;
     if (lhs && other_exp->lhs) {
@@ -102,7 +102,7 @@ void Expression_v2::set_container_sizes(const resolved_type &s,
 }
 
 void Expression_v2::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Parameter_value_base> &value) {
+    const std::shared_ptr<Expression_base> &value) {
     if (lhs && lhs->is<Identifier_token>() && lhs->as<Identifier_token>().get_value() == constant_id) {
         lhs = value;
     } else if (lhs) {

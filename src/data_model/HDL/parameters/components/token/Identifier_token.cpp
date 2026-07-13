@@ -99,7 +99,7 @@ void Identifier_token::set_container_sizes(const resolved_type &s,
     for (auto &us : s.unpacked_sizes) container_size *= us;
 }
 
-std::string Identifier_token::print_index(const std::vector<std::shared_ptr<Parameter_value_base>> &index) const {
+std::string Identifier_token::print_index(const std::vector<std::shared_ptr<Expression_base>> &index) const {
     std::string ret_val;
     for(const auto &item:index){
         ret_val += "[" + item->print() + "]";
@@ -108,7 +108,7 @@ std::string Identifier_token::print_index(const std::vector<std::shared_ptr<Para
 }
 
 
-bool Identifier_token::isEqual(const Parameter_value_base &other) const {
+bool Identifier_token::isEqual(const Expression_base &other) const {
     const auto& rhs = static_cast<const Identifier_token&>(other);
     bool res = id == rhs.id;
     if (array_index.size() != rhs.array_index.size()) return false;
