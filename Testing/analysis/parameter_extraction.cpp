@@ -4515,6 +4515,55 @@ TEST(parameter_extraction, typedef_parameter) {
     }
 }
 
+
+
+
+TEST(parameter_processing, typedef_in_package_parameter) {
+
+    auto test_pattern = R"(
+        package test_pkg;
+            typedef logic [31:0] test_type [15:0];
+        endpackage
+
+        module test_mod #()();
+            parameter test_pkg::test_type array_parameter = '{32, 5};
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resources= analyzer.analyze("", test_pattern);
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_hdl_entity(resources, "", "");
+    auto module = resources[1];
+    auto param = module.get_parameters().get("array_parameter");
+    HDL_parameter p;
+    p.set_name("array_parameter");
+    p.set_type(std::make_shared<HDL_external_type>(qualified_identifier("test_pkg", "test_type")));
+    Concatenation c;
+    c.add_component(std::make_shared<Numeric_token>("32"));
+    c.add_component(std::make_shared<Numeric_token>("5"));
+    p.set_raw_value(std::make_shared<Concatenation>(c));
+    ASSERT_EQ(p, *param);
+
+    parameter_solver::propagate_types(module, d_store);
+    auto defaults = parameter_solver::process_parameters(module.get_parameters(), {});
+
+    mdarray<hdl_integer> array_value;
+    array_value.set_1d_slice({0, 0}, {5, 32});
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("array_parameter"), array_value}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+
+}
+
+
+
 TEST(parameter_extraction, struct_typed_parameter) {
     auto test_pattern = R"(
         module test_mod #()();

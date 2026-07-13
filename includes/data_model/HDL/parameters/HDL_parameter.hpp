@@ -21,6 +21,8 @@
 #include <spdlog/spdlog.h>
 
 #include "data_model/HDL/types/HDL_simple_type.hpp"
+#include "data_model/HDL/parameters/components/HDL_function_call.hpp"
+#include "data_model/HDL/types/HDL_external_type.hpp"
 #include "common/dimension.hpp"
 
 class HDL_function_def;

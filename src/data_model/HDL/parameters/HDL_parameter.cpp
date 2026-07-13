@@ -14,7 +14,6 @@
 //  limitations under the License.
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
-#include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 
 
 HDL_parameter::HDL_parameter(const HDL_parameter &c) {
@@ -71,7 +70,12 @@ std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
 
 std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     if (!type) return std::nullopt;
-    auto container_size = type->evaluate_type(context);
+    std::optional<resolved_type> container_size;
+    if (type->is<HDL_external_type>()) {
+        int i = 0;
+    } else {
+        container_size = type->evaluate_type(context);
+    }
     if (!container_size) return std::nullopt;
     if (return_unpacked_range_left && return_unpacked_range_right) {
         auto lower = return_unpacked_range_left->evaluate(context);

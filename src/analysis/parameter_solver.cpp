@@ -163,6 +163,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     }
 
     propagate_functions(node_spec, d_store);
+    propagate_types(node_spec, d_store);
 
     auto solved_parameters = retrieve_package_parameters(combined_params, d_store);
     auto solution = solve_complex_overrides(work, d_store, solved_parameters);
@@ -189,6 +190,21 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
     return package_parameters;
 }
 
+void parameter_solver::propagate_types(HDL_Resource &resource, const std::shared_ptr<data_store> &d_store) {
+
+    for (auto &[_, param] : resource.get_parameters()) {
+
+        auto deps = param->get_dependencies();
+        for (const auto& type:deps.types) {
+            if (!type.get_package_prefix().empty()) {
+                auto res = d_store->get_HDL_resource(type.get_package_prefix().back());
+                auto type_def = res.get_typedefs()[type.get_name()];
+                param->set_type(type_def);
+            }
+        }
+    }
+}
+
 void parameter_solver::propagate_functions(HDL_Resource &resource, const std::shared_ptr<data_store> &d_store) {
 
     for (auto &[_, param] : resource.get_parameters()) {
@@ -206,6 +222,7 @@ void parameter_solver::propagate_functions(HDL_Resource &resource, const std::sh
 
     }
 }
+
 
 std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_complex_overrides(
     work_order &work,

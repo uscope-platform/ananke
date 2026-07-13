@@ -23,6 +23,7 @@
 #include "analysis/parameter_solver.hpp"
 #include "data_model/HDL/parameters/components/Replication.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
+#include "data_model/HDL/types/HDL_external_type.hpp"
 #include "data_model/HDL/types/HDL_struct_type.hpp"
 
 
@@ -777,10 +778,10 @@ TEST(parameter_processing, package_function_called_from_module_and_typedef) {
 
     HDL_parameter p;
     p.set_name("RESULT");
-    p.set_type(Type_engine::create_primitive_type("integer"));
+    p.set_type(std::make_shared<HDL_external_type>(qualified_identifier("test_pkg", "test_type")));
     HDL_function_call c;
-    c.set_name("CALC");
-    c.add_package_prefix("test_pkg");
+    c.set_name("build_config");
+    c.add_package_prefix("test_pkg_2");
     p.set_raw_value(std::make_shared<HDL_function_call>(c));
     ASSERT_EQ(p, *param);
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});

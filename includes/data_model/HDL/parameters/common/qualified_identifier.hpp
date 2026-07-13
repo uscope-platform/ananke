@@ -89,12 +89,14 @@ private:
 struct parameter_deps_t {
     std::set<qualified_identifier> data;
     std::set<qualified_identifier> functions;
+    std::set<qualified_identifier> types;
     [[nodiscard]] bool empty() const {
         return data.empty() && functions.empty();
     }
     void merge (const parameter_deps_t &p) {
         data.insert(p.data.begin(), p.data.end());
         functions.insert(p.functions.begin(), p.functions.end());
+        types.insert(p.types.begin(), p.types.end());
     }
 
     friend bool operator==(const parameter_deps_t &lhs, const parameter_deps_t &rhs) {

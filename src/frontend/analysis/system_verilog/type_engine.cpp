@@ -15,6 +15,7 @@
 
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
+#include "data_model/HDL/types/HDL_external_type.hpp"
 
 void Type_engine::start_composite_type_declaration(type_kind k) {
     kind = k;
@@ -168,9 +169,14 @@ std::shared_ptr<hdl_type> Type_engine::finalize_type() {
         result.set_unpacked_dimensions(unpacked);
         r_factory.clear();
         return std::make_shared<HDL_simple_type>(result);
-    } else {
-        return current_type;
     }
+    if (current_type->is<HDL_external_type>()) {
+        auto &result = current_type->as<HDL_external_type>();
+        r_factory.clear();
+        return std::make_shared<HDL_external_type>(result);
+    }
+    r_factory.clear();
+    return current_type;
 
 }
 

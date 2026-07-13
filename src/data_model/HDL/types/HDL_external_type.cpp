@@ -18,7 +18,7 @@
 
 parameter_deps_t HDL_external_type::get_dependencies() {
     parameter_deps_t deps;
-    deps.data.insert(value);
+    deps.types.insert(value);
     return deps;
 }
 
@@ -32,7 +32,7 @@ std::optional<resolved_type> HDL_external_type::evaluate_type(
 }
 
 std::string HDL_external_type::to_print() const {
-    return value.print();
+    return " " + value.print();
 }
 
 bool HDL_external_type::operator==(const HDL_external_type &hdl_external) const {
