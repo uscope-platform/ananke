@@ -90,7 +90,7 @@ std::unordered_map<std::string, HDL_Resource>::mapped_type HDL_Resource::clone()
     ret.parameters_spec  = parameters_spec;
 
     for(auto &[function_name,  function_def]:functions) {
-        ret.functions.insert({function_name, function_def.clone()});
+        ret.functions.insert({function_name, function_def});
     }
 
     for(auto &d:dependencies) {

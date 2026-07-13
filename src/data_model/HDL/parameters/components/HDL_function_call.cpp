@@ -114,7 +114,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector(const std::
         auto loop_assignments = loop_metadata.value().get_assignments();
         for(int i = 0; i<loop_assignments.size(); i++) {
             for(auto &l:loop_indexes) {
-                auto la = loop_assignments[i].clone();
+                auto la = loop_assignments[i] ;
                 auto ctx = context;
                 ctx[loop_var] = resolved_parameter(l);
                 auto idx_opt = la.get_index();

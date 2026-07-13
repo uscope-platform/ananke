@@ -28,8 +28,6 @@
 class HDL_function_def {
 public:
 
-    HDL_function_def clone();
-
     void set_name(const std::string &s) { name = s;}
     [[nodiscard]]std::string get_name()const{return name;}
     void add_argument(const std::string &s){argument_names.push_back(s);}

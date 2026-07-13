@@ -21,19 +21,6 @@
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
-HDL_function_def HDL_function_def::clone() {
-    HDL_function_def def;
-    def.name = name;
-    for(auto &a:assignments) {
-        def.assignments.push_back(a.clone());
-    }
-    if( loop_metadata.has_value())
-        def.loop_metadata =  loop_metadata->clone();
-    else
-        def.loop_metadata = std::nullopt;
-    def.return_type_name = return_type_name;
-    return def;
-}
 
 void HDL_function_def::start_assignment(const std::string &n, const std::shared_ptr<Expression_base> &idx) {
    if (idx == nullptr) assignments.push_back({name, {}, {}});

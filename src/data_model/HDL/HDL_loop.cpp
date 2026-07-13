@@ -60,13 +60,6 @@ void assignment::propagate_argument(const std::string &name, const std::shared_p
     value->propagate_expression(qualified_identifier(name), arg_value);
 }
 
-assignment assignment::clone() const {
-    assignment a;
-    a.name = name;
-    if(index.has_value()) a.set_index(index.value());
-    a.set_value(value);
-    return a;
-}
 
 HDL_loop_metadata::~HDL_loop_metadata() = default;
 
@@ -78,16 +71,6 @@ HDL_loop_metadata::HDL_loop_metadata(const HDL_loop_metadata &other)
     iter = other.iter ? std::make_unique<Expression_v2>(*other.iter): nullptr;
 }
 
-HDL_loop_metadata HDL_loop_metadata::clone() const{
-    HDL_loop_metadata ret_val;
-    ret_val.init = init ? init->clone(): nullptr;
-    ret_val.end_c = end_c ? std::make_unique<Expression_v2>(*end_c): nullptr;
-    ret_val.iter = iter ? std::make_unique<Expression_v2>(*iter): nullptr;
-    for(const auto &a:assignments) {
-        ret_val.assignments.push_back(a.clone());
-    }
-    return ret_val;
-}
 
 HDL_loop_metadata::HDL_loop_metadata(HDL_loop_metadata &&other) noexcept
         :

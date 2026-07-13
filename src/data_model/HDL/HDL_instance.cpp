@@ -39,7 +39,7 @@ HDL_instance HDL_instance::clone() {
     c.array_quantifier = array_quantifier;
 
     for(auto &s:loop_specs) {
-        c.loop_specs.push_back(s.clone());
+        c.loop_specs.push_back(s);
     }
 
     c.ports_map = ports_map;

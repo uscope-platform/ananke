@@ -27,7 +27,7 @@ sv_visitor::sv_visitor(std::string p) {
     path = std::move(p);
 }
 
-void sv_visitor::route_expression_component(const std::string& text) {
+void sv_visitor::route_expression_text(const std::string& text) {
     if(loops_factory.in_loop()) {
         loops_factory.add_component(sv_parsing_helpers::make_value(text));
     }
@@ -474,7 +474,7 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
 
 void sv_visitor::exitPrimaryLit(sv2017::PrimaryLitContext *ctx) {
     auto text = ctx->getText();
-    route_expression_component(text);
+    route_expression_text(text);
     if(deps_factory.is_valid_dependency() && deps_factory.is_in_port()) {
         deps_factory.start_scalar_net(text);
     }

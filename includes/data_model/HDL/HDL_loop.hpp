@@ -38,7 +38,6 @@ struct assignment {
     void serialize( Archive & ar ){
         ar(name, index, value);
     }
-    assignment clone() const;
     void set_container_size(const resolved_type &r, const std::map<qualified_identifier, resolved_parameter> &context = {}) {value->set_container_sizes(r, context);}
     void set_index(const std::shared_ptr<Expression_base> &idx);
     void set_value(const std::shared_ptr<Expression_base> &val);
@@ -59,8 +58,6 @@ public:
     ~HDL_loop_metadata();
 
     HDL_loop_metadata(const HDL_loop_metadata &other);
-
-    HDL_loop_metadata clone() const;
 
     HDL_loop_metadata(HDL_loop_metadata &&other) noexcept;
 
