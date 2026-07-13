@@ -375,6 +375,9 @@ void sv_visitor::exitPackage_declaration(sv2017::Package_declarationContext *ctx
 }
 
 void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scoped_pathContext *ctx) {
+    if (type_engine.active() && ctx->DOUBLE_COLON().empty()) {
+        type_engine.set_type(ctx->getText());
+    }
     if(!ctx->DOUBLE_COLON().empty()){
         auto qi = sv_parsing_helpers::parse_qualified_identifier(ctx);
         auto pkg_prefix = qi.get_package_prefix();

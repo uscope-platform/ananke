@@ -35,6 +35,8 @@ void Type_engine::close_composite_member(const std::string &name) {
     r_factory.clear();
     current_struct.member.back().name = name;
     if (current_struct.member.back().type) {
+        if (current_struct.member.back().type->is<HDL_struct_type>())
+            return;
         auto &old = current_struct.member.back().type->as<HDL_simple_type>();
         HDL_simple_type t;
         t.set_signed(old.get_signed());
@@ -75,9 +77,12 @@ std::shared_ptr<hdl_type> Type_engine::stop_composite_type_declaration(const std
     return result;
 }
 
-void Type_engine::set_type(const std::string &type) {
+void Type_engine::set_type(const std::string &type_name) {
     if (kind != simple_type) {
-        current_struct.member.back().type = create_primitive_type(type);
+        if (has_type(type_name))
+            current_struct.member.back().type = get_type(type_name);
+        else
+            current_struct.member.back().type = create_primitive_type(type_name);
     }
 }
 
