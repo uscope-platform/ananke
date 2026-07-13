@@ -38,8 +38,10 @@ void HDL_net_factory::close_range() {
     current_net.set_range(range_factory.get_range());
 }
 
+#include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
+
 void HDL_net_factory::add_component(const std::string &c) {
-    Token tok(c, Token::get_type(c));
+    auto tok = sv_parsing_helpers::make_value(c);
     if(repetition_factory.is_in_repetition()) {
         repetition_factory.add_component(tok);
     }
@@ -53,7 +55,7 @@ void HDL_net_factory::add_component(const std::string &c) {
     }
 }
 
-void HDL_net_factory::add_component(const Token &ec) {
+void HDL_net_factory::add_component(const std::shared_ptr<Parameter_value_base> &ec) {
     if(repetition_factory.is_in_repetition()) {
         repetition_factory.add_component(ec);
     }

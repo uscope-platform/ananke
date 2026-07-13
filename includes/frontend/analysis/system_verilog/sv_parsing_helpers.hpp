@@ -16,11 +16,20 @@
 #ifndef ANANKE_SV_PARSING_HELPERS_HPP
 #define ANANKE_SV_PARSING_HELPERS_HPP
 
+#include <memory>
+#include <string>
+
 #include "mgp_sv/sv2017.h"
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
+#include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
+#include "data_model/HDL/parameters/components/token/String_token.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include <ctre.hpp>
 
 namespace sv_parsing_helpers {
     qualified_identifier parse_qualified_identifier(mgp_sv::sv2017::Package_or_class_scoped_pathContext *ctx);
+    std::shared_ptr<Parameter_value_base> make_value(const std::string &s);
 }
 
 #endif

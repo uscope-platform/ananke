@@ -42,7 +42,7 @@ void cast_factory::consume(const std::shared_ptr<Parameter_value_base> &c) {
         if (c->is<Expression_v2>()) {
             auto &expr = c->as<Expression_v2>();
             if (expr.get_operation() == Expression_v2::none) {
-                if (auto lhs = expr.get_lhs(); lhs && lhs->is<Token>()) {
+                if (auto lhs = expr.get_lhs(); lhs && !lhs->is<Expression_v2>()) {
                     new_cast.set_size(lhs);
                 }
             } else {

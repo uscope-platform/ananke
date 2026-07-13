@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "frontend/analysis/system_verilog/type_engine.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 
 void Type_engine::start_composite_type_declaration(type_kind k) {
     kind = k;
@@ -133,7 +134,7 @@ void Type_engine::start_expression() {
     expr_factory.start_expression(false);
 }
 
-void Type_engine::add_component(const Token &c) {
+void Type_engine::add_component(const std::shared_ptr<Parameter_value_base> &c) {
     expr_factory.add_component(c);
 }
 
@@ -144,7 +145,7 @@ void Type_engine::stop_expression() {
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
                 r_factory.add_expression(Expression_v2::unwrap(expr.value()));
-            } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
+            } else if (auto lhs = expr->get_lhs()) {
                 r_factory.add_expression(lhs);
             } else {
                 r_factory.add_expression(Expression_v2::unwrap(expr.value()));
@@ -196,8 +197,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_implicit(true);
         t.set_packed_dimensions({
             {
-                std::make_shared<Token>("31", Token::number),
-                std::make_shared<Token>("0", Token::number),
+                std::make_shared<Numeric_token>("31"),
+                std::make_shared<Numeric_token>("0"),
                 true
             }
         });
@@ -206,8 +207,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_signed(true);
         t.set_packed_dimensions({
             {
-                std::make_shared<Token>("15", Token::number),
-                std::make_shared<Token>("0", Token::number),
+                std::make_shared<Numeric_token>("15"),
+                std::make_shared<Numeric_token>("0"),
                 true
             }
         });
@@ -216,8 +217,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_signed(true);
         t.set_packed_dimensions({
             {
-                std::make_shared<Token>("31", Token::number),
-                std::make_shared<Token>("0", Token::number),
+                std::make_shared<Numeric_token>("31"),
+                std::make_shared<Numeric_token>("0"),
                 true
             }
         });
@@ -226,8 +227,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_signed(true);
         t.set_packed_dimensions({
             {
-                std::make_shared<Token>("63", Token::number),
-                std::make_shared<Token>("0", Token::number),
+                std::make_shared<Numeric_token>("63"),
+                std::make_shared<Numeric_token>("0"),
                 true
             }
         });
@@ -236,8 +237,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_signed(false);
         t.set_packed_dimensions({
             {
-                std::make_shared<Token>("63", Token::number),
-                std::make_shared<Token>("0", Token::number),
+                std::make_shared<Numeric_token>("63"),
+                std::make_shared<Numeric_token>("0"),
                 true
             }
         });
@@ -246,8 +247,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_real(true);
         t.set_packed_dimensions({
             {
-                std::make_shared<Token>("63", Token::number),
-                std::make_shared<Token>("0", Token::number),
+                std::make_shared<Numeric_token>("63"),
+                std::make_shared<Numeric_token>("0"),
                 true
             }
         });
@@ -256,8 +257,8 @@ std::shared_ptr<hdl_type> Type_engine::create_primitive_type(const std::string &
         t.set_real(true);
         t.set_packed_dimensions({
             {
-                std::make_shared<Token>("31", Token::number),
-                std::make_shared<Token>("0", Token::number),
+                std::make_shared<Numeric_token>("31"),
+                std::make_shared<Numeric_token>("0"),
                 true
             }
         });

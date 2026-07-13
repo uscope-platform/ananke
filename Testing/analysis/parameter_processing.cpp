@@ -257,7 +257,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("param_1");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->set_raw_value(std::make_shared<Token>(4, 0));
+    p->set_raw_value(std::make_shared<Numeric_token>(4, 0));
     p->set_value(4);
 
     check_params.insert(p);
@@ -265,15 +265,15 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p = std::make_shared<HDL_parameter>();
     mdarray<hdl_integer> av;
     av.set_1d_slice({0,0}, {9,8});
-    auto tk = Token(0, 0);
+    auto tk = Numeric_token(0, 0);
     tk.set_value(av);
-    p->set_raw_value(std::make_shared<Token>(tk));
+    p->set_raw_value(std::make_shared<Numeric_token>(tk));
     p->set_name("param_2");
     HDL_simple_type t;
     t = Type_engine::create_primitive_type("implicit")->as<HDL_simple_type>();
     t.add_dimension({
-        std::make_shared<Token>("1", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("1"),
+        std::make_shared<Numeric_token>("0"),
         false
     });
     p->set_type(std::make_shared<HDL_simple_type>(t));
@@ -284,11 +284,11 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p->set_name("param_3");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     Expression_v2 e1, e2;
-    e2.set_lhs(std::make_shared<Token>(4, 0));
-    e2.set_rhs(std::make_shared<Token>(7, 3));
+    e2.set_lhs(std::make_shared<Numeric_token>(4, 0));
+    e2.set_rhs(std::make_shared<Numeric_token>(7, 3));
     e2.set_operation(Expression_v2::add);
     e1.set_lhs(std::make_shared<Expression_v2>(e2));
-    e1.set_rhs(std::make_shared<Token>(1,1));
+    e1.set_rhs(std::make_shared<Numeric_token>(1,1));
     e1.set_operation(Expression_v2::multiply);
     p->set_raw_value(std::make_shared<Expression_v2>(e1));
     p->set_value(11);
@@ -297,9 +297,9 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("p1_t");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    tk = Token("param_2", Token::identifier);
-    tk.add_array_index(std::make_shared<Token>(0, 1));
-    p->set_raw_value(std::make_shared<Token>(tk));
+    auto tk2 = Identifier_token(qualified_identifier("param_2"));
+    tk2.add_array_index(std::make_shared<Numeric_token>(0, 1));
+    p->set_raw_value(std::make_shared<Numeric_token>(tk));
     p->set_value(9);
     check_params.insert(p);
 
@@ -307,9 +307,9 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p = std::make_shared<HDL_parameter>();
     p->set_name("p2_t");
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    tk = Token("param_2", Token::identifier);
-    tk.add_array_index(std::make_shared<Token>(1, 1));
-    p->set_raw_value(std::make_shared<Token>(tk));
+    tk2 = Identifier_token(qualified_identifier("param_2"));
+    tk2.add_array_index(std::make_shared<Numeric_token>(1, 1));
+    p->set_raw_value(std::make_shared<Identifier_token>(tk2));
     p->set_value(8);
     check_params.insert(p);
 
@@ -1097,9 +1097,7 @@ TEST(parameter_processing, override_with_package_parameter) {
             auto override_param = std::make_shared<HDL_parameter>();
             override_param->set_name("param_1");
             override_param->set_type(Type_engine::create_primitive_type("implicit"));
-            Token tk("base", Token::identifier);
-            tk.set_package_prefix("test_package");
-            override_param->set_raw_value(std::make_shared<Token>(tk));
+            override_param->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("test_package", "base")));
             override_param->set_type(param->get_type());
             to_solve.insert(override_param);
         } else {
@@ -1239,9 +1237,7 @@ TEST(parameter_processing, override_package_function) {
             auto override_param = std::make_shared<HDL_parameter>();
             override_param->set_name("param_1");
             override_param->set_type(Type_engine::create_primitive_type("implicit"));
-            Token tk("test_param", Token::identifier);
-            tk.set_package_prefix("test_pack");
-            override_param->set_raw_value(std::make_shared<Token>(tk));
+            override_param->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("test_pack", "test_param")));
             override_param->set_type(param->get_type());
             to_solve.insert(override_param);
         } else {
@@ -1482,7 +1478,7 @@ TEST(parameter_processing, override_after_function_localparam) {
     auto deps = ast_v2->get_dependencies();
     ASSERT_EQ(deps[0]->get_parameters().get("INITIAL_STOPPED_STATE")->get_numeric_value(), 52);
     auto i_l = deps[0]->get_parameters().get("INITIAL_STOPPED_STATE")->get_expression();
-    ASSERT_TRUE(i_l->is<Token>());
+    ASSERT_TRUE(i_l->is<Identifier_token>());
 }
 
 
@@ -1536,28 +1532,28 @@ TEST(parameter_processing, init_list_override) {
     HDL_parameter p;
     p.set_name("NS");
     p.set_type(Type_engine::create_primitive_type("implicit"));
-    p.set_raw_value(std::make_shared<Token>("2", Token::number));
+    p.set_raw_value(std::make_shared<Numeric_token>("2"));
     p.set_value(2);
     check_params.insert(std::make_shared<HDL_parameter>(p));
     p = HDL_parameter();
     p.set_name("SLAVE_ADDR");
     auto param_type = HDL_simple_type();
     Expression_v2 e;
-    e.set_lhs(std::make_shared<Token>("NS", Token::identifier));
-    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("NS")));
+    e.set_rhs(std::make_shared<Numeric_token>("1"));
     e.set_operation(Expression_v2::subtract);
     param_type.add_dimension({
         std::make_shared<Expression_v2>(e),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("0"),
         false});
     param_type.add_dimension({
-        std::make_shared<Token>("31", Token::number),
-        std::make_shared<Token>("0", Token::number),
+        std::make_shared<Numeric_token>("31"),
+        std::make_shared<Numeric_token>("0"),
     true});
     Concatenation c;
 
-    c.add_component(std::make_shared<Token>(1136656384, 0));
-    c.add_component(std::make_shared<Token>(1136656448, 0));
+    c.add_component(std::make_shared<Numeric_token>(1136656384, 0));
+    c.add_component(std::make_shared<Numeric_token>(1136656448, 0));
 
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Concatenation>(c));
@@ -1570,19 +1566,19 @@ TEST(parameter_processing, init_list_override) {
     p = HDL_parameter();
     p.set_name("SLAVE_MASK");
     Replication r;
-    r.set_item(std::make_shared<Token>(64, 32));
-    r.set_size(std::make_shared<Token>(2, 1));
+    r.set_item(std::make_shared<Numeric_token>(64, 32));
+    r.set_size(std::make_shared<Numeric_token>(2, 1));
     HDL_simple_type param_type_2;
-    e.set_lhs(std::make_shared<Token>("NS", Token::identifier));
-    e.set_rhs(std::make_shared<Token>("1", Token::number));
+    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("NS")));
+    e.set_rhs(std::make_shared<Numeric_token>("1"));
     e.set_operation(Expression_v2::subtract);
     param_type_2.add_dimension({
     std::make_shared<Expression_v2>(e),
-    std::make_shared<Token>("0", Token::number),
+    std::make_shared<Numeric_token>("0"),
     false});
     param_type_2.add_dimension({
-    std::make_shared<Token>("31", Token::number),
-    std::make_shared<Token>("0", Token::number),
+    std::make_shared<Numeric_token>("31"),
+    std::make_shared<Numeric_token>("0"),
     true});
     p.set_type(std::make_shared<HDL_simple_type>(param_type_2));
     p.set_raw_value(std::make_shared<Replication>(r));

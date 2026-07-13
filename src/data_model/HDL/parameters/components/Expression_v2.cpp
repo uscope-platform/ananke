@@ -18,6 +18,7 @@
 #include <cereal/archives/binary.hpp>
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 
 CEREAL_REGISTER_TYPE(Expression_v2)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Parameter_value_base, Expression_v2)
@@ -102,10 +103,14 @@ void Expression_v2::set_container_sizes(const resolved_type &s,
 
 void Expression_v2::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {
-    if (lhs && !Token::try_replace_identifier(lhs, constant_id, value)) {
+    if (lhs && lhs->is<Identifier_token>() && lhs->as<Identifier_token>().get_value() == constant_id) {
+        lhs = value;
+    } else if (lhs) {
         lhs->propagate_expression(constant_id, value);
     }
-    if (rhs && !Token::try_replace_identifier(rhs, constant_id, value)) {
+    if (rhs && rhs->is<Identifier_token>() && rhs->as<Identifier_token>().get_value() == constant_id) {
+        rhs = value;
+    } else if (rhs) {
         rhs->propagate_expression(constant_id, value);
     }
 }

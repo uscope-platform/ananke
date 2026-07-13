@@ -18,40 +18,57 @@
 
 #include "frontend/analysis/system_verilog/sv_visitor.hpp"
 #include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include "data_model/HDL/parameters/components/token/String_token.hpp"
 
 sv_visitor::sv_visitor(std::string p) {
     path = std::move(p);
 }
 
 void sv_visitor::route_expression_component(const std::string& text) {
-    Token ec(text, Token::get_type(text));
     if(loops_factory.in_loop()) {
-        loops_factory.add_component(ec);
+        loops_factory.add_component(sv_parsing_helpers::make_value(text));
     }
     if(type_engine.active() || type_engine.is_ranging()){
-        type_engine.add_component(ec);
+        type_engine.add_component(sv_parsing_helpers::make_value(text));
     } else if(params_factory.is_component_relevant()){
-        params_factory.add_component(ec);
+        params_factory.add_component(sv_parsing_helpers::make_value(text));
     }
     if (f_factory.is_active()) {
-        f_factory.add_component(ec);
+        f_factory.add_component(sv_parsing_helpers::make_value(text));
     }
     if(deps_factory.is_valid_dependency()){
         deps_factory.add_connection_element(text);
     }
 }
 
-void sv_visitor::route_expression_component(const Token& ec) {
+void sv_visitor::route_expression_component(const std::shared_ptr<Parameter_value_base> &ec) {
+    auto clone = [](const std::shared_ptr<Parameter_value_base> &src) -> std::shared_ptr<Parameter_value_base> {
+        if (auto id = std::dynamic_pointer_cast<const Identifier_token>(src))
+            return std::make_shared<Identifier_token>(*id);
+        if (auto num = std::dynamic_pointer_cast<const Numeric_token>(src))
+            return std::make_shared<Numeric_token>(*num);
+        if (auto str = std::dynamic_pointer_cast<const String_token>(src))
+            return std::make_shared<String_token>(*str);
+        return src;
+    };
+
+    bool routed = false;
     if(loops_factory.in_loop()) {
-        loops_factory.add_component(ec);
+        loops_factory.add_component(routed ? clone(ec) : ec);
+        routed = true;
     }
     if (f_factory.is_active()) {
-        f_factory.add_component(ec);
+        f_factory.add_component(routed ? clone(ec) : ec);
+        routed = true;
     }
     if(type_engine.active() || type_engine.is_ranging()){
-        type_engine.add_component(ec);
+        type_engine.add_component(routed ? clone(ec) : ec);
+        routed = true;
     } else if(params_factory.is_component_relevant()){
-        params_factory.add_component(ec);
+        params_factory.add_component(routed ? clone(ec) : ec);
+        routed = true;
     }
 }
 
@@ -243,9 +260,7 @@ void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
             auto scoped_ctx = ctx->data_type()->package_or_class_scoped_path();
             if (scoped_ctx && !scoped_ctx->DOUBLE_COLON().empty()) {
                 auto qi = sv_parsing_helpers::parse_qualified_identifier(scoped_ctx);
-                Token ec(qi.get_name(), Token::get_type(qi.get_name()));
-                if (!qi.get_package_prefix().empty())
-                    ec.set_package_prefix(qi.get_package_prefix().back());
+                auto ec = std::make_shared<Identifier_token>(qi);
                 if (f_factory.is_active()) {
                     f_factory.add_component(ec);
                 } else {
@@ -254,9 +269,9 @@ void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
             } else{
                 auto text = ctx->data_type()->getText();
                 if (f_factory.is_active()) {
-                    f_factory.add_component(Token(text, Token::get_type(text)));
+                    f_factory.add_component(sv_parsing_helpers::make_value(text));
                 } else {
-                    params_factory.add_component(Token(text, Token::get_type(text)), true);
+                    params_factory.add_component(sv_parsing_helpers::make_value(text), true);
                 }
 
             }
@@ -466,21 +481,18 @@ void sv_visitor::enterPrimaryPath(sv2017::PrimaryPathContext *ctx) {
 
 
 void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
-    Token ec;
+    std::shared_ptr<Parameter_value_base> ec;
 
     auto scoped_ctx = ctx->package_or_class_scoped_path();
     if (scoped_ctx && !scoped_ctx->DOUBLE_COLON().empty()) {
         auto qi = sv_parsing_helpers::parse_qualified_identifier(scoped_ctx);
-        ec = Token(qi.get_name(), Token::get_type(qi.get_name()));
-        if (!qi.get_package_prefix().empty())
-            ec.set_package_prefix(qi.get_package_prefix().back());
+        ec = std::make_shared<Identifier_token>(qi);
     } else if (!instance_prefix.empty()){
-        ec = Token(instance_item, Token::get_type(instance_item));
-        ec.set_instance_prefix(instance_prefix);
+        ec = std::make_shared<Identifier_token>(qualified_identifier("", instance_prefix, instance_item));
         instance_item.clear();
         instance_prefix.clear();
     } else {
-        ec = Token(ctx->getText(), Token::get_type(ctx->getText()));
+        ec = sv_parsing_helpers::make_value(ctx->getText());
     }
 
     route_expression_component(ec);
@@ -683,7 +695,7 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
     } else {
         if (ctx->constant_param_expression()) {
             auto val = ctx->constant_param_expression()->getText();
-            params_factory.add_component(Token(val, Token::get_type(val)));
+            params_factory.add_component(sv_parsing_helpers::make_value(val));
         }
     }
     if (!in_class) {
@@ -1075,7 +1087,7 @@ void sv_visitor::exitFor_end_expression(sv2017::For_end_expressionContext *ctx) 
         auto ex = param->get_expression();
         if (ex->is<Expression_v2>()) {
             loops_factory.add_expression(ex->as<Expression_v2>());
-        } else if (ex->is<Token>()) {
+        } else {
             Expression_v2 e;
             e.set_lhs(ex);
             loops_factory.add_expression(e);
@@ -1100,13 +1112,13 @@ void sv_visitor::enterInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPos
     if(f_factory.is_active()) {
         if(loops_factory.in_definition()) {
             auto name = ctx->variable_lvalue()->getText();
-            loops_factory.add_component(Token(name, Token::get_type(name)));
+            loops_factory.add_component(sv_parsing_helpers::make_value(name));
             if(ctx->inc_or_dec_operator()->INCR()){
                 loops_factory.set_operation(Expression_v2::add);
             } else if(ctx->inc_or_dec_operator()->DECR()){
                 loops_factory.set_operation(Expression_v2::subtract);
             }
-            loops_factory.add_component(Token("1", Token::number));
+            loops_factory.add_component(std::make_shared<Numeric_token>("1"));
         }
     }
 }
@@ -1124,7 +1136,7 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
         if(loops_factory.in_loop()) {
             loops_factory.start_assignment(var_name);
             if (loops_factory.in_body()) {
-                Token var_token(var_name, Token::get_type(var_name));
+                auto var_token = sv_parsing_helpers::make_value(var_name);
                 loops_factory.add_component(var_token);
             }
         } else {
@@ -1144,13 +1156,13 @@ void sv_visitor::exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
 void sv_visitor::exitGenvar_iteration(sv2017::Genvar_iterationContext *ctx) {
    if(ctx->inc_or_dec_operator()) {
        auto str = ctx->identifier()->getText();
-       loops_factory.add_component(Token(str, Token::get_type(str)));
+       loops_factory.add_component(sv_parsing_helpers::make_value(str));
        if(ctx->inc_or_dec_operator()->INCR()){
            loops_factory.set_operation(Expression_v2::add);
        } else if(ctx->inc_or_dec_operator()->DECR()){
            loops_factory.set_operation(Expression_v2::subtract);
        }
-       loops_factory.add_component(Token("1", Token::number));
+       loops_factory.add_component(std::make_shared<Numeric_token>("1"));
    }
     if (!ctx->genvar_expression()) loops_factory.advance_phase();
 }

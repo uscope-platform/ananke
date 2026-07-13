@@ -15,6 +15,7 @@
 
 
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
 
@@ -54,7 +55,9 @@ parameter_deps_t Concatenation::get_dependencies() const{
 void Concatenation::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Parameter_value_base> &value) {
     for (auto &comp:components) {
-        if (!Token::try_replace_identifier(comp, constant_id, value)) {
+        if (comp->is<Identifier_token>() && comp->as<Identifier_token>().get_value() == constant_id) {
+            comp = value;
+        } else {
             comp->propagate_expression(constant_id, value);
         }
     }

@@ -66,13 +66,13 @@ void HDL_instances_factory::add_concatenation_net() {
 
 void HDL_instances_factory::add_connection_element(const std::string &s) {
     if(expr_factory.active()) {
-        expr_factory.add_component(Token(s, Token::get_type(s)));
+        expr_factory.add_component(sv_parsing_helpers::make_value(s));
     } else {
         net_factory.add_component(s);
     }
 }
 
-void HDL_instances_factory::add_connection_element(const Token &ec) {
+void HDL_instances_factory::add_connection_element(const std::shared_ptr<Parameter_value_base> &ec) {
     net_factory.add_component(ec);
 }
 

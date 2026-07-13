@@ -21,6 +21,7 @@
 #include <nlohmann/json.hpp>
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
+#include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 
 
 
@@ -119,12 +120,12 @@ public:
     }
     void add_index_component(const std::string &ec) {
         Expression_v2 idx_expr;
-        idx_expr.set_lhs(std::make_shared<Token>(ec, Token::get_type(ec)));
+        idx_expr.set_lhs(sv_parsing_helpers::make_value(ec));
         index.push_back(idx_expr);
     }
-    void add_index_component(const Token &ec) {
+    void add_index_component(const std::shared_ptr<Parameter_value_base> &ec) {
         Expression_v2 idx_expr;
-        idx_expr.set_lhs(std::make_shared<Token>(ec));
+        idx_expr.set_lhs(ec);
         index.push_back(idx_expr);
     }
     void add_index_expression(const Expression_v2 &expr) {
@@ -134,15 +135,15 @@ public:
         range = r;
     }
     void add_relication_size(const std::string &ec) {
-        Token tok(ec, Token::get_type(ec));
+        auto tok = sv_parsing_helpers::make_value(ec);
         if (!replication.size.get_lhs()) {
-            replication.size.set_lhs(std::make_shared<Token>(tok));
+            replication.size.set_lhs(tok);
         }
     }
     void add_relication_target(const std::string &ec) {
-        Token tok(ec, Token::get_type(ec));
+        auto tok = sv_parsing_helpers::make_value(ec);
         if (!replication.target.get_lhs()) {
-            replication.target.set_lhs(std::make_shared<Token>(tok));
+            replication.target.set_lhs(tok);
         }
     }
     void set_replication(HDL_replication r) {

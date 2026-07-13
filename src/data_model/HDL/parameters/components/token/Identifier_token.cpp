@@ -84,18 +84,6 @@ std::string Identifier_token::print() const {
 }
 
 
-bool Identifier_token::try_replace_identifier(std::shared_ptr<Parameter_value_base> &slot,
-    const qualified_identifier &constant_id, const std::shared_ptr<Parameter_value_base> &value) {
-    if (slot->is<Identifier_token>()) {
-        auto tok_val = slot->as<Identifier_token>().get_value();
-        if (tok_val == constant_id) {
-            slot = value;
-            return true;
-        }
-    }
-    return false;
-}
-
 bool operator==(const Identifier_token &lhs, const Identifier_token &rhs) {
     bool ret_val = true;
     ret_val &= lhs.id == rhs.id;

@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 
 void expressions_factory::push_level() {
     levels_stack.push(expression_level);
@@ -91,21 +92,20 @@ void expressions_factory::stop_bit_selection() {
     }
 }
 
-void expressions_factory::add_component(const Token &ec) {
+void expressions_factory::add_component(const std::shared_ptr<Parameter_value_base> &ec) {
     if (bit_select_active) {
         if (!bit_select_v2.get_lhs()) {
-            bit_select_v2.set_lhs(std::make_shared<Token>(ec));
+            bit_select_v2.set_lhs(ec);
         } else {
-            bit_select_v2.set_rhs(std::make_shared<Token>(ec));
+            bit_select_v2.set_rhs(ec);
         }
         return;
     }
 
-    auto tok = std::make_shared<Token>(ec);
     if (current_v2.get_lhs() == nullptr) {
-        current_v2.set_lhs(tok);
+        current_v2.set_lhs(ec);
     } else {
-        current_v2.set_rhs(tok);
+        current_v2.set_rhs(ec);
     }
     if (paused) paused = false;
 }
@@ -132,7 +132,7 @@ void expressions_factory::add_index(const std::shared_ptr<Parameter_value_base> 
     } else if (current_v2.get_lhs()) {
         target = current_v2.get_lhs();
     }
-    if (auto tok = std::dynamic_pointer_cast<Token>(target)) {
+    if (auto tok = std::dynamic_pointer_cast<Identifier_token>(target)) {
         tok->add_array_index(idx);
     }
 }

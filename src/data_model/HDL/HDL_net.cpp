@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "data_model/HDL/HDL_net.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 
 HDL_net::HDL_net() = default;
 
@@ -45,7 +46,7 @@ void HDL_net::evaluate(const std::map<qualified_identifier, resolved_parameter> 
     if(val.has_value()) {
         if(val.value().get_integer().get_value()) {
             Expression_v2 acc;
-            acc.set_lhs(std::make_shared<Token>(val.value().get_integer(), 0));
+            acc.set_lhs(std::make_shared<Numeric_token>(val.value().get_integer(), 0));
             range.accessor = acc;
         }
     }
@@ -53,7 +54,7 @@ void HDL_net::evaluate(const std::map<qualified_identifier, resolved_parameter> 
     if(val.has_value()) {
         if(val.value().is_integer()) {
             Expression_v2 rng;
-            rng.set_lhs(std::make_shared<Token>(val.value().get_integer(), 0));
+            rng.set_lhs(std::make_shared<Numeric_token>(val.value().get_integer(), 0));
             range.range = rng;
         }
     }
@@ -62,7 +63,7 @@ void HDL_net::evaluate(const std::map<qualified_identifier, resolved_parameter> 
         if(val.has_value()) {
             if(val.value().is_integer()) {
                 Expression_v2 idx_expr;
-                idx_expr.set_lhs(std::make_shared<Token>(val.value().get_integer(), 0));
+                idx_expr.set_lhs(std::make_shared<Numeric_token>(val.value().get_integer(), 0));
                 idx = idx_expr;
             }
         }
@@ -71,7 +72,7 @@ void HDL_net::evaluate(const std::map<qualified_identifier, resolved_parameter> 
     if(val.has_value()) {
         if(val.value().is_integer()) {
             Expression_v2 sz;
-            sz.set_lhs(std::make_shared<Token>(val.value().get_integer(), 0));
+            sz.set_lhs(std::make_shared<Numeric_token>(val.value().get_integer(), 0));
             replication.size = sz;
         }
     }
@@ -79,7 +80,7 @@ void HDL_net::evaluate(const std::map<qualified_identifier, resolved_parameter> 
     if(val.has_value()) {
         if(val.value().is_integer()) {
             Expression_v2 tgt;
-            tgt.set_lhs(std::make_shared<Token>(val.value().get_integer(), 0));
+            tgt.set_lhs(std::make_shared<Numeric_token>(val.value().get_integer(), 0));
             replication.target = tgt;
         }
     }

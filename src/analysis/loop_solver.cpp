@@ -26,45 +26,6 @@ std::vector<hdl_integer> loop_solver::solve_loop(std::shared_ptr<HDL_instance_AS
    return solve_loop(node->get_inner_loop(), context);
 }
 
-bool loop_solver::is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression_v2 end_cond,const std::map<qualified_identifier, resolved_parameter> &context) {
-    auto val = lv->get_numeric_value();
-    if(!val.has_value()) throw std::runtime_error("Could not get the numeric value of a loop variable, something is seriously wrong");
-    auto ctx = context;
-    ctx[lv->get_identifier()] = val.value();
-
-    auto ec = end_cond.evaluate(ctx);
-    if (!ec.has_value()) throw std::runtime_error("Could not evaluate loop end condition");
-    if (!ec.value().is_integer()) throw std::runtime_error("loop end condition expression must ret");
-    return ec.value().get_integer() == 0;
-}
-
-std::shared_ptr<HDL_parameter> loop_solver::get_init_variable(const HDL_loop_metadata &l,const std::map<qualified_identifier, resolved_parameter> &context) {
-    auto loop_variable = std::make_shared<HDL_parameter>(l.get_init());
-    auto variable_val = loop_variable->evaluate(context);
-    if (!variable_val.has_value()) return{};
-    if (!variable_val.value().is_integer()) return {};
-
-    loop_variable->set_value(variable_val.value().get_integer());
-    return loop_variable;
-}
-
-std::shared_ptr<HDL_parameter> loop_solver::update_loop(
-    Expression_v2 e,
-    std::shared_ptr<HDL_parameter> loop_var,
-    const std::map<qualified_identifier, resolved_parameter> &context
-    ) {
-    auto val = loop_var->get_numeric_value();
-    if(!val.has_value()) throw std::runtime_error("Could not get the numeric value of a loop variable, something is seriously wrong");
-    auto ctx = context;
-    ctx[loop_var->get_identifier()] = val.value();
-    auto res = e.evaluate(ctx);
-    if (!res.has_value()) throw std::runtime_error("Could not evaluate loop end condition");
-    if (!res.value().is_integer()) throw std::runtime_error("loop end condition expression must ret");
-
-    loop_var->set_value(res.value().get_integer());
-    return loop_var;
-}
-
 std::vector<hdl_integer> loop_solver::solve_loop(const HDL_loop_metadata &loop, const std::map<qualified_identifier, resolved_parameter> &context) {
 
     std::vector<hdl_integer> ret;
@@ -83,4 +44,43 @@ std::vector<hdl_integer> loop_solver::solve_loop(const HDL_loop_metadata &loop, 
     }
 
     return ret;
+}
+
+bool loop_solver::is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression_v2 end_cond,const std::map<qualified_identifier, resolved_parameter> &context) {
+    auto val = lv->get_numeric_value();
+    if(!val.has_value()) throw std::runtime_error("Could not get the numeric value of a loop variable, something is seriously wrong");
+    auto ctx = context;
+    ctx[lv->get_identifier()] = val.value();
+
+    auto ec = end_cond.evaluate(ctx);
+    if (!ec.has_value()) throw std::runtime_error("Could not evaluate loop end condition");
+    if (!ec.value().is_integer()) throw std::runtime_error("loop end condition expression must ret");
+    return ec.value().get_integer() == 0;
+}
+
+std::shared_ptr<HDL_parameter> loop_solver::get_init_variable(const HDL_loop_metadata &l,const std::map<qualified_identifier, resolved_parameter> &context) {
+    auto loop_variable = std::make_shared<HDL_parameter>(l.get_init());
+    auto variable_val = loop_variable->evaluate(context);
+    if (!variable_val.has_value()) return{};
+    if (!variable_val.value().is_integer()) return {};
+
+     loop_variable->set_value(variable_val.value().get_integer());
+    return loop_variable;
+}
+
+std::shared_ptr<HDL_parameter> loop_solver::update_loop(
+    Expression_v2 e,
+    std::shared_ptr<HDL_parameter> loop_var,
+    const std::map<qualified_identifier, resolved_parameter> &context
+    ) {
+    auto val = loop_var->get_numeric_value();
+    if(!val.has_value()) throw std::runtime_error("Could not get the numeric value of a loop variable, something is seriously wrong");
+    auto ctx = context;
+    ctx[loop_var->get_identifier()] = val.value();
+    auto res = e.evaluate(ctx);
+    if (!res.has_value()) throw std::runtime_error("Could not evaluate loop end condition");
+    if (!res.value().is_integer()) throw std::runtime_error("loop end condition expression must ret");
+
+    loop_var->set_value(res.value().get_integer());
+    return loop_var;
 }

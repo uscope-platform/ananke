@@ -40,11 +40,6 @@ public:
     std::string print() const override;
     int64_t get_size() override {return  container_size;}
 
-    static bool try_replace_identifier(std::shared_ptr<Parameter_value_base> &slot,
-                                        const qualified_identifier &constant_id,
-                                        const std::shared_ptr<Parameter_value_base> &value);
-
-
     friend bool operator==(const Identifier_token &lhs, const Identifier_token &rhs);
 
     void set_array_index(const std::vector<std::shared_ptr<Parameter_value_base>> &v) {array_index = v;}

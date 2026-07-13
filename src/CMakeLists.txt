@@ -49,6 +49,7 @@ target_sources(ananke_lib
     data_model/HDL/parameters/components/Ternary.cpp
     data_model/HDL/parameters/components/Replication.cpp
     data_model/HDL/parameters/components/Cast.cpp
+
     data_model/HDL/parameters/components/Token.cpp
         data_model/HDL/parameters/components/token/Identifier_token.cpp
         data_model/HDL/parameters/components/token/Numeric_token.cpp

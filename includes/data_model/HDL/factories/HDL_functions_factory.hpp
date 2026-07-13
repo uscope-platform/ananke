@@ -36,7 +36,7 @@ public:
     }
     void start_assignment(const std::string &n);
     void add_argument(const std::string &a);
-    void add_component(const Token &c);
+    void add_component(const std::shared_ptr<Parameter_value_base> &c);
     void add_value(const std::shared_ptr<Parameter_value_base> &v);
     void close_lvalue();
     void start_body(){phase = body;}

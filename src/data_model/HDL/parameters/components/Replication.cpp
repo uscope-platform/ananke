@@ -16,6 +16,7 @@
 #include "data_model/HDL/parameters/components/Replication.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
+#include "data_model/HDL/parameters/components/Parameter_value_base.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
@@ -103,9 +104,9 @@ std::optional<resolved_parameter> Replication::evaluate(const std::map<qualified
                 repeated_value.insert(repeated_value.end(), item_vect.begin(), item_vect.end());
             }
         }
-    } else if (repeated_item->is<Token>()){
-        auto item = repeated_item->as<Token>().evaluate(context);
-        int64_t repeated_size = repeated_item->as<Token>().get_size();
+    } else if (!repeated_item->is<Expression_v2>() && !repeated_item->is<Concatenation>()){
+        auto item = repeated_item->evaluate(context);
+        int64_t repeated_size = repeated_item->get_size();
         if (!item.has_value()) return false;
         if (!item.value().is_integer()) throw std::runtime_error("Tried to replicate non integer");
         if (!packing) {

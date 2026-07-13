@@ -211,7 +211,7 @@ public:
 
 private:
     void route_expression_component(const std::string& text);
-    void route_expression_component(const Token& ec);
+    void route_expression_component(const std::shared_ptr<Parameter_value_base>& ec);
     void process_operation(Expression_v2::expression_operator op);
 
     bool in_param_declaration = false;

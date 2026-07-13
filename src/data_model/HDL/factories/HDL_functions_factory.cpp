@@ -36,13 +36,13 @@ void HDL_functions_factory::set_operation(Expression_v2::expression_operator op)
         }
     }
 }
-void HDL_functions_factory::add_component(const Token &c) {
+void HDL_functions_factory::add_component(const std::shared_ptr<Parameter_value_base> &c) {
     if (phase == body) {
         if (in_bit_selection) {
             if (!bit_index->as<Expression_v2>().get_lhs()) {
-                bit_index->as<Expression_v2>().set_lhs(std::make_shared<Token>(c));
+                bit_index->as<Expression_v2>().set_lhs(c);
             } else {
-                bit_index->as<Expression_v2>().set_rhs(std::make_shared<Token>(c));
+                bit_index->as<Expression_v2>().set_rhs(c);
             }
         } else {
             expr_factory_.add_component(c);
@@ -79,7 +79,7 @@ void HDL_functions_factory::close_assignment() {
             auto &e = assignment_value->as<Expression_v2>();
             if (e.get_operation() != Expression_v2::none) {
                 f.close_assignment(assignment_value);
-            } else if (auto lhs = e.get_lhs(); lhs && lhs->is<Token>()) {
+            } else if (auto lhs = e.get_lhs()) {
                 f.close_assignment(lhs);
             } else if (auto lhs = e.get_lhs()) {
                 f.close_assignment(lhs);
@@ -158,8 +158,6 @@ void HDL_functions_factory::stop_cast() {
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
                 consumer_stack.top()->consume(Expression_v2::unwrap(std::move(*expr)));
-            } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
-                consumer_stack.top()->consume(lhs);
             } else if (auto lhs = expr->get_lhs()) {
                 consumer_stack.top()->consume(lhs);
             }
@@ -190,8 +188,6 @@ void HDL_functions_factory::advance_cast() {
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
                 cast->consume(Expression_v2::unwrap(std::move(*expr)));
-            } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
-                cast->consume(lhs);
             } else if (auto lhs = expr->get_lhs()) {
                 cast->consume(lhs);
             }
@@ -212,8 +208,6 @@ void HDL_functions_factory::stop_expression() {
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
                 add_value(Expression_v2::unwrap(std::move(*expr)));
-            } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
-                add_value(lhs);
             } else if (auto lhs = expr->get_lhs()) {
                 add_value(lhs);
             }

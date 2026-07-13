@@ -18,6 +18,7 @@
 
 #include "data_model/HDL/HDL_instance.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
+#include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 #include "nets/HDL_range_factory.hpp"
 #include "nets/HDL_net_factory.hpp"
 #include "nets/HDL_concat_factory.hpp"
@@ -35,7 +36,7 @@ public:
     void start_replication_port(const std::string &n);
     void add_concatenation_net();
     void add_connection_element(const std::string &s);
-    void add_connection_element(const Token &ec);
+    void add_connection_element(const std::shared_ptr<Parameter_value_base> &ec);
     bool is_valid_dependency() const{return valid_instance;}
     bool in_concatenation() const {return net_factory.is_in_concatenation();}
     bool is_interface() const {return in_interface;}

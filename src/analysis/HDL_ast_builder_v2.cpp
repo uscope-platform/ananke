@@ -17,6 +17,7 @@
 #include "crash_context.hpp"
 
 #include "analysis/loop_solver.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 
 HDL_ast_builder_v2::HDL_ast_builder_v2(const std::shared_ptr<settings_store> &s, const std::shared_ptr<data_store> &d,
                                        const Depfile &d_f){
@@ -151,7 +152,7 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::specialize_instance(const 
             if(n.is_array()) {
                 auto new_net = n;
                 Expression_v2 n_idx;
-                n_idx.set_lhs(std::make_shared<Token>(std::variant<hdl_integer, double>(idx), 0));
+                n_idx.set_lhs(std::make_shared<Numeric_token>(std::variant<hdl_integer, double>(idx), 0));
                 new_net.set_index({n_idx});
                 port_content.emplace_back(new_net);
             } else {

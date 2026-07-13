@@ -35,14 +35,14 @@ TEST(typedef_parsing, mixed_packing_array) {
     EXPECT_EQ(typedefs["ctrl_addr_init_t"]->as<HDL_simple_type>().get_unpacked_dimensions().size(), 1);
 
     dimension_t check_d;
-    check_d.first_bound = std::make_shared<Token>("31", Token::number);
-    check_d.second_bound = std::make_shared<Token>("0", Token::number);
+    check_d.first_bound = std::make_shared<Numeric_token>("31");
+    check_d.second_bound = std::make_shared<Numeric_token>("0");
     check_d.packed = true;
     auto packed_dim = typedefs["ctrl_addr_init_t"]->as<HDL_simple_type>().get_packed_dimensions()[0];
     EXPECT_EQ(packed_dim, check_d);
 
-    check_d.first_bound = std::make_shared<Token>("1", Token::number);
-    check_d.second_bound = std::make_shared<Token>("0", Token::number);
+    check_d.first_bound = std::make_shared<Numeric_token>("1");
+    check_d.second_bound = std::make_shared<Numeric_token>("0");
     check_d.packed = false;
     auto unpacked_dim = typedefs["ctrl_addr_init_t"]->as<HDL_simple_type>().get_unpacked_dimensions()[0];
     EXPECT_EQ(unpacked_dim, check_d);
@@ -181,12 +181,12 @@ TEST(typedef_parsing, struct_with_unpacked_array_of_packed) {
     HDL_simple_type t;
     t.set_packed_dimensions({
         {
-            std::make_shared<Token>(3, 2),
-            std::make_shared<Token>(0, 1),
+            std::make_shared<Numeric_token>(3, 2),
+            std::make_shared<Numeric_token>(0, 1),
             true
         }});
     t.set_unpacked_dimensions({
-        {std::make_shared<Token>(1, 1), std::make_shared<Token>(0, 1), false}
+        {std::make_shared<Numeric_token>(1, 1), std::make_shared<Numeric_token>(0, 1), false}
     });
     m.type = std::make_shared<HDL_simple_type>(t);
     check_struct.member.emplace_back(m);

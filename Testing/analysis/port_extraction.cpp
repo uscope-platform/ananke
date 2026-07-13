@@ -123,7 +123,7 @@ TEST(port_extraction, array_port) {
     check_ports["stream_in"] = {HDL_net("stream")};
 
     Expression_v2 idx;
-    idx.set_lhs(std::make_shared<Token>("5", Token::number));
+    idx.set_lhs(std::make_shared<Numeric_token>("5"));
     check_ports["stream_in"][0].set_index({idx});
 
     ASSERT_EQ(ports, check_ports);
@@ -154,12 +154,12 @@ TEST(port_extraction, array_range_port) {
     HDL_range range;
     {
         Expression_v2 acc;
-        acc.set_lhs(std::make_shared<Token>("3", Token::number));
+        acc.set_lhs(std::make_shared<Numeric_token>("3"));
         range.accessor = acc;
     }
     {
         Expression_v2 rng;
-        rng.set_lhs(std::make_shared<Token>("1", Token::number));
+        rng.set_lhs(std::make_shared<Numeric_token>("1"));
         range.range = rng;
     }
     range.type = HDL_range::increasing_range;
@@ -219,12 +219,12 @@ TEST(port_extraction, concat_simple_slicing) {
 
     {
         Expression_v2 idx;
-        idx.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        idx.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N")));
         check_ports["stream_in"][0].set_index({idx});
     }
     {
         Expression_v2 idx;
-        idx.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        idx.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N")));
         check_ports["stream_in"][1].set_index({idx});
     }
 
@@ -257,12 +257,12 @@ TEST(port_extraction, concat_range) {
     HDL_range range;
     {
         Expression_v2 acc;
-        acc.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        acc.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N")));
         range.accessor = acc;
     }
     {
         Expression_v2 rng;
-        rng.set_lhs(std::make_shared<Token>("3", Token::number));
+        rng.set_lhs(std::make_shared<Numeric_token>("3"));
         range.range = rng;
     }
     range.type = HDL_range::increasing_range;
@@ -271,12 +271,12 @@ TEST(port_extraction, concat_range) {
 
     {
         Expression_v2 acc;
-        acc.set_lhs(std::make_shared<Token>("C", Token::identifier));
+        acc.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("C")));
         range.accessor = acc;
     }
     {
         Expression_v2 rng;
-        rng.set_lhs(std::make_shared<Token>("1", Token::number));
+        rng.set_lhs(std::make_shared<Numeric_token>("1"));
         range.range = rng;
     }
     range.type = HDL_range::decreasing_range;
@@ -313,14 +313,14 @@ TEST(port_extraction,range_concat_expression) {
     HDL_range range;
     {
         Expression_v2 acc;
-        acc.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        acc.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N")));
         acc.set_operation(Expression_v2::multiply);
-        acc.set_rhs(std::make_shared<Token>("ADDR_WIDTH", Token::identifier));
+        acc.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("ADDR_WIDTH")));
         range.accessor = acc;
     }
     {
         Expression_v2 rng;
-        rng.set_lhs(std::make_shared<Token>("ADDR_WIDTH", Token::identifier));
+        rng.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("ADDR_WIDTH")));
         range.range = rng;
     }
     range.type = HDL_range::increasing_range;
@@ -329,14 +329,14 @@ TEST(port_extraction,range_concat_expression) {
 
     {
         Expression_v2 acc;
-        acc.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        acc.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N")));
         acc.set_operation(Expression_v2::multiply);
-        acc.set_rhs(std::make_shared<Token>("3", Token::number));
+        acc.set_rhs(std::make_shared<Numeric_token>("3"));
         range.accessor = acc;
     }
     {
         Expression_v2 rng;
-        rng.set_lhs(std::make_shared<Token>("3", Token::number));
+        rng.set_lhs(std::make_shared<Numeric_token>("3"));
         range.range = rng;
     }
     range.type = HDL_range::increasing_range;
@@ -374,14 +374,14 @@ TEST(port_extraction, concat_complex_slicing) {
     HDL_range range;
     {
         Expression_v2 acc;
-        acc.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        acc.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N")));
         acc.set_operation(Expression_v2::multiply);
-        acc.set_rhs(std::make_shared<Token>("ADDR_WIDTH", Token::identifier));
+        acc.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("ADDR_WIDTH")));
         range.accessor = acc;
     }
     {
         Expression_v2 rng;
-        rng.set_lhs(std::make_shared<Token>("ADDR_WIDTH", Token::identifier));
+        rng.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("ADDR_WIDTH")));
         range.range = rng;
     }
     range.type = HDL_range::increasing_range;
@@ -390,14 +390,14 @@ TEST(port_extraction, concat_complex_slicing) {
 
     {
         Expression_v2 acc;
-        acc.set_lhs(std::make_shared<Token>("N", Token::identifier));
+        acc.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N")));
         acc.set_operation(Expression_v2::multiply);
-        acc.set_rhs(std::make_shared<Token>("3", Token::number));
+        acc.set_rhs(std::make_shared<Numeric_token>("3"));
         range.accessor = acc;
     }
     {
         Expression_v2 rng;
-        rng.set_lhs(std::make_shared<Token>("3", Token::number));
+        rng.set_lhs(std::make_shared<Numeric_token>("3"));
         range.range = rng;
     }
     range.type = HDL_range::increasing_range;
@@ -460,12 +460,12 @@ TEST(port_extraction, repetition_port) {
     HDL_replication rep;
     {
         Expression_v2 sz;
-        sz.set_lhs(std::make_shared<Token>("5", Token::number));
+        sz.set_lhs(std::make_shared<Numeric_token>("5"));
         rep.size = sz;
     }
     {
         Expression_v2 tgt;
-        tgt.set_lhs(std::make_shared<Token>("1'b1", Token::number));
+        tgt.set_lhs(std::make_shared<Numeric_token>("1'b1"));
         rep.target = tgt;
     }
     check_ports["stream_in"][0].set_replication(rep);
@@ -498,21 +498,21 @@ TEST(port_extraction, complex_nested_concat_port) {
 
     {
         Expression_v2 idx;
-        idx.set_lhs(std::make_shared<Token>("data_in.dest", Token::identifier));
+        idx.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("data_in.dest")));
         check_ports["stream_in"][0].set_index({idx});
     }
 
     HDL_replication rep;
     {
         Expression_v2 sz;
-        sz.set_lhs(std::make_shared<Token>("DATA_PATH_WIDTH", Token::identifier));
+        sz.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("DATA_PATH_WIDTH")));
         sz.set_operation(Expression_v2::subtract);
-        sz.set_rhs(std::make_shared<Token>("1", Token::number));
+        sz.set_rhs(std::make_shared<Numeric_token>("1"));
         rep.size = sz;
     }
     {
         Expression_v2 tgt;
-        tgt.set_lhs(std::make_shared<Token>("1'b0", Token::number));
+        tgt.set_lhs(std::make_shared<Numeric_token>("1'b0"));
         rep.target = tgt;
     }
     check_ports["stream_in"][1].set_replication(rep);
@@ -549,12 +549,12 @@ TEST(port_extraction, concat_of_repetitions) {
     HDL_replication rep;
     {
         Expression_v2 sz;
-        sz.set_lhs(std::make_shared<Token>("3", Token::number));
+        sz.set_lhs(std::make_shared<Numeric_token>("3"));
         rep.size = sz;
     }
     {
         Expression_v2 tgt;
-        tgt.set_lhs(std::make_shared<Token>("1'b1", Token::number));
+        tgt.set_lhs(std::make_shared<Numeric_token>("1'b1"));
         rep.target = tgt;
     }
 
@@ -562,14 +562,14 @@ TEST(port_extraction, concat_of_repetitions) {
 
     {
         Expression_v2 sz;
-        sz.set_lhs(std::make_shared<Token>("DATA_PATH_WIDTH", Token::identifier));
+        sz.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("DATA_PATH_WIDTH")));
         sz.set_operation(Expression_v2::subtract);
-        sz.set_rhs(std::make_shared<Token>("1", Token::number));
+        sz.set_rhs(std::make_shared<Numeric_token>("1"));
         rep.size = sz;
     }
     {
         Expression_v2 tgt;
-        tgt.set_lhs(std::make_shared<Token>("1'b0", Token::number));
+        tgt.set_lhs(std::make_shared<Numeric_token>("1'b0"));
         rep.target = tgt;
     }
 

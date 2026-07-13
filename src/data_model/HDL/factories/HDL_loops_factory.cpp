@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 
 void HDL_loops_factory::new_loop() {
     repeated_instances.clear();
@@ -53,7 +54,7 @@ std::vector<HDL_instance> HDL_loops_factory::get_instances() {
     return repeated_instances;
 }
 
-void HDL_loops_factory:: add_component(const Token &c) {
+void HDL_loops_factory:: add_component(const std::shared_ptr<Parameter_value_base> &c) {
     if (loop_phase == body) {
         if (in_body_bit_selection) {
             body_expr_factory.add_component(c);
@@ -61,11 +62,10 @@ void HDL_loops_factory:: add_component(const Token &c) {
             body_expr_factory.add_component(c);
         }
     } else {
-        auto tok = std::make_shared<Token>(c);
         if (current_expression.get_lhs() == nullptr) {
-            current_expression.set_lhs(tok);
+            current_expression.set_lhs(c);
         } else {
-            current_expression.set_rhs(tok);
+            current_expression.set_rhs(c);
         }
     }
 }
@@ -110,8 +110,8 @@ void HDL_loops_factory::advance_expression() {
         auto expr = body_expr_factory.get_expression_v2();
         if (expr.has_value()) {
             auto raw = Expression_v2::unwrap(std::move(*expr));
-            if (raw && raw->is<Token>()) {
-                auto &tok = raw->as<Token>();
+            if (raw && raw->is<Identifier_token>()) {
+                auto &tok = raw->as<Identifier_token>();
                 if (tok.is_subscripted()) {
                     auto indices = tok.get_array_index();
                     if (indices.size() == 1) {
@@ -136,8 +136,6 @@ void HDL_loops_factory::close_expression() {
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
                 assignments.back().set_value(Expression_v2::unwrap(std::move(*expr)));
-            } else if (auto lhs = expr->get_lhs(); lhs && lhs->is<Token>()) {
-                assignments.back().set_value(lhs);
             } else if (auto lhs = expr->get_lhs()) {
                 assignments.back().set_value(lhs);
             }
