@@ -317,14 +317,20 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_str
                 for (auto &ps : type_info->struct_sizes[i].packed_sizes) w *= ps;
                 uint64_t mask = (w >= 64) ? ~0ULL : (1ULL << w) - 1;
                 hdl_integer field_val = static_cast<uint64_t>((raw >> offset) & mask);
+                auto full_prefix = id.get_instance();
+                full_prefix.push_back(id.get_name());
                 qualified_identifier new_identifier(st.member[i].name);
-                new_identifier.set_instance_prefix({id.get_name()});
+                new_identifier.set_instance_prefix(full_prefix);
                 if (st.member[i].type->is<HDL_struct_type>()) {
                     auto sub_param = std::make_shared<HDL_parameter>();
                     sub_param->set_name(st.member[i].name);
                     sub_param->set_type(st.member[i].type);
                     sub_param->set_value(field_val);
-                    auto sub_fields = extract_struct_fields(sub_param, field_val, new_identifier, ctx);
+                    auto sub_prefix = id.get_instance();
+                    sub_prefix.push_back(id.get_name());
+                    qualified_identifier sub_id(st.member[i].name);
+                    sub_id.set_instance_prefix(sub_prefix);
+                    auto sub_fields = extract_struct_fields(sub_param, field_val, sub_id, ctx);
                     fields.insert(sub_fields.begin(), sub_fields.end());
                 } else {
                     fields[new_identifier] = field_val;
@@ -338,8 +344,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_str
             int arr_idx = st.member.size() - 1 - i;
             auto field_val = arr.get_value({static_cast<int64_t>(arr_idx)});
             if (field_val) {
+                auto full_prefix = id.get_instance();
+                full_prefix.push_back(id.get_name());
                 qualified_identifier new_identifier(st.member[i].name);
-                new_identifier.set_instance_prefix({id.get_name()});
+                new_identifier.set_instance_prefix(full_prefix);
                 fields[new_identifier] = field_val.value();
             }
         }

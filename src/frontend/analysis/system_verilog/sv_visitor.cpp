@@ -500,12 +500,28 @@ void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
     if (scoped_ctx && !scoped_ctx->DOUBLE_COLON().empty()) {
         auto qi = sv_parsing_helpers::parse_qualified_identifier(scoped_ctx);
         ec = std::make_shared<Identifier_token>(qi);
-    } else if (!instance_prefix.empty()){
-        ec = std::make_shared<Identifier_token>(qualified_identifier("", instance_prefix, instance_item));
-        instance_item.clear();
-        instance_prefix.clear();
     } else {
-        ec = sv_parsing_helpers::make_value(ctx->getText());
+        std::vector<std::string> dot_chain;
+        auto node = ctx->parent;
+        while (node) {
+            if (auto dot = dynamic_cast<sv2017::PrimaryDotContext *>(node)) {
+                dot_chain.push_back(dot->identifier()->getText());
+                node = dot->parent;
+            } else {
+                break;
+            }
+        }
+        if (dot_chain.empty()) {
+            ec = sv_parsing_helpers::make_value(ctx->getText());
+        } else {
+            auto leaf = ctx->package_or_class_scoped_path()->getText();
+            qualified_identifier qi(dot_chain.back());
+            std::vector<std::string> instance = {leaf};
+            for (size_t i = 0; i < dot_chain.size() - 1; ++i)
+                instance.push_back(dot_chain[i]);
+            qi.set_instance_prefix(instance);
+            ec = std::make_shared<Identifier_token>(qi);
+        }
     }
 
     route_expression_component(ec);
