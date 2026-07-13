@@ -214,6 +214,10 @@ void Concatenation::process_struct_size(
         resolved_type rt;
         rt.packed_sizes = members[i].packed_sizes;
         rt.unpacked_sizes = members[i].unpacked_sizes;
+        rt.struct_sizes = members[i].members;
+        if (!members[i].members.empty()) {
+            rt.packed_struct = true;
+        }
         components[i]->set_container_sizes(rt, context);
     }
 }

@@ -26,16 +26,24 @@ std::optional<resolved_type> HDL_struct_type::evaluate_type(
     resolved_type result;
     uint64_t global_size = 0;
     for (auto &m:member) {
-        if (m.type->is<HDL_struct_type>()) {
-            spdlog::warn("Nested structures are not supported yet");
-            return std::nullopt;
-        }
-        auto s = m.type->as<HDL_simple_type>().evaluate_type(context);
-        result.struct_sizes.push_back({s->unpacked_sizes, s->packed_sizes});
+        struct_member_resolved_type smrt;
         uint64_t member_width = 1;
-        for (auto &ps : s->packed_sizes)
-            member_width *= ps;
-        global_size +=member_width;
+        if (m.type->is<HDL_struct_type>()) {
+            auto s = m.type->as<HDL_struct_type>().evaluate_type(context);
+            smrt.packed_sizes = s->packed_sizes;
+            smrt.unpacked_sizes = s->unpacked_sizes;
+            smrt.members = s->struct_sizes;
+            for (auto &ps : s->packed_sizes)
+                member_width *= ps;
+        } else {
+            auto s = m.type->as<HDL_simple_type>().evaluate_type(context);
+            smrt.packed_sizes = s->packed_sizes;
+            smrt.unpacked_sizes = s->unpacked_sizes;
+            for (auto &ps : s->packed_sizes)
+                member_width *= ps;
+        }
+        result.struct_sizes.push_back(smrt);
+        global_size += member_width;
     }
     result.packed_sizes.push_back(global_size);
     result.packed_ascending.push_back(true);

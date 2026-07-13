@@ -319,7 +319,16 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_str
                 hdl_integer field_val = static_cast<uint64_t>((raw >> offset) & mask);
                 qualified_identifier new_identifier(st.member[i].name);
                 new_identifier.set_instance_prefix({id.get_name()});
-                fields[new_identifier] = field_val;
+                if (st.member[i].type->is<HDL_struct_type>()) {
+                    auto sub_param = std::make_shared<HDL_parameter>();
+                    sub_param->set_name(st.member[i].name);
+                    sub_param->set_type(st.member[i].type);
+                    sub_param->set_value(field_val);
+                    auto sub_fields = extract_struct_fields(sub_param, field_val, new_identifier, ctx);
+                    fields.insert(sub_fields.begin(), sub_fields.end());
+                } else {
+                    fields[new_identifier] = field_val;
+                }
                 offset += w;
             }
         }
