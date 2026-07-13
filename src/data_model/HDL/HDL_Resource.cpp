@@ -76,30 +76,6 @@ void HDL_Resource::add_dependency(const HDL_instance &dep) {
     dependencies.push_back(dep);
 }
 
-std::unordered_map<std::string, HDL_Resource>::mapped_type HDL_Resource::clone() {
-    HDL_Resource ret;
-
-    ret.name = name;
-    ret.path = path;
-    ret.line_n = line_n;
-    ret.hdl_dependency_type = hdl_dependency_type;
-    ret.port_specs = port_specs;
-    ret.processor_docs = processor_docs;
-    ret.doc = doc;
-    ret.typedefs = typedefs;
-    ret.parameters_spec  = parameters_spec;
-
-    for(auto &[function_name,  function_def]:functions) {
-        ret.functions.insert({function_name, function_def});
-    }
-
-    for(auto &d:dependencies) {
-        ret.dependencies.push_back(d.clone());
-    }
-
-    return ret;
-
-}
 
 void HDL_Resource::add_dependencies(std::vector<HDL_instance> deps) {
     dependencies.insert(dependencies.begin(), deps.begin(), deps.end());

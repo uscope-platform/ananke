@@ -66,7 +66,6 @@ public:
     }
 
     void set_name(const std::string &n) {name = n;}
-    std::shared_ptr<HDL_parameter> clone() const;
 
     void set_value(const resolved_parameter &val){solved_value = val;}
 

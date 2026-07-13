@@ -56,17 +56,6 @@ bool operator<(const HDL_parameter &lhs, const HDL_parameter &rhs) {
 }
 
 
-std::shared_ptr<HDL_parameter> HDL_parameter::clone() const {
-    HDL_parameter par;
-    par.name = name;
-    par.type = type;
-    par.solved_value = solved_value;
-    par.raw_value = raw_value;
-    par.return_unpacked_range_left = return_unpacked_range_left;
-    par.return_unpacked_range_right = return_unpacked_range_right;
-    return std::make_shared<HDL_parameter>(par);
-}
-
 
 std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
     if (!type) return std::nullopt;

@@ -80,8 +80,6 @@ class HDL_Resource {
         std::map<std::string, std::shared_ptr<hdl_type>> get_typedefs(){return typedefs;}
 
 
-        std::unordered_map<std::string, HDL_Resource>::mapped_type clone();
-
         void add_dependencies(std::vector<HDL_instance> deps);
         void add_dependency(const HDL_instance &dep);
 

@@ -28,25 +28,6 @@ HDL_instance::HDL_instance(const HDL_instance &c) {
 }
 
 
-HDL_instance HDL_instance::clone() {
-    HDL_instance  c;
-    c.parameters = parameters;
-    c.dep_class = dep_class;
-    c.type = type;
-    c.name = name;
-    c.wildcard_assignment = wildcard_assignment;
-    c.groups = groups;
-    c.array_quantifier = array_quantifier;
-
-    for(auto &s:loop_specs) {
-        c.loop_specs.push_back(s);
-    }
-
-    c.ports_map = ports_map;
-
-    return c;
-}
-
 HDL_instance::HDL_instance(std::string dep_name, std::string dep_type, dependency_class d_c) {
     dep_class = d_c;
     name = std::move(dep_name);

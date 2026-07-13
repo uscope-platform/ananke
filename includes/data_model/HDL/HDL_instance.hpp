@@ -40,7 +40,6 @@
 class HDL_instance {
 public:
     virtual ~HDL_instance() = default;
-    HDL_instance clone();
     HDL_instance(std::string dep_name, std::string dep_type, dependency_class d_c);
     HDL_instance() = default;
     HDL_instance(const HDL_instance &c );
