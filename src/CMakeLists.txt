@@ -55,6 +55,10 @@ target_sources(ananke_lib
     data_model/HDL/parameters/components/token/String_token.cpp
     data_model/HDL/parameters/components/HDL_function_def.cpp
     data_model/HDL/parameters/components/HDL_function_call.cpp
+    data_model/HDL/statement/hdl_instance_statement.cpp
+    data_model/HDL/statement/hdl_loop_statement.cpp
+    data_model/HDL/statement/hdl_statement_base.cpp
+    data_model/HDL/statement/hdl_instance_statement.cpp
     data_model/HDL/factories/HDL_functions_factory.cpp
     data_model/HDL/factories/nets/HDL_range_factory.cpp
     data_model/HDL/factories/nets/HDL_concat_factory.cpp

@@ -63,7 +63,7 @@ std::string Ternary::print() const {
 
 
 bool Ternary::isEqual(const Expression_base &other) const {
-        const auto& rhs = static_cast<const Ternary&>(other);
+w    const auto& rhs = static_cast<const Ternary&>(other);
 
     bool ret_val = true;
     ret_val &= *condition == *rhs.condition;
