@@ -99,6 +99,7 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_vector(const std::
     std::vector<hdl_integer> values(assignments.size() + loop_indexes.size());
     std::vector<int64_t> value_sizes(assignments.size() + loop_indexes.size());
     for(auto &a:assignments) {
+        if (a.get_name() != function_name) continue;
         auto idx = a.get_index().value()->evaluate(context);
         if(!idx.has_value()) return std::nullopt;
         if(!idx.value().is_integer()) return std::nullopt;

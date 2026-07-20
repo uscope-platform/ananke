@@ -100,6 +100,12 @@ TEST(function_processing, simple_function_array) {
         std::make_shared<Numeric_token>("300")
         );
     check_f.add_assignment(a);
+    a = assignment(
+        "IGNORED_ASSIGNMENT",
+        std::make_shared<Numeric_token>("2"),
+        std::make_shared<Numeric_token>("1")
+        );
+    check_f.add_assignment(a);
     EXPECT_EQ(check_f,result);
 }
 

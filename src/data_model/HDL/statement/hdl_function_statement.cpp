@@ -19,18 +19,6 @@
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 
-void hdl_function_statement::start_assignment(const std::string &n, const std::shared_ptr<Expression_base> &idx) {
-   if (idx == nullptr) assignments.push_back({name, {}, {}});
-    else assignments.push_back({name, idx, {}});
-}
-
-void hdl_function_statement::close_assignment(const std::shared_ptr<Expression_base> &val) {
-    if (assignments.empty()) {
-        throw std::runtime_error(fmt::format("parsing of the {} function definition lead to an inconsistent state, report it as a possible bug", name));
-    }
-    assignments.back().set_value(val);
-}
-
 bool hdl_function_statement::is_scalar() const {
     return  !loop_metadata.has_value() && assignments.size() == 1;
 }
@@ -38,6 +26,7 @@ bool hdl_function_statement::is_scalar() const {
 parameter_deps_t hdl_function_statement::get_dependencies() const {
     parameter_deps_t deps;
     for (const auto& a : assignments) {
+        if (a.get_name() != name) continue;
         deps.merge(a.get_value()->get_dependencies());
         if (a.get_index()) deps.merge(a.get_index().value()->get_dependencies());
     }

@@ -1170,7 +1170,7 @@ void sv_visitor::enterInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPos
 
 void sv_visitor::exitBlocking_assignment(sv2017::Blocking_assignmentContext *ctx) {
     if(!loops_factory.in_loop() && f_factory.is_active()) {
-        f_factory.close_assignment();
+        f_factory.finish_assignment();
     }
 
 }

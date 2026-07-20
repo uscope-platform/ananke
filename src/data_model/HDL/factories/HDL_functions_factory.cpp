@@ -59,38 +59,31 @@ void HDL_functions_factory::add_value(const std::shared_ptr<Expression_base> &v)
 }
 
 void HDL_functions_factory::close_lvalue() {
-
     auto unwrapped_bit_index = Expression_v2::unwrap(*std::dynamic_pointer_cast<Expression_v2>(bit_index));
     if (bit_index->is<Expression_v2>() &&
         bit_index->as<Expression_v2>().get_operation() == Expression_v2::none &&
         !bit_index->as<Expression_v2>().get_lhs()
         ) unwrapped_bit_index = nullptr;
-    if(current_assigned_variable == f.name) {
-        f.start_assignment(current_assigned_variable, unwrapped_bit_index);
-    } else {
-        ignore_assignment = true;
-    }
+    current_lhs_index = unwrapped_bit_index;
     bit_index = std::make_shared<Expression_v2>();
 }
 
-void HDL_functions_factory::close_assignment() {
-    if(!ignore_assignment && assignment_value != nullptr) {
-        if (assignment_value->is<Expression_v2>()) {
-            auto &e = assignment_value->as<Expression_v2>();
-            if (e.get_operation() != Expression_v2::none) {
-                f.close_assignment(assignment_value);
-            } else if (auto lhs = e.get_lhs()) {
-                f.close_assignment(lhs);
-            } else if (auto lhs = e.get_lhs()) {
-                f.close_assignment(lhs);
-            } else {
-                f.close_assignment(assignment_value);
-            }
-        } else {
-            f.close_assignment(assignment_value);
+void HDL_functions_factory::finish_assignment() {
+    if (!assignment_value) return;
+
+    auto val = assignment_value;
+    if (val->is<Expression_v2>()) {
+        auto &e = val->as<Expression_v2>();
+        if (e.get_operation() != Expression_v2::none) {
+            // keep as-is
+        } else if (auto lhs = e.get_lhs()) {
+            val = lhs;
         }
     }
-    ignore_assignment = false;
+
+    assignment a(current_assigned_variable, current_lhs_index ? std::make_optional(current_lhs_index) : std::nullopt, val);
+    f.add_assignment(a);
+    current_lhs_index = nullptr;
 }
 
 hdl_function_statement HDL_functions_factory::get_function() {

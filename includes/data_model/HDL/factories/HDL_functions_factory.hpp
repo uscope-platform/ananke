@@ -40,7 +40,7 @@ public:
     void add_value(const std::shared_ptr<Expression_base> &v);
     void close_lvalue();
     void start_body(){phase = body;}
-    void close_assignment();
+    void finish_assignment();
     void add_loop(const HDL_loop_metadata &md){f.add_loop_metadata(md);}
     hdl_function_statement get_function();
     void set_return_type_name(const std::string &n) { f.set_return_type_name(n); }
@@ -91,9 +91,9 @@ private:
         arguments,
         body
     }phase;
-    bool ignore_assignment = false;
     std::shared_ptr<Expression_base> assignment_value;
     std::string current_assigned_variable;
+    std::shared_ptr<Expression_base> current_lhs_index;
 };
 
 

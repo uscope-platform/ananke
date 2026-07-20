@@ -43,6 +43,7 @@ struct assignment {
     void set_value(const std::shared_ptr<Expression_base> &val);
     std::optional<std::shared_ptr<Expression_base>> get_index() const;
     std::shared_ptr<Expression_base> get_value() const;
+    std::string get_name() const { return name; }
     void propagate_argument(const std::string &name, const std::shared_ptr<Expression_base> &value);
 private:
     std::string name;
