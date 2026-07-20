@@ -37,6 +37,7 @@ void topological_sorter::analyze(const Parameters_map &p, const std::map<qualifi
                         break;
                     }
                 }
+                if (!p.contains(effective_dep.get_name())) continue;
                 topo_map[effective_dep].dependents.insert(qualified_identifier(name));
                 topo_map[qualified_identifier(name)].dependencies.insert(effective_dep);
             }

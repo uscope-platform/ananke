@@ -19,7 +19,8 @@
 
 #include "Expression_base.hpp"
 #include "data_model/HDL/statement/hdl_function_statement.hpp"
-#include "data_model/HDL/HDL_loop.hpp"
+#include "data_model/HDL/statement/hdl_assignment_statement.hpp"
+#include "data_model/HDL/statement/hdl_loop_statement.hpp"
 
 
 class HDL_function_call : public Expression_base{
@@ -33,14 +34,10 @@ public:
     void add_argument(const std::shared_ptr<Expression_base> &p);
     void add_package_prefix(const std::string &p){package_prefix = p;}
     std::string get_package_prefix() const {return package_prefix;}
-    void add_assignment(const assignment &a) {assignments.push_back(a);}
-    void set_loop(const HDL_loop_metadata &l){loop_metadata = l;}
-    parameter_deps_t get_dependencies()const  override;
+    parameter_deps_t get_dependencies() const override;
     void propagate_function(const hdl_function_statement &def) override;
-    std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context)  override;
+    std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
 
-    std::optional<resolved_parameter> evaluate_scalar(const std::map<qualified_identifier, resolved_parameter> &context);
-    std::optional<resolved_parameter> evaluate_vector(const std::map<qualified_identifier, resolved_parameter> &context);
     std::optional<resolved_parameter> evaluate_system_task(const std::map<qualified_identifier, resolved_parameter> &context);
     void apply_return_order_reversal(
         std::vector<hdl_integer> &values,
@@ -50,22 +47,14 @@ public:
 
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
 
-    std::string print() const  override;
-    int64_t get_size()  override;
-
+    std::string print() const override;
+    int64_t get_size() override;
 
     [[nodiscard]] bool empty() const;
 
-
-
-    void add_body(const std::vector<assignment> &a, const std::optional<HDL_loop_metadata> &loop) {
-        assignments = a;
-        loop_metadata = loop;
-    };
-
     template<class Archive>
-    void serialize( Archive & ar ) {
-        ar(function_name, arguments, assignments, loop_metadata, package_prefix);
+    void serialize(Archive & ar) {
+        ar(function_name, arguments, body, package_prefix);
     }
 
 private:
@@ -73,17 +62,14 @@ private:
     std::string package_prefix;
     std::vector<std::shared_ptr<Expression_base>> arguments;
 
-    std::vector<assignment> assignments;
-    std::optional<HDL_loop_metadata> loop_metadata;
+    std::vector<std::shared_ptr<hdl_statement_base>> body;
 
-    // VOLATILE ATTRIBUTES
     bool packing = false;
     bool container_unpacked_ascending = false;
     bool has_return_unpacked_ascending = false;
     bool return_unpacked_ascending = false;
 
     bool isEqual(const Expression_base& other) const override;
-
 };
 
 

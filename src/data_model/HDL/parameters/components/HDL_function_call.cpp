@@ -36,11 +36,8 @@ parameter_deps_t HDL_function_call::get_dependencies() const {
     for (auto &arg:arguments) {
         retval.merge(arg->get_dependencies());
     }
-    for(auto &a:assignments) {
-        retval.merge(a.get_value()->get_dependencies());
-    }
-    if(loop_metadata.has_value()) {
-        retval.merge(loop_metadata.value().get_dependencies());
+    for(auto &s:body) {
+        retval.merge(s->get_dependencies());
     }
     retval.functions.insert(qualified_identifier(package_prefix, function_name));
     return retval;
@@ -49,12 +46,62 @@ parameter_deps_t HDL_function_call::get_dependencies() const {
 
 void HDL_function_call::propagate_function(const hdl_function_statement &def) {
     if(def.name == function_name) {
+        body.clear();
+        for (const auto &stmt : def.get_body())
+            body.push_back(stmt->clone());
         auto arg_names = def.get_arguments_names();
-        assignments = def.get_assignments();
-        loop_metadata = def.get_loop();
         for (int i =0;i<arg_names.size(); i++) {
-            for (auto &a:assignments) {
-                a.propagate_argument(arg_names[i], arguments[i]);
+            auto arg_val = arguments[i];
+            for (auto &stmt : body) {
+                if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
+                    if (asgn->get_value())
+                        asgn->get_value()->propagate_expression(qualified_identifier(arg_names[i]), arg_val);
+                    if (asgn->get_index())
+                        asgn->get_index()->propagate_expression(qualified_identifier(arg_names[i]), arg_val);
+                }
+            }
+        }
+    }
+}
+
+static void walk_body(
+    std::vector<hdl_integer> &values,
+    std::vector<int64_t> &value_sizes,
+    const std::string &fcn_name,
+    const std::vector<std::shared_ptr<hdl_statement_base>> &stmts,
+    std::map<qualified_identifier, resolved_parameter> ctx
+) {
+    for (const auto &stmt : stmts) {
+        if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
+            if (!asgn->get_value()) continue;
+            auto val = asgn->get_value()->evaluate(ctx);
+            if (!val.has_value()) continue;
+            if (asgn->get_target() == fcn_name) {
+                int64_t idx_val = 0;
+                if (asgn->get_index()) {
+                    auto idx_res = asgn->get_index()->evaluate(ctx);
+                    if (!idx_res.has_value() || !idx_res.value().is_integer()) continue;
+                    idx_val = idx_res.value().get_integer().get_value();
+                }
+                if (idx_val >= 0 && static_cast<size_t>(idx_val) < values.size()) {
+                    if (val.value().is_integer()) {
+                        values[idx_val] = val.value().get_integer();
+                        value_sizes[idx_val] = val.value().get_integer().get_size();
+                    } else if (val.value().is_int_array()) {
+                        values[idx_val] = val.value().get_int_array().get_1d_slice({0, 0})[0];
+                        value_sizes[idx_val] = 0;
+                    }
+                }
+            } else {
+                ctx[qualified_identifier(asgn->get_target())] = val.value();
+            }
+        } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
+            auto indices = loop_solver::solve_loop(*loop, ctx);
+            auto loop_var = loop->get_init()->get_identifier();
+            for (auto &idx : indices) {
+                auto loop_ctx = ctx;
+                loop_ctx[loop_var] = resolved_parameter(idx);
+                walk_body(values, value_sizes, fcn_name, loop->get_body(), loop_ctx);
             }
         }
     }
@@ -64,73 +111,46 @@ std::optional<resolved_parameter> HDL_function_call::evaluate(const std::map<qua
     if (function_name.starts_with("$")) {
         return evaluate_system_task(context);
     }
-    if( !loop_metadata.has_value() && assignments.size() == 1) {
-        return evaluate_scalar(context);
-    } else {
-        return evaluate_vector(context);
-    }
-}
+    if (body.empty()) return std::nullopt;
 
-std::optional<resolved_parameter> HDL_function_call::evaluate_scalar(const std::map<qualified_identifier, resolved_parameter> &context) {
-    auto raw_value = assignments[0].get_value()->evaluate(context);
-    if (!raw_value) return std::nullopt;
-    if (packing) {
-        if (!raw_value.value().is_int_array()) return raw_value;
-        auto components = raw_value.value().get_int_array().get_1d_slice({0, 0});
-        auto size = 0;
-        if (assignments[0].get_value()->is<Replication>()) size = assignments[0].get_value()->as<Replication>().get_item()->get_size();
-        else size = assignments[0].get_value()->get_size();
-        std::vector<int64_t> packing_sizes(components.size(), size);
-        return pack_values(components, packing_sizes);
-    } else {
-        return raw_value;
-    }
-}
-
-std::optional<resolved_parameter> HDL_function_call::evaluate_vector(const std::map<qualified_identifier, resolved_parameter> &context) {
-    std::vector<hdl_integer> loop_indexes;
-    if(loop_metadata.has_value()) {
-        loop_indexes = loop_solver::solve_loop(loop_metadata.value(), context);
-
-        qualified_identifier loop_var = loop_metadata.value().get_init().get_identifier();
-    } else {
-        loop_indexes = {};
-    }
-    std::vector<hdl_integer> values(assignments.size() + loop_indexes.size());
-    std::vector<int64_t> value_sizes(assignments.size() + loop_indexes.size());
-    for(auto &a:assignments) {
-        if (a.get_name() != function_name) continue;
-        auto idx = a.get_index().value()->evaluate(context);
-        if(!idx.has_value()) return std::nullopt;
-        if(!idx.value().is_integer()) return std::nullopt;
-        auto idx_val = idx.value().get_integer();
-        auto value = a.get_value()->evaluate(context);
-        value_sizes[idx_val.get_value()] = a.get_value()->get_size();
-        if(!value.has_value()) return std::nullopt;
-        values[idx_val.get_value()] = value.value().get_integer();
-    }
-
-    if(loop_metadata.has_value()) {
-        qualified_identifier loop_var =  loop_metadata.value().get_init().get_identifier();
-        auto loop_assignments = loop_metadata.value().get_assignments();
-        for(int i = 0; i<loop_assignments.size(); i++) {
-            for(auto &l:loop_indexes) {
-                auto la = loop_assignments[i] ;
-                auto ctx = context;
-                ctx[loop_var] = resolved_parameter(l);
-                auto idx_opt = la.get_index();
-                if(!idx_opt.has_value()) continue;
-                auto idx = idx_opt.value()->evaluate(ctx);
-                if(!idx.has_value()) continue;
-                if(!idx.value().is_integer()) continue;
-                auto idx_val = idx.value().get_integer();
-                auto var = la.get_value()->evaluate(ctx);
-                if(!var.has_value()) continue;
-                value_sizes[idx_val.get_value()] = var.value().get_integer().get_size();
-                values[idx_val.get_value()] = var.value().get_integer();
+    if (body.size() == 1) {
+        auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(body[0]);
+        if (asgn && asgn->get_target() == function_name && !asgn->get_index()) {
+            auto raw_value = asgn->get_value()->evaluate(context);
+            if (!raw_value) return std::nullopt;
+            if (packing) {
+                if (!raw_value.value().is_int_array()) return raw_value;
+                auto components = raw_value.value().get_int_array().get_1d_slice({0, 0});
+                auto size = asgn->get_value()->get_size();
+                std::vector<int64_t> packing_sizes(components.size(), size);
+                return pack_values(components, packing_sizes);
             }
+            return raw_value;
         }
     }
+
+    size_t max_idx = 0;
+    for (const auto &stmt : body) {
+        if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
+            if (asgn->get_target() != function_name) continue;
+            if (asgn->get_index()) {
+                auto idx_res = asgn->get_index()->evaluate(context);
+                if (idx_res.has_value() && idx_res.value().is_integer())
+                    max_idx = std::max(max_idx, static_cast<size_t>(idx_res.value().get_integer().get_value() + 1));
+            } else {
+                max_idx = std::max(max_idx, static_cast<size_t>(1));
+            }
+        } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
+            auto indices = loop_solver::solve_loop(*loop, context);
+            if (!indices.empty())
+                max_idx = std::max(max_idx, static_cast<size_t>(indices.back().get_value() + 1));
+        }
+    }
+
+    if (max_idx == 0) return std::nullopt;
+    std::vector<hdl_integer> values(max_idx);
+    std::vector<int64_t> value_sizes(max_idx);
+    walk_body(values, value_sizes, function_name, body, context);
 
     apply_return_order_reversal(values, value_sizes, context);
 
@@ -213,73 +233,21 @@ std::optional<resolved_parameter> HDL_function_call::evaluate_system_task(const 
 void HDL_function_call::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
     packing = s.unpacked_sizes.empty();
     container_unpacked_ascending = s.unpacked_ascending.empty() ? true : s.unpacked_ascending[0];
-    if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) {
-        if (assignments.size()==1 && !loop_metadata.has_value()){
-            assignments[0].set_container_size(s, context);
-        }
-        return;
-    }
-    if (s.unpacked_sizes.empty()) {
-        if (assignments.size()==1 && !loop_metadata.has_value()){
-            assignments[0].set_container_size(s, context);
-        } else {
-            resolved_type lower_container_size;
-            lower_container_size.packed_sizes.insert(
-                lower_container_size.packed_sizes.begin(),
-                s.packed_sizes.begin(),
-                s.packed_sizes.end()-1
-            );
-            lower_container_size.packed_ascending.insert(
-                lower_container_size.packed_ascending.begin(),
-                s.packed_ascending.begin(),
-                s.packed_ascending.end()-1
-            );
-            for (auto &a:assignments) {
-                a.set_container_size(lower_container_size, context);
-            }
-            if (loop_metadata) {
-                std::vector<assignment> new_assignments;
-                for (auto &a:loop_metadata->get_assignments()) {
-                    a.set_container_size(lower_container_size, context);
-                    new_assignments.push_back(a);
-                }
-                loop_metadata->set_assignments(new_assignments);
-            }
-        }
-    } else {
-        if (assignments.size()==1 && !loop_metadata.has_value()) {
-            assignments[0].set_container_size(s, context);
-        } else {
-            resolved_type lower_container_size;
-            lower_container_size.packed_sizes = s.unpacked_sizes;
-            lower_container_size.packed_ascending = s.unpacked_ascending;
-            lower_container_size.unpacked_sizes.insert(
-                lower_container_size.unpacked_sizes.begin(),
-                s.unpacked_sizes.begin(),
-                s.unpacked_sizes.end()-1
-            );
-            lower_container_size.unpacked_ascending.insert(
-                lower_container_size.unpacked_ascending.begin(),
-                s.unpacked_ascending.begin(),
-                s.unpacked_ascending.end()-1
-            );
-            for (auto &a:assignments) {
-                a.set_container_size(lower_container_size, context);
-            }
-            if (loop_metadata) {
-                std::vector<assignment> new_assignments;
-                for (auto &a:loop_metadata->get_assignments()) {
-                    a.set_container_size(lower_container_size, context);
-                    new_assignments.push_back(a);
-                }
-                loop_metadata->set_assignments(new_assignments);
-            }
-        }
-
-    }
     if (s.return_unpacked_ascending.has_value()) {
         return_unpacked_ascending = s.return_unpacked_ascending.value();
         has_return_unpacked_ascending = true;
+    }
+    if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) return;
+    for (auto &stmt : body) {
+        if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
+            if (asgn->get_value()) asgn->get_value()->set_container_sizes(s, context);
+        } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
+            for (auto &bs : loop->get_body()) {
+                if (auto la = std::dynamic_pointer_cast<hdl_assignment_statement>(bs)) {
+                    if (la->get_value()) la->get_value()->set_container_sizes(s, context);
+                }
+            }
+        }
     }
 }
 
@@ -315,8 +283,9 @@ bool HDL_function_call::isEqual(const Expression_base &other) const {
     for (int i = 0; i< arguments.size(); i++) {
         is_equal &= *arguments[i] == *rhs.arguments[i];
     }
-    is_equal &= loop_metadata == rhs.loop_metadata;
-    is_equal &= assignments == rhs.assignments;
+    is_equal &= body.size() == rhs.body.size();
+    for (size_t i = 0; i < body.size(); i++)
+        is_equal &= *body[i] == *rhs.body[i];
     is_equal &= package_prefix == rhs.package_prefix;
     return is_equal;
 }
