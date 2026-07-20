@@ -65,8 +65,9 @@ void HDL_instances_factory::start_concat_port(const std::string &n) {
 
 void HDL_instances_factory::stop_concat_port() {
     net_factory.stop_concatenation();
-    current_instance.add_port_connection(port_name, net_factory.get_nets());
-    current_statement.add_port_connection(port_name, net_factory.get_nets());
+    auto nets = net_factory.get_nets();
+    current_instance.add_port_connection(port_name, nets);
+    current_statement.add_port_connection(port_name, nets);
 }
 
 void HDL_instances_factory::start_replication_port(const std::string &n) {

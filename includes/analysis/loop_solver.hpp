@@ -21,14 +21,16 @@
 #include <memory>
 #include "data_model/HDL/parameters/Parameters_map.hpp"
 #include "data_model/HDL/HDL_instance_AST.hpp"
+#include "data_model/HDL/statement/hdl_loop_statement.hpp"
 
 class loop_solver {
 public:
     loop_solver() = default;
     static std::vector<hdl_integer> solve_loop(std::shared_ptr<HDL_instance_AST> &node, const std::map<qualified_identifier, resolved_parameter> &context);
     static std::vector<hdl_integer> solve_loop(const HDL_loop_metadata &loop, const std::map<qualified_identifier, resolved_parameter> &context);
+    static std::vector<hdl_integer> solve_loop(const hdl_loop_statement &loop, const std::map<qualified_identifier, resolved_parameter> &context);
 private:
-    static std::shared_ptr<HDL_parameter> get_init_variable(const HDL_loop_metadata &l, const std::map<qualified_identifier, resolved_parameter> &context);
+    static std::shared_ptr<HDL_parameter> get_init_variable(const HDL_parameter &init, const std::map<qualified_identifier, resolved_parameter> &context);
     static std::shared_ptr<HDL_parameter> update_loop(
         Expression_v2 e,
         std::shared_ptr<HDL_parameter> loop_var,

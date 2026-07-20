@@ -18,6 +18,7 @@
 
 #include "analysis/loop_solver.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
+#include "data_model/HDL/statement/hdl_statements.hpp"
 
 HDL_ast_builder_v2::HDL_ast_builder_v2(const std::shared_ptr<settings_store> &s, const std::shared_ptr<data_store> &d,
                                        const Depfile &d_f){
@@ -88,45 +89,57 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                         interfaces_map[port_name] = port_spec.if_info.type;
                     }
                 }
-                for (auto &dep: res.get_dependencies()) {
-                    if(dep.get_dependency_class() == interface || dep.get_dependency_class() == module) {
-                        auto child = std::make_shared<HDL_instance_AST>(dep);
-                        child->set_parent(working_instance);
-
-                        // The loop structure is attached to the looped instances, that need to be repeated,
-                        // But the parent parameters only need to be propagated in its expressions
-                        auto loop_idx = loop_solver::solve_loop(child, current_param_values);
-                        process_quantifier(child->get_array_quantifier(), current_param_values);
-
-                        if (!loop_idx.empty()) {
-                            for (auto &idx:loop_idx) {
-                                auto new_child = std::make_shared<HDL_instance_AST>(*child);
-                                auto specialized_child = specialize_instance(*new_child, idx, child->get_inner_loop().get_init().get_name());
-                                working_instance->add_child(specialized_child);
-                                auto parent_params = current_param_values;
-                                parent_params[qualified_identifier(child->get_inner_loop().get_init().get_name())] = resolved_parameter(idx);
-                                child_wo.push_back({
-                                    specialized_child,
-                                    parent_params,
-                                    wo.path + "." + working_instance->get_name(),
-                                    interfaces_map
-                                });
-                            }
-                        } else {
+                for (auto &stmt : res.get_statements()) {
+                    if (auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(stmt)) {
+                        auto dc = inst->get_dependency_class();
+                        if (dc == module || dc == interface) {
+                            auto child = std::make_shared<HDL_instance_AST>(*inst);
+                            child->set_parent(working_instance);
+                            process_quantifier(child->get_array_quantifier(), current_param_values);
                             working_instance->add_child(child);
-                            child_wo.push_back({
-                                child,
-                                current_param_values,
-                                wo.path + "." + working_instance->get_name(),
-                                interfaces_map
-                            });
+                            child_wo.push_back({child, current_param_values, wo.path + "." + working_instance->get_name(), interfaces_map});
+                        } else if (dc == package) {
+                            auto path = d_store->get_HDL_resource(inst->get_type()).get_path();
+                            working_instance->add_package_dependency(path);
+                        } else if (dc == memory_init) {
+                            auto path = d_store->get_data_file(inst->get_type()).get_path();
+                            working_instance->add_data_dependency(path);
                         }
-                    } else if(dep.get_dependency_class() == package) {
-                        auto path = d_store->get_HDL_resource(dep.get_type()).get_path();
-                        working_instance->add_package_dependency(path);
-                    } else if(dep.get_dependency_class() == memory_init) {
-                        auto path = d_store->get_data_file(dep.get_type()).get_path();
-                        working_instance->add_data_dependency(path);
+                    } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
+                        auto indices = loop_solver::solve_loop(*loop, current_param_values);
+                        auto loop_var_name = loop->get_init()->get_name();
+                        for (auto &body_stmt : loop->get_body()) {
+                            for (auto &idx : indices) {
+                                auto body_inst = std::dynamic_pointer_cast<hdl_instance_statement>(body_stmt);
+                                if (!body_inst) continue;
+                                auto child = std::make_shared<HDL_instance_AST>(*body_inst);
+                                child->set_parent(working_instance);
+                                process_quantifier(child->get_array_quantifier(), current_param_values);
+
+                                std::unordered_map<std::string, std::vector<HDL_net>> new_ports;
+                                for (auto &[port_name, nets] : child->get_ports()) {
+                                    std::vector<HDL_net> port_content;
+                                    for (auto &n : nets) {
+                                        if (n.is_array()) {
+                                            auto new_net = n;
+                                            Expression_v2 n_idx;
+                                            n_idx.set_lhs(std::make_shared<Numeric_token>(std::variant<hdl_integer, double>(idx), 0));
+                                            new_net.set_index({n_idx});
+                                            port_content.emplace_back(new_net);
+                                        } else {
+                                            port_content.push_back(n);
+                                        }
+                                    }
+                                    new_ports[port_name] = port_content;
+                                }
+                                child->set_ports(new_ports);
+
+                                working_instance->add_child(child);
+                                auto parent_params = current_param_values;
+                                parent_params[qualified_identifier(loop_var_name)] = resolved_parameter(idx);
+                                child_wo.push_back({child, parent_params, wo.path + "." + working_instance->get_name(), interfaces_map});
+                            }
+                        }
                     }
                 }
                 for (const auto &c:child_wo| std::views::reverse) {

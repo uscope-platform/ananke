@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "Backend/Dependency_resolver.hpp"
+#include "data_model/HDL/statement/hdl_instance_statement.hpp"
 
 
 
@@ -33,6 +34,19 @@ protected:
         mod_entity.set_path("test/mod.sv");
         mod_entity.set_type(module);
         mod_entity.add_dependencies(deps);
+
+        auto s1 = std::make_shared<hdl_instance_statement>();
+        s1->set_name("inst"); s1->set_type("test_dep"); s1->set_dependency_class(module);
+        mod_entity.add_statement(s1);
+        auto s2 = std::make_shared<hdl_instance_statement>();
+        s2->set_name("mem_init"); s2->set_type("test_mem_init"); s2->set_dependency_class(memory_init);
+        mod_entity.add_statement(s2);
+        auto s3 = std::make_shared<hdl_instance_statement>();
+        s3->set_name("exm"); s3->set_type("excluded_module"); s3->set_dependency_class(module);
+        mod_entity.add_statement(s3);
+        auto s4 = std::make_shared<hdl_instance_statement>();
+        s4->set_name("pkg"); s4->set_type("test_package"); s4->set_dependency_class(package);
+        mod_entity.add_statement(s4);
 
         std::vector entities ={mod_entity};
         d_store->store_hdl_entity(entities, "", "");

@@ -22,6 +22,8 @@
 #include "data_model/HDL/HDL_instance.hpp"
 #include "data_model/documentation/processor_instance.hpp"
 
+class hdl_instance_statement;
+
 struct proxy_target {
     std::string module;
     std::string interface;
@@ -37,6 +39,7 @@ public:
     HDL_instance_AST() = default;
     HDL_instance_AST(const HDL_instance_AST &c );
     HDL_instance_AST(const HDL_instance &c );
+    explicit HDL_instance_AST(const hdl_instance_statement &stmt);
 
     std::vector<std::shared_ptr<HDL_instance_AST>> get_dependencies() {return child_instances;};
     void add_child(const std::shared_ptr<HDL_instance_AST> &i) {

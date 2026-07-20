@@ -30,7 +30,7 @@ std::vector<hdl_integer> loop_solver::solve_loop(const HDL_loop_metadata &loop, 
 
     std::vector<hdl_integer> ret;
 
-    auto loop_variable = get_init_variable(loop, context);
+    auto loop_variable = get_init_variable(loop.get_init(), context);
 
 
     while(!is_loop_done(loop_variable, loop.get_end_c(), context)){
@@ -40,6 +40,25 @@ std::vector<hdl_integer> loop_solver::solve_loop(const HDL_loop_metadata &loop, 
         ret.push_back(val.value());
 
         update_loop(loop.get_iter(), loop_variable, context);
+
+    }
+
+    return ret;
+}
+
+std::vector<hdl_integer> loop_solver::solve_loop(const hdl_loop_statement &loop, const std::map<qualified_identifier, resolved_parameter> &context) {
+
+    std::vector<hdl_integer> ret;
+
+    auto loop_variable = get_init_variable(*loop.get_init(), context);
+
+    while(!is_loop_done(loop_variable, loop.get_end_condition()->as<Expression_v2>(), context)){
+
+        auto val = loop_variable->get_numeric_value();
+        if(!val.has_value()) throw std::runtime_error("Could not get the numeric value of a loop variable, something is seriously wrong");
+        ret.push_back(val.value());
+
+        update_loop(loop.get_iteration()->as<Expression_v2>(), loop_variable, context);
 
     }
 
@@ -58,8 +77,8 @@ bool loop_solver::is_loop_done(std::shared_ptr<HDL_parameter> &lv, Expression_v2
     return ec.value().get_integer() == 0;
 }
 
-std::shared_ptr<HDL_parameter> loop_solver::get_init_variable(const HDL_loop_metadata &l,const std::map<qualified_identifier, resolved_parameter> &context) {
-    auto loop_variable = std::make_shared<HDL_parameter>(l.get_init());
+std::shared_ptr<HDL_parameter> loop_solver::get_init_variable(const HDL_parameter &init,const std::map<qualified_identifier, resolved_parameter> &context) {
+    auto loop_variable = std::make_shared<HDL_parameter>(init);
     auto variable_val = loop_variable->evaluate(context);
     if (!variable_val.has_value()) return{};
     if (!variable_val.value().is_integer()) return {};

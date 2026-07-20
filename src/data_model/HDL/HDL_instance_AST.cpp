@@ -14,6 +14,22 @@
 //  limitations under the License.
 
 #include "data_model/HDL/HDL_instance_AST.hpp"
+#include "data_model/HDL/statement/hdl_instance_statement.hpp"
+
+HDL_instance_AST::HDL_instance_AST(const hdl_instance_statement &stmt)
+    : HDL_instance(stmt.get_name(), stmt.get_type(), stmt.get_dependency_class()) {
+    wildcard_assignment = stmt.get_wildcard();
+    groups = stmt.get_channel_groups();
+    array_quantifier = stmt.get_array_quantifier();
+
+    for (const auto& [key, param] : stmt.get_parameters()) {
+        parameters.insert(param);
+    }
+    for (const auto& [port_name, nets] : stmt.get_ports()) {
+        ports_map[port_name] = nets;
+    }
+}
+
 HDL_instance_AST::HDL_instance_AST(const HDL_instance &c) : HDL_instance(c) {
 
 }
