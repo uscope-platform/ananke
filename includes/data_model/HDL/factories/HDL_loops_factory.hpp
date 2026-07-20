@@ -70,6 +70,8 @@ private:
     bool active = false;
     expressions_factory body_expr_factory;
     bool in_body_bit_selection = false;
+    std::string body_target;
+    std::shared_ptr<Expression_base> body_index;
 };
 
 

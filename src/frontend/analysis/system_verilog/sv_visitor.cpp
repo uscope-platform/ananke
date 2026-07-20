@@ -1084,8 +1084,7 @@ void sv_visitor::enterLoop_statement(sv2017::Loop_statementContext *ctx) {
 
 void sv_visitor::exitLoop_statement(sv2017::Loop_statementContext *ctx) {
     if(f_factory.is_active()) {
-        auto spec = loops_factory.get_loop_specs();
-        f_factory.add_loop(spec);
+        f_factory.add_loop(loops_factory.get_loop_specs(), loops_factory.get_loop_statement());
         loops_factory.clear();
         f_factory.resume();
     }

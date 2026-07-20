@@ -56,9 +56,8 @@ bool hdl_function_statement::equals(const hdl_statement_base& other) const {
     retval &= argument_names == rhs.argument_names;
     retval &= return_type_name == rhs.return_type_name;
     if (body.size() != rhs.body.size()) return false;
-    for (int i = 0; i< body.size();i++) {
-        retval &=  *body[i] == *rhs.body[i];
-    }
+    for (size_t i = 0; i < body.size(); i++)
+        retval &= *body[i] == *rhs.body[i];
     return retval;
 }
 

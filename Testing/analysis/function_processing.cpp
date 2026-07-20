@@ -185,6 +185,30 @@ TEST(function_processing, simple_loop_function) {
 
     metadata.add_assignment(a);
     check_f.add_loop_metadata(metadata);
+
+    auto loop_stmt = std::make_shared<hdl_loop_statement>();
+    auto lp = std::make_shared<HDL_parameter>();
+    lp->set_name("i"); lp->set_raw_value(std::make_shared<Numeric_token>("0"));
+    loop_stmt->set_init(lp);
+    Expression_v2 le;
+    le.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    le.set_rhs(std::make_shared<Numeric_token>("3"));
+    le.set_operation(Expression_v2::less);
+    loop_stmt->set_end_condition(std::make_shared<Expression_v2>(le));
+    le.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    le.set_rhs(std::make_shared<Numeric_token>("1"));
+    le.set_operation(Expression_v2::add);
+    loop_stmt->set_iteration(std::make_shared<Expression_v2>(le));
+    auto ba = std::make_shared<hdl_assignment_statement>();
+    ba->set_target("CTRL_ADDR_CALC");
+    ba->set_index(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    le.set_lhs(std::make_shared<Numeric_token>("100"));
+    le.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    le.set_operation(Expression_v2::multiply);
+    ba->set_value(std::make_shared<Expression_v2>(le));
+    loop_stmt->add_body_stmt(ba);
+    check_f.add_statement(loop_stmt);
+
     EXPECT_EQ(check_f, result);
 }
 
@@ -245,6 +269,30 @@ TEST(function_processing, parametric_loop_function) {
 
     metadata.add_assignment(a);
     check_f.add_loop_metadata(metadata);
+
+    auto ploop = std::make_shared<hdl_loop_statement>();
+    auto pp = std::make_shared<HDL_parameter>();
+    pp->set_name("i"); pp->set_raw_value(std::make_shared<Numeric_token>("0"));
+    ploop->set_init(pp);
+    Expression_v2 pe;
+    pe.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    pe.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("N_CORES")));
+    pe.set_operation(Expression_v2::less);
+    ploop->set_end_condition(std::make_shared<Expression_v2>(pe));
+    pe.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    pe.set_rhs(std::make_shared<Numeric_token>("1"));
+    pe.set_operation(Expression_v2::add);
+    ploop->set_iteration(std::make_shared<Expression_v2>(pe));
+    auto pba = std::make_shared<hdl_assignment_statement>();
+    pba->set_target("CTRL_ADDR_CALC");
+    pba->set_index(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    pe.set_lhs(std::make_shared<Numeric_token>("100"));
+    pe.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    pe.set_operation(Expression_v2::multiply);
+    pba->set_value(std::make_shared<Expression_v2>(pe));
+    ploop->add_body_stmt(pba);
+    check_f.add_statement(ploop);
+
     EXPECT_EQ(check_f,result);
 }
 
@@ -308,24 +356,55 @@ TEST(function_processing, complex_loop_function) {
 
     metadata.add_assignment(a);
     check_f.add_loop_metadata(metadata);
+
+    auto cloop = std::make_shared<hdl_loop_statement>();
+    auto cp = std::make_shared<HDL_parameter>();
+    cp->set_name("i"); cp->set_raw_value(std::make_shared<Numeric_token>("1"));
+    cloop->set_init(cp);
+    Expression_v2 ce2;
+    ce2.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N_CORES")));
+    ce2.set_rhs(std::make_shared<Numeric_token>("1"));
+    ce2.set_operation(Expression_v2::add);
+    Expression_v2 ce;
+    ce.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    ce.set_rhs(std::make_shared<Expression_v2>(ce2));
+    ce.set_operation(Expression_v2::less);
+    cloop->set_end_condition(std::make_shared<Expression_v2>(ce));
+    ce.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    ce.set_rhs(std::make_shared<Numeric_token>("1"));
+    ce.set_operation(Expression_v2::add);
+    cloop->set_iteration(std::make_shared<Expression_v2>(ce));
+    auto cba = std::make_shared<hdl_assignment_statement>();
+    cba->set_target("CTRL_ADDR_CALC");
+    cba->set_index(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    ce.set_lhs(std::make_shared<Numeric_token>("100"));
+    ce.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    ce.set_operation(Expression_v2::multiply);
+    cba->set_value(std::make_shared<Expression_v2>(ce));
+    cloop->add_body_stmt(cba);
+
     a = {
         "CTRL_ADDR_CALC",
         std::make_shared<Numeric_token>("0"),
         std::make_shared<Numeric_token>("44")
     };
     check_f.add_assignment(a);
+    auto ca0 = std::make_shared<hdl_assignment_statement>();
+    ca0->set_target("CTRL_ADDR_CALC"); ca0->set_index(std::make_shared<Numeric_token>("0")); ca0->set_value(std::make_shared<Numeric_token>("44"));
+    check_f.add_statement(ca0);
+
+    check_f.add_statement(cloop);
+
     a = {
         "CTRL_ADDR_CALC",
         std::make_shared<Numeric_token>("4"),
         std::make_shared<Numeric_token>("667")
     };
     check_f.add_assignment(a);
-    auto ca0 = std::make_shared<hdl_assignment_statement>();
-    ca0->set_target("CTRL_ADDR_CALC"); ca0->set_index(std::make_shared<Numeric_token>("0")); ca0->set_value(std::make_shared<Numeric_token>("44"));
-    check_f.add_statement(ca0);
     auto ca1 = std::make_shared<hdl_assignment_statement>();
     ca1->set_target("CTRL_ADDR_CALC"); ca1->set_index(std::make_shared<Numeric_token>("4")); ca1->set_value(std::make_shared<Numeric_token>("667"));
     check_f.add_statement(ca1);
+
     EXPECT_EQ(check_f,result);
 }
 

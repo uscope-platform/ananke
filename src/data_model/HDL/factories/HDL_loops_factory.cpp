@@ -46,6 +46,8 @@ void HDL_loops_factory::start_assignment(const std::string &name) {
         expression_valid = true;
         body_expr_factory.clear_expression();
         loop_specs.add_assignment(assignment(name, {}, {}));
+        body_target = name;
+        body_index = nullptr;
     }
 }
 
@@ -124,6 +126,7 @@ void HDL_loops_factory::advance_expression() {
             }
         }
         loop_specs.set_assignments(assignments);
+        body_index = assignments.back().get_index().value_or(nullptr);
         body_expr_factory.clear_expression();
     }
 }
@@ -140,6 +143,13 @@ void HDL_loops_factory::close_expression() {
             }
         }
         loop_specs.set_assignments(assignments);
+
+        auto stmt = std::make_shared<hdl_assignment_statement>();
+        stmt->set_target(body_target);
+        if (body_index) stmt->set_index(body_index);
+        stmt->set_value(assignments.back().get_value());
+        _statement.add_body_stmt(stmt);
+
         expression_valid = false;
         body_expr_factory.clear_expression();
     }
