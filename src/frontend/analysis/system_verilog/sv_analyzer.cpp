@@ -16,6 +16,7 @@
 
 
 #include "frontend/analysis/system_verilog/sv_analyzer.hpp"
+#include "data_model/HDL/statement/hdl_instance_statement.hpp"
 
 #include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
 
@@ -72,13 +73,12 @@ std::vector<HDL_Resource> sv_analyzer::analyze(const std::string &path, const st
         std::string scope_instance = item.first.substr(item.first.find(".")+1, item.first.size());
         for(auto &e:entities){
             if(e.getName() == entity){
-                auto dependencies = e.get_dependencies();
-                for(auto &dep:dependencies){
-                    if(dep.get_name() == scope_instance){
-                        dep.set_channel_groups(item.second);
+                for (auto &stmt : e.get_statements()) {
+                    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(stmt);
+                    if (inst && inst->get_name() == scope_instance) {
+                        inst->set_channel_groups(item.second);
                     }
                 }
-                e.set_dependencies(dependencies);
             }
         }
     }
