@@ -18,18 +18,23 @@
 
 #include <string>
 #include <vector>
-#include<set>
+#include <set>
+#include <memory>
 
-
+#include "data_model/HDL/statement/hdl_statement_base.hpp"
 #include "data_model/HDL/HDL_loop.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 
 
-class HDL_function_def {
+class HDL_function_def : public hdl_statement_base {
 public:
+    parameter_deps_t get_dependencies() const override;
+    std::unique_ptr<hdl_statement_base> clone() const override;
+    bool equals(const hdl_statement_base& other) const override;
+    std::string print() const override;
 
     void set_name(const std::string &s) { name = s;}
-    [[nodiscard]]std::string get_name()const{return name;}
+    [[nodiscard]] std::string get_name()const{return name;}
     void add_argument(const std::string &s){argument_names.push_back(s);}
     void start_assignment(const std::string &n, const std::shared_ptr<Expression_base> & idx);
     void close_assignment(const std::shared_ptr<Expression_base> &val);
@@ -39,7 +44,6 @@ public:
     std::vector<assignment> get_assignments()const{ return assignments;}
     std::vector<std::string> get_arguments_names()const{return  argument_names;}
     std::optional<HDL_loop_metadata> get_loop()const{ return loop_metadata;}
-    bool operator==(const HDL_function_def &rhs) const;
 
     void set_return_type_name(const std::string &n) { return_type_name = n; }
     std::string get_return_type_name() const { return return_type_name; }

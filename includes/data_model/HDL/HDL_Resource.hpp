@@ -122,10 +122,10 @@ class HDL_Resource {
         Parameters_map get_parameters() const {return parameters_spec;};
 
         void add_function(const HDL_function_def &f) {
-            functions[f.name] = f;
+            statements.push_back(std::make_shared<HDL_function_def>(f));
         }
-        std::unordered_map<std::string, HDL_function_def> get_functions() {return functions;};
-        HDL_function_def get_function(const std::string &fname){return functions[fname];}
+        std::unordered_map<std::string, HDL_function_def> get_functions();
+        HDL_function_def get_function(const std::string &fname);
 
         void set_documentation(module_documentation &d) {
             doc= d;
@@ -135,7 +135,7 @@ class HDL_Resource {
         template<class Archive>
         void serialize( Archive & ar ) {
             ar(name, path, hdl_dependency_type, parameters_spec, port_specs, doc, processor_docs,
-                functions, line_n, typedefs, statements);
+                line_n, typedefs, statements);
         }
 
         bool is_empty();
@@ -153,7 +153,6 @@ private:
         std::unordered_map<std::string, HDL_port> port_specs;
 
         Parameters_map parameters_spec;
-        std::unordered_map<std::string, HDL_function_def> functions;
 
         std::vector<processor_instance> processor_docs;
         std::map<std::string, std::shared_ptr<hdl_type>> typedefs;

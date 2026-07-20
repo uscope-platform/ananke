@@ -27,7 +27,6 @@ HDL_Resource::HDL_Resource(const HDL_Resource &c) {
     path = c.path;
     line_n = c.line_n;
     hdl_dependency_type = c.hdl_dependency_type;
-    functions = c.functions;
     parameters_spec = c.parameters_spec;
     doc = c.doc;
     processor_docs = c.processor_docs;
@@ -41,14 +40,17 @@ bool HDL_Resource::is_interface() {
 }
 
 void HDL_Resource::process_calls() {
-    for(auto &function: functions | std::views::values) {
-        if (!function.get_return_type_name().empty()) {
-            auto it = typedefs.find(function.get_return_type_name());
+    for (auto &stmt : statements) {
+        auto function = std::dynamic_pointer_cast<HDL_function_def>(stmt);
+        if (!function) continue;
+
+        if (!function->get_return_type_name().empty()) {
+            auto it = typedefs.find(function->get_return_type_name());
             if (it != typedefs.end() && it->second->is<HDL_simple_type>()) {
                 auto& simple = it->second->as<HDL_simple_type>();
                 auto udims = simple.get_unpacked_dimensions();
                 if (!udims.empty()) {
-                    function.set_return_unpacked_bounds(udims[0].first_bound, udims[0].second_bound);
+                    function->set_return_unpacked_bounds(udims[0].first_bound, udims[0].second_bound);
                 }
             }
         }
@@ -65,13 +67,28 @@ bool HDL_Resource::is_empty() {
     ret &= processor_docs.empty();
     ret &= port_specs.empty();
     ret &= parameters_spec.empty();
-    ret &= functions.empty();
+    ret &= statements.empty();
     ret &= typedefs.empty();
 
     return ret;
 }
 
+std::unordered_map<std::string, HDL_function_def> HDL_Resource::get_functions() {
+    std::unordered_map<std::string, HDL_function_def> result;
+    for (auto &stmt : statements) {
+        auto f = std::dynamic_pointer_cast<HDL_function_def>(stmt);
+        if (f) result[f->name] = *f;
+    }
+    return result;
+}
 
+HDL_function_def HDL_Resource::get_function(const std::string &fname) {
+    for (auto &stmt : statements) {
+        auto f = std::dynamic_pointer_cast<HDL_function_def>(stmt);
+        if (f && f->name == fname) return *f;
+    }
+    return {};
+}
 
 
 bool operator==(const HDL_Resource &lhs, const HDL_Resource &rhs) {
@@ -84,7 +101,6 @@ bool operator==(const HDL_Resource &lhs, const HDL_Resource &rhs) {
     ret &= lhs.processor_docs == rhs.processor_docs;
     ret &= lhs.port_specs == rhs.port_specs;
     ret &= lhs.parameters_spec == rhs.parameters_spec;
-    ret &= lhs.functions == rhs.functions;
     ret &= lhs.typedefs == rhs.typedefs;
     if (lhs.statements.size() != rhs.statements.size()) return false;
     for (int i =0; i<lhs.statements.size(); i++) {
@@ -119,4 +135,3 @@ void PrintTo(const HDL_Resource &res, std::ostream *os) {
 
 
 }
-

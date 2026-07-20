@@ -18,5 +18,6 @@
 
 #include "data_model/HDL/statement/hdl_instance_statement.hpp"
 #include "data_model/HDL/statement/hdl_loop_statement.hpp"
+#include "data_model/HDL/parameters/HDL_function_def.hpp"
 
 #endif //ANANKE_HDL_STATEMENTS_HPP

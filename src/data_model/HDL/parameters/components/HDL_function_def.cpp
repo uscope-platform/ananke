@@ -16,9 +16,6 @@
 
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
 
-#include "analysis/loop_solver.hpp"
-#include "data_model/HDL/parameters/components/Expression_v2.hpp"
-
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 
@@ -38,9 +35,31 @@ bool HDL_function_def::is_scalar() const {
     return  !loop_metadata.has_value() && assignments.size() == 1;
 }
 
-bool HDL_function_def::operator==(const HDL_function_def &rhs) const {
-    bool retval = true;
-    retval &= name == rhs.name;
+parameter_deps_t HDL_function_def::get_dependencies() const {
+    parameter_deps_t deps;
+    for (const auto& a : assignments) {
+        deps.merge(a.get_value()->get_dependencies());
+        if (a.get_index()) deps.merge(a.get_index().value()->get_dependencies());
+    }
+    if (loop_metadata) deps.merge(loop_metadata->get_dependencies());
+    return deps;
+}
+
+std::unique_ptr<hdl_statement_base> HDL_function_def::clone() const {
+    auto result = std::make_unique<HDL_function_def>();
+    result->name = name;
+    result->assignments = assignments;
+    result->loop_metadata = loop_metadata;
+    result->argument_names = argument_names;
+    result->return_type_name = return_type_name;
+    result->return_unpacked_range_left = return_unpacked_range_left;
+    result->return_unpacked_range_right = return_unpacked_range_right;
+    return result;
+}
+
+bool HDL_function_def::equals(const hdl_statement_base& other) const {
+    const auto& rhs = static_cast<const HDL_function_def&>(other);
+    bool retval = name == rhs.name;
     retval &= assignments == rhs.assignments;
     retval &= loop_metadata == rhs.loop_metadata;
     retval &= argument_names == rhs.argument_names;
@@ -48,3 +67,6 @@ bool HDL_function_def::operator==(const HDL_function_def &rhs) const {
     return retval;
 }
 
+std::string HDL_function_def::print() const {
+    return "function " + name + "(...)";
+}
