@@ -24,7 +24,6 @@
 #include <nlohmann/json.hpp>
 
 #include "data_model/HDL/HDL_definitions.hpp"
-#include "data_model/HDL/HDL_loop.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/Parameters_map.hpp"
 #include "data_model/HDL/HDL_net.hpp"
@@ -81,12 +80,6 @@ public:
     // ---- wildcard ----
     void set_wildcard(bool w) { wildcard_assignment = true; }
     bool get_wildcard() const { return wildcard_assignment; }
-
-    // ---- loop specs (legacy) ----
-    void add_loop(const HDL_loop_metadata &l) { loop_specs.push_back(l); }
-    void update_loop(const HDL_loop_metadata &l, int i) { loop_specs[i] = l; }
-    HDL_loop_metadata get_inner_loop() { return loop_specs.empty() ? HDL_loop_metadata{} : loop_specs[0]; }
-    unsigned int get_n_loops() { return loop_specs.size(); }
 
     // ---- channel groups ----
     void set_channel_groups(const std::vector<channel_group> &g) { groups = g; }
@@ -163,7 +156,7 @@ public:
 
     template<class Archive>
     void serialize(Archive & ar) {
-        ar(name, type, dep_class, ports_map, parameters, groups, loop_specs, array_quantifier,
+        ar(name, type, dep_class, ports_map, parameters, groups, array_quantifier,
            bus_address, child_instances, data_dependencies, package_dependencies,
            leaf_module_top, leaf_module_prefix, proxy_specs, proxy_ast,
            array_index, if_specs, processors, parent);
@@ -179,7 +172,6 @@ private:
     Parameters_map parameters;
     std::unordered_map<std::string, std::vector<HDL_net>> ports_map;
     bool wildcard_assignment = false;
-    std::vector<HDL_loop_metadata> loop_specs;
     std::vector<channel_group> groups;
     std::shared_ptr<HDL_parameter> array_quantifier;
 

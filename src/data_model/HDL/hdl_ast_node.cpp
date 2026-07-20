@@ -41,7 +41,6 @@ hdl_ast_node::hdl_ast_node(const hdl_ast_node &c) {
     parameters = c.parameters;
     ports_map = c.ports_map;
     wildcard_assignment = c.wildcard_assignment;
-    loop_specs = c.loop_specs;
     groups = c.groups;
     array_quantifier = c.array_quantifier;
 
@@ -87,7 +86,6 @@ bool operator==(const hdl_ast_node &lhs, const hdl_ast_node &rhs) {
     ret &= lhs.dep_class == rhs.dep_class;
     ret &= lhs.ports_map == rhs.ports_map;
     ret &= lhs.parameters == rhs.parameters;
-    ret &= lhs.loop_specs == rhs.loop_specs;
     ret &= lhs.wildcard_assignment == rhs.wildcard_assignment;
     ret &= lhs.groups == rhs.groups;
 
