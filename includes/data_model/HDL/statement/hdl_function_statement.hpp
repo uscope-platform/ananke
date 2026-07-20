@@ -23,7 +23,6 @@
 
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
-#include "data_model/HDL/HDL_loop.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 
 
@@ -40,12 +39,8 @@ public:
     void set_name(const std::string &s) { name = s;}
     [[nodiscard]] std::string get_name()const{return name;}
     void add_argument(const std::string &s){argument_names.push_back(s);}
-    void add_assignment(const assignment &a){assignments.push_back(a);}
-    void add_loop_metadata(const HDL_loop_metadata &l){loop_metadata = l;}
     bool is_scalar() const;
-    std::vector<assignment> get_assignments()const{ return assignments;}
     std::vector<std::string> get_arguments_names()const{return  argument_names;}
-    std::optional<HDL_loop_metadata> get_loop()const{ return loop_metadata;}
 
     void set_return_type_name(const std::string &n) { return_type_name = n; }
     std::string get_return_type_name() const { return return_type_name; }
@@ -62,15 +57,13 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name, assignments, loop_metadata, argument_names, return_type_name, body);
+        ar(name, argument_names, return_type_name, body);
     }
 
     friend void PrintTo(const hdl_function_statement& s, std::ostream* os);
 
     std::string name;
 private:
-    std::vector<assignment> assignments;
-    std::optional<HDL_loop_metadata> loop_metadata;
     std::vector<std::string> argument_names;
     std::string return_type_name;
     std::shared_ptr<Expression_base> return_unpacked_range_left;

@@ -17,26 +17,6 @@
 #include "analysis/loop_solver.hpp"
 
 
-std::vector<hdl_integer> loop_solver::solve_loop(const HDL_loop_metadata &loop, const std::map<qualified_identifier, resolved_parameter> &context) {
-
-    std::vector<hdl_integer> ret;
-
-    auto loop_variable = get_init_variable(loop.get_init(), context);
-
-
-    while(!is_loop_done(loop_variable, loop.get_end_c(), context)){
-
-        auto val = loop_variable->get_numeric_value();
-        if(!val.has_value()) throw std::runtime_error("Could not get the numeric value of a loop variable, something is seriously wrong");
-        ret.push_back(val.value());
-
-        update_loop(loop.get_iter(), loop_variable, context);
-
-    }
-
-    return ret;
-}
-
 std::vector<hdl_integer> loop_solver::solve_loop(const hdl_loop_statement &loop, const std::map<qualified_identifier, resolved_parameter> &context) {
 
     std::vector<hdl_integer> ret;

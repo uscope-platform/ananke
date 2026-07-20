@@ -81,9 +81,6 @@ void HDL_functions_factory::finish_assignment() {
         }
     }
 
-    assignment a(current_assigned_variable, current_lhs_index ? std::make_optional(current_lhs_index) : std::nullopt, val);
-    f.add_assignment(a);
-
     auto stmt = std::make_shared<hdl_assignment_statement>();
     stmt->set_target(current_assigned_variable);
     if (current_lhs_index) stmt->set_index(current_lhs_index);

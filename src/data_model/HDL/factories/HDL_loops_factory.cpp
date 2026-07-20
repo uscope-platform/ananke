@@ -23,7 +23,6 @@ void HDL_loops_factory::new_loop() {
 }
 
 void HDL_loops_factory::clear() {
-    loop_specs = HDL_loop_metadata();
     _statement = hdl_loop_statement();
     current_expression = Expression_v2();
     body_expr_factory = expressions_factory();
@@ -45,7 +44,6 @@ void HDL_loops_factory::start_assignment(const std::string &name) {
     if(loop_phase == body) {
         expression_valid = true;
         body_expr_factory.clear_expression();
-        loop_specs.add_assignment(assignment(name, {}, {}));
         body_target = name;
         body_index = nullptr;
     }
@@ -70,7 +68,6 @@ void HDL_loops_factory:: add_component(const std::shared_ptr<Expression_base> &c
 void HDL_loops_factory::add_loop_variable(const std::string &p) {
     HDL_parameter param;
     param.set_name(p);
-    loop_specs.set_init(param);
     _statement.set_init(std::make_shared<HDL_parameter>(param));
 }
 
@@ -79,19 +76,19 @@ void HDL_loops_factory::set_phase(loop_phase_t p) {
     if(p==init) {
         current_expression = Expression_v2();
     } else if(p==end) {
-        auto init = loop_specs.get_init();
-        init.set_raw_value(Expression_v2::unwrap(current_expression));
-        loop_specs.set_init(init);
-        _statement.set_init(std::make_shared<HDL_parameter>(init));
+        auto init = _statement.get_init();
+        if (init) {
+            auto copy = std::make_shared<HDL_parameter>(*init);
+            copy->set_raw_value(Expression_v2::unwrap(current_expression));
+            _statement.set_init(copy);
+        }
         current_expression = Expression_v2();
     } else if(p==step) {
         if(!end_cond_valid) {
-            loop_specs.set_end_c(current_expression);
             _statement.set_end_condition(std::make_shared<Expression_v2>(current_expression));
         }
         current_expression = Expression_v2();
     } else if(p==body) {
-        loop_specs.set_iter(current_expression);
         _statement.set_iteration(std::make_shared<Expression_v2>(current_expression));
         current_expression = Expression_v2();
         body_expr_factory = expressions_factory();
@@ -107,7 +104,6 @@ void HDL_loops_factory::advance_phase() {
 
 void HDL_loops_factory::advance_expression() {
     if(expression_valid) {
-        auto assignments = loop_specs.get_assignments();
         auto expr = body_expr_factory.get_expression_v2();
         if (expr.has_value()) {
             auto raw = Expression_v2::unwrap(std::move(*expr));
@@ -115,39 +111,34 @@ void HDL_loops_factory::advance_expression() {
                 auto &tok = raw->as<Identifier_token>();
                 if (tok.is_subscripted()) {
                     auto indices = tok.get_array_index();
-                    if (indices.size() == 1) {
-                        assignments.back().set_index(indices[0]);
-                    }
+                    if (indices.size() == 1) body_index = indices[0];
                 } else {
-                    assignments.back().set_index(raw);
+                    body_index = raw;
                 }
             } else if (raw && raw->is<Expression_v2>()) {
-                assignments.back().set_index(raw);
+                body_index = raw;
             }
         }
-        loop_specs.set_assignments(assignments);
-        body_index = assignments.back().get_index().value_or(nullptr);
         body_expr_factory.clear_expression();
     }
 }
 
 void HDL_loops_factory::close_expression() {
     if(expression_valid) {
-        auto assignments = loop_specs.get_assignments();
         auto expr = body_expr_factory.get_expression_v2();
+        std::shared_ptr<Expression_base> val;
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
-                assignments.back().set_value(Expression_v2::unwrap(std::move(*expr)));
+                val = Expression_v2::unwrap(std::move(*expr));
             } else if (auto lhs = expr->get_lhs()) {
-                assignments.back().set_value(lhs);
+                val = lhs;
             }
         }
-        loop_specs.set_assignments(assignments);
 
         auto stmt = std::make_shared<hdl_assignment_statement>();
         stmt->set_target(body_target);
         if (body_index) stmt->set_index(body_index);
-        stmt->set_value(assignments.back().get_value());
+        if (val) stmt->set_value(val);
         _statement.add_body_stmt(stmt);
 
         expression_valid = false;

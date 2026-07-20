@@ -21,7 +21,6 @@
 #include <stack>
 #include <string>
 
-#include "data_model/HDL/HDL_loop.hpp"
 #include "data_model/HDL/statement/hdl_function_statement.hpp"
 #include "data_model/HDL/statement/hdl_loop_statement.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
@@ -42,8 +41,7 @@ public:
     void close_lvalue();
     void start_body(){phase = body;}
     void finish_assignment();
-    void add_loop(const HDL_loop_metadata &md, const std::shared_ptr<hdl_loop_statement> &ls) {
-        f.add_loop_metadata(md);
+    void add_loop(const std::shared_ptr<hdl_loop_statement> &ls) {
         f.add_statement(ls);
     }
     hdl_function_statement get_function();

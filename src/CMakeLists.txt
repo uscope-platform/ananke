@@ -71,7 +71,6 @@ target_sources(ananke_lib
     data_model/HDL/factories/parameters/expressions_factory.cpp
     data_model/HDL/factories/parameters/function_calls_factory.cpp
     data_model/HDL/factories/parameters/ternary_factory.cpp
-    data_model/HDL/HDL_loop.cpp
     data_model/HDL/HDL_net.cpp
     data_model/bus_mapping/bus_specs_manager.cpp
     data_model/bus_mapping/mapper_bus_component.cpp

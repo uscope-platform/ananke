@@ -20,8 +20,9 @@
 #include <vector>
 
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
-#include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
+
+class HDL_parameter;
 
 class hdl_loop_statement : public hdl_statement_base {
 public:

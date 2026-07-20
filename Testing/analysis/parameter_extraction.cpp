@@ -3966,26 +3966,6 @@ TEST(parameter_extraction, loop_function_parameter) {
     p.set_type(std::make_shared<HDL_simple_type>(param_type));
     p.set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("CTRL_ADDR_CALC")));
     HDL_function_call call("CTRL_ADDR_CALC");
-    HDL_loop_metadata loop;
-    HDL_parameter idx;
-    idx.set_name("i");
-    idx.set_raw_value(std::make_shared<Numeric_token>("0"));
-    loop.set_init(idx);
-
-    Expression_v2 e;
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_rhs(std::make_shared<Numeric_token>("3"));
-    e.set_operation(Expression_v2::less);
-    loop.set_end_c(e);
-
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_rhs(std::make_shared<Numeric_token>("1"));
-    e.set_operation(Expression_v2::add);
-    loop.set_iter(e);
-
-    e.set_lhs(std::make_shared<Numeric_token>("100"));
-    e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_operation(Expression_v2::multiply);
     p.set_raw_value(std::make_shared<HDL_function_call>(call));
 
     ASSERT_EQ(p, *param);
@@ -4035,26 +4015,6 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     p.set_name("TEST_PARAM");
     p.set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("CTRL_ADDR_CALC")));
     HDL_function_call call("CTRL_ADDR_CALC");
-    HDL_loop_metadata loop;
-    HDL_parameter idx;
-    idx.set_name("i");
-    idx.set_raw_value(std::make_shared<Numeric_token>("0"));
-    loop.set_init(idx);
-
-    Expression_v2 e;
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("N_CHAINS")));
-    e.set_operation(Expression_v2::less);
-    loop.set_end_c(e);
-
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_rhs(std::make_shared<Numeric_token>("1"));
-    e.set_operation(Expression_v2::add);
-    loop.set_iter(e);
-
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("OFFSET")));
-    e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_operation(Expression_v2::multiply);
 
     auto param_type = HDL_simple_type();
     param_type.add_dimension({

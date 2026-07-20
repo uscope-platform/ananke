@@ -47,8 +47,6 @@ TEST(function_processing, simple_function_scalar) {
 
     hdl_function_statement check_f;
     check_f.set_name("CTRL_ADDR_CALC");
-    assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Numeric_token>("67"));
-    check_f.add_assignment(a);
 
     auto stmt = std::make_shared<hdl_assignment_statement>();
     stmt->set_target("CTRL_ADDR_CALC");
@@ -89,30 +87,7 @@ TEST(function_processing, simple_function_array) {
     auto result = functions["CTRL_ADDR_CALC"];
     hdl_function_statement check_f;
     check_f.set_name("CTRL_ADDR_CALC");
-    assignment a(
-        "CTRL_ADDR_CALC",
-        std::make_shared<Numeric_token>("0"),
-        std::make_shared<Numeric_token>("100")
-        );
-    check_f.add_assignment(a);
-    a = assignment(
-        "CTRL_ADDR_CALC",
-        std::make_shared<Numeric_token>("1"),
-        std::make_shared<Numeric_token>("200")
-        );
-    check_f.add_assignment(a);
-    a = assignment(
-        "CTRL_ADDR_CALC",
-        std::make_shared<Numeric_token>("2"),
-        std::make_shared<Numeric_token>("300")
-        );
-    check_f.add_assignment(a);
-    a = assignment(
-        "IGNORED_ASSIGNMENT",
-        std::make_shared<Numeric_token>("2"),
-        std::make_shared<Numeric_token>("1")
-        );
-    check_f.add_assignment(a);
+
     auto s0 = std::make_shared<hdl_assignment_statement>();
     s0->set_target("CTRL_ADDR_CALC"); s0->set_index(std::make_shared<Numeric_token>("0")); s0->set_value(std::make_shared<Numeric_token>("100"));
     check_f.add_statement(s0);
@@ -156,35 +131,6 @@ TEST(function_processing, simple_loop_function) {
 
     hdl_function_statement check_f;
     check_f.set_name("CTRL_ADDR_CALC");
-    auto metadata = HDL_loop_metadata();
-
-    HDL_parameter p;
-    p.set_name("i");
-    p.set_raw_value(std::make_shared<Numeric_token>("0"));
-    metadata.set_init(p);
-
-    Expression_v2 e;
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_rhs(std::make_shared<Numeric_token>("3"));
-    e.set_operation(Expression_v2::less);
-    metadata.set_end_c(e);
-
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_rhs(std::make_shared<Numeric_token>("1"));
-    e.set_operation(Expression_v2::add);
-    metadata.set_iter(e);
-
-    e.set_lhs(std::make_shared<Numeric_token>("100"));
-    e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_operation(Expression_v2::multiply);
-    assignment a = {
-        "CTRL_ADDR_CALC",
-        std::make_shared<Identifier_token>(qualified_identifier("i")),
-        std::make_shared<Expression_v2>(e)
-    };
-
-    metadata.add_assignment(a);
-    check_f.add_loop_metadata(metadata);
 
     auto loop_stmt = std::make_shared<hdl_loop_statement>();
     auto lp = std::make_shared<HDL_parameter>();
@@ -239,36 +185,6 @@ TEST(function_processing, parametric_loop_function) {
 
     hdl_function_statement check_f;
     check_f.set_name("CTRL_ADDR_CALC");
-    auto metadata = HDL_loop_metadata();
-
-    HDL_parameter p;
-    p.set_name("i");
-    p.set_raw_value(std::make_shared<Numeric_token>("0"));
-    metadata.set_init(p);
-
-    Expression_v2 e;
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("N_CORES")));
-    e.set_operation(Expression_v2::less);
-    metadata.set_end_c(e);
-
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_rhs(std::make_shared<Numeric_token>("1"));
-    e.set_operation(Expression_v2::add);
-    metadata.set_iter(e);
-
-
-    e.set_lhs(std::make_shared<Numeric_token>("100"));
-    e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_operation(Expression_v2::multiply);
-    assignment a = {
-        "CTRL_ADDR_CALC",
-        std::make_shared<Identifier_token>(qualified_identifier("i")),
-        std::make_shared<Expression_v2>(e)
-    };
-
-    metadata.add_assignment(a);
-    check_f.add_loop_metadata(metadata);
 
     auto ploop = std::make_shared<hdl_loop_statement>();
     auto pp = std::make_shared<HDL_parameter>();
@@ -324,38 +240,6 @@ TEST(function_processing, complex_loop_function) {
 
     hdl_function_statement check_f;
     check_f.set_name("CTRL_ADDR_CALC");
-    auto metadata = HDL_loop_metadata();
-
-    HDL_parameter p;
-    p.set_name("i");
-    p.set_raw_value(std::make_shared<Numeric_token>("1"));
-    metadata.set_init(p);
-    Expression_v2 e, e2;
-    e2.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N_CORES")));
-    e2.set_rhs(std::make_shared<Numeric_token>("1"));
-    e2.set_operation(Expression_v2::add);
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_rhs(std::make_shared<Expression_v2>(e2));
-    e.set_operation(Expression_v2::less);
-    metadata.set_end_c(e);
-
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_rhs(std::make_shared<Numeric_token>("1"));
-    e.set_operation(Expression_v2::add);
-    metadata.set_iter(e);
-
-    e.set_lhs(std::make_shared<Numeric_token>("100"));
-    e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
-    e.set_operation(Expression_v2::multiply);
-
-    assignment a = {
-        "CTRL_ADDR_CALC",
-        std::make_shared<Identifier_token>(qualified_identifier("i")),
-        std::make_shared<Expression_v2>(e)
-    };
-
-    metadata.add_assignment(a);
-    check_f.add_loop_metadata(metadata);
 
     auto cloop = std::make_shared<hdl_loop_statement>();
     auto cp = std::make_shared<HDL_parameter>();
@@ -383,24 +267,12 @@ TEST(function_processing, complex_loop_function) {
     cba->set_value(std::make_shared<Expression_v2>(ce));
     cloop->add_body_stmt(cba);
 
-    a = {
-        "CTRL_ADDR_CALC",
-        std::make_shared<Numeric_token>("0"),
-        std::make_shared<Numeric_token>("44")
-    };
-    check_f.add_assignment(a);
     auto ca0 = std::make_shared<hdl_assignment_statement>();
     ca0->set_target("CTRL_ADDR_CALC"); ca0->set_index(std::make_shared<Numeric_token>("0")); ca0->set_value(std::make_shared<Numeric_token>("44"));
     check_f.add_statement(ca0);
 
     check_f.add_statement(cloop);
 
-    a = {
-        "CTRL_ADDR_CALC",
-        std::make_shared<Numeric_token>("4"),
-        std::make_shared<Numeric_token>("667")
-    };
-    check_f.add_assignment(a);
     auto ca1 = std::make_shared<hdl_assignment_statement>();
     ca1->set_target("CTRL_ADDR_CALC"); ca1->set_index(std::make_shared<Numeric_token>("4")); ca1->set_value(std::make_shared<Numeric_token>("667"));
     check_f.add_statement(ca1);
@@ -435,18 +307,6 @@ TEST(function_processing, parametrized_function) {
     hdl_function_statement check_f;
     check_f.set_name("CTRL_ADDR_CALC");
 
-    assignment a = {
-        "CTRL_ADDR_CALC",
-        std::make_shared<Numeric_token>("0"),
-        std::make_shared<Numeric_token>("44")
-    };
-    check_f.add_assignment(a);
-    a = {
-        "CTRL_ADDR_CALC",
-        std::make_shared<Identifier_token>(qualified_identifier("N_CORES")),
-        std::make_shared<Numeric_token>("33")
-    };
-    check_f.add_assignment(a);
     auto ps0 = std::make_shared<hdl_assignment_statement>();
     ps0->set_target("CTRL_ADDR_CALC"); ps0->set_index(std::make_shared<Numeric_token>("0")); ps0->set_value(std::make_shared<Numeric_token>("44"));
     check_f.add_statement(ps0);
@@ -484,18 +344,7 @@ TEST(function_processing, function_in_package) {
 
     hdl_function_statement check_f;
     check_f.set_name("CTRL_ADDR_CALC");
-    assignment a = {
-        "CTRL_ADDR_CALC",
-        std::make_shared<Numeric_token>("0"),
-        std::make_shared<Numeric_token>("67")
-    };
-    check_f.add_assignment(a);
-    a = {
-        "CTRL_ADDR_CALC",
-        std::make_shared<Numeric_token>("1"),
-        std::make_shared<Numeric_token>("100")
-    };
-    check_f.add_assignment(a);
+
     auto fs0 = std::make_shared<hdl_assignment_statement>();
     fs0->set_target("CTRL_ADDR_CALC"); fs0->set_index(std::make_shared<Numeric_token>("0")); fs0->set_value(std::make_shared<Numeric_token>("67"));
     check_f.add_statement(fs0);
@@ -531,13 +380,6 @@ TEST(function_processing, package_assignment) {
 
     hdl_function_statement check_f;
     check_f.set_name("CTRL_ADDR_CALC");
-
-    assignment a = {
-        "CTRL_ADDR_CALC",
-        std::make_shared<Numeric_token>("0"),
-        std::make_shared<Identifier_token>(qualified_identifier("hil_address_space","bus_base"))
-    };
-    check_f.add_assignment(a);
 
     auto pas0 = std::make_shared<hdl_assignment_statement>();
     pas0->set_target("CTRL_ADDR_CALC"); pas0->set_index(std::make_shared<Numeric_token>("0"));

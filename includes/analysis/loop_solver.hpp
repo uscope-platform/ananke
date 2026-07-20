@@ -20,12 +20,12 @@
 
 #include <memory>
 #include "data_model/HDL/parameters/Parameters_map.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 #include "data_model/HDL/statement/hdl_loop_statement.hpp"
 
 class loop_solver {
 public:
     loop_solver() = default;
-    static std::vector<hdl_integer> solve_loop(const HDL_loop_metadata &loop, const std::map<qualified_identifier, resolved_parameter> &context);
     static std::vector<hdl_integer> solve_loop(const hdl_loop_statement &loop, const std::map<qualified_identifier, resolved_parameter> &context);
 private:
     static std::shared_ptr<HDL_parameter> get_init_variable(const HDL_parameter &init, const std::map<qualified_identifier, resolved_parameter> &context);

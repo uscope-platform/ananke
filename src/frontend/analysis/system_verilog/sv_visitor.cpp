@@ -1030,7 +1030,7 @@ void sv_visitor::enterGenvar_initialization(sv2017::Genvar_initializationContext
 void sv_visitor::exitGenvar_initialization(sv2017::Genvar_initializationContext *ctx) {
     auto param = params_factory.get_parameter();
     params_factory.stop_param_assignment();
-    loops_factory.set_identifier(*param);
+    loops_factory.set_loop_init(*param);
     loops_factory.advance_phase();
 }
 
@@ -1084,7 +1084,7 @@ void sv_visitor::enterLoop_statement(sv2017::Loop_statementContext *ctx) {
 
 void sv_visitor::exitLoop_statement(sv2017::Loop_statementContext *ctx) {
     if(f_factory.is_active()) {
-        f_factory.add_loop(loops_factory.get_loop_specs(), loops_factory.get_loop_statement());
+        f_factory.add_loop(loops_factory.get_loop_statement());
         loops_factory.clear();
         f_factory.resume();
     }

@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "data_model/HDL/statement/hdl_loop_statement.hpp"
+#include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 #include <algorithm>
 
