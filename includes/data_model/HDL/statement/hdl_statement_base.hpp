@@ -30,6 +30,8 @@ public:
     bool operator==(const hdl_statement_base& rhs) const {
         return typeid(*this) == typeid(rhs) && equals(rhs);
     }
+
+    friend void PrintTo(const hdl_statement_base& s, std::ostream* os);
 };
 
 

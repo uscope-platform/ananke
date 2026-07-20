@@ -413,3 +413,54 @@ TEST(analysis_test, nested_included_declaration) {
     EXPECT_EQ(resource[2].getName(), "test_module");
     EXPECT_EQ(resource[2].get_path(), "/tmp/file.sv");
 }
+
+
+TEST(analysis_test, generate_for_loop) {
+    auto test_pattern = R"(
+        module dependency();
+        endmodule
+
+        module test_mod();
+            genvar n;
+            generate
+                for (n = 0; n < 3; n = n + 1) begin
+                    dependency d();
+                end
+            endgenerate
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern)[1];
+
+    hdl_loop_statement expected;
+
+    auto init = std::make_shared<HDL_parameter>();
+    init->set_name("n");
+    init->set_raw_value(std::make_shared<Numeric_token>("0"));
+    expected.set_init(init);
+
+    Expression_v2 end_cond;
+    end_cond.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    end_cond.set_rhs(std::make_shared<Numeric_token>("3"));
+    end_cond.set_operation(Expression_v2::less);
+    expected.set_end_condition(std::make_shared<Expression_v2>(end_cond));
+
+    Expression_v2 iter;
+    iter.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    iter.set_rhs(std::make_shared<Numeric_token>("1"));
+    iter.set_operation(Expression_v2::add);
+    expected.set_iteration(std::make_shared<Expression_v2>(iter));
+
+    auto inst = std::make_shared<hdl_instance_statement>();
+    inst->set_name("d");
+    inst->set_type("dependency");
+    inst->set_dependency_class(module);
+    expected.add_body_stmt(inst);
+
+    const auto& stmts = resource.get_statements();
+    ASSERT_EQ(stmts.size(), 1);
+    auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmts[0]);
+    ASSERT_NE(loop, nullptr);
+    ASSERT_EQ(*loop, expected);
+}

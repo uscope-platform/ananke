@@ -20,6 +20,7 @@ void HDL_loops_factory::new_loop() {
     repeated_instances.clear();
     end_cond_valid = false;
     active = true;
+    _statement = hdl_loop_statement();
 }
 
 void HDL_loops_factory::clear() {
@@ -74,6 +75,7 @@ void HDL_loops_factory::add_loop_variable(const std::string &p) {
     HDL_parameter param;
     param.set_name(p);
     loop_specs.set_init(param);
+    _statement.set_init(std::make_shared<HDL_parameter>(param));
 }
 
 void HDL_loops_factory::set_phase(loop_phase_t p) {
@@ -84,14 +86,17 @@ void HDL_loops_factory::set_phase(loop_phase_t p) {
         auto init = loop_specs.get_init();
         init.set_raw_value(Expression_v2::unwrap(current_expression));
         loop_specs.set_init(init);
+        _statement.set_init(std::make_shared<HDL_parameter>(init));
         current_expression = Expression_v2();
     } else if(p==step) {
         if(!end_cond_valid) {
             loop_specs.set_end_c(current_expression);
+            _statement.set_end_condition(std::make_shared<Expression_v2>(current_expression));
         }
         current_expression = Expression_v2();
     } else if(p==body) {
         loop_specs.set_iter(current_expression);
+        _statement.set_iteration(std::make_shared<Expression_v2>(current_expression));
         current_expression = Expression_v2();
         body_expr_factory = expressions_factory();
         in_body_bit_selection = false;
@@ -179,6 +184,10 @@ void HDL_loops_factory::add_expression(const Expression_v2 &e) {
 void HDL_loops_factory::add_instance(HDL_instance &i) {
     i.add_loop(loop_specs);
     repeated_instances.push_back(i);
+}
+
+void HDL_loops_factory::add_statement(const std::shared_ptr<hdl_statement_base> &stmt) {
+    _statement.add_body_stmt(stmt);
 }
 
 

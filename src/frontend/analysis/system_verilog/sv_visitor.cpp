@@ -110,9 +110,9 @@ void sv_visitor::exitModule_or_interface_or_program_or_udp_instantiation(sv2017:
     if(loops_factory.in_loop()){
         auto dep = deps_factory.get_dependency();
         loops_factory.add_instance(dep);
-        auto s = deps_factory.get_statement();
+        loops_factory.add_statement(deps_factory.get_statement());
     } else {
-        modules_factory.add_statement(std::make_shared<hdl_instance_statement>(deps_factory.get_statement()));
+        modules_factory.add_statement(deps_factory.get_statement());
         modules_factory.add_instance(deps_factory.get_dependency());
     }
 
@@ -1018,10 +1018,10 @@ void sv_visitor::enterLoop_generate_construct(sv2017::Loop_generate_constructCon
 }
 
 void sv_visitor::exitLoop_generate_construct(sv2017::Loop_generate_constructContext *) {
-    auto inst = loops_factory.get_instances();
     for(auto &i:loops_factory.get_instances()){
         modules_factory.add_instance(i);
     }
+    modules_factory.add_statement(loops_factory.get_loop_statement());
 }
 
 void sv_visitor::enterGenvar_initialization(sv2017::Genvar_initializationContext *ctx) {

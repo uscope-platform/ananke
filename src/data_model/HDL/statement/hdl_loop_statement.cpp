@@ -50,10 +50,14 @@ bool hdl_loop_statement::equals(const hdl_statement_base &other) const {
 
 std::string hdl_loop_statement::print() const {
     std::ostringstream oss;
-    oss << "for( "<< init->to_string() << " ; " << end_condition->print()  << " ; " << iteration->print()<< " ) begin";
+    oss << "for( "<< init->to_string() << " ; " << end_condition->print()  << " ; " << iteration->print()<< " ) begin\n";
     for (auto &stmt:loop_body) {
         oss << stmt->print() << "\n";
     }
     oss << "end";
     return oss.str();
+}
+
+void PrintTo(const hdl_loop_statement& s, std::ostream* os) {
+    *os << s.print();
 }

@@ -40,6 +40,8 @@ public:
     std::shared_ptr<Expression_base> get_iteration() const { return iteration; }
     const std::vector<std::shared_ptr<hdl_statement_base>>& get_body() const { return loop_body; }
 
+    friend void PrintTo(const hdl_loop_statement& s, std::ostream* os);
+
 private:
     std::shared_ptr<HDL_parameter> init;
     std::shared_ptr<Expression_base> end_condition;

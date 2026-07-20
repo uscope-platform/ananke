@@ -57,3 +57,7 @@ bool hdl_instance_statement::equals(const hdl_statement_base& other) const {
 std::string hdl_instance_statement::print() const {
     return type + " " + name;
 }
+
+void PrintTo(const hdl_instance_statement& s, std::ostream* os) {
+    *os << s.print();
+}

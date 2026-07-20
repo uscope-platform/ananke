@@ -14,3 +14,7 @@
 //  limitations under the License.
 
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
+
+void PrintTo(const hdl_statement_base& s, std::ostream* os) {
+    *os << s.print();
+}

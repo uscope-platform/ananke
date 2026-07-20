@@ -52,9 +52,9 @@ HDL_instance HDL_instances_factory::get_dependency() {
 }
 
 
-hdl_instance_statement HDL_instances_factory::get_statement() {
+std::shared_ptr<hdl_instance_statement> HDL_instances_factory::get_statement() {
     valid_instance = false;
-    return current_statement;
+    return std::make_shared<hdl_instance_statement>(current_statement);
 }
 
 

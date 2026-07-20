@@ -61,6 +61,8 @@ public:
     void set_array_quantifier(const std::shared_ptr<HDL_parameter>& p) { array_quantifier = p; }
     std::shared_ptr<HDL_parameter> get_array_quantifier() const { return array_quantifier; }
 
+    friend void PrintTo(const hdl_instance_statement& s, std::ostream* os);
+
 private:
     std::string name;
     std::string type;

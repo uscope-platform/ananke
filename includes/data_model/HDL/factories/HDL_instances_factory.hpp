@@ -32,7 +32,7 @@ public:
     void start_scalar_net(const std::string &n);
     void add_scalar_net(const std::string &name);
     HDL_instance get_dependency();
-    hdl_instance_statement get_statement();
+    std::shared_ptr<hdl_instance_statement> get_statement();
     void start_concat_port(const std::string &n);
     void stop_concat_port();
     void start_replication_port(const std::string &n);
