@@ -17,19 +17,32 @@
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 
 parameter_deps_t hdl_assignment_statement::get_dependencies() const {
-    parameter_deps_t res;
-
-    return res;
+    parameter_deps_t deps;
+    if (value) deps.merge(value->get_dependencies());
+    return deps;
 }
 
 std::unique_ptr<hdl_statement_base> hdl_assignment_statement::clone() const {
-    return std::make_unique<hdl_assignment_statement>();
+    auto c = std::make_unique<hdl_assignment_statement>();
+    c->target = target;
+    c->index = index;
+    c->value = value;
+    return c;
 }
 
-bool hdl_assignment_statement::equals(const hdl_statement_base &other) const {
-    return false;
+bool hdl_assignment_statement::equals(const hdl_statement_base& other) const {
+    const auto& rhs = static_cast<const hdl_assignment_statement&>(other);
+    bool res = target == rhs.target;
+    res &= (!value && !rhs.value) || (value && rhs.value && *value == *rhs.value);
+    res &= (!index && !rhs.index) || (index && rhs.index && *index == *rhs.index);
+    return res;
 }
 
 std::string hdl_assignment_statement::print() const {
-    return "";
+    std::ostringstream oss;
+    oss << target;
+    if (index) oss << "[" << index->print() << "]";
+    oss << " = ";
+    if (value) oss << value->print();
+    return oss.str();
 }
