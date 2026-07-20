@@ -21,7 +21,7 @@
 #include <memory>
 
 #include "data_model/Depfile/Depfile.hpp"
-#include "data_model/HDL/HDL_instance_AST.hpp"
+#include "data_model/HDL/hdl_ast_node.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/settings_store.hpp"
 #include "analysis/passes/pass_manager.hpp"
@@ -31,9 +31,9 @@
 class HDL_ast_builder_v2 {
 public:
     HDL_ast_builder_v2(const std::shared_ptr<settings_store> &s, const std::shared_ptr<data_store> &d, const Depfile& d_f);
-    std::vector<std::shared_ptr<HDL_instance_AST>> build_ast(const std::vector<std::string>& modules);
+    std::vector<std::shared_ptr<hdl_ast_node>> build_ast(const std::vector<std::string>& modules);
 private:
-    std::shared_ptr<HDL_instance_AST> build_ast(const std::string& top_level_module);
+    std::shared_ptr<hdl_ast_node> build_ast(const std::string& top_level_module);
     void process_quantifier(const std::shared_ptr<HDL_parameter> &quantifier, const std::map<qualified_identifier, resolved_parameter> &parameters);
     std::map<qualified_identifier, resolved_parameter> process_runtime_parameters(const std::map<qualified_identifier, resolved_parameter> &parameters, const HDL_Resource &res);
     std::shared_ptr<data_store> d_store;

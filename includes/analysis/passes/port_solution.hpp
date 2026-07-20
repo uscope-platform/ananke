@@ -20,7 +20,7 @@
 
 class port_solution  : public pass_base {
 public:
-     void process_node(const std::shared_ptr<HDL_instance_AST> &node) override;
+     void process_node(const std::shared_ptr<hdl_ast_node> &node) override;
 };
 
 

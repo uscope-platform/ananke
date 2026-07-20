@@ -51,11 +51,11 @@ struct proxy_target {
 } ;
 
 
-class HDL_instance_AST {
+class hdl_ast_node {
 public:
-    HDL_instance_AST() = default;
-    HDL_instance_AST(const HDL_instance_AST &c );
-    explicit HDL_instance_AST(const hdl_instance_statement &stmt);
+    hdl_ast_node() = default;
+    hdl_ast_node(const hdl_ast_node &c );
+    explicit hdl_ast_node(const hdl_instance_statement &stmt);
 
     // ---- port connections ----
     void add_port_connection(const std::string& port_name, std::vector<HDL_net> value);
@@ -97,13 +97,13 @@ public:
     std::shared_ptr<HDL_parameter> get_array_quantifier() const { return array_quantifier; }
 
     // ---- AST tree ----
-    std::vector<std::shared_ptr<HDL_instance_AST>> get_dependencies() { return child_instances; }
-    void add_child(const std::shared_ptr<HDL_instance_AST> &i) {
+    std::vector<std::shared_ptr<hdl_ast_node>> get_dependencies() { return child_instances; }
+    void add_child(const std::shared_ptr<hdl_ast_node> &i) {
         i->set_array_index(array_index);
         child_instances.push_back(i);
     }
-    void set_parent(const std::shared_ptr<HDL_instance_AST> &p) { parent = p; }
-    std::shared_ptr<HDL_instance_AST> get_parent() { return parent; }
+    void set_parent(const std::shared_ptr<hdl_ast_node> &p) { parent = p; }
+    std::shared_ptr<hdl_ast_node> get_parent() { return parent; }
 
     // ---- bus addressing ----
     void add_address(const hdl_integer &i) { bus_address.push_back(i); }
@@ -148,8 +148,8 @@ public:
     // ---- proxy ----
     void set_proxy_specs(const proxy_target &p) { proxy_specs = p; }
     proxy_target get_proxy_specs() const { return proxy_specs; }
-    void set_proxy_ast(const std::shared_ptr<HDL_instance_AST> &p) { proxy_ast = p; }
-    std::shared_ptr<HDL_instance_AST> get_proxy_ast() const { return proxy_ast; }
+    void set_proxy_ast(const std::shared_ptr<hdl_ast_node> &p) { proxy_ast = p; }
+    std::shared_ptr<hdl_ast_node> get_proxy_ast() const { return proxy_ast; }
 
     // ---- array index ----
     void set_array_index(int16_t i) { array_index = i; }
@@ -159,7 +159,7 @@ public:
     nlohmann::json dump();
     std::string dump_structure();
 
-    friend bool operator==(const HDL_instance_AST&lhs, const HDL_instance_AST&rhs);
+    friend bool operator==(const hdl_ast_node&lhs, const hdl_ast_node&rhs);
 
     template<class Archive>
     void serialize(Archive & ar) {
@@ -170,7 +170,7 @@ public:
     }
 
 private:
-    static std::string dump_structure(const std::shared_ptr<HDL_instance_AST>&ast, const std::string &prefix);
+    static std::string dump_structure(const std::shared_ptr<hdl_ast_node>&ast, const std::string &prefix);
 
     // ---- core instance data ----
     std::string name;
@@ -185,8 +185,8 @@ private:
 
     // ---- AST tree ----
     std::vector<hdl_integer> bus_address;
-    std::shared_ptr<HDL_instance_AST> parent;
-    std::vector<std::shared_ptr<HDL_instance_AST>> child_instances;
+    std::shared_ptr<hdl_ast_node> parent;
+    std::vector<std::shared_ptr<hdl_ast_node>> child_instances;
 
     // ---- dependency tracking ----
     std::vector<std::string> data_dependencies;
@@ -199,7 +199,7 @@ private:
     std::string leaf_module_top;
     std::string leaf_module_prefix;
     proxy_target proxy_specs;
-    std::shared_ptr<HDL_instance_AST> proxy_ast = nullptr;
+    std::shared_ptr<hdl_ast_node> proxy_ast = nullptr;
 };
 
 

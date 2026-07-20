@@ -26,12 +26,12 @@
 #include "data_model/data_store.hpp"
 #include "data_model/scope.hpp"
 
-#include "data_model/HDL/HDL_instance_AST.hpp"
+#include "data_model/HDL/hdl_ast_node.hpp"
 
 class application_definition_generator {
 public:
     explicit application_definition_generator(
-            const std::shared_ptr<HDL_instance_AST> &l,
+            const std::shared_ptr<hdl_ast_node> &l,
             const nlohmann::json &p,
             const std::map<std::string, std::string> &a,
             const std::unordered_map<std::string, std::string> &vm
@@ -47,8 +47,8 @@ public:
     std::vector<nlohmann::json> get_peripherals(){return peripherals;};
 
 private:
-    std::map<std::string, hdl_integer> get_parameters(const nlohmann::json &spec, std::shared_ptr<HDL_instance_AST> &node);
-    void process_ast(const std::shared_ptr<HDL_instance_AST> &l);
+    std::map<std::string, hdl_integer> get_parameters(const nlohmann::json &spec, std::shared_ptr<hdl_ast_node> &node);
+    void process_ast(const std::shared_ptr<hdl_ast_node> &l);
     void detect_scope(const std::string &s, std::vector<int64_t> addr);
     void deduplicate_peripheral_names();
     void denormalize_addresses();

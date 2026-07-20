@@ -23,10 +23,10 @@
 void parameter_solver::resolve_interface_chain(
     work_order &work,
     const std::shared_ptr<data_store> &d_store,
-    std::shared_ptr<HDL_instance_AST> &examined_node,
+    std::shared_ptr<hdl_ast_node> &examined_node,
     std::string &instance_name
 ) {
-    auto is_interface_at = [&](const std::string &name, const std::shared_ptr<HDL_instance_AST> &node) -> bool {
+    auto is_interface_at = [&](const std::string &name, const std::shared_ptr<hdl_ast_node> &node) -> bool {
         if (!node) return false;
         auto node_type = node->get_type();
         if (!d_store->contains_hdl_entity(node_type)) return false;
@@ -93,7 +93,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
 
 void parameter_solver::update_parameters_map(
     const std::map<qualified_identifier, resolved_parameter> &solved_parameters,
-    const std::shared_ptr<HDL_instance_AST>& node,
+    const std::shared_ptr<hdl_ast_node>& node,
     const std::shared_ptr<data_store> &d_store
 ) {
     auto node_parameters = node->get_parameters();
@@ -118,7 +118,7 @@ resolved_parameter parameter_solver::resolve_instance_dependency(
     const std::shared_ptr<data_store> &d_store
 ) {
     auto instance_name = dep.get_instance().back();
-    std::shared_ptr<HDL_instance_AST> examined_node = work.node;
+    std::shared_ptr<hdl_ast_node> examined_node = work.node;
 
     auto current_ports = work.node->get_ports();
     if (current_ports.contains(dep.get_instance().back())) {
@@ -282,10 +282,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     return process_parameters(to_solve, ctx);
 }
 
-std::string parameter_solver::get_full_path(const std::shared_ptr<HDL_instance_AST> &node) {
+std::string parameter_solver::get_full_path(const std::shared_ptr<hdl_ast_node> &node) {
     std::string res;
 
-    std::shared_ptr<HDL_instance_AST> current_node = node;
+    std::shared_ptr<hdl_ast_node> current_node = node;
 
     while (current_node != nullptr) {
         res = current_node->get_name() + "." + res;

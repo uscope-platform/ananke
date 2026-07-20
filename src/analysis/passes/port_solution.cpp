@@ -16,7 +16,7 @@
 
 #include "analysis/passes/port_solution.hpp"
 
-void port_solution::process_node(const std::shared_ptr<HDL_instance_AST> &node) {
+void port_solution::process_node(const std::shared_ptr<hdl_ast_node> &node) {
     auto ports = node->get_ports();
     if(node->get_parent() != nullptr) {
         auto parameters = node->get_parent()->get_parameters();

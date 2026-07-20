@@ -19,13 +19,13 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 
-#include "data_model/HDL/HDL_instance_AST.hpp"
+#include "data_model/HDL/hdl_ast_node.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/Depfile/Depfile.hpp"
 
 class peripheral_definition_generator {
 public:
-    peripheral_definition_generator(std::shared_ptr<data_store> &d, const std::shared_ptr<HDL_instance_AST> &l);
+    peripheral_definition_generator(std::shared_ptr<data_store> &d, const std::shared_ptr<hdl_ast_node> &l);
 
     nlohmann::json get_peripheral_definitions() {return peripheral_defs;};
     std::map<std::string, std::string> get_alias_map() const{return alias_map;};

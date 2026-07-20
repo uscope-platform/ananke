@@ -27,8 +27,8 @@ HDL_ast_builder_v2::HDL_ast_builder_v2(const std::shared_ptr<settings_store> &s,
     dep_file = d_f;
 }
 
-std::vector<std::shared_ptr<HDL_instance_AST>> HDL_ast_builder_v2::build_ast(const std::vector<std::string> &modules) {
-    std::vector<std::shared_ptr<HDL_instance_AST>> ret;
+std::vector<std::shared_ptr<hdl_ast_node>> HDL_ast_builder_v2::build_ast(const std::vector<std::string> &modules) {
+    std::vector<std::shared_ptr<hdl_ast_node>> ret;
     ret.reserve(modules.size());
     pass_manager m(d_store);
     for(auto &item:modules){
@@ -41,9 +41,9 @@ std::vector<std::shared_ptr<HDL_instance_AST>> HDL_ast_builder_v2::build_ast(con
     return ret;
 }
 
-std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::string &top_level_module) {
+std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &top_level_module) {
 
-        auto top = std::make_shared<HDL_instance_AST>();
+        auto top = std::make_shared<hdl_ast_node>();
         top->set_name("TL");
         top->set_type(top_level_module);
         top->set_dependency_class(module);
@@ -93,7 +93,7 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                     if (auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(stmt)) {
                         auto dc = inst->get_dependency_class();
                         if (dc == module || dc == interface) {
-                            auto child = std::make_shared<HDL_instance_AST>(*inst);
+                            auto child = std::make_shared<hdl_ast_node>(*inst);
                             child->set_parent(working_instance);
                             process_quantifier(child->get_array_quantifier(), current_param_values);
                             working_instance->add_child(child);
@@ -112,7 +112,7 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
                             for (auto &idx : indices) {
                                 auto body_inst = std::dynamic_pointer_cast<hdl_instance_statement>(body_stmt);
                                 if (!body_inst) continue;
-                                auto child = std::make_shared<HDL_instance_AST>(*body_inst);
+                                auto child = std::make_shared<hdl_ast_node>(*body_inst);
                                 child->set_parent(working_instance);
                                 process_quantifier(child->get_array_quantifier(), current_param_values);
 

@@ -16,7 +16,7 @@
 #ifndef ANANKE_CONTROL_BUS_ANALYSIS_HPP
 #define ANANKE_CONTROL_BUS_ANALYSIS_HPP
 
-#include "data_model/HDL/HDL_instance_AST.hpp"
+#include "data_model/HDL/hdl_ast_node.hpp"
 #include "data_model/bus_mapping/bus_specs_manager.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/settings_store.hpp"
@@ -25,7 +25,7 @@
 #include <spdlog/spdlog.h>
 
 struct analysis_context{
-    std::shared_ptr<HDL_instance_AST> node;
+    std::shared_ptr<hdl_ast_node> node;
     std::string interface;
     hdl_integer address;
     std::string current_module_top;
@@ -45,8 +45,8 @@ struct bus_context{
 class control_bus_analysis {
 public:
     explicit control_bus_analysis(const Depfile &df);
-    void analyze_bus(std::shared_ptr<HDL_instance_AST> &ast);
-    void analyze_bus(std::shared_ptr<HDL_instance_AST> &ast, const std::string &intf);
+    void analyze_bus(std::shared_ptr<hdl_ast_node> &ast);
+    void analyze_bus(std::shared_ptr<hdl_ast_node> &ast, const std::string &intf);
 private:
 
     std::vector<analysis_context> process_interconnect(const analysis_context &inst);

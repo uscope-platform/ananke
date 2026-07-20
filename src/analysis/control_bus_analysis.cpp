@@ -21,7 +21,7 @@ control_bus_analysis::control_bus_analysis(const Depfile &df) : specs_manager("a
     dfile = df;
 }
 
-void control_bus_analysis::analyze_bus(std::shared_ptr<HDL_instance_AST> &ast) {
+void control_bus_analysis::analyze_bus(std::shared_ptr<hdl_ast_node> &ast) {
 
     if (!dfile.get_bus_section("control")) return;
     auto bus = dfile.get_bus_section("control").value();
@@ -32,7 +32,7 @@ void control_bus_analysis::analyze_bus(std::shared_ptr<HDL_instance_AST> &ast) {
     analize_node({top});
 }
 
-void control_bus_analysis::analyze_bus(std::shared_ptr<HDL_instance_AST> &ast,const std::string &intf) {
+void control_bus_analysis::analyze_bus(std::shared_ptr<hdl_ast_node> &ast,const std::string &intf) {
 
     std::string bus_if = intf;
 

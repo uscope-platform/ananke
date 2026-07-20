@@ -22,7 +22,7 @@ data_acquisition_analysis::data_acquisition_analysis(bool logging) : specs_manag
 }
 
 
-void data_acquisition_analysis::analyze(std::shared_ptr<HDL_instance_AST> &ast) {
+void data_acquisition_analysis::analyze(std::shared_ptr<hdl_ast_node> &ast) {
     auto sinks = find_sinks(ast);
     if(sinks.empty()) return;
     if(sinks.size()>1){
@@ -57,9 +57,9 @@ void data_acquisition_analysis::analyze(std::shared_ptr<HDL_instance_AST> &ast) 
     channelize_groups();
 }
 
-std::vector<std::shared_ptr<HDL_instance_AST>>
-data_acquisition_analysis::find_sinks(std::shared_ptr<HDL_instance_AST> &ast) {
-    std::vector<std::shared_ptr<HDL_instance_AST>> ret;
+std::vector<std::shared_ptr<hdl_ast_node>>
+data_acquisition_analysis::find_sinks(std::shared_ptr<hdl_ast_node> &ast) {
+    std::vector<std::shared_ptr<hdl_ast_node>> ret;
 
     for(auto &item:ast->get_dependencies()){
         if(specs_manager.is_sink(item->get_type())){
@@ -81,10 +81,10 @@ data_acquisition_analysis::find_sinks(std::shared_ptr<HDL_instance_AST> &ast) {
     return ret;
 }
 
-void data_acquisition_analysis::backtrace_scope_inputs(const std::shared_ptr<HDL_instance_AST> &node,const data_stream &intf) {
+void data_acquisition_analysis::backtrace_scope_inputs(const std::shared_ptr<hdl_ast_node> &node,const data_stream &intf) {
     auto dbg_n= node->get_name();
     auto dbg_t= node->get_type();
-    std::shared_ptr<HDL_instance_AST> if_source;
+    std::shared_ptr<hdl_ast_node> if_source;
     std::string if_port;
     for(auto &dep:node->get_dependencies()){
         for(auto [port_name, nets]:dep->get_ports()){
@@ -128,7 +128,7 @@ void data_acquisition_analysis::backtrace_scope_inputs(const std::shared_ptr<HDL
 
 }
 
-std::optional<std::vector<data_stream>> data_acquisition_analysis::process_node(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream) {
+std::optional<std::vector<data_stream>> data_acquisition_analysis::process_node(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream) {
     auto node_type = specs_manager.get_component_spec(node->get_type(), "type");
 
     if(specs_manager.is_interconnect(node->get_type())){
@@ -149,7 +149,7 @@ std::optional<std::vector<data_stream>> data_acquisition_analysis::process_node(
     }
 }
 
-void data_acquisition_analysis::process_source(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream) {
+void data_acquisition_analysis::process_source(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream) {
     spdlog::trace("Found data source at node: {}", node->get_name());
     std::string node_names;
     if(node->has_parameter("PRAGMA_MKFG_DATAPOINT_NAMES")){
@@ -247,7 +247,7 @@ void data_acquisition_analysis::process_source(const std::shared_ptr<HDL_instanc
 }
 
 std::vector<data_stream>
-data_acquisition_analysis::process_n_to_1_node(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream) {
+data_acquisition_analysis::process_n_to_1_node(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream) {
     std::vector<data_stream> ret;
     auto in_port = specs_manager.get_input_port(node->get_type());
     for(auto &[port_name, nets]:node->get_ports()){
@@ -273,7 +273,7 @@ data_acquisition_analysis::process_n_to_1_node(const std::shared_ptr<HDL_instanc
 }
 
 std::vector<data_stream>
-data_acquisition_analysis::process_1_to_n_node(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream) {
+data_acquisition_analysis::process_1_to_n_node(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream) {
     data_stream ret;
     auto in_port = specs_manager.get_input_port(node->get_type());
     for(auto &[port_name, nets]:node->get_ports()){
@@ -288,7 +288,7 @@ data_acquisition_analysis::process_1_to_n_node(const std::shared_ptr<HDL_instanc
 }
 
 std::vector<data_stream>
-data_acquisition_analysis::process_1_to_1_node(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream) {
+data_acquisition_analysis::process_1_to_1_node(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream) {
     data_stream ret;
 
     auto in_port = specs_manager.get_input_port(node->get_type());
@@ -325,7 +325,7 @@ data_acquisition_analysis::process_1_to_1_node(const std::shared_ptr<HDL_instanc
 }
 
 hdl_integer
-data_acquisition_analysis::find_datapoint_width(const std::shared_ptr<HDL_instance_AST> &node, std::string name) {
+data_acquisition_analysis::find_datapoint_width(const std::shared_ptr<hdl_ast_node> &node, std::string name) {
     for(auto &item:node->get_dependencies()){
         if(item->get_name() == name){
             auto val = item->get_parameter_value("DATA_WIDTH")->get_numeric_value();

@@ -27,7 +27,7 @@
 class data_store;
 
 struct work_order {
-    std::shared_ptr<HDL_instance_AST> node;
+    std::shared_ptr<hdl_ast_node> node;
     std::map<qualified_identifier, resolved_parameter> parent_parameters;
     std::string path;
     std::unordered_map<std::string, std::string> interfaces_map;
@@ -41,7 +41,7 @@ public:
     );
     static void update_parameters_map(
         const std::map<qualified_identifier, resolved_parameter> &parameters,
-        const std::shared_ptr<HDL_instance_AST>& node,
+        const std::shared_ptr<hdl_ast_node>& node,
         const std::shared_ptr<data_store> &d_store
         );
 
@@ -56,13 +56,13 @@ public:
             const std::map<qualified_identifier, resolved_parameter> &node_defaults
         );
 
-    static std::string get_full_path(const std::shared_ptr<HDL_instance_AST> &node);
+    static std::string get_full_path(const std::shared_ptr<hdl_ast_node> &node);
 
 private:
     static void resolve_interface_chain(
         work_order &work,
         const std::shared_ptr<data_store> &d_store,
-        std::shared_ptr<HDL_instance_AST> &examined_node,
+        std::shared_ptr<hdl_ast_node> &examined_node,
         std::string &instance_name
     );
     static resolved_parameter resolve_instance_dependency(

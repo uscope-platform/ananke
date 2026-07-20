@@ -21,7 +21,7 @@ processor_detection::processor_detection(const std::shared_ptr<data_store> &d) {
     d_store = d;
 }
 
-void processor_detection::process_node(const std::shared_ptr<HDL_instance_AST> &node) {
+void processor_detection::process_node(const std::shared_ptr<hdl_ast_node> &node) {
     auto node_spec = d_store->get_HDL_resource(node->get_type());
     auto node_params = node->get_parameters();
 

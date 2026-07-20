@@ -20,7 +20,7 @@
 #include <spdlog/spdlog.h>
 #include <bitset>
 
-#include "data_model/HDL/HDL_instance_AST.hpp"
+#include "data_model/HDL/hdl_ast_node.hpp"
 #include "data_model/bus_mapping/bus_specs_manager.hpp"
 #include "data_model/documentation/channel_group.hpp"
 #include "data_model/documentation/channel.hpp"
@@ -35,22 +35,22 @@ typedef struct {
 class data_acquisition_analysis {
 public:
     explicit data_acquisition_analysis(bool logging);
-    void analyze(std::shared_ptr<HDL_instance_AST> &ast);
+    void analyze(std::shared_ptr<hdl_ast_node> &ast);
     std::vector<channel> get_datapoints(){return data_points;}
     std::vector<channel_group> get_channel_groups(){return groups;};
     scope_data get_scope_data(){return scope;};
 private:
-    void backtrace_scope_inputs(const std::shared_ptr<HDL_instance_AST> &node,const data_stream &intf);
+    void backtrace_scope_inputs(const std::shared_ptr<hdl_ast_node> &node,const data_stream &intf);
     void channelize_groups();
 
-    std::optional<std::vector<data_stream>> process_node(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream);
-    std::vector<data_stream> process_n_to_1_node(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream);
-    std::vector<data_stream> process_1_to_n_node(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream);
-    std::vector<data_stream> process_1_to_1_node(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream);
-    void process_source(const std::shared_ptr<HDL_instance_AST> &node, const data_stream &in_stream);
+    std::optional<std::vector<data_stream>> process_node(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream);
+    std::vector<data_stream> process_n_to_1_node(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream);
+    std::vector<data_stream> process_1_to_n_node(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream);
+    std::vector<data_stream> process_1_to_1_node(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream);
+    void process_source(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream);
     std::set<std::pair<std::string, std::string>> explored_nodes;
-    std::vector<std::shared_ptr<HDL_instance_AST>> find_sinks(std::shared_ptr<HDL_instance_AST> &ast);
-    hdl_integer find_datapoint_width(const std::shared_ptr<HDL_instance_AST> &node,std::string name);
+    std::vector<std::shared_ptr<hdl_ast_node>> find_sinks(std::shared_ptr<hdl_ast_node> &ast);
+    hdl_integer find_datapoint_width(const std::shared_ptr<hdl_ast_node> &node,std::string name);
 
     std::vector<std::string> parse_datapoint_names(std::string &s){
         std::stringstream ss(s);

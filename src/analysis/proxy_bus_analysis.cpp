@@ -23,8 +23,8 @@ proxy_bus_analysis::proxy_bus_analysis(std::shared_ptr<settings_store> &s, std::
 
 
 
-void proxy_bus_analysis::analyze(const std::shared_ptr<HDL_instance_AST> &node) {
-    std::stack<std::shared_ptr<HDL_instance_AST>> working_stack;
+void proxy_bus_analysis::analyze(const std::shared_ptr<hdl_ast_node> &node) {
+    std::stack<std::shared_ptr<hdl_ast_node>> working_stack;
     working_stack.push(node);
 
 

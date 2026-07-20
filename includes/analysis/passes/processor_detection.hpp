@@ -23,7 +23,7 @@
 class processor_detection : public pass_base{
 public:
     processor_detection(const std::shared_ptr<data_store> &d);
-    void process_node(const std::shared_ptr<HDL_instance_AST> &node) override;
+    void process_node(const std::shared_ptr<hdl_ast_node> &node) override;
 private:
     std::shared_ptr<data_store> d_store;
 };

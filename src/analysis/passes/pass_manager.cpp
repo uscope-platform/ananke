@@ -25,16 +25,16 @@ pass_manager::pass_manager(const std::shared_ptr<data_store> &d) {
     };
 }
 
-void pass_manager::apply_passes(std::shared_ptr<HDL_instance_AST> &c) {
+void pass_manager::apply_passes(std::shared_ptr<hdl_ast_node> &c) {
     if(!data_store_valid) throw std::runtime_error("Data store not found while running AST passes");
     for (const auto &pass: passes) {
         apply_pass(c, pass);
     }
 }
 
-void pass_manager::apply_pass(std::shared_ptr<HDL_instance_AST> &c, const std::shared_ptr<pass_base> &pass) {
+void pass_manager::apply_pass(std::shared_ptr<hdl_ast_node> &c, const std::shared_ptr<pass_base> &pass) {
 
-    std::stack<std::shared_ptr<HDL_instance_AST>> working_set;
+    std::stack<std::shared_ptr<hdl_ast_node>> working_set;
     working_set.push(c);
     pass->setup(c);
     while (!working_set.empty()) {

@@ -17,7 +17,7 @@
 #include "analysis/loop_solver.hpp"
 
 
-std::vector<hdl_integer> loop_solver::solve_loop(std::shared_ptr<HDL_instance_AST> &node, const std::map<qualified_identifier, resolved_parameter> &context) {
+std::vector<hdl_integer> loop_solver::solve_loop(std::shared_ptr<hdl_ast_node> &node, const std::map<qualified_identifier, resolved_parameter> &context) {
     if (node->get_n_loops() == 0) return {};
     if (node->get_n_loops()>1) {
         spdlog::warn("Nested loops are not supported by parameter analysis\n In HDL instance: " + node->get_name() + " of type: " + node->get_type() + " is in a nested loop");

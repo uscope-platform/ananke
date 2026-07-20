@@ -13,12 +13,12 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "data_model/HDL/HDL_instance_AST.hpp"
+#include "data_model/HDL/hdl_ast_node.hpp"
 #include "data_model/HDL/statement/hdl_instance_statement.hpp"
 
 #include <sstream>
 
-HDL_instance_AST::HDL_instance_AST(const hdl_instance_statement &stmt) {
+hdl_ast_node::hdl_ast_node(const hdl_instance_statement &stmt) {
     name = stmt.get_name();
     type = stmt.get_type();
     dep_class = stmt.get_dependency_class();
@@ -34,7 +34,7 @@ HDL_instance_AST::HDL_instance_AST(const hdl_instance_statement &stmt) {
     }
 }
 
-HDL_instance_AST::HDL_instance_AST(const HDL_instance_AST &c) {
+hdl_ast_node::hdl_ast_node(const hdl_ast_node &c) {
     name = c.name;
     type = c.type;
     dep_class = c.dep_class;
@@ -57,29 +57,29 @@ HDL_instance_AST::HDL_instance_AST(const HDL_instance_AST &c) {
     array_index = c.array_index;
 }
 
-void HDL_instance_AST::add_port_connection(const std::string& port_name, std::vector<HDL_net> value) {
+void hdl_ast_node::add_port_connection(const std::string& port_name, std::vector<HDL_net> value) {
     ports_map[port_name] = std::move(value);
 }
 
-void HDL_instance_AST::add_parameter(const std::shared_ptr<HDL_parameter> &p) {
+void hdl_ast_node::add_parameter(const std::shared_ptr<HDL_parameter> &p) {
     parameters.insert(p);
 }
 
-void HDL_instance_AST::add_parameters(Parameters_map &p) {
+void hdl_ast_node::add_parameters(Parameters_map &p) {
     for (const auto& [key, param] : p) {
         parameters.insert(param);
     }
 }
 
-void HDL_instance_AST::set_parameters(Parameters_map &p) {
+void hdl_ast_node::set_parameters(Parameters_map &p) {
     parameters = std::move(p);
 }
 
-Parameters_map HDL_instance_AST::get_parameters() {
+Parameters_map hdl_ast_node::get_parameters() {
     return parameters;
 }
 
-bool operator==(const HDL_instance_AST &lhs, const HDL_instance_AST &rhs) {
+bool operator==(const hdl_ast_node &lhs, const hdl_ast_node &rhs) {
     bool ret = true;
 
     ret &= lhs.name == rhs.name;
@@ -110,7 +110,7 @@ bool operator==(const HDL_instance_AST &lhs, const HDL_instance_AST &rhs) {
     return ret;
 }
 
-nlohmann::json HDL_instance_AST::dump() {
+nlohmann::json hdl_ast_node::dump() {
     nlohmann::json ret;
     ret["instance_name"] = name;
     ret["instance_type"] = type;
@@ -149,7 +149,7 @@ nlohmann::json HDL_instance_AST::dump() {
     return ret;
 }
 
-std::string HDL_instance_AST::dump_structure() {
+std::string hdl_ast_node::dump_structure() {
     std::ostringstream oss;
     oss << name << ":" << type << "\n";
     for (const auto &dep: get_dependencies()) {
@@ -158,7 +158,7 @@ std::string HDL_instance_AST::dump_structure() {
     return oss.str();
 }
 
-std::string HDL_instance_AST::dump_structure(const std::shared_ptr<HDL_instance_AST> &ast, const std::string &prefix) {
+std::string hdl_ast_node::dump_structure(const std::shared_ptr<hdl_ast_node> &ast, const std::string &prefix) {
     std::ostringstream oss;
     oss << prefix << ast->get_name() << ":" << ast->get_type() << "\n";
     for (const auto &dep: ast->get_dependencies()) {

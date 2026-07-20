@@ -19,12 +19,12 @@
 #include <vector>
 #include <memory>
 
-#include "data_model/HDL/HDL_instance_AST.hpp"
+#include "data_model/HDL/hdl_ast_node.hpp"
 class pass_base {
 public:
     virtual ~pass_base() {}
-    virtual void process_node(const std::shared_ptr<HDL_instance_AST> &node) {}
-    virtual void setup(const std::shared_ptr<HDL_instance_AST> &root) {}
+    virtual void process_node(const std::shared_ptr<hdl_ast_node> &node) {}
+    virtual void setup(const std::shared_ptr<hdl_ast_node> &root) {}
 protected:
 private:
 

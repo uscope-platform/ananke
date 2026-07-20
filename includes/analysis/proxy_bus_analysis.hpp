@@ -16,14 +16,14 @@
 #ifndef ANANKE_PROXY_BUS_ANALYSIS_HPP
 #define ANANKE_PROXY_BUS_ANALYSIS_HPP
 
-#include "data_model/HDL/HDL_instance_AST.hpp"
+#include "data_model/HDL/hdl_ast_node.hpp"
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "analysis/control_bus_analysis.hpp"
 
 class proxy_bus_analysis {
 public:
     proxy_bus_analysis( std::shared_ptr<settings_store> &s, std::shared_ptr<data_store> &d, const Depfile& d_f);
-    void analyze(const std::shared_ptr<HDL_instance_AST> &node);
+    void analyze(const std::shared_ptr<hdl_ast_node> &node);
 private:
     std::shared_ptr<settings_store> s_store;
     std::shared_ptr<data_store> d_store;

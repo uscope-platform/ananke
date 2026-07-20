@@ -27,9 +27,9 @@
 class pass_manager {
 public:
    pass_manager(const std::shared_ptr<data_store> &d);
-   void apply_passes(std::shared_ptr<HDL_instance_AST> &c);
+   void apply_passes(std::shared_ptr<hdl_ast_node> &c);
 private:
-   void apply_pass(std::shared_ptr<HDL_instance_AST> &c,const std::shared_ptr<pass_base> &pass);
+   void apply_pass(std::shared_ptr<hdl_ast_node> &c,const std::shared_ptr<pass_base> &pass);
    std::vector<std::shared_ptr<pass_base>> passes;
    bool data_store_valid = false;
 };

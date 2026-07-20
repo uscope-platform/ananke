@@ -17,7 +17,7 @@
 
 
 
-Dependency_resolver_v2::Dependency_resolver_v2(const std::vector<std::shared_ptr<HDL_instance_AST>> &i, std::shared_ptr<data_store> store) {
+Dependency_resolver_v2::Dependency_resolver_v2(const std::vector<std::shared_ptr<hdl_ast_node>> &i, std::shared_ptr<data_store> store) {
     AST = i;
     d_store = std::move(store);
     for(auto &a:AST){
@@ -40,7 +40,7 @@ std::set<std::string> Dependency_resolver_v2::get_data() {
     return data;
 }
 
-void Dependency_resolver_v2::solve_dep(std::shared_ptr<HDL_instance_AST> &i) {
+void Dependency_resolver_v2::solve_dep(std::shared_ptr<hdl_ast_node> &i) {
 
     auto type = i->get_type();
 
