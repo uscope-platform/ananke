@@ -18,7 +18,6 @@
 
 #include "data_model/HDL/HDL_Resource.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
-#include "data_model/HDL/HDL_instance.hpp"
 
 #include "data_model/HDL/factories/resource_factory_base.hpp"
 

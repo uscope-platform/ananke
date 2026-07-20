@@ -150,34 +150,6 @@ std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::build_ast(const std::strin
     return top;
 }
 
-std::shared_ptr<HDL_instance_AST> HDL_ast_builder_v2::specialize_instance(const HDL_instance_AST &i, hdl_integer idx, std::string idx_name) {
-    HDL_instance_AST specialized_d = i;
-    specialized_d.set_repeated(true);
-    specialized_d.set_repetition_idx(idx);
-
-    std::unordered_map<std::string, std::vector<HDL_net>> new_ports;
-
-    std::string accessor = "[" + idx_name + "]";
-
-        for(auto &[port_name, nets]:specialized_d.get_ports()){
-        std::vector<HDL_net> port_content;
-        for(auto &n:nets){
-            if(n.is_array()) {
-                auto new_net = n;
-                Expression_v2 n_idx;
-                n_idx.set_lhs(std::make_shared<Numeric_token>(std::variant<hdl_integer, double>(idx), 0));
-                new_net.set_index({n_idx});
-                port_content.emplace_back(new_net);
-            } else {
-                port_content.push_back(n);
-            }
-        }
-        new_ports[port_name] = port_content;
-    }
-    specialized_d.set_ports(new_ports);
-    return std::make_shared<HDL_instance_AST>(specialized_d);
-}
-
 void HDL_ast_builder_v2::process_quantifier(const std::shared_ptr<HDL_parameter> &quantifier, const std::map<qualified_identifier, resolved_parameter> &parameters) {
 
     if (quantifier != nullptr) {

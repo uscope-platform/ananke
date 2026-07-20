@@ -23,8 +23,8 @@
 #include <vector>
 #include <memory>
 
-#include "data_model/HDL/HDL_instance.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/parameters/Parameters_map.hpp"
 #include "data_model/documentation/module_documentation.hpp"
 
 

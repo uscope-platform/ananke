@@ -57,8 +57,6 @@ void vhdl_visitor::exitConcurrent_statement(mgp_vh::vhdlParser::Concurrent_state
         } else{
             module_name = instantiation->instantiated_unit()->name()->name_literal()->identifier()->getText();
         }
-        HDL_instance dep(ctx->label()->getText(), module_name, module);
-        dependency_map[current_architecture].push_back(dep);
         auto stmt = std::make_shared<hdl_instance_statement>();
         stmt->set_name(ctx->label()->getText());
         stmt->set_type(module_name);

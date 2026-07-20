@@ -111,11 +111,9 @@ void sv_visitor::enterModule_or_interface_or_program_or_udp_instantiation(sv2017
 
 void sv_visitor::exitModule_or_interface_or_program_or_udp_instantiation(sv2017::Module_or_interface_or_program_or_udp_instantiationContext *ctx) {
     if(loops_factory.in_loop()){
-        auto dep = deps_factory.get_dependency();
-        loops_factory.add_instance(dep);
-        loops_factory.add_statement(deps_factory.get_statement());
+        loops_factory.add_statement(deps_factory.get_dependency());
     } else {
-        modules_factory.add_statement(deps_factory.get_statement());
+        modules_factory.add_statement(deps_factory.get_dependency());
     }
 
 }

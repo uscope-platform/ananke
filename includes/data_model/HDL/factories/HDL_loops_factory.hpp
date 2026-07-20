@@ -17,7 +17,6 @@
 #define ANANKE_HDL_LOOPS_FACTORY_H
 
 #include <vector>
-#include "data_model/HDL/HDL_instance.hpp"
 #include "data_model/HDL/HDL_loop.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
@@ -30,12 +29,10 @@ public:
 
     void clear();
 
-    void add_instance(HDL_instance &i);
     void add_statement(const std::shared_ptr<hdl_statement_base> &stmt);
     void add_expression(const Expression_v2 &e);
     void set_identifier(HDL_parameter &id) {loop_specs.set_init(id);}
     void start_assignment(const std::string &name);
-    std::vector<HDL_instance> get_instances();
     HDL_loop_metadata get_loop_specs() {return loop_specs;}
     std::shared_ptr<hdl_loop_statement> get_loop_statement() {active = false; return std::make_shared<hdl_loop_statement>(_statement);};
     bool in_loop(){return active;}
@@ -62,7 +59,6 @@ public:
 private:
 
     hdl_loop_statement _statement;
-    std::vector<HDL_instance> repeated_instances;
     HDL_loop_metadata loop_specs;
 
     Expression_v2 current_expression;

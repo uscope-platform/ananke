@@ -17,7 +17,6 @@
 #define ANANKE_HDL_INSTANCES_FACTORY_HPP
 
 #include "data_model/HDL/statement/hdl_instance_statement.hpp"
-#include "data_model/HDL/HDL_instance.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 #include "nets/HDL_range_factory.hpp"
@@ -31,8 +30,7 @@ public:
     void add_port(const std::string &name);
     void start_scalar_net(const std::string &n);
     void add_scalar_net(const std::string &name);
-    HDL_instance get_dependency();
-    std::shared_ptr<hdl_instance_statement> get_statement();
+    std::shared_ptr<hdl_instance_statement> get_dependency();
     void start_concat_port(const std::string &n);
     void stop_concat_port();
     void start_replication_port(const std::string &n);
@@ -79,8 +77,7 @@ private:
     expressions_factory expr_factory;
     std::string port_name;
 
-    HDL_instance current_instance;
-    hdl_instance_statement current_statement;
+    hdl_instance_statement current_instance;
     bool valid_instance = false;
 };
 

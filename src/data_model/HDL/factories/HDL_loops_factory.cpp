@@ -17,15 +17,14 @@
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 
 void HDL_loops_factory::new_loop() {
-    repeated_instances.clear();
     end_cond_valid = false;
     active = true;
     _statement = hdl_loop_statement();
 }
 
 void HDL_loops_factory::clear() {
-    repeated_instances.clear();
     loop_specs = HDL_loop_metadata();
+    _statement = hdl_loop_statement();
     current_expression = Expression_v2();
     body_expr_factory = expressions_factory();
     in_body_bit_selection = false;
@@ -48,11 +47,6 @@ void HDL_loops_factory::start_assignment(const std::string &name) {
         body_expr_factory.clear_expression();
         loop_specs.add_assignment(assignment(name, {}, {}));
     }
-}
-
-std::vector<HDL_instance> HDL_loops_factory::get_instances() {
-    active = false;
-    return repeated_instances;
 }
 
 void HDL_loops_factory:: add_component(const std::shared_ptr<Expression_base> &c) {
@@ -179,11 +173,6 @@ void HDL_loops_factory::stop_bit_selection() {
 
 void HDL_loops_factory::add_expression(const Expression_v2 &e) {
     current_expression = e;
-}
-
-void HDL_loops_factory::add_instance(HDL_instance &i) {
-    i.add_loop(loop_specs);
-    repeated_instances.push_back(i);
 }
 
 void HDL_loops_factory::add_statement(const std::shared_ptr<hdl_statement_base> &stmt) {

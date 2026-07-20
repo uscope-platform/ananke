@@ -18,9 +18,26 @@
 
 #include <vector>
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <array>
+#include <nlohmann/json.hpp>
 
-#include "data_model/HDL/HDL_instance.hpp"
+#include "data_model/HDL/HDL_definitions.hpp"
+#include "data_model/HDL/HDL_loop.hpp"
+#include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/parameters/Parameters_map.hpp"
+#include "data_model/HDL/HDL_net.hpp"
+#include "data_model/documentation/channel_group.hpp"
 #include "data_model/documentation/processor_instance.hpp"
+
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/array.hpp>
+#include <cereal/types/memory.hpp>
+
+#include <spdlog/spdlog.h>
 
 class hdl_instance_statement;
 
@@ -34,102 +51,155 @@ struct proxy_target {
 } ;
 
 
-class HDL_instance_AST : public HDL_instance {
+class HDL_instance_AST {
 public:
     HDL_instance_AST() = default;
     HDL_instance_AST(const HDL_instance_AST &c );
-    HDL_instance_AST(const HDL_instance &c );
     explicit HDL_instance_AST(const hdl_instance_statement &stmt);
 
-    std::vector<std::shared_ptr<HDL_instance_AST>> get_dependencies() {return child_instances;};
+    // ---- port connections ----
+    void add_port_connection(const std::string& port_name, std::vector<HDL_net> value);
+    void set_ports(const std::unordered_map<std::string, std::vector<HDL_net>> &p) { ports_map = p; }
+    std::unordered_map<std::string, std::vector<HDL_net>> get_ports() { return ports_map; }
+
+    // ---- parameters ----
+    void add_parameter(const std::shared_ptr<HDL_parameter> &p);
+    void add_parameters(Parameters_map &p);
+    void set_parameters(Parameters_map &p);
+    Parameters_map get_parameters();
+    bool has_parameter(const std::string &s) { return parameters.contains(s); }
+    std::shared_ptr<HDL_parameter> get_parameter_value(const std::string& parameter_name) { return parameters.get(parameter_name); }
+
+    // ---- identity ----
+    std::string get_name() const { return name; }
+    void set_name(const std::string &n) { name = n; }
+    std::string get_type() const { return type; }
+    void set_type(const std::string &t) { type = t; }
+    dependency_class get_dependency_class() const { return dep_class; }
+    void set_dependency_class(dependency_class dc) { dep_class = dc; }
+
+    // ---- wildcard ----
+    void set_wildcard(bool w) { wildcard_assignment = true; }
+    bool get_wildcard() const { return wildcard_assignment; }
+
+    // ---- loop specs (legacy) ----
+    void add_loop(const HDL_loop_metadata &l) { loop_specs.push_back(l); }
+    void update_loop(const HDL_loop_metadata &l, int i) { loop_specs[i] = l; }
+    HDL_loop_metadata get_inner_loop() { return loop_specs.empty() ? HDL_loop_metadata{} : loop_specs[0]; }
+    unsigned int get_n_loops() { return loop_specs.size(); }
+
+    // ---- channel groups ----
+    void set_channel_groups(const std::vector<channel_group> &g) { groups = g; }
+    std::vector<channel_group> get_channel_groups() { return groups; }
+
+    // ---- array quantifier ----
+    void add_array_quantifier(const std::shared_ptr<HDL_parameter> &p) { array_quantifier = p; }
+    std::shared_ptr<HDL_parameter> get_array_quantifier() const { return array_quantifier; }
+
+    // ---- AST tree ----
+    std::vector<std::shared_ptr<HDL_instance_AST>> get_dependencies() { return child_instances; }
     void add_child(const std::shared_ptr<HDL_instance_AST> &i) {
         i->set_array_index(array_index);
         child_instances.push_back(i);
     }
+    void set_parent(const std::shared_ptr<HDL_instance_AST> &p) { parent = p; }
+    std::shared_ptr<HDL_instance_AST> get_parent() { return parent; }
 
-    void set_parent(const std::shared_ptr<HDL_instance_AST> &p){parent = p;};
-    std::shared_ptr<HDL_instance_AST> get_parent(){return parent;};
+    // ---- bus addressing ----
+    void add_address(const hdl_integer &i) { bus_address.push_back(i); }
+    std::vector<hdl_integer> get_address() { return bus_address; }
+    void clear_address() { bus_address.clear(); }
 
-    void add_address(const hdl_integer &i) { bus_address.push_back(i);};
-    std::vector<hdl_integer> get_address(){return bus_address;};
-    void clear_address() {bus_address.clear();};
+    // ---- dependencies ----
+    void add_data_dependency(const std::string &p) { data_dependencies.push_back(p); }
+    std::vector<std::string> get_data_dependencies() { return data_dependencies; }
+    void add_package_dependency(const std::string &p) { package_dependencies.push_back(p); }
+    std::vector<std::string> get_package_dependencies() { return package_dependencies; }
 
-    void add_data_dependency(const std::string &p){data_dependencies.push_back(p);};
-    std::vector<std::string> get_data_dependencies(){return data_dependencies;};
-
-    void add_package_dependency(const std::string &p){package_dependencies.push_back(p);};
-    std::vector<std::string> get_package_dependencies(){return package_dependencies;};
-
+    // ---- leaf module ----
     void set_leaf_module_top(const std::string &s) {
         std::string_view sv = s;
-        if(s.length() >=2 && s.starts_with('"') && s.ends_with('"')){
+        if(s.length() >=2 && s.starts_with('"') && s.ends_with('"')) {
             sv.remove_prefix(1);
             sv.remove_suffix(1);
         }
-        leaf_module_top =  std::string(sv);
-    };
-    std::string get_leaf_module_top(){return leaf_module_top;};
+        leaf_module_top = std::string(sv);
+    }
+    std::string get_leaf_module_top() { return leaf_module_top; }
 
     void set_leaf_module_prefix(const std::string &s) {
         std::string_view sv = s;
-        if(s.length() >=2 && s.starts_with('"') && s.ends_with('"')){
+        if(s.length() >=2 && s.starts_with('"') && s.ends_with('"')) {
             sv.remove_prefix(1);
             sv.remove_suffix(1);
         }
-        leaf_module_prefix =  std::string(sv);
-    };
-    std::string get_leaf_module_prefix(){return leaf_module_prefix;};
+        leaf_module_prefix = std::string(sv);
+    }
+    std::string get_leaf_module_prefix() { return leaf_module_prefix; }
 
-    void set_if_specs(const std::unordered_map<std::string, std::array<std::string, 2>> &if_s){if_specs = if_s;};
-    std::unordered_map<std::string, std::array<std::string, 2>> get_if_specs(){return if_specs;};
+    // ---- interface specs ----
+    void set_if_specs(const std::unordered_map<std::string, std::array<std::string, 2>> &if_s) { if_specs = if_s; }
+    std::unordered_map<std::string, std::array<std::string, 2>> get_if_specs() { return if_specs; }
 
-    void set_processors(std::vector<processor_instance> &p){processors = p;};
-    std::vector<processor_instance> get_processors() const{return processors;};
+    // ---- processors ----
+    void set_processors(std::vector<processor_instance> &p) { processors = p; }
+    std::vector<processor_instance> get_processors() const { return processors; }
 
-    void set_proxy_specs(const proxy_target &p){ proxy_specs = p;};
-    proxy_target get_proxy_specs()const{return proxy_specs;};
+    // ---- proxy ----
+    void set_proxy_specs(const proxy_target &p) { proxy_specs = p; }
+    proxy_target get_proxy_specs() const { return proxy_specs; }
+    void set_proxy_ast(const std::shared_ptr<HDL_instance_AST> &p) { proxy_ast = p; }
+    std::shared_ptr<HDL_instance_AST> get_proxy_ast() const { return proxy_ast; }
 
-    void set_proxy_ast(const std::shared_ptr<HDL_instance_AST> &p){proxy_ast = p;};
-    std::shared_ptr<HDL_instance_AST> get_proxy_ast() const {return proxy_ast;}
-    nlohmann::json dump() override;
+    // ---- array index ----
+    void set_array_index(int16_t i) { array_index = i; }
+    uint32_t get_array_index() const { return array_index; }
 
-    void set_repeated(const bool &b){repeated_instance = b;};
-    bool get_repeated() const {return repeated_instance;};
-
-    void set_repetition_idx(hdl_integer b){repetition_idx = b;};
-    hdl_integer get_repetition_idx() const {return repetition_idx;};
+    // ---- serialization ----
+    nlohmann::json dump();
+    std::string dump_structure();
 
     friend bool operator==(const HDL_instance_AST&lhs, const HDL_instance_AST&rhs);
 
-    void set_array_index(int16_t i){array_index = i;}
-    uint32_t get_array_index() const {return array_index;}
+    template<class Archive>
+    void serialize(Archive & ar) {
+        ar(name, type, dep_class, ports_map, parameters, groups, loop_specs, array_quantifier,
+           bus_address, child_instances, data_dependencies, package_dependencies,
+           leaf_module_top, leaf_module_prefix, proxy_specs, proxy_ast,
+           array_index, if_specs, processors, parent);
+    }
 
-    std::string dump_structure();
 private:
-
     static std::string dump_structure(const std::shared_ptr<HDL_instance_AST>&ast, const std::string &prefix);
 
+    // ---- core instance data ----
+    std::string name;
+    std::string type;
+    dependency_class dep_class = module;
+    Parameters_map parameters;
+    std::unordered_map<std::string, std::vector<HDL_net>> ports_map;
+    bool wildcard_assignment = false;
+    std::vector<HDL_loop_metadata> loop_specs;
+    std::vector<channel_group> groups;
+    std::shared_ptr<HDL_parameter> array_quantifier;
+
+    // ---- AST tree ----
     std::vector<hdl_integer> bus_address;
     std::shared_ptr<HDL_instance_AST> parent;
     std::vector<std::shared_ptr<HDL_instance_AST>> child_instances;
 
+    // ---- dependency tracking ----
     std::vector<std::string> data_dependencies;
     std::vector<std::string> package_dependencies;
 
+    // ---- metadata ----
     std::vector<processor_instance> processors;
-
     int32_t array_index = -1;
-
     std::unordered_map<std::string, std::array<std::string, 2>> if_specs;
-
     std::string leaf_module_top;
     std::string leaf_module_prefix;
     proxy_target proxy_specs;
-
     std::shared_ptr<HDL_instance_AST> proxy_ast = nullptr;
-
-    bool repeated_instance = false;
-    hdl_integer repetition_idx = -1;
 };
 
 
