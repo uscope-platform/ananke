@@ -22,7 +22,7 @@
 #include <string>
 
 #include "data_model/HDL/HDL_loop.hpp"
-#include "data_model/HDL/parameters/hdl_function_statement.hpp"
+#include "data_model/HDL/statement/hdl_function_statement.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
 

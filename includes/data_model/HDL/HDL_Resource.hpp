@@ -36,8 +36,8 @@
 #include <spdlog/spdlog.h>
 #include "data_model/HDL/HDL_definitions.hpp"
 #include "data_model/HDL/types/HDL_struct_type.hpp"
-#include "data_model/HDL/parameters/hdl_function_statement.hpp"
-#include "statement/hdl_statement_base.hpp"
+#include "data_model/HDL/statement/hdl_function_statement.hpp"
+#include "data_model/HDL/statement/hdl_statement_base.hpp"
 
  struct if_port_specs {
     std::string type;

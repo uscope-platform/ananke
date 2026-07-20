@@ -14,7 +14,7 @@
 //  limitations under the License.
 
 
-#include "data_model/HDL/parameters/hdl_function_statement.hpp"
+#include "data_model/HDL/statement/hdl_function_statement.hpp"
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
