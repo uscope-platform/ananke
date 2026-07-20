@@ -38,7 +38,7 @@ public:
     void add_struct_def(const std::string & name, const std::shared_ptr<hdl_type> & hdl_struct);
 
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);
-    void add_function(const HDL_function_def &f);
+    void add_function(const hdl_function_statement &f);
     void add_port(const std::string &p_n, HDL_port p);
     bool is_current_valid() {return valid_resource;}
 

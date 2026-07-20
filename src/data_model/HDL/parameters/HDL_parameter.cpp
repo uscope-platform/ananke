@@ -103,7 +103,7 @@ std::optional<resolved_parameter> HDL_parameter::cast_result(
 }
 
 
-void HDL_parameter::propagate_function(const HDL_function_def &def) {
+void HDL_parameter::propagate_function(const hdl_function_statement &def) {
     if (raw_value) raw_value->propagate_function(def);
     auto call = std::dynamic_pointer_cast<HDL_function_call>(raw_value);
     if (call && call->get_name() == def.get_name()) {

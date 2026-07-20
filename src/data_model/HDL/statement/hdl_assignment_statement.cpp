@@ -13,11 +13,23 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef ANANKE_HDL_STATEMENTS_HPP
-#define ANANKE_HDL_STATEMENTS_HPP
 
-#include "data_model/HDL/statement/hdl_instance_statement.hpp"
-#include "data_model/HDL/statement/hdl_loop_statement.hpp"
-#include "data_model/HDL/parameters/hdl_function_statement.hpp"
+#include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 
-#endif //ANANKE_HDL_STATEMENTS_HPP
+parameter_deps_t hdl_assignment_statement::get_dependencies() const {
+    parameter_deps_t res;
+
+    return res;
+}
+
+std::unique_ptr<hdl_statement_base> hdl_assignment_statement::clone() const {
+    return std::make_unique<hdl_assignment_statement>();
+}
+
+bool hdl_assignment_statement::equals(const hdl_statement_base &other) const {
+    return false;
+}
+
+std::string hdl_assignment_statement::print() const {
+    return "";
+}

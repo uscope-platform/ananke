@@ -47,7 +47,7 @@ parameter_deps_t HDL_function_call::get_dependencies() const {
 }
 
 
-void HDL_function_call::propagate_function(const HDL_function_def &def) {
+void HDL_function_call::propagate_function(const hdl_function_statement &def) {
     if(def.name == function_name) {
         auto arg_names = def.get_arguments_names();
         assignments = def.get_assignments();

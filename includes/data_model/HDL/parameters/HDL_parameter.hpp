@@ -25,7 +25,7 @@
 #include "data_model/HDL/types/HDL_external_type.hpp"
 #include "common/dimension.hpp"
 
-class HDL_function_def;
+class hdl_function_statement;
 
 class HDL_parameter {
 public:
@@ -88,7 +88,7 @@ public:
 
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context);
     std::optional<resolved_parameter> cast_result(const  std::optional<resolved_parameter> &in, const std::optional<resolved_type> &sizes);
-    void propagate_function(const HDL_function_def &def);
+    void propagate_function(const hdl_function_statement &def);
     explicit operator std::string();
 
     bool is_array() const{return type && !type->is_scalar();}

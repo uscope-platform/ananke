@@ -32,7 +32,7 @@ public:
     explicit Identifier_token(const qualified_identifier &q_i);
 
     parameter_deps_t get_dependencies() const override;
-    void propagate_function(const HDL_function_def &def) override;
+    void propagate_function(const hdl_function_statement &def) override;
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
 
     bool is_subscripted() const {return !array_index.empty();}

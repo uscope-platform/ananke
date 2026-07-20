@@ -32,7 +32,7 @@ public:
     explicit Numeric_token(std::variant<hdl_integer, double> n, int64_t b_s);
 
     parameter_deps_t get_dependencies() const override {return {};}
-    void propagate_function(const HDL_function_def &def) override {}
+    void propagate_function(const hdl_function_statement &def) override {}
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
 
     std::string print() const override;

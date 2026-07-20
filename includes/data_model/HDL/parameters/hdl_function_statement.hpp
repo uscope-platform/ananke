@@ -26,7 +26,7 @@
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 
 
-class HDL_function_def : public hdl_statement_base {
+class hdl_function_statement : public hdl_statement_base {
 public:
     parameter_deps_t get_dependencies() const override;
     std::unique_ptr<hdl_statement_base> clone() const override;

@@ -14,28 +14,28 @@
 //  limitations under the License.
 
 
-#include "data_model/HDL/parameters/HDL_function_def.hpp"
+#include "data_model/HDL/parameters/hdl_function_statement.hpp"
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 
-void HDL_function_def::start_assignment(const std::string &n, const std::shared_ptr<Expression_base> &idx) {
+void hdl_function_statement::start_assignment(const std::string &n, const std::shared_ptr<Expression_base> &idx) {
    if (idx == nullptr) assignments.push_back({name, {}, {}});
     else assignments.push_back({name, idx, {}});
 }
 
-void HDL_function_def::close_assignment(const std::shared_ptr<Expression_base> &val) {
+void hdl_function_statement::close_assignment(const std::shared_ptr<Expression_base> &val) {
     if (assignments.empty()) {
         throw std::runtime_error(fmt::format("parsing of the {} function definition lead to an inconsistent state, report it as a possible bug", name));
     }
     assignments.back().set_value(val);
 }
 
-bool HDL_function_def::is_scalar() const {
+bool hdl_function_statement::is_scalar() const {
     return  !loop_metadata.has_value() && assignments.size() == 1;
 }
 
-parameter_deps_t HDL_function_def::get_dependencies() const {
+parameter_deps_t hdl_function_statement::get_dependencies() const {
     parameter_deps_t deps;
     for (const auto& a : assignments) {
         deps.merge(a.get_value()->get_dependencies());
@@ -45,8 +45,8 @@ parameter_deps_t HDL_function_def::get_dependencies() const {
     return deps;
 }
 
-std::unique_ptr<hdl_statement_base> HDL_function_def::clone() const {
-    auto result = std::make_unique<HDL_function_def>();
+std::unique_ptr<hdl_statement_base> hdl_function_statement::clone() const {
+    auto result = std::make_unique<hdl_function_statement>();
     result->name = name;
     result->assignments = assignments;
     result->loop_metadata = loop_metadata;
@@ -57,8 +57,8 @@ std::unique_ptr<hdl_statement_base> HDL_function_def::clone() const {
     return result;
 }
 
-bool HDL_function_def::equals(const hdl_statement_base& other) const {
-    const auto& rhs = static_cast<const HDL_function_def&>(other);
+bool hdl_function_statement::equals(const hdl_statement_base& other) const {
+    const auto& rhs = static_cast<const hdl_function_statement&>(other);
     bool retval = name == rhs.name;
     retval &= assignments == rhs.assignments;
     retval &= loop_metadata == rhs.loop_metadata;
@@ -67,6 +67,6 @@ bool HDL_function_def::equals(const hdl_statement_base& other) const {
     return retval;
 }
 
-std::string HDL_function_def::print() const {
+std::string hdl_function_statement::print() const {
     return "function " + name + "(...)";
 }

@@ -35,7 +35,7 @@ parameter_deps_t Identifier_token::get_dependencies() const {
     return result;
 }
 
-void Identifier_token::propagate_function(const HDL_function_def &def) {
+void Identifier_token::propagate_function(const hdl_function_statement &def) {
     for (auto &component : array_index) {
         component->propagate_function(def);
     }

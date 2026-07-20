@@ -3914,7 +3914,7 @@ TEST(parameter_extraction, function_with_parameters) {
 
 
 
-    HDL_function_def f;
+    hdl_function_statement f;
     f.set_name("CTRL_ADDR_CALC");
     f.add_argument("i");
     f.add_argument("b");

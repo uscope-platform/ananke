@@ -41,7 +41,7 @@ bool HDL_Resource::is_interface() {
 
 void HDL_Resource::process_calls() {
     for (auto &stmt : statements) {
-        auto function = std::dynamic_pointer_cast<HDL_function_def>(stmt);
+        auto function = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
         if (!function) continue;
 
         if (!function->get_return_type_name().empty()) {
@@ -73,18 +73,18 @@ bool HDL_Resource::is_empty() {
     return ret;
 }
 
-std::unordered_map<std::string, HDL_function_def> HDL_Resource::get_functions() {
-    std::unordered_map<std::string, HDL_function_def> result;
+std::unordered_map<std::string, hdl_function_statement> HDL_Resource::get_functions() {
+    std::unordered_map<std::string, hdl_function_statement> result;
     for (auto &stmt : statements) {
-        auto f = std::dynamic_pointer_cast<HDL_function_def>(stmt);
+        auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
         if (f) result[f->name] = *f;
     }
     return result;
 }
 
-HDL_function_def HDL_Resource::get_function(const std::string &fname) {
+hdl_function_statement HDL_Resource::get_function(const std::string &fname) {
     for (auto &stmt : statements) {
-        auto f = std::dynamic_pointer_cast<HDL_function_def>(stmt);
+        auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
         if (f && f->name == fname) return *f;
     }
     return {};

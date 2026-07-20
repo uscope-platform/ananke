@@ -18,7 +18,7 @@
 #define ANANKE_HDL_FUNCTION_CALL_HPP
 
 #include "Expression_base.hpp"
-#include "data_model/HDL/parameters/HDL_function_def.hpp"
+#include "data_model/HDL/parameters/hdl_function_statement.hpp"
 #include "data_model/HDL/HDL_loop.hpp"
 
 
@@ -36,7 +36,7 @@ public:
     void add_assignment(const assignment &a) {assignments.push_back(a);}
     void set_loop(const HDL_loop_metadata &l){loop_metadata = l;}
     parameter_deps_t get_dependencies()const  override;
-    void propagate_function(const HDL_function_def &def) override;
+    void propagate_function(const hdl_function_statement &def) override;
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context)  override;
 
     std::optional<resolved_parameter> evaluate_scalar(const std::map<qualified_identifier, resolved_parameter> &context);

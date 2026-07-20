@@ -36,7 +36,7 @@
 #include <spdlog/spdlog.h>
 #include "data_model/HDL/HDL_definitions.hpp"
 #include "data_model/HDL/types/HDL_struct_type.hpp"
-#include "data_model/HDL/parameters/HDL_function_def.hpp"
+#include "data_model/HDL/parameters/hdl_function_statement.hpp"
 #include "statement/hdl_statement_base.hpp"
 
  struct if_port_specs {
@@ -121,11 +121,11 @@ class HDL_Resource {
         void set_parameters(Parameters_map p);
         Parameters_map get_parameters() const {return parameters_spec;};
 
-        void add_function(const HDL_function_def &f) {
-            statements.push_back(std::make_shared<HDL_function_def>(f));
+        void add_function(const hdl_function_statement &f) {
+            statements.push_back(std::make_shared<hdl_function_statement>(f));
         }
-        std::unordered_map<std::string, HDL_function_def> get_functions();
-        HDL_function_def get_function(const std::string &fname);
+        std::unordered_map<std::string, hdl_function_statement> get_functions();
+        hdl_function_statement get_function(const std::string &fname);
 
         void set_documentation(module_documentation &d) {
             doc= d;

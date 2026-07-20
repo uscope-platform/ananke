@@ -93,9 +93,9 @@ void HDL_functions_factory::close_assignment() {
     ignore_assignment = false;
 }
 
-HDL_function_def HDL_functions_factory::get_function() {
+hdl_function_statement HDL_functions_factory::get_function() {
     auto current_function = f;
-    f = HDL_function_def();
+    f = hdl_function_statement();
     active = false;
     return current_function;
 }
