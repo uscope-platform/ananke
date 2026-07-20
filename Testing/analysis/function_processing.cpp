@@ -20,6 +20,7 @@
 #include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
+#include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 
 
 TEST(function_processing, simple_function_scalar) {
@@ -48,6 +49,12 @@ TEST(function_processing, simple_function_scalar) {
     check_f.set_name("CTRL_ADDR_CALC");
     assignment a("CTRL_ADDR_CALC", std::nullopt, std::make_shared<Numeric_token>("67"));
     check_f.add_assignment(a);
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("CTRL_ADDR_CALC");
+    stmt->set_value(std::make_shared<Numeric_token>("67"));
+    check_f.add_statement(stmt);
+
     EXPECT_EQ(check_f,functions["CTRL_ADDR_CALC"]);
 
     auto values = call.evaluate({});
@@ -106,6 +113,18 @@ TEST(function_processing, simple_function_array) {
         std::make_shared<Numeric_token>("1")
         );
     check_f.add_assignment(a);
+    auto s0 = std::make_shared<hdl_assignment_statement>();
+    s0->set_target("CTRL_ADDR_CALC"); s0->set_index(std::make_shared<Numeric_token>("0")); s0->set_value(std::make_shared<Numeric_token>("100"));
+    check_f.add_statement(s0);
+    auto s1 = std::make_shared<hdl_assignment_statement>();
+    s1->set_target("CTRL_ADDR_CALC"); s1->set_index(std::make_shared<Numeric_token>("1")); s1->set_value(std::make_shared<Numeric_token>("200"));
+    check_f.add_statement(s1);
+    auto s2 = std::make_shared<hdl_assignment_statement>();
+    s2->set_target("CTRL_ADDR_CALC"); s2->set_index(std::make_shared<Numeric_token>("2")); s2->set_value(std::make_shared<Numeric_token>("300"));
+    check_f.add_statement(s2);
+    auto s3 = std::make_shared<hdl_assignment_statement>();
+    s3->set_target("IGNORED_ASSIGNMENT"); s3->set_index(std::make_shared<Numeric_token>("2")); s3->set_value(std::make_shared<Numeric_token>("1"));
+    check_f.add_statement(s3);
     EXPECT_EQ(check_f,result);
 }
 
@@ -301,6 +320,12 @@ TEST(function_processing, complex_loop_function) {
         std::make_shared<Numeric_token>("667")
     };
     check_f.add_assignment(a);
+    auto ca0 = std::make_shared<hdl_assignment_statement>();
+    ca0->set_target("CTRL_ADDR_CALC"); ca0->set_index(std::make_shared<Numeric_token>("0")); ca0->set_value(std::make_shared<Numeric_token>("44"));
+    check_f.add_statement(ca0);
+    auto ca1 = std::make_shared<hdl_assignment_statement>();
+    ca1->set_target("CTRL_ADDR_CALC"); ca1->set_index(std::make_shared<Numeric_token>("4")); ca1->set_value(std::make_shared<Numeric_token>("667"));
+    check_f.add_statement(ca1);
     EXPECT_EQ(check_f,result);
 }
 
@@ -343,6 +368,12 @@ TEST(function_processing, parametrized_function) {
         std::make_shared<Numeric_token>("33")
     };
     check_f.add_assignment(a);
+    auto ps0 = std::make_shared<hdl_assignment_statement>();
+    ps0->set_target("CTRL_ADDR_CALC"); ps0->set_index(std::make_shared<Numeric_token>("0")); ps0->set_value(std::make_shared<Numeric_token>("44"));
+    check_f.add_statement(ps0);
+    auto ps1 = std::make_shared<hdl_assignment_statement>();
+    ps1->set_target("CTRL_ADDR_CALC"); ps1->set_index(std::make_shared<Identifier_token>(qualified_identifier("N_CORES"))); ps1->set_value(std::make_shared<Numeric_token>("33"));
+    check_f.add_statement(ps1);
     EXPECT_EQ(check_f,result);
 }
 
@@ -386,6 +417,12 @@ TEST(function_processing, function_in_package) {
         std::make_shared<Numeric_token>("100")
     };
     check_f.add_assignment(a);
+    auto fs0 = std::make_shared<hdl_assignment_statement>();
+    fs0->set_target("CTRL_ADDR_CALC"); fs0->set_index(std::make_shared<Numeric_token>("0")); fs0->set_value(std::make_shared<Numeric_token>("67"));
+    check_f.add_statement(fs0);
+    auto fs1 = std::make_shared<hdl_assignment_statement>();
+    fs1->set_target("CTRL_ADDR_CALC"); fs1->set_index(std::make_shared<Numeric_token>("1")); fs1->set_value(std::make_shared<Numeric_token>("100"));
+    check_f.add_statement(fs1);
     EXPECT_EQ(check_f,result);
 }
 
@@ -422,6 +459,11 @@ TEST(function_processing, package_assignment) {
         std::make_shared<Identifier_token>(qualified_identifier("hil_address_space","bus_base"))
     };
     check_f.add_assignment(a);
+
+    auto pas0 = std::make_shared<hdl_assignment_statement>();
+    pas0->set_target("CTRL_ADDR_CALC"); pas0->set_index(std::make_shared<Numeric_token>("0"));
+    pas0->set_value(std::make_shared<Identifier_token>(qualified_identifier("hil_address_space","bus_base")));
+    check_f.add_statement(pas0);
 
     EXPECT_EQ(check_f,result);
 

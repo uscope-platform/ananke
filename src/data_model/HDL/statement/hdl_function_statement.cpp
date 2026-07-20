@@ -15,6 +15,7 @@
 
 
 #include "data_model/HDL/statement/hdl_function_statement.hpp"
+#include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
@@ -43,6 +44,7 @@ std::unique_ptr<hdl_statement_base> hdl_function_statement::clone() const {
     result->return_type_name = return_type_name;
     result->return_unpacked_range_left = return_unpacked_range_left;
     result->return_unpacked_range_right = return_unpacked_range_right;
+    result->body = body;
     return result;
 }
 
@@ -53,9 +55,23 @@ bool hdl_function_statement::equals(const hdl_statement_base& other) const {
     retval &= loop_metadata == rhs.loop_metadata;
     retval &= argument_names == rhs.argument_names;
     retval &= return_type_name == rhs.return_type_name;
+    if (body.size() != rhs.body.size()) return false;
+    for (int i = 0; i< body.size();i++) {
+        retval &=  *body[i] == *rhs.body[i];
+    }
     return retval;
 }
 
 std::string hdl_function_statement::print() const {
     return "function " + name + "(...)";
+}
+
+void PrintTo(const hdl_function_statement& s, std::ostream* os) {
+    *os << "\nfunction: " << s.name << " assignments: " << s.assignments.size()
+        << " loop: " << s.loop_metadata.has_value() << " body: " << s.body.size();
+    for (const auto& a : s.assignments) {
+        *os << "\n  " << a.get_name() << "[";
+        if (a.get_index()) *os << a.get_index().value()->print();
+        *os << "] = " << a.get_value()->print();
+    }
 }

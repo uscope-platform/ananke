@@ -21,6 +21,7 @@
 #include <set>
 #include <memory>
 
+#include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
 #include "data_model/HDL/HDL_loop.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
@@ -32,6 +33,8 @@ public:
     std::unique_ptr<hdl_statement_base> clone() const override;
     bool equals(const hdl_statement_base& other) const override;
     std::string print() const override;
+
+    void add_statement(const std::shared_ptr<hdl_statement_base> stmt){body.push_back(stmt);}
 
     void set_name(const std::string &s) { name = s;}
     [[nodiscard]] std::string get_name()const{return name;}
@@ -58,8 +61,11 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name, assignments, loop_metadata, argument_names, return_type_name);
+        ar(name, assignments, loop_metadata, argument_names, return_type_name, body);
     }
+
+    friend void PrintTo(const hdl_function_statement& s, std::ostream* os);
+
     std::string name;
 private:
     std::vector<assignment> assignments;
@@ -68,6 +74,8 @@ private:
     std::string return_type_name;
     std::shared_ptr<Expression_base> return_unpacked_range_left;
     std::shared_ptr<Expression_base> return_unpacked_range_right;
+
+    std::vector<std::shared_ptr<hdl_statement_base>> body;
 };
 
 
