@@ -18,16 +18,22 @@
 
 void HDL_instances_factory::new_dependency(const std::string &n, const std::string &p, dependency_class dc) {
     current_instance = HDL_instance(n, p, dc);
+    current_statement = hdl_instance_statement();
+    current_statement.set_name(n);
+    current_statement.set_type(p),
+    current_statement.set_dependency_class(dc);
     valid_instance = true;
 }
 
 void HDL_instances_factory::add_parameter(const std::shared_ptr<HDL_parameter> &p) {
     current_instance.add_parameter(p);
+    current_statement.add_parameter(p);
 }
 
 void HDL_instances_factory::add_port(const std::string &name) {
     auto nets = net_factory.get_nets();
     current_instance.add_port_connection(name, nets);
+    current_statement.add_port_connection(name, nets);
 }
 
 void HDL_instances_factory::start_scalar_net(const std::string &n) {
@@ -45,6 +51,13 @@ HDL_instance HDL_instances_factory::get_dependency() {
     return current_instance;
 }
 
+
+hdl_instance_statement HDL_instances_factory::get_statement() {
+    valid_instance = false;
+    return current_statement;
+}
+
+
 void HDL_instances_factory::start_concat_port(const std::string &n) {
     net_factory.start_concatenation();
     port_name = n;
@@ -53,6 +66,7 @@ void HDL_instances_factory::start_concat_port(const std::string &n) {
 void HDL_instances_factory::stop_concat_port() {
     net_factory.stop_concatenation();
     current_instance.add_port_connection(port_name, net_factory.get_nets());
+    current_statement.add_port_connection(port_name, net_factory.get_nets());
 }
 
 void HDL_instances_factory::start_replication_port(const std::string &n) {
@@ -135,6 +149,7 @@ void HDL_instances_factory::stop_array_range() {
 
 void HDL_instances_factory::add_array_quantifier(const std::shared_ptr<HDL_parameter> &p) {
     current_instance.add_array_quantifier(p);
+    current_statement.set_array_quantifier(p);
 }
 
 void HDL_instances_factory::change_array_name(const std::string &s){
@@ -169,4 +184,5 @@ void HDL_instances_factory::stop_expression(bool new_expr) {
 
 void HDL_instances_factory::set_wildcard(bool cond) {
     current_instance.set_wildcard(cond);
+    current_statement.set_wildcard(cond);
 }

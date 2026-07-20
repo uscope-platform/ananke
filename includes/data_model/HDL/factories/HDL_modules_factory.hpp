@@ -29,6 +29,7 @@ public:
     HDL_Resource get_module();
 
     void add_instance(const HDL_instance &i);
+    void add_statement(std::shared_ptr<hdl_statement_base> s);
     void add_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type);
     bool has_typedef(const std::string &name) {
         return current_resource.get_typedefs().contains(name);

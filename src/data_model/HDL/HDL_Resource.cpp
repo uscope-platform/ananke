@@ -34,6 +34,7 @@ HDL_Resource::HDL_Resource(const HDL_Resource &c) {
     processor_docs = c.processor_docs;
     port_specs = c.port_specs;
     typedefs = c.typedefs;
+    statements = c.statements;
 }
 
 bool HDL_Resource::is_interface() {
@@ -96,6 +97,10 @@ bool operator==(const HDL_Resource &lhs, const HDL_Resource &rhs) {
     ret &= lhs.parameters_spec == rhs.parameters_spec;
     ret &= lhs.functions == rhs.functions;
     ret &= lhs.typedefs == rhs.typedefs;
+    if (lhs.statements.size() != rhs.statements.size()) return false;
+    for (int i =0; i<lhs.statements.size(); i++) {
+        ret &= *lhs.statements[i] == *rhs.statements[i];
+    }
 
     return ret;
 }

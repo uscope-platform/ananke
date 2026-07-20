@@ -109,8 +109,10 @@ void sv_visitor::enterModule_or_interface_or_program_or_udp_instantiation(sv2017
 void sv_visitor::exitModule_or_interface_or_program_or_udp_instantiation(sv2017::Module_or_interface_or_program_or_udp_instantiationContext *ctx) {
     if(loops_factory.in_loop()){
         auto dep = deps_factory.get_dependency();
-         loops_factory.add_instance(dep);
+        loops_factory.add_instance(dep);
+        auto s = deps_factory.get_statement();
     } else {
+        modules_factory.add_statement(std::make_shared<hdl_instance_statement>(deps_factory.get_statement()));
         modules_factory.add_instance(deps_factory.get_dependency());
     }
 
@@ -356,6 +358,11 @@ void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
         if(ext == ".dat"|| ext == ".mem"){
             HDL_instance dep("__init_file__", p.stem(), memory_init);
             modules_factory.add_instance(dep);
+            auto stmt = std::make_shared<hdl_instance_statement>();
+            stmt->set_name("__init_file__");
+            stmt->set_type(p.stem());
+            stmt->set_dependency_class(memory_init);
+            modules_factory.add_statement(stmt);
         }
     }
     if(params_factory.is_component_relevant()) {
@@ -384,6 +391,11 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
         std::string prefix_str = pkg_prefix.empty() ? "" : pkg_prefix.back();
         HDL_instance dep(qi.get_name(), prefix_str, package);
         modules_factory.add_instance(dep);
+        auto stmt = std::make_shared<hdl_instance_statement>();
+        stmt->set_name(qi.get_name());
+        stmt->set_type(prefix_str);
+        stmt->set_dependency_class(package);
+        modules_factory.add_statement(stmt);
     }
 }
 

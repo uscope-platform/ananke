@@ -20,6 +20,7 @@
 #include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "frontend/analysis/vhdl/vhdl_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/statement/hdl_statements.hpp"
 
 
 TEST( analysis_test , package) {
@@ -195,7 +196,51 @@ TEST( analysis_test , sv_module) {
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("74"));
     check_res.add_parameter(p);
+
+    auto sc = std::make_shared<hdl_instance_statement>();
+    sc->set_name("SC");
+    sc->set_type("SyndromeCalculator");
+    sc->set_dependency_class(module);
+    sc->add_port_connection("clock", {HDL_net("clock")});
+    sc->add_port_connection("reset", {HDL_net("reset")});
+    sc->add_port_connection("data_in", {HDL_net("data_in")});
+    sc->add_port_connection("syndrome", {HDL_net("data_out")});
+    auto pkg_param = std::make_shared<HDL_parameter>();
+    pkg_param->set_name("TEST_PARAM");
+    pkg_param->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("test_package", "param")));
+    sc->add_parameter(pkg_param);
+
+    auto if_array = std::make_shared<hdl_instance_statement>();
+    if_array->set_name("if_array");
+    if_array->set_type("axi_lite");
+    if_array->set_dependency_class(module);
+    auto quant = std::make_shared<HDL_parameter>();
+    quant->set_name("instance_array_qualifier");
+    Expression_v2 qe;
+    qe.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("module_parameter_2")));
+    qe.set_rhs(std::make_shared<Numeric_token>("1"));
+    qe.set_operation(Expression_v2::add);
+    quant->set_raw_value(std::make_shared<Expression_v2>(qe));
+    if_array->set_array_quantifier(quant);
+
+    auto init_file = std::make_shared<hdl_instance_statement>();
+    init_file->set_name("__init_file__");
+    init_file->set_type("file");
+    init_file->set_dependency_class(memory_init);
+
+    auto pkg_stmt = std::make_shared<hdl_instance_statement>();
+    pkg_stmt->set_name("param");
+    pkg_stmt->set_type("test_package");
+    pkg_stmt->set_dependency_class(package);
+
+    check_res.add_statement(if_array);
+    check_res.add_statement(init_file);
+    check_res.add_statement(pkg_stmt);
+    check_res.add_statement(sc);
+
+
     ASSERT_EQ(resource, check_res);
+
     resource = res[1];
     check_res = HDL_Resource();
     check_res.set_name("test_if");

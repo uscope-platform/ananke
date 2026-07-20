@@ -27,6 +27,9 @@ void HDL_modules_factory::add_instance(const HDL_instance &i) {
     current_resource.add_dependency(i);
 }
 
+void HDL_modules_factory:: add_statement(std::shared_ptr<hdl_statement_base> s) {
+    current_resource.add_statement(s);
+}
 
 void HDL_modules_factory::add_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type) {
     current_resource.add_typedef(name, type);

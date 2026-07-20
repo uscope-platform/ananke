@@ -37,8 +37,9 @@
 #include "data_model/HDL/HDL_definitions.hpp"
 #include "data_model/HDL/types/HDL_struct_type.hpp"
 #include "data_model/HDL/parameters/HDL_function_def.hpp"
+#include "statement/hdl_statement_base.hpp"
 
-struct if_port_specs {
+ struct if_port_specs {
     std::string type;
     std::string modport;
 
@@ -82,6 +83,10 @@ class HDL_Resource {
 
         void add_dependencies(std::vector<HDL_instance> deps);
         void add_dependency(const HDL_instance &dep);
+
+        void add_statement(const std::shared_ptr<hdl_statement_base> &s){ statements.push_back(s);}
+
+        const std::vector<std::shared_ptr<hdl_statement_base>>& get_statements() const { return statements; }
 
         void set_name(const std::string &n) {
             name  = n;
@@ -136,7 +141,7 @@ class HDL_Resource {
         template<class Archive>
         void serialize( Archive & ar ) {
             ar(name, path, hdl_dependency_type, dependencies, parameters_spec, port_specs, doc, processor_docs,
-                functions, line_n, typedefs);
+                functions, line_n, typedefs, statements);
         }
 
         bool is_empty();
@@ -159,6 +164,8 @@ private:
 
         std::vector<processor_instance> processor_docs;
         std::map<std::string, std::shared_ptr<hdl_type>> typedefs;
+
+        std::vector<std::shared_ptr<hdl_statement_base>> statements;
 
         // DOCUMENTATION``
         module_documentation doc;
