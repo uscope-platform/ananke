@@ -25,6 +25,7 @@
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/types/HDL_external_type.hpp"
 #include "data_model/HDL/types/HDL_struct_type.hpp"
+#include "data_model/HDL/statement/hdl_statements.hpp"
 
 
 TEST(parameter_processing, override_after_fatal) {
@@ -867,7 +868,8 @@ TEST(parameter_processing, interface_default_parameters) {
 
     d_store->store_hdl_entity(resources, "", "");
 
-    auto raw_param = resources[1].get_dependencies()[0].get_parameters();
+    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resources[1].get_statements()[0]);
+    auto raw_param = inst->get_parameters();
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -918,7 +920,8 @@ TEST(parameter_processing, override_with_interface_param) {
 
     d_store->store_hdl_entity(resources, "", "");
 
-    auto raw_param = resources[2].get_dependencies()[1].get_parameters();
+    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resources[2].get_statements()[1]);
+    auto raw_param = inst->get_parameters();
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());

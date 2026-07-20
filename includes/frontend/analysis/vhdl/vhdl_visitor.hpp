@@ -22,6 +22,7 @@
 #include <stack>
 #include "data_model/HDL/HDL_Resource.hpp"
 #include "data_model/HDL/HDL_instance.hpp"
+#include "data_model/HDL/statement/hdl_instance_statement.hpp"
 #include "data_model/HDL/factories/HDL_modules_factory.hpp"
 
 #include "mgp_vh/vhdlParserBaseListener.h"
@@ -42,6 +43,7 @@ private:
     std::string path;
     std::vector<HDL_Resource>  entities;
     std::unordered_map<std::string, std::vector<HDL_instance>> dependency_map;
+    std::unordered_map<std::string, std::vector<std::shared_ptr<hdl_statement_base>>> statement_map;
     std::string current_architecture;
 
     HDL_modules_factory modules_factory;

@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "data_model/HDL/HDL_Resource.hpp"
+#include "data_model/HDL/statement/hdl_instance_statement.hpp"
 
 
 
@@ -83,16 +84,18 @@ TEST( HDL_resource_test , get_path) {
     ASSERT_EQ(res.get_path(), "/test_path/test.sv");
 }
 
-TEST( HDL_resource_test , get_dependencies) {
+TEST( HDL_resource_test , get_statements) {
     HDL_Resource test_item;
-    HDL_instance d("inst", "test_module_1", module);
-    test_item.add_dependency(d);
-    HDL_instance d2("inst", "test_module_2", module);
-    test_item.add_dependency(d2);
+    auto s1 = std::make_shared<hdl_instance_statement>();
+    s1->set_name("inst"); s1->set_type("test_module_1"); s1->set_dependency_class(module);
+    test_item.add_statement(s1);
+    auto s2 = std::make_shared<hdl_instance_statement>();
+    s2->set_name("inst"); s2->set_type("test_module_2"); s2->set_dependency_class(module);
+    test_item.add_statement(s2);
 
-    std::vector<HDL_instance> check = {d, d2};
-
-    ASSERT_EQ(test_item.get_dependencies(), check);
+    ASSERT_EQ(test_item.get_statements().size(), 2);
+    ASSERT_EQ(*test_item.get_statements()[0], *s1);
+    ASSERT_EQ(*test_item.get_statements()[1], *s2);
 }
 
 TEST( HDL_resource_test , get_name) {

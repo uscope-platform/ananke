@@ -11,6 +11,7 @@
 //  distributed under the License is distributed on an "AS IS" BASIS,
 //  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //  See the License for the specific language governing permissions and
+//  See the License for the specific language governing permissions and
 //  limitations under the License.
 
 #include "frontend/analysis/vhdl/vhdl_visitor.hpp"
@@ -35,7 +36,9 @@ void vhdl_visitor::exitArchitecture_body(mgp_vh::vhdlParser::Architecture_bodyCo
     std::string name = ctx->name()->getText();
     for(auto &item:entities){
         if(item.getName() == name){
-            item.add_dependencies(dependency_map[item.getName()]);
+            for (auto &stmt : statement_map[item.getName()]) {
+                item.add_statement(stmt);
+            }
         }
     }
 }
@@ -56,10 +59,14 @@ void vhdl_visitor::exitConcurrent_statement(mgp_vh::vhdlParser::Concurrent_state
         }
         HDL_instance dep(ctx->label()->getText(), module_name, module);
         dependency_map[current_architecture].push_back(dep);
+        auto stmt = std::make_shared<hdl_instance_statement>();
+        stmt->set_name(ctx->label()->getText());
+        stmt->set_type(module_name);
+        stmt->set_dependency_class(module);
+        statement_map[current_architecture].push_back(stmt);
     }
 }
 
 void vhdl_visitor::enterArchitecture_body(mgp_vh::vhdlParser::Architecture_bodyContext *ctx) {
     current_architecture = ctx->name()->getText();
 }
-

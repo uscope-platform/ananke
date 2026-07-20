@@ -255,13 +255,16 @@ TEST( analysis_test , vhdl_module) {
     vhdl_analyzer analyzer("check_files/test_vhdl_module.vhd");
     analyzer.cleanup_content("`(.*)");
     auto resource = analyzer.analyze()[0];
-    HDL_instance dep("and_component", "ANDGATE", module);
     HDL_Resource check_res;
     check_res.set_name("half_adder");
     check_res.set_type(module);
     check_res.set_path("check_files/test_vhdl_module.vhd");
     check_res.set_line_n(4);
-    check_res.add_dependency(dep);
+    auto stmt = std::make_shared<hdl_instance_statement>();
+    stmt->set_name("and_component");
+    stmt->set_type("ANDGATE");
+    stmt->set_dependency_class(module);
+    check_res.add_statement(stmt);
     ASSERT_EQ(resource, check_res);
 }
 
@@ -286,17 +289,18 @@ TEST(analysis_test, port_concat_assignment) {
     auto resource = analyzer.analyze("",test_pattern)[0];
     auto parameters = resource.get_parameters();
 
-    auto dep = resource.get_dependencies()[0];
+    auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
+    ASSERT_NE(stmt, nullptr);
 
-    HDL_instance check_dependency;
-    check_dependency.set_type("axil_crossbar_interface");
-    check_dependency.set_name("axi_xbar");
-    check_dependency.set_dependency_class(module);
-    check_dependency.add_port_connection("clock", {HDL_net("clock")});
-    check_dependency.add_port_connection("slaves", {HDL_net("axi_in")});
-    check_dependency.add_port_connection("masters", {HDL_net("timebase_axi"), HDL_net("gpio_axi"), HDL_net("fcore_axi")});
+    auto check_stmt = std::make_shared<hdl_instance_statement>();
+    check_stmt->set_type("axil_crossbar_interface");
+    check_stmt->set_name("axi_xbar");
+    check_stmt->set_dependency_class(module);
+    check_stmt->add_port_connection("clock", {HDL_net("clock")});
+    check_stmt->add_port_connection("slaves", {HDL_net("axi_in")});
+    check_stmt->add_port_connection("masters", {HDL_net("timebase_axi"), HDL_net("gpio_axi"), HDL_net("fcore_axi")});
 
-    ASSERT_EQ(dep, check_dependency);
+    ASSERT_EQ(*stmt, *check_stmt);
 }
 
 
@@ -314,17 +318,18 @@ TEST(analysis_test, interfaces_array) {
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
-    auto dep = resource.get_dependencies()[0];
+    auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
+    ASSERT_NE(stmt, nullptr);
 
-    HDL_instance check_dependency;
-    check_dependency.set_type("axi_lite");
-    check_dependency.set_name("cores_control");
-    check_dependency.set_dependency_class(module);
+    auto check_stmt = std::make_shared<hdl_instance_statement>();
+    check_stmt->set_type("axi_lite");
+    check_stmt->set_name("cores_control");
+    check_stmt->set_dependency_class(module);
     auto array_qual = std::make_shared<HDL_parameter>();
     array_qual->set_name("instance_array_qualifier");
     array_qual->set_raw_value(std::make_shared<Numeric_token>("3"));
-    check_dependency.add_array_quantifier(array_qual);
-    ASSERT_EQ(dep, check_dependency);
+    check_stmt->set_array_quantifier(array_qual);
+    ASSERT_EQ(*stmt, *check_stmt);
 }
 
 
@@ -347,7 +352,9 @@ TEST(analysis_test, parameter_array_assignment) {
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto parameters = resource.get_parameters();
 
-    auto param = resource.get_dependencies()[0].get_parameters().get("TEST_PARAM");
+    auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
+    ASSERT_NE(stmt, nullptr);
+    auto param = stmt->get_parameters().const_get("TEST_PARAM");
 
     HDL_parameter reference_param;
     reference_param.set_name("TEST_PARAM");

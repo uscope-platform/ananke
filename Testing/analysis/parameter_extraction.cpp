@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "frontend/analysis/system_verilog/sv_analyzer.hpp"
+#include "data_model/HDL/statement/hdl_statements.hpp"
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "analysis/parameter_solver.hpp"
@@ -2941,8 +2942,8 @@ TEST(parameter_extraction, interface_parameter_use) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern);
-    auto res = resources[1].get_dependencies()[2];
-    auto parameters = res.get_parameters();
+    auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resources[1].get_statements()[2]);
+    auto parameters = stmt->get_parameters();
 
     Parameters_map check_params;
 
@@ -3318,7 +3319,7 @@ TEST(parameter_extraction, instance_parameter) {
     auto resource = analyzer.analyze("", test_pattern)[0];
     auto def_parameters = resource.get_parameters();
 
-    auto inst_parameters = resource.get_dependencies()[0].get_parameters();
+    auto inst_parameters = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0])->get_parameters();
 
     std::vector<std::pair<std::string, std::vector<std::string>>> vect_params = {
             {"test_param", {"4"}}
@@ -4159,9 +4160,8 @@ TEST(parameter_extraction, unrelated_wire_dependency_conflict) {
 
     auto resource = analyzer.analyze("", test_pattern)[0];
 
-    HDL_instance i = resource.get_dependencies()[0];
-
-    auto parameter = i.get_parameters().get("DECIMATED");
+    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
+    auto parameter = inst->get_parameters().const_get("DECIMATED");
 
     auto check_param = std::make_shared<HDL_parameter>();
     check_param->set_name("DECIMATED");
@@ -4244,33 +4244,41 @@ TEST(parameter_extraction, generate_for) {
 
     auto resource = analyzer.analyze("", test_pattern)[0];
 
-    auto dep = resource.get_dependencies()[0];
+    auto loop_stmt = std::dynamic_pointer_cast<hdl_loop_statement>(resource.get_statements()[0]);
+    ASSERT_NE(loop_stmt, nullptr);
 
-    ASSERT_EQ(dep.get_n_loops(), 1);
-
-    auto loop = dep.get_inner_loop();
-
-    HDL_loop_metadata check_loop;
+    hdl_loop_statement check_loop;
 
     HDL_parameter p;
     p.set_name("n");
     p.set_raw_value(std::make_shared<Numeric_token>("0"));
 
-    check_loop.set_init(p);
+    check_loop.set_init(std::make_shared<HDL_parameter>(p));
 
     Expression_v2 e;
     e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("N_REPETITIONS")));
     e.set_operation(Expression_v2::less);
-    check_loop.set_end_c(e);
+    check_loop.set_end_condition(std::make_shared<Expression_v2>(e));
 
     e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
     e.set_rhs(std::make_shared<Numeric_token>("1"));
     e.set_operation(Expression_v2::add);
-    check_loop.set_iter(e);
+    check_loop.set_iteration(std::make_shared<Expression_v2>(e));
 
+    auto dep_inst = std::make_shared<hdl_instance_statement>();
+    dep_inst->set_name("dep");
+    dep_inst->set_type("dependency");
+    dep_inst->set_dependency_class(module);
+    auto dep_param = std::make_shared<HDL_parameter>();
+    dep_param->set_name("DEP_PARAM");
+    Identifier_token arr_idx(qualified_identifier("ARRAY_PARAM"));
+    arr_idx.add_array_index(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    dep_param->set_raw_value(std::make_shared<Identifier_token>(arr_idx));
+    dep_inst->add_parameter(dep_param);
+    check_loop.add_body_stmt(dep_inst);
 
-    ASSERT_EQ(loop, check_loop);
+    ASSERT_EQ(*loop_stmt, check_loop);
 }
 
 

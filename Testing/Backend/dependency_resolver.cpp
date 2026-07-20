@@ -24,16 +24,10 @@ class dep_resolver : public ::testing::Test {
 protected:
     void SetUp() {
         d_store = std::make_shared<data_store>(true,"/tmp/test_data_store");
-        HDL_instance d1("inst", "test_dep", module);
-        HDL_instance d2("mem_init", "test_mem_init", memory_init);
-        HDL_instance d3("exm", "excluded_module", module);
-        HDL_instance d4("pkg", "test_package", package);
-        std::vector<HDL_instance> deps = {d1, d2, d3, d4};
         HDL_Resource mod_entity;
         mod_entity.set_name("test_module");
         mod_entity.set_path("test/mod.sv");
         mod_entity.set_type(module);
-        mod_entity.add_dependencies(deps);
 
         auto s1 = std::make_shared<hdl_instance_statement>();
         s1->set_name("inst"); s1->set_type("test_dep"); s1->set_dependency_class(module);
