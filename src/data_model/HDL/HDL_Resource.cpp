@@ -27,7 +27,6 @@ HDL_Resource::HDL_Resource(const HDL_Resource &c) {
     path = c.path;
     line_n = c.line_n;
     hdl_dependency_type = c.hdl_dependency_type;
-    dependencies = c.dependencies;
     functions = c.functions;
     parameters_spec = c.parameters_spec;
     doc = c.doc;
@@ -64,7 +63,6 @@ bool HDL_Resource::is_empty() {
     ret &= path.empty();
     ret &= hdl_dependency_type == module;
     ret &= processor_docs.empty();
-    ret &= dependencies.empty();
     ret &= port_specs.empty();
     ret &= parameters_spec.empty();
     ret &= functions.empty();
@@ -73,14 +71,6 @@ bool HDL_Resource::is_empty() {
     return ret;
 }
 
-void HDL_Resource::add_dependency(const HDL_instance &dep) {
-    dependencies.push_back(dep);
-}
-
-
-void HDL_Resource::add_dependencies(std::vector<HDL_instance> deps) {
-    dependencies.insert(dependencies.begin(), deps.begin(), deps.end());
-}
 
 
 
@@ -91,7 +81,6 @@ bool operator==(const HDL_Resource &lhs, const HDL_Resource &rhs) {
     ret &= lhs.line_n == rhs.line_n;
     ret &= lhs.path == rhs.path;
     ret &= lhs.hdl_dependency_type == rhs.hdl_dependency_type;
-    ret &= lhs.dependencies == rhs.dependencies;
     ret &= lhs.processor_docs == rhs.processor_docs;
     ret &= lhs.port_specs == rhs.port_specs;
     ret &= lhs.parameters_spec == rhs.parameters_spec;

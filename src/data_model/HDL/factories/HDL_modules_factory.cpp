@@ -23,9 +23,6 @@ void HDL_modules_factory::new_module(const std::string &name, const std::string 
     current_resource.set_line_n(line_n);
 }
 
-void HDL_modules_factory::add_instance(const HDL_instance &i) {
-    current_resource.add_dependency(i);
-}
 
 void HDL_modules_factory:: add_statement(std::shared_ptr<hdl_statement_base> s) {
     current_resource.add_statement(s);

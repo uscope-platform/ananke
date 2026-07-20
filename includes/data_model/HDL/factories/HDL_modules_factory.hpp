@@ -28,7 +28,6 @@ public:
     void new_module(const std::string &name, const std::string &path,const dependency_class &type, unsigned int line_n);
     HDL_Resource get_module();
 
-    void add_instance(const HDL_instance &i);
     void add_statement(std::shared_ptr<hdl_statement_base> s);
     void add_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type);
     bool has_typedef(const std::string &name) {

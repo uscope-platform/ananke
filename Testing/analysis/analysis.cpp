@@ -145,29 +145,6 @@ TEST( analysis_test , sv_module) {
     auto res = analyzer.analyze("/test/file.sv",test_pattern);
     auto resource = res[0];
 
-    HDL_instance d3("SC", "SyndromeCalculator", module);
-    d3.add_port_connection("clock", {HDL_net("clock")});
-    d3.add_port_connection("reset", {HDL_net("reset")});
-    d3.add_port_connection("data_in", {HDL_net("data_in")});
-    d3.add_port_connection("syndrome", {HDL_net("data_out")});
-    auto p = std::make_shared<HDL_parameter>();
-    p->set_name("TEST_PARAM");
-    p->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("test_package", "param")));
-    d3.add_parameter(p);
-
-    HDL_instance d2("param", "test_package", package);
-    HDL_instance d1("__init_file__", "file", memory_init);
-    HDL_instance d0("if_array", "axi_lite", module);
-    p = std::make_shared<HDL_parameter>();
-    p->set_name("instance_array_qualifier");
-    Expression_v2 e;
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("module_parameter_2")));
-    e.set_rhs(std::make_shared<Numeric_token>("1"));
-    e.set_operation(Expression_v2::add);
-    p->set_raw_value(std::make_shared<Expression_v2>(e));
-    d0.add_array_quantifier(p);
-    std::vector deps = {d0, d1, d2, d3};
-
 
     std::unordered_map<std::string, HDL_port> test_ports;
 
@@ -181,10 +158,9 @@ TEST( analysis_test , sv_module) {
     check_res.set_type(module);
     check_res.set_path("/test/file.sv");
     check_res.set_line_n(3);
-    check_res.add_dependencies(deps);
     check_res.set_ports(test_ports);
 
-    p = std::make_shared<HDL_parameter>();
+    auto p = std::make_shared<HDL_parameter>();
     p->set_name("module_parameter_1");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("56"));

@@ -70,19 +70,13 @@ class HDL_Resource {
         explicit HDL_Resource(const std::string &n){name = n;}
         HDL_Resource();
 
-        std::vector<HDL_instance> get_dependencies(){return dependencies;}
-
         void process_calls();
-        void set_dependencies(std::vector<HDL_instance> &d) {
-            dependencies = d;
-        }
+
 
         void add_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type){typedefs.insert({name, type});}
         std::map<std::string, std::shared_ptr<hdl_type>> get_typedefs(){return typedefs;}
 
 
-        void add_dependencies(std::vector<HDL_instance> deps);
-        void add_dependency(const HDL_instance &dep);
 
         void add_statement(const std::shared_ptr<hdl_statement_base> &s){ statements.push_back(s);}
 
@@ -140,7 +134,7 @@ class HDL_Resource {
 
         template<class Archive>
         void serialize( Archive & ar ) {
-            ar(name, path, hdl_dependency_type, dependencies, parameters_spec, port_specs, doc, processor_docs,
+            ar(name, path, hdl_dependency_type, parameters_spec, port_specs, doc, processor_docs,
                 functions, line_n, typedefs, statements);
         }
 
@@ -156,7 +150,6 @@ private:
         std::string path;
         unsigned int line_n = 0;
         dependency_class hdl_dependency_type = module;
-        std::vector<HDL_instance> dependencies;
         std::unordered_map<std::string, HDL_port> port_specs;
 
         Parameters_map parameters_spec;

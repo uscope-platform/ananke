@@ -37,7 +37,7 @@ public:
     void start_assignment(const std::string &name);
     std::vector<HDL_instance> get_instances();
     HDL_loop_metadata get_loop_specs() {return loop_specs;}
-    std::shared_ptr<hdl_loop_statement> get_loop_statement() {return std::make_shared<hdl_loop_statement>(_statement);};
+    std::shared_ptr<hdl_loop_statement> get_loop_statement() {active = false; return std::make_shared<hdl_loop_statement>(_statement);};
     bool in_loop(){return active;}
 
     enum loop_phase_t {init, end, step, body};

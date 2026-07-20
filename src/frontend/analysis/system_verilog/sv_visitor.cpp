@@ -17,6 +17,9 @@
 #include <ctre.hpp>
 
 #include "frontend/analysis/system_verilog/sv_visitor.hpp"
+
+#include <sys/stat.h>
+
 #include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
@@ -113,7 +116,6 @@ void sv_visitor::exitModule_or_interface_or_program_or_udp_instantiation(sv2017:
         loops_factory.add_statement(deps_factory.get_statement());
     } else {
         modules_factory.add_statement(deps_factory.get_statement());
-        modules_factory.add_instance(deps_factory.get_dependency());
     }
 
 }
@@ -241,8 +243,11 @@ void sv_visitor::exitData_type(sv2017::Data_typeContext *ctx) {
 void sv_visitor::exitInterface_header(sv2017::Interface_headerContext *ctx) {
     std::string interface_name = ctx->identifier()->getText();
     if(modules_factory.is_current_valid()){
-        HDL_instance dep("__scoped_declaration__", interface_name, interface);
-        modules_factory.add_instance(dep);
+        hdl_instance_statement statement;
+        statement.set_name("__scoped_declaration__");
+        statement.set_type(interface_name);
+        statement.set_dependency_class(interface);
+        modules_factory.add_statement(std::make_shared<hdl_instance_statement>(statement));
     }
 
 }
@@ -356,8 +361,6 @@ void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
         std::filesystem::path p = data_file;
         auto ext = p.extension().string();
         if(ext == ".dat"|| ext == ".mem"){
-            HDL_instance dep("__init_file__", p.stem(), memory_init);
-            modules_factory.add_instance(dep);
             auto stmt = std::make_shared<hdl_instance_statement>();
             stmt->set_name("__init_file__");
             stmt->set_type(p.stem());
@@ -389,8 +392,6 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
         auto qi = sv_parsing_helpers::parse_qualified_identifier(ctx);
         auto pkg_prefix = qi.get_package_prefix();
         std::string prefix_str = pkg_prefix.empty() ? "" : pkg_prefix.back();
-        HDL_instance dep(qi.get_name(), prefix_str, package);
-        modules_factory.add_instance(dep);
         auto stmt = std::make_shared<hdl_instance_statement>();
         stmt->set_name(qi.get_name());
         stmt->set_type(prefix_str);
@@ -1018,9 +1019,6 @@ void sv_visitor::enterLoop_generate_construct(sv2017::Loop_generate_constructCon
 }
 
 void sv_visitor::exitLoop_generate_construct(sv2017::Loop_generate_constructContext *) {
-    for(auto &i:loops_factory.get_instances()){
-        modules_factory.add_instance(i);
-    }
     modules_factory.add_statement(loops_factory.get_loop_statement());
 }
 
