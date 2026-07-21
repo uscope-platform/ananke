@@ -17,7 +17,6 @@
 #define ANANKE_HDL_RESOURCE_HPP
 
 #include <utility>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -33,7 +32,6 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/memory.hpp>
 
-#include <spdlog/spdlog.h>
 #include "data_model/HDL/HDL_definitions.hpp"
 #include "data_model/HDL/types/HDL_struct_type.hpp"
 #include "data_model/HDL/statement/hdl_function_statement.hpp"

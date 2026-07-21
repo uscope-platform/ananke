@@ -18,7 +18,6 @@
 
 #include <string>
 #include <vector>
-#include <set>
 #include <memory>
 
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"

@@ -19,7 +19,6 @@
 
 #include <memory>
 #include "Expression_base.hpp"
-#include "data_model/HDL/parameters/components/Expression_v2.hpp"
 
 
 class Ternary : public Expression_base{
