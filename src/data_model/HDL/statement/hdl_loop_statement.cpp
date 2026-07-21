@@ -18,6 +18,12 @@
 
 #include <algorithm>
 
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+
+CEREAL_REGISTER_TYPE(hdl_loop_statement)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_loop_statement)
+
 parameter_deps_t hdl_loop_statement::get_dependencies() const {
     parameter_deps_t deps;
     deps.merge(init->get_dependencies());

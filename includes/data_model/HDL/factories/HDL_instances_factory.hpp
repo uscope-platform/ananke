@@ -21,7 +21,6 @@
 #include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 #include "nets/HDL_range_factory.hpp"
 #include "nets/HDL_net_factory.hpp"
-#include "nets/HDL_concat_factory.hpp"
 
 class HDL_instances_factory {
 public:
@@ -29,7 +28,6 @@ public:
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);
     void add_port(const std::string &name);
     void start_scalar_net(const std::string &n);
-    void add_scalar_net(const std::string &name);
     std::shared_ptr<hdl_instance_statement> get_dependency();
     void start_concat_port(const std::string &n);
     void stop_concat_port();

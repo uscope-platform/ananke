@@ -15,6 +15,12 @@
 
 #include "data_model/HDL/statement/hdl_instance_statement.hpp"
 
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+
+CEREAL_REGISTER_TYPE(hdl_instance_statement)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_instance_statement)
+
 void hdl_instance_statement::add_port_connection(const std::string& port_name, std::vector<HDL_net> value) {
     ports_map[port_name] = std::move(value);
 }

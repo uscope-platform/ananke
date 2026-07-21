@@ -27,6 +27,9 @@
 #include "data_model/HDL/HDL_net.hpp"
 #include "data_model/documentation/channel_group.hpp"
 
+#include <cereal/types/vector.hpp>
+#include <cereal/types/unordered_map.hpp>
+
 class hdl_instance_statement : public hdl_statement_base {
 public:
     parameter_deps_t get_dependencies() const override;
@@ -62,6 +65,11 @@ public:
     std::shared_ptr<HDL_parameter> get_array_quantifier() const { return array_quantifier; }
 
     friend void PrintTo(const hdl_instance_statement& s, std::ostream* os);
+
+    template<class Archive>
+    void serialize( Archive & ar ) {
+        ar(name, type, dep_class, parameters,ports_map, wildcard_assignment, groups, array_quantifier);
+    }
 
 private:
     std::string name;

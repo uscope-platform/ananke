@@ -54,6 +54,8 @@ hdl_ast_node::hdl_ast_node(const hdl_ast_node &c) {
     proxy_specs = c.proxy_specs;
     proxy_ast = c.proxy_ast;
     array_index = c.array_index;
+    if_specs = c.if_specs;
+    leaf_module_prefix = c.leaf_module_prefix;
 }
 
 void hdl_ast_node::add_port_connection(const std::string& port_name, std::vector<HDL_net> value) {
@@ -62,12 +64,6 @@ void hdl_ast_node::add_port_connection(const std::string& port_name, std::vector
 
 void hdl_ast_node::add_parameter(const std::shared_ptr<HDL_parameter> &p) {
     parameters.insert(p);
-}
-
-void hdl_ast_node::add_parameters(Parameters_map &p) {
-    for (const auto& [key, param] : p) {
-        parameters.insert(param);
-    }
 }
 
 void hdl_ast_node::set_parameters(Parameters_map &p) {
@@ -105,6 +101,8 @@ bool operator==(const hdl_ast_node &lhs, const hdl_ast_node &rhs) {
     ret &= lhs.processors == rhs.processors;
     ret &= lhs.proxy_specs == rhs.proxy_specs;
     ret &= lhs.array_index == rhs.array_index;
+    ret &= lhs.if_specs == rhs.if_specs;
+    ret &= lhs.leaf_module_prefix == rhs.leaf_module_prefix;
     return ret;
 }
 

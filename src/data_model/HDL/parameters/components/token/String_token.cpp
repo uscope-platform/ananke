@@ -14,6 +14,11 @@
 //  limitations under the License.
 
 #include "data_model/HDL/parameters/components/token/String_token.hpp"
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+
+CEREAL_REGISTER_TYPE(String_token)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, String_token)
 
 String_token::String_token(const String_token &c) {
     value = c.value;

@@ -40,7 +40,6 @@ private:
     } factory_state = idle;
 
     HDL_range current_range;
-    std::vector<HDL_range> ranges_stack;
 };
 
 

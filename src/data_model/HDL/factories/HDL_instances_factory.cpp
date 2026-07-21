@@ -39,9 +39,6 @@ void HDL_instances_factory::start_scalar_net(const std::string &n) {
     }
 }
 
-void HDL_instances_factory::add_scalar_net(const std::string &name) {
-    net_factory.new_net(name);
-}
 
 std::shared_ptr<hdl_instance_statement> HDL_instances_factory::get_dependency() {
     valid_instance = false;

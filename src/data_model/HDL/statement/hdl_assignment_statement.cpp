@@ -13,12 +13,18 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
+
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+
+CEREAL_REGISTER_TYPE(hdl_assignment_statement)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_assignment_statement)
 
 parameter_deps_t hdl_assignment_statement::get_dependencies() const {
     parameter_deps_t deps;
     if (value) deps.merge(value->get_dependencies());
+    if (index) deps.merge(index->get_dependencies());
     return deps;
 }
 

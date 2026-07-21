@@ -39,6 +39,10 @@ public:
     void set_value(const std::shared_ptr<Expression_base>& v) { value = v; }
     std::shared_ptr<Expression_base> get_value() const { return value; }
 
+    template<class Archive>
+    void serialize( Archive & ar ) {
+        ar(target, index, value);
+    }
 private:
     std::string target;
     std::shared_ptr<Expression_base> index;

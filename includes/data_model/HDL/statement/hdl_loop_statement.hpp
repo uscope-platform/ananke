@@ -43,6 +43,11 @@ public:
 
     friend void PrintTo(const hdl_loop_statement& s, std::ostream* os);
 
+    template<class Archive>
+    void serialize( Archive & ar ) {
+        ar(init, end_condition, iteration, loop_body);
+    }
+
 private:
     std::shared_ptr<HDL_parameter> init;
     std::shared_ptr<Expression_base> end_condition;

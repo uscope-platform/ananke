@@ -17,6 +17,11 @@
 #include <charconv>
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+
+CEREAL_REGISTER_TYPE(Numeric_token)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Numeric_token)
 
 Numeric_token::Numeric_token(const Numeric_token &c) {
     value = c.value;

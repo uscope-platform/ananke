@@ -17,8 +17,11 @@
 #include "data_model/HDL/statement/hdl_function_statement.hpp"
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 
-#include "data_model/HDL/parameters/components/Expression_v2.hpp"
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
 
+CEREAL_REGISTER_TYPE(hdl_function_statement)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_function_statement)
 
 bool hdl_function_statement::is_scalar() const {
     return body.size() == 1

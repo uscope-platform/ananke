@@ -52,7 +52,7 @@ target_sources(ananke_lib
     data_model/HDL/parameters/components/token/Identifier_token.cpp
     data_model/HDL/parameters/components/token/Numeric_token.cpp
     data_model/HDL/parameters/components/token/String_token.cpp
-        data_model/HDL/statement/hdl_function_statement.cpp
+    data_model/HDL/statement/hdl_function_statement.cpp
     data_model/HDL/parameters/components/HDL_function_call.cpp
     data_model/HDL/statement/hdl_instance_statement.cpp
     data_model/HDL/statement/hdl_loop_statement.cpp
@@ -61,7 +61,6 @@ target_sources(ananke_lib
     data_model/HDL/statement/hdl_assignment_statement.cpp
     data_model/HDL/factories/HDL_functions_factory.cpp
     data_model/HDL/factories/nets/HDL_range_factory.cpp
-    data_model/HDL/factories/nets/HDL_concat_factory.cpp
     data_model/HDL/factories/nets/HDL_net_factory.cpp
     data_model/HDL/factories/nets/HDL_repetition_factory.cpp
     data_model/HDL/factories/parameters/cast_factory.cpp

@@ -15,6 +15,11 @@
 
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+
+CEREAL_REGISTER_TYPE(Identifier_token)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Identifier_token)
 
 Identifier_token::Identifier_token(const Identifier_token &c) {
     container_size = c.container_size;

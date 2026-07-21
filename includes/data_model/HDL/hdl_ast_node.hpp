@@ -36,8 +36,6 @@
 #include <cereal/types/array.hpp>
 #include <cereal/types/memory.hpp>
 
-#include <spdlog/spdlog.h>
-
 class hdl_instance_statement;
 
 struct proxy_target {
@@ -56,20 +54,17 @@ public:
     hdl_ast_node(const hdl_ast_node &c );
     explicit hdl_ast_node(const hdl_instance_statement &stmt);
 
-    // ---- port connections ----
     void add_port_connection(const std::string& port_name, std::vector<HDL_net> value);
     void set_ports(const std::unordered_map<std::string, std::vector<HDL_net>> &p) { ports_map = p; }
     std::unordered_map<std::string, std::vector<HDL_net>> get_ports() { return ports_map; }
 
-    // ---- parameters ----
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);
-    void add_parameters(Parameters_map &p);
+
     void set_parameters(Parameters_map &p);
     Parameters_map get_parameters();
     bool has_parameter(const std::string &s) { return parameters.contains(s); }
     std::shared_ptr<HDL_parameter> get_parameter_value(const std::string& parameter_name) { return parameters.get(parameter_name); }
 
-    // ---- identity ----
     std::string get_name() const { return name; }
     void set_name(const std::string &n) { name = n; }
     std::string get_type() const { return type; }
@@ -77,19 +72,15 @@ public:
     dependency_class get_dependency_class() const { return dep_class; }
     void set_dependency_class(dependency_class dc) { dep_class = dc; }
 
-    // ---- wildcard ----
-    void set_wildcard(bool w) { wildcard_assignment = true; }
+    void set_wildcard(bool w) { wildcard_assignment = w; }
     bool get_wildcard() const { return wildcard_assignment; }
 
-    // ---- channel groups ----
     void set_channel_groups(const std::vector<channel_group> &g) { groups = g; }
     std::vector<channel_group> get_channel_groups() { return groups; }
 
-    // ---- array quantifier ----
     void add_array_quantifier(const std::shared_ptr<HDL_parameter> &p) { array_quantifier = p; }
     std::shared_ptr<HDL_parameter> get_array_quantifier() const { return array_quantifier; }
 
-    // ---- AST tree ----
     std::vector<std::shared_ptr<hdl_ast_node>> get_dependencies() { return child_instances; }
     void add_child(const std::shared_ptr<hdl_ast_node> &i) {
         i->set_array_index(array_index);
@@ -98,18 +89,15 @@ public:
     void set_parent(const std::shared_ptr<hdl_ast_node> &p) { parent = p; }
     std::shared_ptr<hdl_ast_node> get_parent() { return parent; }
 
-    // ---- bus addressing ----
     void add_address(const hdl_integer &i) { bus_address.push_back(i); }
     std::vector<hdl_integer> get_address() { return bus_address; }
     void clear_address() { bus_address.clear(); }
 
-    // ---- dependencies ----
     void add_data_dependency(const std::string &p) { data_dependencies.push_back(p); }
     std::vector<std::string> get_data_dependencies() { return data_dependencies; }
     void add_package_dependency(const std::string &p) { package_dependencies.push_back(p); }
     std::vector<std::string> get_package_dependencies() { return package_dependencies; }
 
-    // ---- leaf module ----
     void set_leaf_module_top(const std::string &s) {
         std::string_view sv = s;
         if(s.length() >=2 && s.starts_with('"') && s.ends_with('"')) {
@@ -130,25 +118,21 @@ public:
     }
     std::string get_leaf_module_prefix() { return leaf_module_prefix; }
 
-    // ---- interface specs ----
     void set_if_specs(const std::unordered_map<std::string, std::array<std::string, 2>> &if_s) { if_specs = if_s; }
     std::unordered_map<std::string, std::array<std::string, 2>> get_if_specs() { return if_specs; }
 
-    // ---- processors ----
     void set_processors(std::vector<processor_instance> &p) { processors = p; }
     std::vector<processor_instance> get_processors() const { return processors; }
 
-    // ---- proxy ----
     void set_proxy_specs(const proxy_target &p) { proxy_specs = p; }
     proxy_target get_proxy_specs() const { return proxy_specs; }
     void set_proxy_ast(const std::shared_ptr<hdl_ast_node> &p) { proxy_ast = p; }
     std::shared_ptr<hdl_ast_node> get_proxy_ast() const { return proxy_ast; }
 
-    // ---- array index ----
     void set_array_index(int16_t i) { array_index = i; }
     uint32_t get_array_index() const { return array_index; }
 
-    // ---- serialization ----
+
     nlohmann::json dump();
     std::string dump_structure();
 
@@ -165,7 +149,6 @@ public:
 private:
     static std::string dump_structure(const std::shared_ptr<hdl_ast_node>&ast, const std::string &prefix);
 
-    // ---- core instance data ----
     std::string name;
     std::string type;
     dependency_class dep_class = module;
@@ -175,16 +158,13 @@ private:
     std::vector<channel_group> groups;
     std::shared_ptr<HDL_parameter> array_quantifier;
 
-    // ---- AST tree ----
     std::vector<hdl_integer> bus_address;
     std::shared_ptr<hdl_ast_node> parent;
     std::vector<std::shared_ptr<hdl_ast_node>> child_instances;
 
-    // ---- dependency tracking ----
     std::vector<std::string> data_dependencies;
     std::vector<std::string> package_dependencies;
 
-    // ---- metadata ----
     std::vector<processor_instance> processors;
     int32_t array_index = -1;
     std::unordered_map<std::string, std::array<std::string, 2>> if_specs;
