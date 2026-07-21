@@ -23,6 +23,7 @@
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 
+class HDL_parameter;
 
 class hdl_function_statement : public hdl_statement_base {
 public:
@@ -40,6 +41,9 @@ public:
     bool is_scalar() const;
     std::vector<std::string> get_arguments_names()const{return  argument_names;}
 
+    void add_local_variable(const std::shared_ptr<HDL_parameter> &p) { local_variables.push_back(p); }
+    const std::vector<std::shared_ptr<HDL_parameter>>& get_local_variables() const { return local_variables; }
+
     void set_return_type_name(const std::string &n) { return_type_name = n; }
     std::string get_return_type_name() const { return return_type_name; }
 
@@ -55,7 +59,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name, argument_names, return_type_name, body);
+        ar(name, argument_names, return_type_name, body, local_variables);
     }
 
     friend void PrintTo(const hdl_function_statement& s, std::ostream* os);
@@ -68,6 +72,7 @@ private:
     std::shared_ptr<Expression_base> return_unpacked_range_right;
 
     std::vector<std::shared_ptr<hdl_statement_base>> body;
+    std::vector<std::shared_ptr<HDL_parameter>> local_variables;
 };
 
 

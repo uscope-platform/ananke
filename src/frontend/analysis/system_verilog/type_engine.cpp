@@ -172,14 +172,17 @@ std::shared_ptr<hdl_type> Type_engine::finalize_type() {
         auto [packed, unpacked] = r_factory.get_dimensions();
         result.set_packed_dimensions(packed);
         result.set_unpacked_dimensions(unpacked);
+        r_factory.stop();
         r_factory.clear();
         return std::make_shared<HDL_simple_type>(result);
     }
     if (current_type->is<HDL_external_type>()) {
         auto &result = current_type->as<HDL_external_type>();
+        r_factory.stop();
         r_factory.clear();
         return std::make_shared<HDL_external_type>(result);
     }
+    r_factory.stop();
     r_factory.clear();
     return current_type;
 
@@ -190,6 +193,7 @@ std::shared_ptr<hdl_type> Type_engine::finalize_dimensions() {
     HDL_simple_type result;
     result.set_packed_dimensions(packed);
     result.set_unpacked_dimensions(unpacked);
+    r_factory.stop();
     r_factory.clear();
     return std::make_shared<HDL_simple_type>(result);
 }

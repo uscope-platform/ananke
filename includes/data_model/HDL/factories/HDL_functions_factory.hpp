@@ -22,6 +22,7 @@
 #include <string>
 
 #include "data_model/HDL/statement/hdl_statements.hpp"
+#include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
 
@@ -35,6 +36,7 @@ public:
     }
     void start_assignment(const std::string &n);
     void add_argument(const std::string &a);
+    void add_local_variable(const std::shared_ptr<HDL_parameter> &p) { f.add_local_variable(p); }
     void add_component(const std::shared_ptr<Expression_base> &c);
     void add_value(const std::shared_ptr<Expression_base> &v);
     void close_lvalue();

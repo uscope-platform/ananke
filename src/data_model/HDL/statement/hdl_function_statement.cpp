@@ -16,6 +16,7 @@
 
 #include "data_model/HDL/statement/hdl_function_statement.hpp"
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
+#include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
@@ -36,6 +37,9 @@ parameter_deps_t hdl_function_statement::get_dependencies() const {
     for (const auto& stmt : body) {
         deps.merge(stmt->get_dependencies());
     }
+    for (const auto& v : local_variables) {
+        if (v) deps.merge(v->get_dependencies());
+    }
     return deps;
 }
 
@@ -47,6 +51,7 @@ std::unique_ptr<hdl_statement_base> hdl_function_statement::clone() const {
     result->return_unpacked_range_left = return_unpacked_range_left;
     result->return_unpacked_range_right = return_unpacked_range_right;
     result->body = body;
+    result->local_variables = local_variables;
     return result;
 }
 
@@ -58,6 +63,12 @@ bool hdl_function_statement::equals(const hdl_statement_base& other) const {
     if (body.size() != rhs.body.size()) return false;
     for (size_t i = 0; i < body.size(); i++)
         retval &= *body[i] == *rhs.body[i];
+    if (local_variables.size() != rhs.local_variables.size()) return false;
+    for (size_t i = 0; i < local_variables.size(); i++) {
+        if (!local_variables[i] && !rhs.local_variables[i]) continue;
+        if (!local_variables[i] || !rhs.local_variables[i]) return false;
+        retval &= *local_variables[i] == *rhs.local_variables[i];
+    }
     return retval;
 }
 

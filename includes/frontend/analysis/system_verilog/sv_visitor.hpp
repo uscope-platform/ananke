@@ -212,8 +212,10 @@ private:
     void route_expression_text(const std::string& text);
     void route_expression_component(const std::shared_ptr<Expression_base>& ec);
     void process_operation(Expression_v2::expression_operator op);
+    std::shared_ptr<hdl_type> setup_data_type(sv2017::Data_type_or_implicitContext *dtoi);
 
     bool in_param_declaration = false;
+    bool in_function_var_decl = false;
     bool in_class = false;
     std::string path;
     std::vector<HDL_Resource> entities;

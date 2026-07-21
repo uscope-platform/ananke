@@ -148,7 +148,43 @@ void sv_visitor::exitTf_port_list(sv2017::Tf_port_listContext *ctx) {
     f_factory.start_body();
 }
 
+std::shared_ptr<hdl_type> sv_visitor::setup_data_type(sv2017::Data_type_or_implicitContext *dtoi) {
+    type_engine.set_base_type(std::make_shared<HDL_simple_type>());
+    if (dtoi && dtoi->data_type()) {
+        if (dtoi->data_type()->package_or_class_scoped_path() &&
+            !dtoi->data_type()->package_or_class_scoped_path()->DOUBLE_COLON().empty()) {
+            auto pkg_ctx = dtoi->data_type()->package_or_class_scoped_path();
+            auto qi = sv_parsing_helpers::parse_qualified_identifier(pkg_ctx);
+            auto ext_type = std::make_shared<HDL_external_type>(qi);
+            type_engine.set_base_type(ext_type);
+            return ext_type;
+        }
+        std::string type;
+        if (dtoi->data_type()->data_type_primitive())
+            type = dtoi->data_type()->data_type_primitive()->getText();
+        if (dtoi->data_type()->package_or_class_scoped_path())
+            type = dtoi->data_type()->package_or_class_scoped_path()->getText();
+        auto resolved = type_engine.resolve_type(type);
+        type_engine.set_base_type(resolved);
+        return resolved;
+    }
+    if (!dtoi) {
+        auto implicit = Type_engine::create_primitive_type("implicit");
+        type_engine.set_base_type(implicit);
+        return implicit;
+    }
+    return std::make_shared<HDL_simple_type>();
+}
+
 void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
+    if (f_factory.is_active() && !ctx->type_declaration() &&
+        !(ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type() &&
+          ctx->data_type_or_implicit()->data_type()->struct_union())) {
+        in_function_var_decl = true;
+        setup_data_type(ctx->data_type_or_implicit());
+        type_engine.start_range();
+        return;
+    }
     if (ctx->type_declaration()) {
         if (
             ctx->type_declaration()->data_type() &&
@@ -172,6 +208,20 @@ void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
 }
 
 void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
+    if (in_function_var_decl) {
+        in_function_var_decl = false;
+        auto var_name = ctx->list_of_variable_decl_assignments()
+            ->variable_decl_assignment(0)->identifier()->getText();
+        auto t = type_engine.finalize_type();
+        type_engine.stop_range();
+        if (!t) {
+            t = Type_engine::create_primitive_type("implicit");
+        }
+        auto param = std::make_shared<HDL_parameter>(var_name);
+        param->set_type(t);
+        f_factory.add_local_variable(param);
+        return;
+    }
     if (ctx->type_declaration()) {
         auto name = ctx->type_declaration()->identifier(0)->getText();
         if (type_engine.is_simple_type()) {
@@ -401,35 +451,12 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
 void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
     if (ctx->list_of_type_assignments() ) return;
     in_param_declaration = true;
-    type_engine.set_base_type(std::make_shared<HDL_simple_type>());
     if (!ctx->list_of_param_assignments()) {
         throw std::runtime_error("Encountered non existent list of parameter declarations");
     }
-    if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type()) {
-        if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path() &&
-            !ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->DOUBLE_COLON().empty()) {
-            auto pkg_ctx = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path();
-            auto qi = sv_parsing_helpers::parse_qualified_identifier(pkg_ctx);
-            auto ext_type = std::make_shared<HDL_external_type>(qi);
-            params_factory.set_type(ext_type);
-            type_engine.set_base_type(ext_type);
-        } else {
-            std::string type;
-            if (ctx->data_type_or_implicit()->data_type()->data_type_primitive())
-                type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
-            if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path())
-                type = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->getText();
-            auto resolved = type_engine.resolve_type(type);
-            params_factory.set_type(resolved);
-            type_engine.set_base_type(resolved);
-        }
-    }
-    if (!ctx->data_type_or_implicit()) {
-        auto implicit = Type_engine::create_primitive_type("implicit");
-        params_factory.set_type(implicit);
-        type_engine.set_base_type(implicit);
-    }
+    auto resolved = setup_data_type(ctx->data_type_or_implicit());
     type_engine.start_range();
+    params_factory.set_type(resolved);
     current_parameter = ctx->list_of_param_assignments()[0].param_assignment()[0]->identifier()->getText();
 }
 
@@ -978,33 +1005,9 @@ void sv_visitor::exitData_type_or_implicit(sv2017::Data_type_or_implicitContext 
 
 void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
     in_param_declaration = true;
-    type_engine.set_base_type(std::make_shared<HDL_simple_type>() );
-    if (ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type()) {
-        if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path() &&
-            !ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->DOUBLE_COLON().empty()) {
-            auto pkg_ctx = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path();
-            auto qi = sv_parsing_helpers::parse_qualified_identifier(pkg_ctx);
-            auto ext_type = std::make_shared<HDL_external_type>(qi);
-            params_factory.set_type(ext_type);
-            type_engine.set_base_type(ext_type);
-        } else {
-            std::string type;
-            if (ctx->data_type_or_implicit()->data_type()->data_type_primitive())
-                type = ctx->data_type_or_implicit()->data_type()->data_type_primitive()->getText();
-            if (ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path())
-                type = ctx->data_type_or_implicit()->data_type()->package_or_class_scoped_path()->getText();
-            auto resolved = type_engine.resolve_type(type);
-            params_factory.set_type(resolved);
-            type_engine.set_base_type(resolved);
-        }
-    }
-
+    auto resolved = setup_data_type(ctx->data_type_or_implicit());
     type_engine.start_range();
-    if (!ctx->data_type_or_implicit()) {
-        auto implicit = Type_engine::create_primitive_type("implicit");
-        params_factory.set_type(implicit);
-        type_engine.set_base_type(implicit);
-    }
+    params_factory.set_type(resolved);
 }
 
 void sv_visitor::exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {

@@ -21,6 +21,7 @@
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
+#include "frontend/analysis/system_verilog/type_engine.hpp"
 
 
 TEST(function_processing, simple_function_scalar) {
@@ -388,6 +389,49 @@ TEST(function_processing, package_assignment) {
 
     EXPECT_EQ(check_f,result);
 
+}
+
+
+TEST(function_processing, local_variable_scalar) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+
+            function integer compute();
+                int tmp;
+                tmp = 42;
+                compute = tmp;
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto functions = resource.get_functions();
+
+    EXPECT_EQ(functions.size(), 1);
+    EXPECT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+
+    auto lv = std::make_shared<HDL_parameter>("tmp");
+    lv->set_type(Type_engine::create_primitive_type("int"));
+    check_f.add_local_variable(lv);
+
+    auto s1 = std::make_shared<hdl_assignment_statement>();
+    s1->set_target("tmp");
+    s1->set_value(std::make_shared<Numeric_token>("42"));
+    check_f.add_statement(s1);
+
+    auto s2 = std::make_shared<hdl_assignment_statement>();
+    s2->set_target("compute");
+    s2->set_value(std::make_shared<Identifier_token>(qualified_identifier("tmp")));
+    check_f.add_statement(s2);
+
+    EXPECT_EQ(check_f, result);
 }
 
 
