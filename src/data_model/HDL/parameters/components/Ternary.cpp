@@ -17,6 +17,7 @@
 #include "data_model/HDL/parameters/components/Ternary.hpp"
 
 #include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
 
 CEREAL_REGISTER_TYPE(Ternary)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Ternary)

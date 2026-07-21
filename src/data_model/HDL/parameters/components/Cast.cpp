@@ -18,6 +18,7 @@
 #include "analysis/type_cast_engine.hpp"
 
 #include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
 
 CEREAL_REGISTER_TYPE(Cast)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Cast)
