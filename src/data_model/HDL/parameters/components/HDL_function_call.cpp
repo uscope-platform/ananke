@@ -19,7 +19,6 @@
 #include "analysis/loop_solver.hpp"
 
 #include <cereal/types/polymorphic.hpp>
-#include <cereal/archives/binary.hpp>
 #include <algorithm>
 
 

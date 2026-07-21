@@ -20,7 +20,6 @@
 #include <vector>
 #include <memory>
 
-#include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 

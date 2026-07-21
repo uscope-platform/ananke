@@ -94,7 +94,6 @@ std::optional<resolved_parameter> HDL_parameter::cast_result(
             }
         }
         if (t.get_signed() && !in->get_integer().get_signed()) {
-            int i = 0;
         }
     }
     return in;

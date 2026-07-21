@@ -21,8 +21,7 @@
 #include <stack>
 #include <string>
 
-#include "data_model/HDL/statement/hdl_function_statement.hpp"
-#include "data_model/HDL/statement/hdl_loop_statement.hpp"
+#include "data_model/HDL/statement/hdl_statements.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
 

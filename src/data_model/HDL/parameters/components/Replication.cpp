@@ -19,7 +19,6 @@
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 
 #include <cereal/types/polymorphic.hpp>
-#include <cereal/archives/binary.hpp>
 
 
 CEREAL_REGISTER_TYPE(Replication)

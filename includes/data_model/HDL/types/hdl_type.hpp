@@ -19,7 +19,6 @@
 
 #include <optional>
 #include <string>
-#include <map>
 
 #include "data_model/HDL/types/resolved_type.hpp"
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"

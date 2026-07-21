@@ -77,7 +77,7 @@ std::unordered_map<std::string, hdl_function_statement> HDL_Resource::get_functi
     std::unordered_map<std::string, hdl_function_statement> result;
     for (auto &stmt : statements) {
         auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
-        if (f) result[f->name] = *f;
+        if (f) result[f->get_name()] = *f;
     }
     return result;
 }
@@ -85,7 +85,7 @@ std::unordered_map<std::string, hdl_function_statement> HDL_Resource::get_functi
 hdl_function_statement HDL_Resource::get_function(const std::string &fname) {
     for (auto &stmt : statements) {
         auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
-        if (f && f->name == fname) return *f;
+        if (f && f->get_name() == fname) return *f;
     }
     return {};
 }
