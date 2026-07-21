@@ -16,6 +16,7 @@
 #ifndef ANANKE_HDL_STATEMENT_BASE_HPP
 #define ANANKE_HDL_STATEMENT_BASE_HPP
 
+#include <memory>
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 
 

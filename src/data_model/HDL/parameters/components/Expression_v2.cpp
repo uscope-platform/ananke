@@ -235,11 +235,11 @@ std::variant<hdl_integer, double> Expression_v2::evaluate_binary_expression(reso
         else result_d = d_a / d_b;
     }else if(operation == modulo){
         if(int_exec) result_i =i_a % i_b;
-        spdlog::warn("The modulus operator is only defined between integers");
+        else spdlog::warn("The modulus operator is only defined between integers");
         result_d = 0;
     }else if(operation == logic_shift_left){
         if(int_exec) result_i =i_a << i_b;
-        spdlog::warn("The shift operator is only defined between integers");
+        else spdlog::warn("The shift operator is only defined between integers");
         result_d = 0;
     }else if(operation == logic_shift_right){
         if(int_exec) {
@@ -255,11 +255,11 @@ std::variant<hdl_integer, double> Expression_v2::evaluate_binary_expression(reso
         return 0;
     } else if(operation == arithmetic_shift_left){
         if(int_exec) result_i =i_a << i_b;
-        spdlog::warn("The shift operator is only defined between integers");
+        else spdlog::warn("The shift operator is only defined between integers");
         result_d = 0;
     } else if(operation == arithmetic_shift_right){
         if(int_exec) result_i =i_a >> i_b;
-        spdlog::warn("The shift operator is only defined between integers");
+        else spdlog::warn("The shift operator is only defined between integers");
         result_d = 0;
     }else if(operation == greater){
         if(int_exec) result_i =i_a > i_b;

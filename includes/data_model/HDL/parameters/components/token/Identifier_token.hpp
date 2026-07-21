@@ -16,7 +16,7 @@
 #ifndef ANANKE_IDENTIFIER_TOKEN_HPP
 #define ANANKE_IDENTIFIER_TOKEN_HPP
 
-
+#include <bitset>
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 
 #include <cereal/types/vector.hpp>
