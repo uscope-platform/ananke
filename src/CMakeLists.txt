@@ -56,6 +56,7 @@ target_sources(ananke_lib
     data_model/HDL/parameters/components/HDL_function_call.cpp
     data_model/HDL/statement/hdl_instance_statement.cpp
     data_model/HDL/statement/hdl_loop_statement.cpp
+    data_model/HDL/statement/hdl_conditional_statement.cpp
     data_model/HDL/statement/hdl_statement_base.cpp
     data_model/HDL/statement/hdl_instance_statement.cpp
     data_model/HDL/statement/hdl_assignment_statement.cpp
