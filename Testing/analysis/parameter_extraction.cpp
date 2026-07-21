@@ -4942,3 +4942,57 @@ TEST(parameter_extraction, wide_int_parameter) {
 
     ASSERT_EQ(res, param.get_integer());
 }
+
+
+
+TEST(parameter_extraction, function_with_variables) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+
+            function integer compute();
+                int tmp;
+                tmp = 42;
+                compute = tmp;
+            endfunction
+
+            parameter integer TEST_PARAM = compute();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto functions = resource.get_functions();
+
+    EXPECT_EQ(functions.size(), 1);
+    EXPECT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+
+    auto lv = std::make_shared<HDL_parameter>("tmp");
+    lv->set_type(Type_engine::create_primitive_type("int"));
+    check_f.add_local_variable(lv);
+
+    auto s1 = std::make_shared<hdl_assignment_statement>();
+    s1->set_target("tmp");
+    s1->set_value(std::make_shared<Numeric_token>("42"));
+    check_f.add_statement(s1);
+
+    auto s2 = std::make_shared<hdl_assignment_statement>();
+    s2->set_target("compute");
+    s2->set_value(std::make_shared<Identifier_token>(qualified_identifier("tmp")));
+    check_f.add_statement(s2);
+
+    EXPECT_EQ(check_f, result);
+
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+
+    qualified_identifier sid = qualified_identifier("TEST_PARAM");
+    EXPECT_EQ(defaults[sid], 42);
+
+}
