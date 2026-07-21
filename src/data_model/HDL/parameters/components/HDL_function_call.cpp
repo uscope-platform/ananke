@@ -62,12 +62,12 @@ void HDL_function_call::propagate_function(const hdl_function_statement &def) {
     }
 }
 
-static void walk_body(
-    std::vector<hdl_integer> &values,
-    std::vector<int64_t> &value_sizes,
+void HDL_function_call::walk_body(
     const std::string &fcn_name,
     const std::vector<std::shared_ptr<hdl_statement_base>> &stmts,
-    std::map<qualified_identifier, resolved_parameter> ctx
+    std::map<qualified_identifier, resolved_parameter> ctx,
+    std::map<int64_t, hdl_integer> &value_map,
+    std::map<int64_t, int64_t> &size_map
 ) {
     for (const auto &stmt : stmts) {
         if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
@@ -75,20 +75,18 @@ static void walk_body(
             auto val = asgn->get_value()->evaluate(ctx);
             if (!val.has_value()) continue;
             if (asgn->get_target() == fcn_name) {
-                int64_t idx_val = 0;
+                int64_t idx = 0;
                 if (asgn->get_index()) {
                     auto idx_res = asgn->get_index()->evaluate(ctx);
                     if (!idx_res.has_value() || !idx_res.value().is_integer()) continue;
-                    idx_val = idx_res.value().get_integer().get_value();
+                    idx = idx_res.value().get_integer().get_value();
                 }
-                if (idx_val >= 0 && static_cast<size_t>(idx_val) < values.size()) {
-                    if (val.value().is_integer()) {
-                        values[idx_val] = val.value().get_integer();
-                        value_sizes[idx_val] = val.value().get_integer().get_size();
-                    } else if (val.value().is_int_array()) {
-                        values[idx_val] = val.value().get_int_array().get_1d_slice({0, 0})[0];
-                        value_sizes[idx_val] = 0;
-                    }
+                if (val.value().is_integer()) {
+                    value_map[idx] = val.value().get_integer();
+                    size_map[idx] = val.value().get_integer().get_size();
+                } else if (val.value().is_int_array()) {
+                    value_map[idx] = val.value().get_int_array().get_1d_slice({0, 0})[0];
+                    size_map[idx] = 0;
                 }
             } else {
                 ctx[qualified_identifier(asgn->get_target())] = val.value();
@@ -99,7 +97,7 @@ static void walk_body(
             for (auto &idx : indices) {
                 auto loop_ctx = ctx;
                 loop_ctx[loop_var] = resolved_parameter(idx);
-                walk_body(values, value_sizes, fcn_name, loop->get_body(), loop_ctx);
+                walk_body(fcn_name, loop->get_body(), loop_ctx, value_map, size_map);
             }
         }
     }
@@ -111,51 +109,32 @@ std::optional<resolved_parameter> HDL_function_call::evaluate(const std::map<qua
     }
     if (body.empty()) return std::nullopt;
 
-    if (body.size() == 1) {
-        auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(body[0]);
-        if (asgn && asgn->get_target() == function_name && !asgn->get_index()) {
-            auto raw_value = asgn->get_value()->evaluate(context);
-            if (!raw_value) return std::nullopt;
-            if (packing) {
-                if (!raw_value.value().is_int_array()) return raw_value;
-                auto components = raw_value.value().get_int_array().get_1d_slice({0, 0});
-                auto size = asgn->get_value()->get_size();
-                std::vector<int64_t> packing_sizes(components.size(), size);
-                return pack_values(components, packing_sizes);
-            }
-            return raw_value;
-        }
-    }
+    std::map<int64_t, hdl_integer> value_map;
+    std::map<int64_t, int64_t> size_map;
+    walk_body(function_name, body, context, value_map, size_map);
 
-    size_t max_idx = 0;
-    for (const auto &stmt : body) {
-        if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
-            if (asgn->get_target() != function_name) continue;
-            if (asgn->get_index()) {
-                auto idx_res = asgn->get_index()->evaluate(context);
-                if (idx_res.has_value() && idx_res.value().is_integer())
-                    max_idx = std::max(max_idx, static_cast<size_t>(idx_res.value().get_integer().get_value() + 1));
-            } else {
-                max_idx = std::max(max_idx, static_cast<size_t>(1));
-            }
-        } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
-            auto indices = loop_solver::solve_loop(*loop, context);
-            if (!indices.empty())
-                max_idx = std::max(max_idx, static_cast<size_t>(indices.back().get_value() + 1));
-        }
-    }
+    if (value_map.empty()) return std::nullopt;
 
-    if (max_idx == 0) return std::nullopt;
+    size_t max_idx = static_cast<size_t>(value_map.rbegin()->first) + 1;
     std::vector<hdl_integer> values(max_idx);
-    std::vector<int64_t> value_sizes(max_idx);
-    walk_body(values, value_sizes, function_name, body, context);
+    std::vector<int64_t> sizes(max_idx);
+    for (auto &[idx, val] : value_map) {
+        if (idx >= 0 && static_cast<size_t>(idx) < max_idx) {
+            values[idx] = val;
+            sizes[idx] = size_map[idx];
+        }
+    }
 
-    apply_return_order_reversal(values, value_sizes, context);
+    if (values.size() == 1) {
+        return resolved_parameter(values[0]);
+    }
+
+    apply_return_order_reversal(values, sizes, context);
 
     mdarray<hdl_integer> result;
     result.set_1d_slice({0, 0}, values);
     if (packing) {
-        result.set_1d_slice({0,0}, {pack_values(values, value_sizes)});
+        result.set_1d_slice({0,0}, {pack_values(values, sizes)});
     }
     return result;
 }
