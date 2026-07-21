@@ -134,13 +134,13 @@ public:
     void set_range(HDL_range r) {
         range = r;
     }
-    void add_relication_size(const std::string &ec) {
+    void add_replication_size(const std::string &ec) {
         auto tok = sv_parsing_helpers::make_value(ec);
         if (!replication.size.get_lhs()) {
             replication.size.set_lhs(tok);
         }
     }
-    void add_relication_target(const std::string &ec) {
+    void add_replication_target(const std::string &ec) {
         auto tok = sv_parsing_helpers::make_value(ec);
         if (!replication.target.get_lhs()) {
             replication.target.set_lhs(tok);

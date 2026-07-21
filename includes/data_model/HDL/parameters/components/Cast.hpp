@@ -17,8 +17,7 @@
 #ifndef ANANKE_CAST_HPP
 #define ANANKE_CAST_HPP
 
-#include "analysis/type_cast_engine.hpp"
-#include <spdlog/spdlog.h>
+
 #include "Expression_base.hpp"
 
 class Cast : public Expression_base{

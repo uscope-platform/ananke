@@ -13,10 +13,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+#include <spdlog/spdlog.h>
 #include "data_model/HDL/parameters/components/Cast.hpp"
+#include "analysis/type_cast_engine.hpp"
 
 #include <cereal/types/polymorphic.hpp>
-#include <cereal/archives/binary.hpp>
 
 CEREAL_REGISTER_TYPE(Cast)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Cast)

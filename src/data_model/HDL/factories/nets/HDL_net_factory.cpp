@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "data_model/HDL/factories/nets/HDL_net_factory.hpp"
+#include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 
 void HDL_net_factory::new_net(const std::string &name) {
     if(!current_net.get_name().empty() && !is_in_concatenation()|| current_net.is_array() || current_net.is_replication()) {
@@ -38,7 +39,6 @@ void HDL_net_factory::close_range() {
     current_net.set_range(range_factory.get_range());
 }
 
-#include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 
 void HDL_net_factory::add_component(const std::string &c) {
     auto tok = sv_parsing_helpers::make_value(c);
@@ -119,5 +119,5 @@ void HDL_net_factory::add_index_component(const std::string &c) {
 }
 
 void HDL_net_factory::add_replication_size(const std::string &c) {
-    current_net.add_relication_size(c);
+    current_net.add_replication_size(c);
 }

@@ -160,7 +160,6 @@ std::string Concatenation::print()  const{
         if (i<components.size()-1) oss <<", ";
     }
     oss <<"}\n";
-    auto dbg =  oss.str();
     return oss.str();
 }
 

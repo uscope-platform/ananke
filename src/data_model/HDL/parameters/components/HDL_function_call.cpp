@@ -24,7 +24,6 @@
 
 
 CEREAL_REGISTER_TYPE(HDL_function_call)
-
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, HDL_function_call)
 
 void HDL_function_call::add_argument(const std::shared_ptr<Expression_base> &p) {
@@ -45,7 +44,7 @@ parameter_deps_t HDL_function_call::get_dependencies() const {
 
 
 void HDL_function_call::propagate_function(const hdl_function_statement &def) {
-    if(def.name == function_name) {
+    if(def.get_name() == function_name) {
         body.clear();
         for (const auto &stmt : def.get_body())
             body.push_back(stmt->clone());

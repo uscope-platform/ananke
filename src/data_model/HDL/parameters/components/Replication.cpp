@@ -23,7 +23,6 @@
 
 
 CEREAL_REGISTER_TYPE(Replication)
-
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Replication)
 
 

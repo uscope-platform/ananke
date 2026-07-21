@@ -13,8 +13,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef ANANKE_PARAMETER_VALUE_BASE_HPP
-#define ANANKE_PARAMETER_VALUE_BASE_HPP
+#ifndef ANANKE_EXPRESSION_BASE_HPP
+#define ANANKE_EXPRESSION_BASE_HPP
 
 #include <string>
 #include <vector>

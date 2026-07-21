@@ -61,8 +61,8 @@ public:
 
     friend void PrintTo(const hdl_function_statement& s, std::ostream* os);
 
-    std::string name;
 private:
+    std::string name;
     std::vector<std::string> argument_names;
     std::string return_type_name;
     std::shared_ptr<Expression_base> return_unpacked_range_left;

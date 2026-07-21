@@ -18,7 +18,6 @@
 
 #include <string>
 #include <nlohmann/json.hpp>
-#include <spdlog/spdlog.h>
 
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"

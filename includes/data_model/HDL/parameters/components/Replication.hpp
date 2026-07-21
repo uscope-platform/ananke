@@ -65,9 +65,6 @@ public:
         ar(repetition_size, repeated_item);
     }
     bool isEqual(const Expression_base &other) const override{
-        // Clangd error "No viable conversion" usually means:
-        // 1. The compiler thinks 'other' isn't a Parameter_value_base (check headers)
-        // 2. Replication isn't fully defined yet.
 
         const auto& rhs = static_cast<const Replication&>(other);
         bool res = true;

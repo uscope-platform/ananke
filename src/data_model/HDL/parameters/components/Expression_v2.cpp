@@ -15,7 +15,6 @@
 
 #include <sstream>
 #include <cereal/types/polymorphic.hpp>
-#include <cereal/archives/binary.hpp>
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"

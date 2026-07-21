@@ -16,6 +16,7 @@
 #define ANANKE_SCOPE_HPP
 
 #include <cstdint>
+#include "data_model/HDL/parameters/common/hdl_integer.hpp"
 
 struct scope_data {
     hdl_integer buffer_address = 0;

@@ -13,8 +13,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef ANANKE_HDL_INSTANCE_AST_HPP
-#define ANANKE_HDL_INSTANCE_AST_HPP
+#ifndef ANANKE_HDL_AST_NODE_HPP
+#define ANANKE_HDL_AST_NODE_HPP
 
 #include <vector>
 #include <memory>
@@ -30,11 +30,6 @@
 #include "data_model/documentation/channel_group.hpp"
 #include "data_model/documentation/processor_instance.hpp"
 
-#include <cereal/archives/binary.hpp>
-#include <cereal/types/unordered_map.hpp>
-#include <cereal/types/vector.hpp>
-#include <cereal/types/array.hpp>
-#include <cereal/types/memory.hpp>
 
 class hdl_instance_statement;
 
@@ -175,4 +170,4 @@ private:
 };
 
 
-#endif //ANANKE_HDL_INSTANCE_AST_HPP
+#endif //ANANKE_HDL_AST_NODE_HPP

@@ -61,7 +61,6 @@ std::optional<resolved_parameter> HDL_parameter::evaluate(const std::map<qualifi
     if (!type) return std::nullopt;
     std::optional<resolved_type> container_size;
     if (type->is<HDL_external_type>()) {
-        int i = 0;
     } else {
         container_size = type->evaluate_type(context);
     }

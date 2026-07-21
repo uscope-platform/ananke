@@ -24,10 +24,11 @@ CEREAL_REGISTER_TYPE(hdl_function_statement)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_function_statement)
 
 bool hdl_function_statement::is_scalar() const {
+    auto assignment = std::dynamic_pointer_cast<hdl_assignment_statement>(body[0]);
     return body.size() == 1
-        && std::dynamic_pointer_cast<hdl_assignment_statement>(body[0]) != nullptr
-        && std::dynamic_pointer_cast<hdl_assignment_statement>(body[0])->get_target() == name
-        && std::dynamic_pointer_cast<hdl_assignment_statement>(body[0])->get_index() == nullptr;
+        && assignment != nullptr
+        && assignment->get_target() == name
+        && assignment->get_index() == nullptr;
 }
 
 parameter_deps_t hdl_function_statement::get_dependencies() const {
