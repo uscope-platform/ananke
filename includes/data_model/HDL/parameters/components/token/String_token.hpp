@@ -32,7 +32,6 @@ public:
     void propagate_function(const hdl_function_statement &def) override {}
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
     std::string print() const override;
-    int64_t get_size() override {return 0;}
 
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override {}
 

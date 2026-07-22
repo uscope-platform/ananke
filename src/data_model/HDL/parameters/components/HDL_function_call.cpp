@@ -242,11 +242,6 @@ std::string HDL_function_call::print() const {
     return result.str();
 }
 
-int64_t HDL_function_call::get_size() {
-    return 0;
-}
-
-
 bool HDL_function_call::empty() const {
     return function_name.empty();
 }

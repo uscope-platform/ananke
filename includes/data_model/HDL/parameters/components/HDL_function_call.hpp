@@ -50,7 +50,6 @@ public:
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
 
     std::string print() const override;
-    int64_t get_size() override;
 
     [[nodiscard]] bool empty() const;
 

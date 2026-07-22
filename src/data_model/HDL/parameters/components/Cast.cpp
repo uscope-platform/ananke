@@ -82,7 +82,9 @@ std::optional<resolved_parameter> Cast::evaluate(const std::map<qualified_identi
         auto raw_value = content_val.value().get_integer();
         auto cast_size = raw_cast_size.value().get_integer().get_value();
         int64_t mask = (1ULL << cast_size) - 1;
-        return raw_value &  mask;
+        auto result = raw_value & mask;
+        result.set_size(cast_size);
+        return result;
     }
         return std::nullopt;
 }
@@ -101,10 +103,6 @@ void Cast::propagate_expression(const qualified_identifier &constant_id,
     if (size) size->propagate_expression(constant_id, value);
 }
 
-int64_t Cast::get_size() {
-    if (!size) return 0;
-    return size->evaluate({}).value().get_integer().get_value();
-}
 
 
 void Cast::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {

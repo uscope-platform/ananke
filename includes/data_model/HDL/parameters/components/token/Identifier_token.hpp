@@ -38,7 +38,6 @@ public:
     bool is_subscripted() const {return !array_index.empty();}
 
     std::string print() const override;
-    int64_t get_size() override {return 0;}
 
     friend bool operator==(const Identifier_token &lhs, const Identifier_token &rhs);
 

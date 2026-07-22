@@ -104,9 +104,10 @@ std::optional<resolved_parameter> Replication::evaluate(const std::map<qualified
         }
     } else if (!repeated_item->is<Expression_v2>() && !repeated_item->is<Concatenation>()){
         auto item = repeated_item->evaluate(context);
-        int64_t repeated_size = repeated_item->get_size();
         if (!item.has_value()) return false;
         if (!item.value().is_integer()) throw std::runtime_error("Tried to replicate non integer");
+        int64_t repeated_size = repeated_item->get_size();
+        if (repeated_size <= 0) repeated_size = item.value().get_integer().get_size();
         if (!packing) {
             repeated_value = std::vector(size, item.value().get_integer());
         } else {

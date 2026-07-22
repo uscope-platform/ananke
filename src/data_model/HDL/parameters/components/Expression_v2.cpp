@@ -129,15 +129,6 @@ bool operator==(const Expression_v2 &lhs, const Expression_v2 &rhs) {
     return lhs.operation == rhs.operation;
 }
 
-int64_t Expression_v2::get_size() {
-    auto expression_value = evaluate({});
-    if(expression_value.has_value()) {
-        if(expression_value.value().is_integer())
-            return expression_value.value().get_integer().get_size();
-    }
-    return 0;
-}
-
 parameter_deps_t Expression_v2::get_dependencies() const {
     parameter_deps_t deps;
     if (lhs) {
