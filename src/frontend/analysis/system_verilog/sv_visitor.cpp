@@ -1071,7 +1071,12 @@ void sv_visitor::exitFunction_declaration(sv2017::Function_declarationContext *c
             }
         }
     }
-    modules_factory.add_function( f_factory.get_function());
+    auto func = f_factory.get_function();
+    if (modules_factory.is_current_valid()) {
+        modules_factory.add_function(func);
+    } else {
+        entities.push_back(std::make_shared<hdl_function_statement>(func));
+    }
 }
 
 void sv_visitor::enterLoop_statement(sv2017::Loop_statementContext *ctx) {

@@ -65,6 +65,7 @@ public:
     std::optional<Script> get_script(std::string& name);
     std::optional<DataFile> get_data_file(const std::string& name);
     std::optional<Constraints> get_constraint(const std::string& name);
+    std::optional<hdl_function_statement> get_standalone_function(const std::string &name, const std::string &source_path);
     // OLD IF
 
     void remove_stale_info(const std::filesystem::path& p);

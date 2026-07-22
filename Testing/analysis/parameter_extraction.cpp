@@ -4990,34 +4990,95 @@ TEST(parameter_extraction, function_with_variables) {
 
 }
 
-TEST(parameter_extraction, top_level_function) {
+TEST(parameter_extraction, concat_and_assignment_in_function ) {
     auto test_pattern = R"(
 
 
-        function [15:0] get_axis_metadata (input [4:0] size,input is_signed, input is_float);
-        reg [3:0] biased_size;
-        begin
-            biased_size = size -8;
-            get_axis_metadata = { 10'h0, is_float, is_signed, biased_size};
-        end
-        endfunction
+
 
         module test_mod #(
         )();
-
+           function [15:0] get_axis_metadata (input [4:0] size,input is_signed, input is_float);
+            reg [3:0] biased_size;
+            begin
+                biased_size = size -8;
+                get_axis_metadata = { 10'h0, is_float, is_signed, biased_size};
+            end
+            endfunction
             localparam TEST_PARAM = get_axis_metadata(18, 1, 0);
         endmodule
     )";
 
     sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern);
 
-    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).get_content()[0]);
-    auto functions = resource->get_functions();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
 
-    parameter_solver::propagate_functions(resource, nullptr);
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
+
+
+    parameter_solver::propagate_functions(resource, d_store);
     auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     EXPECT_EQ(defaults[sid], 26);
 
+}
+
+
+TEST(parameter_extraction, top_level_function_simple) {
+    auto test_pattern = R"(
+        function integer calc();
+            calc = 77;
+        endfunction
+
+        module test_mod #(
+        )();
+            localparam TEST_PARAM = calc();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern);
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
+    auto functions = resource->get_functions();
+
+    parameter_solver::propagate_functions(resource, d_store);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    qualified_identifier sid = qualified_identifier("TEST_PARAM");
+    EXPECT_EQ(defaults[sid], 77);
+}
+
+
+TEST(parameter_extraction, top_level_function_with_args) {
+    auto test_pattern = R"(
+        function integer add(input integer a, input integer b);
+            add = a + b;
+        endfunction
+
+        module test_mod #(
+        )();
+            localparam TEST_PARAM = add(5, 7);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern);
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
+
+    parameter_solver::propagate_functions(resource, d_store);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    qualified_identifier sid = qualified_identifier("TEST_PARAM");
+    EXPECT_EQ(defaults[sid], 12);
 }

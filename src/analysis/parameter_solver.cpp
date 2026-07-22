@@ -230,9 +230,21 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
                     return;
                 }
                 auto fcn_def = res.value()->get_function(fcn.get_name());
-                param->propagate_function(fcn_def);
+                if (!fcn_def) {
+                    spdlog::critical("Function {}::{}, not found in the specified package",fcn.get_package_prefix().back(), fcn.get_name());
+                    continue;
+                }
+                param->propagate_function(fcn_def.value());
             } else {
-                param->propagate_function(resource->get_function(fcn.get_name()));
+                if (auto local_fcn = resource->get_function(fcn.get_name())) {
+                    param->propagate_function(local_fcn.value());
+                } else {
+                    std::string path;
+                    d_store->get_HDL_resource(resource->getName(), path);
+                    auto standalone_function = d_store->get_standalone_function(fcn.get_name(), path);
+                    if (standalone_function) param->propagate_function(standalone_function.value());
+                }
+
             }
         }
 

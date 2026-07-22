@@ -82,7 +82,7 @@ public:
         statements.push_back(std::make_shared<hdl_function_statement>(f));
     }
     std::unordered_map<std::string, hdl_function_statement> get_functions();
-    hdl_function_statement get_function(const std::string &fname);
+    std::optional<hdl_function_statement> get_function(const std::string &fname);
 
     void set_documentation(module_documentation &d) { doc = d; }
     module_documentation get_documentation() const { return doc; }

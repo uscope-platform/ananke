@@ -1459,6 +1459,11 @@ TEST(parameter_processing, override_after_function_localparam) {
         parameter INITIAL_STOPPED_STATE = 52
     )();
 
+        function core_addr_init_t ADDR_CALC();
+                CORE_ADDR_CALC[0] = 10;
+                CORE_ADDR_CALC[1] = 20;
+        endfunction
+
         localparam [31:0] AXI_ADDRESSES [1:0] = ADDR_CALC();
 
         PwmControlUnit #(

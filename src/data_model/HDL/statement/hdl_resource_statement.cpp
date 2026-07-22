@@ -107,12 +107,12 @@ std::unordered_map<std::string, hdl_function_statement> hdl_resource_statement::
     return result;
 }
 
-hdl_function_statement hdl_resource_statement::get_function(const std::string &fname) {
+std::optional<hdl_function_statement> hdl_resource_statement::get_function(const std::string &fname) {
     for (auto &stmt : statements) {
         auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
         if (f && f->get_name() == fname) return *f;
     }
-    return {};
+    return std::nullopt;
 }
 
 void hdl_resource_statement::set_parameters(Parameters_map p) {

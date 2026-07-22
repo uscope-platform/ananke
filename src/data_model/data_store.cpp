@@ -103,6 +103,18 @@ std::optional<Constraints> data_store::get_constraint(const std::string &name) {
     return std::nullopt;
     }
 
+std::optional<hdl_function_statement> data_store::get_standalone_function(const std::string &name, const std::string &source_path) {
+    if (!cache.contains(source_path)) return std::nullopt;
+    auto &file = cache.at(source_path);
+    if (!std::holds_alternative<hdl_file>(file.content)) return std::nullopt;
+    for (auto &stmt : std::get<hdl_file>(file.content).get_content()) {
+        auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
+        if (f && f->get_name() == name) return *f;
+    }
+    return std::nullopt;
+}
+
+
 
 
 
