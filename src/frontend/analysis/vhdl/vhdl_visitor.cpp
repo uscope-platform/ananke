@@ -32,7 +32,7 @@ void vhdl_visitor::enterEntity_declaration(mgp_vh::vhdlParser::Entity_declaratio
 void vhdl_visitor::exitArchitecture_body(mgp_vh::vhdlParser::Architecture_bodyContext *ctx) {
     std::string name = ctx->name()->getText();
     for(auto &item:entities){
-        if(item->as<hdl_resource_statement>().getName() == name){
+        if(item->is<hdl_resource_statement>() && item->as<hdl_resource_statement>().getName() == name){
             for (auto &stmt : statement_map[item->as<hdl_resource_statement>().getName()]) {
                 item->as<hdl_resource_statement>().add_statement(stmt);
             }

@@ -82,8 +82,10 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
                 auto analysis_result = analyzer.analyze(target, file.view());
                 std::unordered_map<std::string, std::string> res_map;
                 for (auto &res:analysis_result.get_content()) {
-
-                    res_map.insert({res->as<hdl_resource_statement>().getName(), target});
+                    std::string statement_id;
+                    if (res->is<hdl_resource_statement>()) statement_id = res->as<hdl_resource_statement>().getName();
+                    else if (res->is<hdl_function_statement>()) statement_id = res->as<hdl_function_statement>().get_name();
+                    res_map.insert({statement_id, target});
                 }
                 return res_map;
             } catch (std::runtime_error &err) {

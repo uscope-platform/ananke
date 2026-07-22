@@ -52,13 +52,13 @@ hdl_file sv_analyzer::analyze(const std::string &path, const std::string_view &f
 
     auto modules_doc = doc.get_modules_documentation();
     for(auto &e: result.get_content()){
-        e->as<hdl_resource_statement>().set_documentation(modules_doc[e->as<hdl_resource_statement>().getName()]);
+        if (e->is<hdl_resource_statement>()) e->as<hdl_resource_statement>().set_documentation(modules_doc[e->as<hdl_resource_statement>().getName()]);
     }
 
     auto procs = doc.get_processors_documentation();
     for(auto &item: procs){
         for(auto &e:result.get_content()){
-            if(e->as<hdl_resource_statement>().getName() == item.first){
+            if( e->is<hdl_resource_statement>() && e->as<hdl_resource_statement>().getName() == item.first){
                 e->as<hdl_resource_statement>().add_processor_doc(item.second);
             }
         }
@@ -69,7 +69,7 @@ hdl_file sv_analyzer::analyze(const std::string &path, const std::string_view &f
         std::string entity = item.first.substr(0, item.first.find("."));
         std::string scope_instance = item.first.substr(item.first.find(".")+1, item.first.size());
         for(auto &e:result.get_content()){
-            if(e->as<hdl_resource_statement>().getName() == entity){
+            if(e->is<hdl_resource_statement>() && e->as<hdl_resource_statement>().getName() == entity){
                 for (auto &stmt : e->as<hdl_resource_statement>().get_statements()) {
                     auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(stmt);
                     if (inst && inst->get_name() == scope_instance) {
