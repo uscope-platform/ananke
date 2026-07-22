@@ -43,8 +43,7 @@ protected:
         mod_entity.add_statement(s4);
 
         std::vector entities ={mod_entity};
-        d_store->store_hdl_entity(entities, "", "");
-
+        d_store->store_file({"test/mod.sv", "file_hash", entities});
         DataFile D("test_mem_init", "test/mem_init.mem");
         d_store->store_data_file({D}, "", "");
         HDL_Resource expl_dep;
@@ -52,19 +51,19 @@ protected:
         expl_dep.set_path("test/explicit/dep.sv");
         expl_dep.set_type(module);
         entities ={expl_dep};
-        d_store->store_hdl_entity(entities, "", "");
+        d_store->store_file({"test/explicit/dep.sv", "file_hash", entities});
         HDL_Resource dep_entity;
         dep_entity.set_name("test_dep");
         dep_entity.set_path("test/dep.sv");
         dep_entity.set_type(module);
         entities ={dep_entity};
-        d_store->store_hdl_entity(entities, "", "");
+        d_store->store_file({"test/dep.sv", "file_hash", entities});
         HDL_Resource pkg_entity;
         pkg_entity.set_name("test_package");
         pkg_entity.set_path("test/pkg.sv");
         pkg_entity.set_type(package);
         entities ={pkg_entity};
-        d_store->store_hdl_entity(entities, "", "");
+        d_store->store_file({"test/pkg.sv", "file_hash", entities});
     }
 
     virtual void TearDown() {

@@ -22,8 +22,8 @@ Dependency_resolver_v2::Dependency_resolver_v2(const std::vector<std::shared_ptr
     d_store = std::move(store);
     for(auto &a:AST){
         solve_dep(a);
-        auto path = d_store->get_HDL_resource(a->get_type()).get_path();
-        modules.insert(path);
+        auto opt = d_store->get_HDL_resource(a->get_type());
+        if (opt.has_value()&& !opt.value().get_path().empty()) modules.insert(opt.value().get_path());
     }
 
 }
@@ -45,11 +45,8 @@ void Dependency_resolver_v2::solve_dep(std::shared_ptr<hdl_ast_node> &i) {
     auto type = i->get_type();
 
     for(auto &dep:i->get_dependencies()){
-        if(d_store->contains_hdl_entity(dep->get_type())){
-
-            auto path = d_store->get_HDL_resource(dep->get_type()).get_path();
-            if(!path.empty()) modules.insert(path);
-        }
+        auto opt = d_store->get_HDL_resource(dep->get_type());
+        if (opt.has_value() && !opt.value().get_path().empty()) modules.insert(opt.value().get_path());
         solve_dep(dep);
     }
 

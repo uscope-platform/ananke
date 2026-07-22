@@ -67,10 +67,13 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
 
             if(working_instance->get_dependency_class() == module || working_instance->get_dependency_class() == interface ) {
 
-                if (!d_store->contains_hdl_entity(type)) {
-                    std::cerr << "ERROR:\n HDL entity: " + type + " Not found\n";
+                auto res_opt = d_store->get_HDL_resource(type);
+
+                if (!res_opt.has_value()) {
+                    spdlog::error("Definition of module {} while AST building", type);
+                    continue;
                 }
-                auto res = d_store->get_HDL_resource(type);
+                auto res = res_opt.value();
                 crash_ctx.set(type, res.get_path());
 
                 spdlog::trace("Processing dependency {} in module {}",working_instance->get_name(), type);
@@ -99,7 +102,12 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                             working_instance->add_child(child);
                             child_wo.push_back({child, current_param_values, wo.path + "." + working_instance->get_name(), interfaces_map});
                         } else if (dc == package) {
-                            auto path = d_store->get_HDL_resource(inst->get_type()).get_path();
+                            auto pkg = d_store->get_HDL_resource(inst->get_type());
+                            if (!pkg.has_value()) {
+                                spdlog::error("Definition of package {} while AST building", inst->get_type());
+                                continue;
+                            }
+                            auto path = pkg.value().get_path();
                             working_instance->add_package_dependency(path);
                         } else if (dc == memory_init) {
                             auto path = d_store->get_data_file(inst->get_type()).get_path();

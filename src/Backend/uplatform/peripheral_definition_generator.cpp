@@ -30,7 +30,12 @@ peripheral_definition_generator::peripheral_definition_generator(std::shared_ptr
         if(!current_node->get_address().empty()){
             processed_peripherals.insert(current_node->get_type());
             auto parameters = current_node->get_parameters();
-            generate_peripheral(d_store->get_HDL_resource(current_node->get_type()), parameters, current_node->get_name());
+            auto periph = d_store->get_HDL_resource(current_node->get_type());
+            if (!periph.has_value()) {
+                spdlog::error("Definition of module {} while generating peripheral definitions", current_node->get_type());
+                continue;
+            }
+            generate_peripheral(periph.value(), parameters, current_node->get_name());
         }
         if(current_node->get_proxy_ast() != nullptr){
             peripheral_definition_generator proxy_gen(d, current_node->get_proxy_ast());

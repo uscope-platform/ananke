@@ -50,7 +50,11 @@ TEST( bus_analysis, simple_bus_analysis) {
 
                 analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
                 auto resources = analyzer.analyze(prefix, test_file.view());
-                d_store->store_hdl_entity(resources, "", "");
+                d_store->store_file({
+                    f.path(),
+                    "file_hash",
+                    resources
+                });
             }
         }
     }

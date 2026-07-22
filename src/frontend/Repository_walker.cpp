@@ -79,7 +79,6 @@ void Repository_walker::collect_analysis_results() {
         if (resource) {
             for (auto &res: resource.value())
                 d_store->store_file({path, file_hash, std::vector{res}});
-            d_store->store_hdl_entity(resource.value(), file_hash, path);
         }
     }
     for(auto &f : scripts_futures){
@@ -87,7 +86,6 @@ void Repository_walker::collect_analysis_results() {
         if (resource) {
             for (auto &res: resource.value())
                 d_store->store_file({path, file_hash, res});
-            d_store->store_script(resource.value(), file_hash, path);
         }
     }
     for(auto &f : constraints_futures){
@@ -173,26 +171,26 @@ void Repository_walker::analyze_file(std::filesystem::path &file) {
 
     spdlog::trace("Analizing file: {}", file.string());
     if(file_is_verilog(file)){
-        auto old_hash = d_store->get_hdl_entity_hash(file).value_or("");
+        auto old_hash = d_store->get_hash(file);
         hdl_futures.push_back(pool.submit(analyze_verilog, file, default_includes, old_hash));
         working_threads++;
     } else if(file_is_script(file)){
         std::set<std::string> includes;
-        auto old_hash = d_store->get_script_hash(file).value_or("");
+        auto old_hash = d_store->get_hash(file);
         scripts_futures.push_back(pool.submit(analyze_script, file, includes, old_hash));
         working_threads++;
     } else if(file_is_vhdl(file)){
-        auto old_hash = d_store->get_hdl_entity_hash(file).value_or("");
+        auto old_hash = d_store->get_hash(file);
         hdl_futures.push_back(pool.submit(analyze_vhdl, file, default_includes, old_hash));
         working_threads++;
     } else if(file_is_constraint(file)){
         std::set<std::string> includes;
-        auto old_hash = d_store->get_constraint_hash(file).value_or("");
+        auto old_hash = d_store->get_hash(file);
         constraints_futures.push_back(pool.submit(analyze_constraint, file, includes, old_hash));
         working_threads++;
     } else if(file_is_data(file)){
         std::set<std::string> includes;
-        auto old_hash = d_store->get_data_file_hash(file).value_or("");
+        auto old_hash = d_store->get_hash(file);
         data_futures.push_back(pool.submit(analyze_data, file, includes, old_hash));
         working_threads++;
     }

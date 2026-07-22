@@ -45,7 +45,7 @@ TEST( periph_def_generation , generate_periph_def) {
                 sv_analyzer analyzer;
 
                 auto resources = analyzer.analyze(f.path(), test_file.view());
-                d_store->store_hdl_entity(resources, "", "");
+                d_store->store_file({f.path(), "file_hash", resources});
             }
         }
     }

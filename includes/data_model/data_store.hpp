@@ -54,30 +54,23 @@ public:
     data_store(bool e, std::string cache_dir_path);
     // NEW IF
     void store_file(const source_file &file);
+    void evict_file(const std::string &file);
     template<typename T> std::optional<T> get_file(const std::string &name) const;
-    [[nodiscard]] std::optional<std::string> get_hash(const std::string &name) const;
+    [[nodiscard]] std::string get_hash(const std::string &name) const;
     bool contains(const std::string &name)const;
-    // OLD IF
-    HDL_Resource get_HDL_resource(const std::string& name);
-    void store_hdl_entity(std::vector<HDL_Resource> & vect, const std::string &hash,const std::string &path);
-    void evict_hdl_entity(const std::string& name);
-    bool contains_hdl_entity(const std::string& name) const;
-    [[nodiscard]] std::optional<std::string> get_hdl_entity_hash(const std::string &name)const;
 
-    Script get_script(std::string& name);
-    void store_script(const std::vector<Script> & vect, const std::string &hash,const std::string &path);
-    void evict_script(const std::string& name);
-    [[nodiscard]] std::optional<std::string> get_script_hash(const std::string &name)const;
+    std::optional<HDL_Resource> get_HDL_resource(const std::string& name);
+    std::optional<Script> get_script(std::string& name);
+    // OLD IF
+
 
     DataFile get_data_file(const std::string& name);
     void store_data_file(const std::vector<DataFile> & vect, const std::string &hash,const std::string &path);
     void evict_data_file(const std::string& name);
-    [[nodiscard]] std::optional<std::string> get_data_file_hash(const std::string &name)const;
 
     Constraints get_constraint(std::string& name);
     void store_constraint(const std::vector<Constraints> & vect, const std::string &hash,const std::string &path);
     void evict_constraint(const std::string& name);
-    [[nodiscard]] std::optional<std::string> get_constraint_hash(const std::string &name)const;
 
     void remove_stale_info(const std::filesystem::path& p);
     bool is_primitive(const std::string &name);

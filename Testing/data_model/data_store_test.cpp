@@ -42,13 +42,12 @@ TEST( data_store_test , evict_script) {
     s.type = "py";
     Script test_scr(s);
 
-    store_1->store_script({test_scr},"", "");
-    store_1->evict_script(test_scr.get_name());
+    store_1->store_file({"/test/script", "", {test_scr}});
+    store_1->evict_file("/test/script");
     std::string n = "test";
-    Script test_item = store_1->get_script(n);
-
+    auto test_item = store_1->get_script(n);
     delete store_1;
-    ASSERT_EQ(test_item.get_name(), "");
+    EXPECT_FALSE(test_item);
 
 }
 
@@ -79,36 +78,13 @@ TEST( data_store_test , evict_hdl_entity) {
     test_entity.set_line_n(15);
 
     std::vector entities ={test_entity};
-    store_1->store_hdl_entity(entities, "","");
-
-    store_1->evict_hdl_entity(test_entity.getName());
+    store_1->store_file({"/test/path", "test_hash", entities});
+    store_1->evict_file("/test/path");
     std::string n = "test";
-    HDL_Resource test_item = store_1->get_HDL_resource(n);
+    auto  test_item = store_1->get_HDL_resource(n);
 
     delete store_1;
-    ASSERT_EQ(test_item, HDL_Resource());
-
-}
-
-
-TEST( data_store_test , evict_interface_entity) {
-
-    auto *store_1 = new data_store(true, "/tmp/test_data_store");
-    HDL_Resource test_entity;
-    test_entity.set_name("test");
-    test_entity.set_path("/test/path");
-    test_entity.set_type(interface);
-    test_entity.set_line_n(15);
-
-    std::vector entities ={test_entity};
-    store_1->store_hdl_entity(entities, "","");
-
-    store_1->evict_hdl_entity(test_entity.getName());
-    std::string n = "test";
-    HDL_Resource test_item = store_1->get_HDL_resource(n);
-
-    delete store_1;
-    ASSERT_EQ(test_item, HDL_Resource());
+    ASSERT_FALSE(test_item.has_value());
 
 }
 
@@ -136,34 +112,6 @@ TEST( data_store_test , ser_des_data_File) {
 
 
 
-TEST( data_store_test , store_script_vect) {
-
-    auto *store = new data_store(true, "/tmp/test_data_store");
-    script_specs s;
-    s.name = "test_1";
-    s.type = "py";
-    Script test_scr_1(s);
-    s.name = "test_2";
-    s.type = "py";
-    Script test_scr_2(s);
-    std::vector<Script> test_vect = {test_scr_1,test_scr_2};
-    store->store_script(test_vect, "", "");
-    std::string name = "test_1";
-    Script test_res_1 = store->get_script(name);
-    name = "test_2";
-    Script test_res_2 = store->get_script(name);
-
-    std::vector<Script> res_vect = {test_res_1, test_res_2};
-
-    store->evict_script("test_1");
-    store->evict_script("test_2");
-
-    delete store;
-    ASSERT_EQ(test_vect[0], res_vect[0]);
-    ASSERT_EQ(test_vect[1], res_vect[1]);
-}
-
-
 TEST( data_store_test , store_data_file_vect) {
 
     auto *store = new data_store(true, "/tmp/test_data_store");
@@ -176,9 +124,6 @@ TEST( data_store_test , store_data_file_vect) {
     name = "test_2";
     DataFile test_res_2 = store->get_data_file(name);
     std::vector<DataFile> res_vect = {test_res_1, test_res_2};
-
-    store->evict_script("test_1");
-    store->evict_script("test_2");
 
     delete store;
     ASSERT_EQ(test_vect[0], res_vect[0]);
@@ -199,20 +144,24 @@ TEST( data_store_test , store_interface_vect) {
     test_res_2.set_type(interface);
     test_res_2.set_path("/bin/sh");
     test_res_1.set_path("/bin/sh");
-    std::vector<HDL_Resource> test_vect = {test_res_1,test_res_2};
-    store->store_hdl_entity(test_vect, "", "");
+    store->store_file({
+        "/bin/sh",
+        "test_hash",
+        std::vector{{test_res_1,test_res_2}}}
+    );
     std::string name = "test_1";
-    HDL_Resource test_result_1 = store->get_HDL_resource(name);
+    auto test_result_1 = store->get_HDL_resource(name);
+    ASSERT_TRUE(test_result_1.has_value());
     name = "test_2";
-    HDL_Resource test_result_2 = store->get_HDL_resource(name);
-    std::vector<HDL_Resource> res_vect = {test_result_1, test_result_2};
+    auto test_result_2 = store->get_HDL_resource(name);
+    ASSERT_TRUE(test_result_2.has_value());
+    std::vector<HDL_Resource> res_vect = {test_result_1.value(), test_result_2.value()};
 
-    store->evict_hdl_entity("test_1");
-    store->evict_hdl_entity("test_2");
+    store->evict_file("/bin/sh");
 
     delete store;
-    ASSERT_EQ(test_vect[0], res_vect[0]);
-    ASSERT_EQ(test_vect[1], res_vect[1]);
+    ASSERT_EQ(test_res_1, res_vect[0]);
+    ASSERT_EQ(test_res_2, res_vect[1]);
 }
 
 TEST( data_store_test , store_hdl_vect) {
@@ -225,20 +174,24 @@ TEST( data_store_test , store_hdl_vect) {
     test_res_2.set_name("test_2");
     test_res_2.set_path("/bin/sh");
     test_res_2.set_type(module);
-    std::vector<HDL_Resource> test_vect = {test_res_1,test_res_2};
-    store->store_hdl_entity(test_vect, "", "");
+    store->store_file({
+       "/bin/sh",
+       "test_hash",
+       std::vector{{test_res_1,test_res_2}}}
+   );
     std::string name = "test_1";
-    HDL_Resource test_result_1 = store->get_HDL_resource(name);
+    auto test_result_1 = store->get_HDL_resource(name);
+    ASSERT_TRUE(test_result_1.has_value());
     name = "test_2";
-    HDL_Resource test_result_2 = store->get_HDL_resource(name);
-    std::vector<HDL_Resource> res_vect = {test_result_1, test_result_2};
+    auto test_result_2 = store->get_HDL_resource(name);
+    ASSERT_TRUE(test_result_1.has_value());
+    std::vector<HDL_Resource> res_vect = {test_result_1.value(), test_result_2.value()};
 
-    store->evict_hdl_entity("test_1");
-    store->evict_hdl_entity("test_2");
+    store->evict_file("/bin/sh");
 
     delete store;
-    ASSERT_EQ(test_vect[0], res_vect[0]);
-    ASSERT_EQ(test_vect[1], res_vect[1]);
+    ASSERT_EQ(test_res_1, res_vect[0]);
+    ASSERT_EQ(test_res_2, res_vect[1]);
 }
 
 TEST( data_store_test , store_const_vect) {
@@ -288,9 +241,8 @@ TEST( data_store_test , data_file_clean_up) {
     delete store_1;
     auto *store_2 = new data_store(true,"/tmp/test_data_store");
     std::string name = "test";
-    Script result = store_2->get_script(name);
-    ASSERT_EQ(result.get_name(), "");
-    store_2->evict_script(test_df.get_name());
+    auto result = store_2->get_script(name);
+    ASSERT_FALSE(result);
     delete store_2;
 
 }
@@ -303,13 +255,13 @@ TEST( data_store_test , script_clean_up) {
     s.type = "py";
     Script test_scr(s);
     test_scr.set_path("/test");
-    store_1->store_script({test_scr}, "", "");
+    store_1->store_file({"/test", "hash", {test_scr}});
     delete store_1;
     auto *store_2 = new data_store(true,"/tmp/test_data_store");
     std::string name = "test";
-    Script result = store_2->get_script(name);
-    ASSERT_EQ(result.get_name(), "");
-    store_2->evict_script(test_scr.get_name());
+    auto result = store_2->get_script(name);
+    ASSERT_FALSE(result);
+    store_2->evict_file("/test");
     delete store_2;
 
 }
@@ -325,13 +277,13 @@ TEST( data_store_test , resource_clean_up) {
     test_entity.set_line_n(15);
 
     std::vector entities ={test_entity};
-    store_1->store_hdl_entity(entities, "","");
+    store_1->store_file({"/test", "hash", entities});
     delete store_1;
     auto *store_2 = new data_store(true,"/tmp/test_data_store");
     std::string name = "test";
-    HDL_Resource result = store_2->get_HDL_resource(name);
-    ASSERT_EQ(result, HDL_Resource());
-    store_2->evict_script(test_entity.getName());
+    auto result = store_2->get_HDL_resource(name);
+    ASSERT_FALSE(result.has_value());
+    store_2->evict_file("/test");
     delete store_2;
 
 }

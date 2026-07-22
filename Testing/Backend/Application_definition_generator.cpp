@@ -46,7 +46,7 @@ TEST( app_def_generation , generate_app_def) {
                 sv_analyzer analyzer;
 
                 auto resources = analyzer.analyze("", test_file.view());
-                d_store->store_hdl_entity(resources, "", "");
+                d_store->store_file({f.path(), "file_hash", resources});
             }
         }
     }

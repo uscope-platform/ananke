@@ -4503,7 +4503,7 @@ TEST(parameter_processing, typedef_in_package_parameter) {
     auto resources= analyzer.analyze("", test_pattern);
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
     auto module = resources[1];
     auto param = module.get_parameters().get("array_parameter");
     HDL_parameter p;

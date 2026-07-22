@@ -66,7 +66,7 @@ TEST(parameter_processing, override_after_fatal) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -108,7 +108,7 @@ TEST(parameter_processing, mixed_dep_override) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -246,7 +246,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -352,7 +352,7 @@ TEST(parameter_processing, packed_array_initialization_expression_override) {
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -397,7 +397,7 @@ TEST(parameter_processing, simple_for_array_parameter) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
 
     Depfile df;
@@ -448,7 +448,7 @@ TEST(parameter_processing, complex_for_array_parameter) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -494,9 +494,9 @@ TEST(parameter_processing, complex_vector_function_parameter) {
 
     sv_analyzer analyzer;
 
-    std::vector<HDL_Resource> resource = analyzer.analyze("", test_pattern);
+    std::vector<HDL_Resource> resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resource,"", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -540,9 +540,9 @@ TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch)
 
     sv_analyzer analyzer;
 
-    std::vector<HDL_Resource> resource = analyzer.analyze("", test_pattern);
+    std::vector<HDL_Resource> resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resource,"", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -713,7 +713,7 @@ TEST(parameter_processing, package_function_called_from_module) {
 
 
     auto resources = analyzer.analyze("", test_pattern);
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
     auto& pkg = resources[0];
     auto& mod = resources[1];
 
@@ -769,7 +769,7 @@ TEST(parameter_processing, package_function_called_from_module_and_typedef) {
 
 
     auto resources = analyzer.analyze("", test_pattern);
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
     auto& pkg = resources[0];
     auto& pkg2 = resources[1];
     auto& mod = resources[2];
@@ -830,7 +830,7 @@ TEST(parameter_processing, override_with_system_task) {
 
     auto resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -866,7 +866,7 @@ TEST(parameter_processing, interface_default_parameters) {
 
     auto resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resources[1].get_statements()[0]);
     auto raw_param = inst->get_parameters();
@@ -918,7 +918,7 @@ TEST(parameter_processing, override_with_interface_param) {
 
     auto resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resources[2].get_statements()[1]);
     auto raw_param = inst->get_parameters();
@@ -979,7 +979,7 @@ TEST(parameter_processing, nested_override_with_interface_param) {
 
     auto resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -1045,7 +1045,7 @@ TEST(parameter_processing, double_nested_override_with_interface_param) {
 
     auto resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -1161,7 +1161,7 @@ TEST(parameter_processing, override_with_function_parameter) {
 
     auto resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -1301,7 +1301,7 @@ TEST(parameter_processing, parameter_with_for_loop) {
 
     auto resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -1369,7 +1369,7 @@ TEST(parameter_processing, parameter_with_for_loop_incr) {
 
     auto resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
@@ -1431,7 +1431,7 @@ TEST(parameter_processing, parent_parameter_collision) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -1474,7 +1474,7 @@ TEST(parameter_processing, override_after_function_localparam) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -1526,7 +1526,7 @@ TEST(parameter_processing, init_list_override) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top_module"}))[0];
@@ -1636,7 +1636,7 @@ TEST(parameter_processing, override_as_dependency) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
@@ -1705,7 +1705,7 @@ endmodule
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top_module"}))[0];
@@ -1775,7 +1775,7 @@ endmodule
         resources[0].get_parameters(), {});
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top_module"}))[0];
@@ -1814,7 +1814,7 @@ TEST(parameter_processing, override_with_package_ref_in_array_init) {
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -1866,7 +1866,7 @@ TEST(parameter_processing, intermediate_interface_param) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern);
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -1915,7 +1915,7 @@ TEST(parameter_processing, intermediate_interface_in_override_param) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern);
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -2003,7 +2003,7 @@ TEST(parameter_processing, interface_param_same_name_as_child_param_with_loopbac
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern);
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -2078,7 +2078,7 @@ TEST(parameter_processing, interface_param_same_name_as_child_param_no_loopback)
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern);
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -2121,7 +2121,7 @@ TEST(parameter_processing, ternary_with_package_override) {
     auto resources = analyzer.analyze("", test_pattern);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -2152,7 +2152,7 @@ TEST(parameter_processing, override_dep_on_local_param_chain) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -2195,7 +2195,7 @@ TEST(parameter_processing, packed_struct_override) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -2232,7 +2232,7 @@ TEST(parameter_processing, packed_struct_field_override_child_param) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -2268,7 +2268,7 @@ TEST(parameter_processing, unpacked_struct_field_override_child_param) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
@@ -2302,7 +2302,7 @@ TEST(parameter_processing, unpacked_struct_override) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
-    d_store->store_hdl_entity(resources, "", "");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];

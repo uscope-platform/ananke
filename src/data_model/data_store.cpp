@@ -31,18 +31,27 @@ data_store::data_store(bool e, std::string cache_dir_path) {
     clean_up_caches();
 }
 
-HDL_Resource data_store::get_HDL_resource(const std::string& name) {
-    if(cache.interfaces.contains(name)) return cache.interfaces[name];
-    return cache.hdl[name];
+std::optional<HDL_Resource> data_store::get_HDL_resource(const std::string& name) {
+    for (auto &[_, file]: cache.cache_content) {
+        if (!std::holds_alternative<std::vector<HDL_Resource>>(file.content)) continue;
+        for (auto &res:std::get<std::vector<HDL_Resource>>(file.content)) {
+            if (res.getName() == name) return res;
+        }
+    }
+    return std::nullopt;
 }
 
 void data_store::store_file(const source_file &file) {
     cache.cache_content.insert({file.path, file});
 }
 
+void data_store::evict_file(const std::string &file) {
+    cache.cache_content.erase(file);
+}
 
-std::optional<std::string> data_store::get_hash(const std::string &name) const {
-    if (!cache.cache_content.contains(name)) return std::nullopt;
+
+std::string data_store::get_hash(const std::string &name) const {
+    if (!cache.cache_content.contains(name)) return "";
     return cache.cache_content.at(name).hash;
 }
 
@@ -50,28 +59,14 @@ bool data_store::contains(const std::string &name) const {
     return cache.cache_content.contains(name);
 }
 
-void data_store::store_hdl_entity(std::vector<HDL_Resource>& vect,const std::string &hash, const std::string &path) {
-    for(auto &item: vect){
-        if(item.get_type()==interface){
-            cache.interfaces[item.getName()] = item;
-        } else {
-            cache.hdl[item.getName()] = item;
 
-        }
+std::optional<Script> data_store::get_script(std::string &name) {
+    for (auto &[_, file]: cache.cache_content) {
+        if (!std::holds_alternative<Script>(file.content)) continue;
+        auto scr = std::get<Script>(file.content);
+        if (scr.get_name() == name) return scr;
     }
-
-    cache.hdl_hash[path] = hash;
-}
-
-Script data_store::get_script(std::string &name) {
-    return cache.scripts[name];
-}
-
-void data_store::store_script(const std::vector<Script> &vect, const std::string &hash,const std::string &path) {
-    for(auto &item: vect){
-        cache.scripts[item.get_name()] = item;
-    }
-    cache.scripts_hash[path] = hash;
+    return std::nullopt;
 }
 
 Constraints data_store::get_constraint(std::string &name) {
@@ -87,9 +82,9 @@ void data_store::store_constraint(const std::vector<Constraints> &vect, const st
         cache.constraints_hash[path]= hash;
 }
 
-DataFile data_store::get_data_file(const std::string &name) {
-    return cache.data[name];
-}
+    DataFile data_store::get_data_file(const std::string &name) {
+        return cache.data[name];
+    }
 
 
 void data_store::store_data_file(const std::vector<DataFile> &vect, const std::string &hash,const std::string &path) {
@@ -229,14 +224,6 @@ void data_store::remove_stale_info(const std::filesystem::path& p) {
 
 }
 
-void data_store::evict_hdl_entity(const std::string &name) {
-    if(cache.interfaces.contains(name)) cache.interfaces.erase(name);
-    else cache.hdl.erase(name);
-}
-
-void data_store::evict_script(const std::string &name) {
-    cache.scripts.erase(name);
-}
 
 void data_store::evict_constraint(const std::string &name) {
     cache.constraints.erase(name);
@@ -256,30 +243,3 @@ std::unordered_map<std::string, HDL_Resource> data_store::get_hdl_cache() {
     return ret_val;
 }
 
-bool data_store::contains_hdl_entity(const std::string &name) const {
-    return cache.hdl.contains(name) || cache.interfaces.contains(name);
-}
-
-std::optional<std::string> data_store::get_hdl_entity_hash(const std::string &name) const {
-    if (ephemeral) return std::nullopt;
-    if (cache.hdl_hash.contains(name)) return cache.hdl_hash.at(name);
-    return std::nullopt;
-}
-
-std::optional<std::string> data_store::get_script_hash(const std::string &name) const {
-    if (ephemeral) return std::nullopt;
-    if (cache.scripts_hash.contains(name)) return cache.scripts_hash.at(name);
-    return std::nullopt;
-}
-
-std::optional<std::string> data_store::get_data_file_hash(const std::string &name) const {
-    if (ephemeral) return std::nullopt;
-    if (cache.data_hash.contains(name)) return cache.data_hash.at(name);
-    return std::nullopt;
-}
-
-std::optional<std::string> data_store::get_constraint_hash(const std::string &name) const {
-    if (ephemeral) return std::nullopt;
-    if (cache.constraints_hash.contains(name)) return cache.constraints_hash.at(name);
-    return std::nullopt;
-}

@@ -15,6 +15,7 @@
 
 #include "Backend/Auxiliary_resolver.hpp"
 
+#include "../../../../.conan2/p/b/spdloaee7bae194d75/p/include/spdlog/spdlog.h"
 
 
 Auxiliary_resolver::Auxiliary_resolver(std::shared_ptr<data_store> store) {
@@ -27,7 +28,12 @@ std::vector<script_source> Auxiliary_resolver::get_tcl_script_paths(const std::v
         std::string script_name = item.get_name();
         if (script_name.ends_with(".tcl")) script_name.resize(script_name.size() - 4);
         else if (script_name.ends_with(".py")) script_name.resize(script_name.size() - 3);
-        Script scr = d_store->get_script(script_name);
+        auto scr_opt = d_store->get_script(script_name);
+        if (!scr_opt) {
+            spdlog::critical("Skipping script not found: {}", script_name);
+            continue;
+        }
+        auto scr = scr_opt.value();
         if(scr.get_type() == tcl_script) {
             script_source s;
             s.name = scr.get_name();
@@ -66,8 +72,12 @@ Auxiliary_resolver::get_script_paths_by_type(const std::vector<Script> &names, s
         std::string script_name = item.get_name();
         if (script_name.ends_with(".tcl")) script_name.resize(script_name.size() - 4);
         else if (script_name.ends_with(".py")) script_name.resize(script_name.size() - 3);
-        Script scr = d_store->get_script(script_name);
-        if(scr.get_type() == type) ret_val.insert(scr.get_path());
+        auto scr = d_store->get_script(script_name);
+        if (!scr) {
+            spdlog::critical("script not found: {}", script_name);
+            continue;
+        }
+        if(scr.value().get_type() == type) ret_val.insert(scr.value().get_path());
 
     }
     return ret_val;
@@ -79,8 +89,12 @@ std::vector<Script>  Auxiliary_resolver::get_script_objects_by_type(const std::v
         std::string script_name = item.get_name();
         if (script_name.ends_with(".tcl")) script_name.resize(script_name.size() - 4);
         else if (script_name.ends_with(".py")) script_name.resize(script_name.size() - 3);
-        Script scr =  d_store->get_script(script_name);
-
+        auto scr_opt =  d_store->get_script(script_name);
+        if (!scr_opt) {
+            spdlog::critical("Skipping script not found: {}", script_name);
+            continue;
+        }
+        auto scr = scr_opt.value();
         if(scr.get_type() == type){
             scr.set_arguments(item.get_arguments());
             scr.set_product(item.get_product_include(), item.get_product_type());
