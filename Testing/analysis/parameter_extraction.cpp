@@ -4996,3 +4996,35 @@ TEST(parameter_extraction, function_with_variables) {
     EXPECT_EQ(defaults[sid], 42);
 
 }
+
+TEST(parameter_extraction, top_level_function) {
+    auto test_pattern = R"(
+
+
+        function [15:0] get_axis_metadata (input [4:0] size,input is_signed, input is_float);
+        reg [3:0] biased_size;
+        begin
+            biased_size = size -8;
+            get_axis_metadata = { 10'h0, is_float, is_signed, biased_size};
+        end
+        endfunction
+
+        module test_mod #(
+        )();
+
+            localparam TEST_PARAM = get_axis_metadata(18, 1, 0);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto functions = resource.get_functions();
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+
+    qualified_identifier sid = qualified_identifier("TEST_PARAM");
+    EXPECT_EQ(defaults[sid], 26);
+
+}
