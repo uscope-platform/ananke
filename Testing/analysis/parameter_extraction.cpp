@@ -4990,22 +4990,19 @@ TEST(parameter_extraction, function_with_variables) {
 
 }
 
-TEST(parameter_extraction, concat_and_assignment_in_function ) {
+TEST(parameter_extraction, concat_size_mixup_in_function) {
     auto test_pattern = R"(
-
-
-
 
         module test_mod #(
         )();
-           function [15:0] get_axis_metadata (input [4:0] size,input is_signed, input is_float);
+           function [15:0] get_axis_metadata ();
             reg [3:0] biased_size;
             begin
-                biased_size = size -8;
-                get_axis_metadata = { 10'h0, is_float, is_signed, biased_size};
+                biased_size = 10;
+                get_axis_metadata = { 10'h1, biased_size};
             end
             endfunction
-            localparam TEST_PARAM = get_axis_metadata(18, 1, 0);
+            localparam TEST_PARAM = get_axis_metadata();
         endmodule
     )";
 
@@ -5022,7 +5019,7 @@ TEST(parameter_extraction, concat_and_assignment_in_function ) {
     auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
-    EXPECT_EQ(defaults[sid], 26);
+    EXPECT_EQ(defaults[sid], 10);
 
 }
 

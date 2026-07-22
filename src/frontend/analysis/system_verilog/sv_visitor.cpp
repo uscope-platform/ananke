@@ -210,10 +210,7 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
         auto var_name = ctx->list_of_variable_decl_assignments()
             ->variable_decl_assignment(0)->identifier()->getText();
         auto t = type_engine.finalize_type();
-        type_engine.stop_range();
-        if (!t) {
-            t = Type_engine::create_primitive_type("implicit");
-        }
+        if (!t) t = Type_engine::create_primitive_type("implicit");
         auto param = std::make_shared<HDL_parameter>(var_name);
         param->set_type(t);
         f_factory.add_local_variable(param);

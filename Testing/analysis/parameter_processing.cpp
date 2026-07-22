@@ -1803,7 +1803,7 @@ TEST(parameter_processing, override_with_package_ref_in_array_init) {
         parameter a = 10;
         parameter b = 20;
         parameter c = 30;
-    endpackage;
+    endpackage
 
     module child #(
         parameter int X = 0
@@ -1830,6 +1830,10 @@ TEST(parameter_processing, override_with_package_ref_in_array_init) {
     EXPECT_TRUE(inst->get_parameters().contains("X"));
     EXPECT_TRUE(inst->get_parameters().get("X")->get_numeric_value().has_value());
     EXPECT_EQ(inst->get_parameters().get("X")->get_numeric_value().value().get_value(), 30);
+
+    EXPECT_TRUE(inst->get_parameters().contains("Y"));
+    EXPECT_TRUE(inst->get_parameters().get("Y")->get_numeric_value().has_value());
+    EXPECT_EQ(inst->get_parameters().get("Y")->get_numeric_value().value().get_value(), 60);
 }
 
 TEST(parameter_processing, intermediate_interface_param) {
