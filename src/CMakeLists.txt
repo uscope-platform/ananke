@@ -30,8 +30,9 @@ target_sources(ananke_lib
     Backend/Toolchain_manager.cpp
     Backend/python_script_runner.cpp
     data_model/HDL/HDL_Resource.cpp
-        data_model/HDL/hdl_ast_node.cpp
+    data_model/HDL/hdl_ast_node.cpp
     data_model/mm_file.cpp
+    data_model/hdl_file.cpp
     data_model/HDL/factories/HDL_instances_factory.cpp
     data_model/HDL/factories/HDL_modules_factory.cpp
     data_model/HDL/factories/HDL_interfaces_factory.cpp
@@ -52,8 +53,9 @@ target_sources(ananke_lib
     data_model/HDL/parameters/components/token/Identifier_token.cpp
     data_model/HDL/parameters/components/token/Numeric_token.cpp
     data_model/HDL/parameters/components/token/String_token.cpp
-    data_model/HDL/statement/hdl_function_statement.cpp
     data_model/HDL/parameters/components/HDL_function_call.cpp
+    data_model/HDL/statement/hdl_resource_statement.cpp
+    data_model/HDL/statement/hdl_function_statement.cpp
     data_model/HDL/statement/hdl_instance_statement.cpp
     data_model/HDL/statement/hdl_loop_statement.cpp
     data_model/HDL/statement/hdl_conditional_statement.cpp

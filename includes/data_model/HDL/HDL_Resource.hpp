@@ -22,6 +22,7 @@
 #include <vector>
 #include <memory>
 
+#include "data_model/HDL/HDL_port.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/Parameters_map.hpp"
 #include "data_model/documentation/module_documentation.hpp"
@@ -37,29 +38,6 @@
 #include "data_model/HDL/statement/hdl_function_statement.hpp"
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
 
- struct if_port_specs {
-    std::string type;
-    std::string modport;
-
-    template<class Archive>
-    void serialize( Archive & ar ) {
-        ar(type, modport);
-    }
-
-    bool operator==(const if_port_specs&) const = default;
-};
-
-struct HDL_port {
-    port_direction_t direction;
-    if_port_specs if_info;
-
-    template<class Archive>
-    void serialize( Archive & ar ) {
-        ar(direction, if_info);
-    }
-
-    bool operator==(const HDL_port&) const = default;
-};
 
 
 class HDL_Resource {

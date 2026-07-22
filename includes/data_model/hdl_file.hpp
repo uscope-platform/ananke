@@ -1,4 +1,6 @@
-//  Copyright 2026 Filippo Savi
+
+
+//  Copyright  2026 University of Nottingham
 //  Author: Filippo Savi <filssavi@gmail.com>
 //
 //  Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +15,17 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef ANANKE_HDL_STATEMENTS_HPP
-#define ANANKE_HDL_STATEMENTS_HPP
+#ifndef ANANKE_HDL_FILE_HPP
+#define ANANKE_HDL_FILE_HPP
 
-#include "data_model/HDL/statement/hdl_instance_statement.hpp"
-#include "data_model/HDL/statement/hdl_loop_statement.hpp"
-#include "data_model/HDL/statement/hdl_assignment_statement.hpp"
-#include "data_model/HDL/statement/hdl_function_statement.hpp"
-#include "data_model/HDL/statement/hdl_resource_statement.hpp"
+#include "data_model/HDL/statement/hdl_statements.hpp"
 
-#endif //ANANKE_HDL_STATEMENTS_HPP
+class hdl_file {
+public:
+    void add_statement(const std::shared_ptr<hdl_statement_base> &statement){content.push_back(statement);}
+private:
+    std::vector<std::shared_ptr<hdl_statement_base>> content;
+};
+
+
+#endif //ANANKE_HDL_FILE_HPP
