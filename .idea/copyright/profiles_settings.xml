@@ -1,7 +1,3 @@
 <component name="CopyrightManager">
-  <settings>
-    <module2copyright>
-      <element module="Project Files" copyright="uplatform" />
-    </module2copyright>
-  </settings>
+  <settings default="uplatform_uon" />
 </component>
