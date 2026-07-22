@@ -77,8 +77,7 @@ void Repository_walker::collect_analysis_results() {
     for(auto &f : hdl_futures){
         auto [path, file_hash, resource] = f.get();
         if (resource) {
-            for (auto &res: resource.value())
-                d_store->store_file({path, file_hash, std::vector{res}});
+                d_store->store_file({path, file_hash, std::vector{resource.value()}});
         }
     }
     for(auto &f : scripts_futures){

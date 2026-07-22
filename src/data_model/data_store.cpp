@@ -41,7 +41,7 @@ std::optional<HDL_Resource> data_store::get_HDL_resource(const std::string& name
     return std::nullopt;
 }
 
-void data_store::store_file(const source_file &file) {
+void data_store::store_file(const cached_item &file) {
     cache.insert({file.path, file});
 }
 

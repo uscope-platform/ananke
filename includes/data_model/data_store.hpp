@@ -22,8 +22,6 @@
 #include <set>
 #include <fstream>
 
-
-#include "data_model/source_file.hpp"
 #include "data_model/HDL/HDL_Resource.hpp"
 #include "Script.hpp"
 #include "Constraints.hpp"
@@ -32,9 +30,27 @@
 
 class data_store {
 public:
+
+
+    using source_content = std::variant<
+        Script,
+        DataFile,
+        Constraints,
+        std::vector<HDL_Resource>
+    >;
+
+    struct cached_item {
+        std::string path;
+        std::string hash;
+        source_content content;
+        template<class Archive> void serialize(Archive & ar) {
+            ar(path, hash, content);  // cereal supports variant natively
+        }
+    };
+
     data_store(bool e, std::string cache_dir_path);
     // NEW IF
-    void store_file(const source_file &file);
+    void store_file(const cached_item &file);
     void evict_file(const std::string &file);
     template<typename T> std::optional<T> get_file(const std::string &name) const;
     [[nodiscard]] std::string get_hash(const std::string &name) const;
@@ -59,7 +75,7 @@ private:
     void store_cache();
 
 
-    std::unordered_map<std::string, source_file> cache;
+    std::unordered_map<std::string, cached_item> cache;
     bool ephemeral;
 
     std::string store_path;
