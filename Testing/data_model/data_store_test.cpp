@@ -71,14 +71,14 @@ TEST( data_store_test , evict_data_file) {
 TEST( data_store_test , evict_hdl_entity) {
 
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
-    HDL_Resource test_entity;
-    test_entity.set_name("test");
-    test_entity.set_path("/test/path");
-    test_entity.set_type(module);
-    test_entity.set_line_n(15);
-
-    std::vector entities ={test_entity};
-    store_1->store_file({"/test/path", "test_hash", entities});
+    auto test_entity = std::make_shared<hdl_resource_statement>();
+    test_entity->set_name("test");
+    test_entity->set_type(module);
+    test_entity->set_line_n(15);
+    hdl_file f;
+    f.set_path("/test/path");
+    f.set_content({test_entity});
+    store_1->store_file({"/test/path", "test_hash", f});
     store_1->evict_file("/test/path");
     std::string n = "test";
     auto  test_item = store_1->get_HDL_resource(n);
@@ -116,61 +116,63 @@ TEST( data_store_test , ser_des_data_File) {
 TEST( data_store_test , store_interface_vect) {
 
     auto *store = new data_store(true, "/tmp/test_data_store");
-    HDL_Resource test_res_1, test_res_2;
-    test_res_1.set_name("test_1");
-    test_res_2.set_name("test_2");
-    test_res_1.set_type(interface);
-    test_res_2.set_type(interface);
-    test_res_2.set_path("/bin/sh");
-    test_res_1.set_path("/bin/sh");
+    auto test_res_1 = std::make_shared<hdl_resource_statement>();
+    auto test_res_2 = std::make_shared<hdl_resource_statement>();
+    test_res_1->set_name("test_1");
+    test_res_2->set_name("test_2");
+    test_res_1->set_type(interface);
+    test_res_2->set_type(interface);
+    hdl_file f;
+    f.set_path("/bin/sh");
+    f.set_content({test_res_1,test_res_2});
     store->store_file({
         "/bin/sh",
         "test_hash",
-        std::vector{{test_res_1,test_res_2}}}
-    );
+        f
+    });
     std::string name = "test_1";
     auto test_result_1 = store->get_HDL_resource(name);
     ASSERT_TRUE(test_result_1.has_value());
     name = "test_2";
     auto test_result_2 = store->get_HDL_resource(name);
     ASSERT_TRUE(test_result_2.has_value());
-    std::vector<HDL_Resource> res_vect = {test_result_1.value(), test_result_2.value()};
 
     store->evict_file("/bin/sh");
 
     delete store;
-    ASSERT_EQ(test_res_1, res_vect[0]);
-    ASSERT_EQ(test_res_2, res_vect[1]);
+    ASSERT_EQ(test_res_1, test_result_1.value());
+    ASSERT_EQ(test_res_2, test_result_2.value());
 }
 
 TEST( data_store_test , store_hdl_vect) {
 
     auto *store = new data_store(true, "/tmp/test_data_store");
-    HDL_Resource test_res_1, test_res_2;
-    test_res_1.set_name("test_1");
-    test_res_1.set_path("/bin/sh");
-    test_res_1.set_type(module);
-    test_res_2.set_name("test_2");
-    test_res_2.set_path("/bin/sh");
-    test_res_2.set_type(module);
+    auto test_file_1 = std::make_shared<hdl_resource_statement>();
+    auto test_file_2 = std::make_shared<hdl_resource_statement>();
+    test_file_1->set_name("test_1");
+    test_file_1->set_type(module);
+    test_file_2->set_name("test_2");
+    test_file_2->set_type(module);
+    hdl_file f;
+    f.set_path("/bin/sh");
+    f.set_content({test_file_1, test_file_2});
     store->store_file({
        "/bin/sh",
        "test_hash",
-       std::vector{{test_res_1,test_res_2}}}
-   );
+       f
+    });
     std::string name = "test_1";
     auto test_result_1 = store->get_HDL_resource(name);
     ASSERT_TRUE(test_result_1.has_value());
     name = "test_2";
     auto test_result_2 = store->get_HDL_resource(name);
     ASSERT_TRUE(test_result_1.has_value());
-    std::vector<HDL_Resource> res_vect = {test_result_1.value(), test_result_2.value()};
 
     store->evict_file("/bin/sh");
 
     delete store;
-    ASSERT_EQ(test_res_1, res_vect[0]);
-    ASSERT_EQ(test_res_2, res_vect[1]);
+    ASSERT_EQ(test_file_1, test_result_1);
+    ASSERT_EQ(test_file_2, test_result_2);
 }
 
 
@@ -228,14 +230,14 @@ TEST( data_store_test , resource_clean_up) {
 
     auto *store_1 = new data_store(true,"/tmp/test_data_store");
 
-    HDL_Resource test_entity;
-    test_entity.set_name("test");
-    test_entity.set_path("/test");
-    test_entity.set_type(module);
-    test_entity.set_line_n(15);
-
-    std::vector entities ={test_entity};
-    store_1->store_file({"/test", "hash", entities});
+    auto test_entity = std::make_shared<hdl_resource_statement>();
+    test_entity->set_name("test");
+    test_entity->set_type(module);
+    test_entity->set_line_n(15);
+    hdl_file f;
+    f.set_path("/test");
+    f.set_content({test_entity});
+    store_1->store_file({"/test", "hash", f});
     delete store_1;
     auto *store_2 = new data_store(true,"/tmp/test_data_store");
     std::string name = "test";

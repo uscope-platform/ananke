@@ -32,7 +32,7 @@ std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const s
 }
 
 
-std::vector<HDL_Resource> sv_analyzer::analyze(const std::string &path, const std::string_view &file_content) {
+hdl_file sv_analyzer::analyze(const std::string &path, const std::string_view &file_content) {
 
     preprocessor::sv_preprocessor preproc;
     preproc.set_path(path);
@@ -41,11 +41,8 @@ std::vector<HDL_Resource> sv_analyzer::analyze(const std::string &path, const st
     auto documentation_comments = preproc.get_documentation_comments();
     auto sources_map = preproc.get_source_map();
 
-    auto entities = process_hdl(path, processed_content);
+    auto result = process_hdl(path, processed_content);
 
-    for (auto &e: entities) {
-        e.set_path(source_mapper::get_path(e.get_line_n(), sources_map).value());
-    }
 
     documentation_analyzer doc(documentation_comments);
     doc.set_source_path(path);
@@ -54,15 +51,15 @@ std::vector<HDL_Resource> sv_analyzer::analyze(const std::string &path, const st
     doc.process_documentation(parameters);
 
     auto modules_doc = doc.get_modules_documentation();
-    for(auto &e:entities){
-        e.set_documentation(modules_doc[e.getName()]);
+    for(auto &e: result.get_content()){
+        e->as<hdl_resource_statement>().set_documentation(modules_doc[e->as<hdl_resource_statement>().getName()]);
     }
 
     auto procs = doc.get_processors_documentation();
     for(auto &item: procs){
-        for(auto &e:entities){
-            if(e.getName() == item.first){
-                e.add_processor_doc(item.second);
+        for(auto &e:result.get_content()){
+            if(e->as<hdl_resource_statement>().getName() == item.first){
+                e->as<hdl_resource_statement>().add_processor_doc(item.second);
             }
         }
     }
@@ -71,9 +68,9 @@ std::vector<HDL_Resource> sv_analyzer::analyze(const std::string &path, const st
     for(auto &item: ch_groups){
         std::string entity = item.first.substr(0, item.first.find("."));
         std::string scope_instance = item.first.substr(item.first.find(".")+1, item.first.size());
-        for(auto &e:entities){
-            if(e.getName() == entity){
-                for (auto &stmt : e.get_statements()) {
+        for(auto &e:result.get_content()){
+            if(e->as<hdl_resource_statement>().getName() == entity){
+                for (auto &stmt : e->as<hdl_resource_statement>().get_statements()) {
                     auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(stmt);
                     if (inst && inst->get_name() == scope_instance) {
                         inst->set_channel_groups(item.second);
@@ -83,11 +80,12 @@ std::vector<HDL_Resource> sv_analyzer::analyze(const std::string &path, const st
         }
     }
 
-    return  entities;
+    return result;
 }
 
 
-std::vector<HDL_Resource> sv_analyzer::process_hdl(const std::string &path, const std::string &preprocessed_content) {
+hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &preprocessed_content) {
+    hdl_file result;
     std::istringstream istream(preprocessed_content);
 
 
@@ -108,9 +106,11 @@ std::vector<HDL_Resource> sv_analyzer::process_hdl(const std::string &path, cons
     //parser.getInterpreter<antlr4::atn::ParserATNSimulator>()->setPredictionMode(antlr4::atn::PredictionMode::SLL);
     antlr4::tree::ParseTree *Tree = parser.source_text();
 
-    sv_visitor sv_modules_explorer(path);
+    sv_visitor sv_modules_explorer;
     antlr4::tree::ParseTreeWalker::DEFAULT.walk(&sv_modules_explorer, Tree);
-    return sv_modules_explorer.get_entities();
+    result.set_content(sv_modules_explorer.get_entities());
+    result.set_path(path);
+    return result;
 }
 
 

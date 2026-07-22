@@ -19,13 +19,13 @@
 
 #include "data_model/HDL/HDL_Resource.hpp"
 #include "resource_factory_base.hpp"
+#include "data_model/HDL/statement/hdl_resource_statement.hpp"
 
-
-class HDL_interfaces_factory : protected resources_factory_base<HDL_Resource>{
+class HDL_interfaces_factory : protected resources_factory_base<hdl_resource_statement>{
 
 public:
-    void new_interface(const std::string &name, const std::string &path, unsigned int line_n);
-    HDL_Resource get_interface();
+    void new_interface(const std::string &name, unsigned int line_n);
+    std::shared_ptr<hdl_resource_statement> get_interface();
     bool is_current_valid(){return valid_resource;}
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);
 

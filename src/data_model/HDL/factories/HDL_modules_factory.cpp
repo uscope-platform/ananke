@@ -15,10 +15,11 @@
 
 #include "data_model/HDL/factories/HDL_modules_factory.hpp"
 
+#include "data_model/HDL/statement/hdl_resource_statement.hpp"
 
-void HDL_modules_factory::new_module(const std::string &name, const std::string &path, const dependency_class &type, unsigned int line_n) {
+
+void HDL_modules_factory::new_module(const std::string &name, const dependency_class &type, unsigned int line_n) {
     new_basic_resource(name);
-    current_resource.set_path(path);
     current_resource.set_type(type);
     current_resource.set_line_n(line_n);
 }
@@ -41,10 +42,10 @@ void HDL_modules_factory::add_port(const std::string &p_n, HDL_port p) {
 }
 
 
-HDL_Resource HDL_modules_factory::get_module() {
+std::shared_ptr<hdl_resource_statement> HDL_modules_factory::get_module() {
     auto res = get_resource();
     res.process_calls();
-    return res;
+    return std::make_shared<hdl_resource_statement>(res);
 }
 
 

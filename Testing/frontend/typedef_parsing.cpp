@@ -27,7 +27,7 @@ TEST(typedef_parsing, mixed_packing_array) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("", test_pattern).get_content()[0]->as<hdl_resource_statement>();
     auto typedefs = resource.get_typedefs();
     EXPECT_TRUE(typedefs.contains("ctrl_addr_init_t"));
 
@@ -63,7 +63,7 @@ TEST(typedef_parsing, basic_packed_struct_definition) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("", test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
@@ -98,7 +98,7 @@ TEST(typedef_parsing, basic_unpacked_struct_definition) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("", test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
@@ -134,7 +134,7 @@ TEST(typedef_parsing, bits_in_struct_definition) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("", test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
@@ -170,7 +170,7 @@ TEST(typedef_parsing, struct_with_unpacked_array_of_packed) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("", test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
@@ -215,7 +215,7 @@ TEST(typedef_parsing, nested_struct_definition) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("", test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("inner_struct"));
@@ -265,6 +265,6 @@ TEST(typedef_parsing, anonymous_simple_struct) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("", test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
 }

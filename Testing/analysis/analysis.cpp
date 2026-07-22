@@ -28,7 +28,7 @@ TEST( analysis_test , package) {
     sv_analyzer analyzer;
 
     
-    auto resource = analyzer.analyze("", test_file.view())[0];
+    auto resource = analyzer.analyze("", test_file.view()) .get_content()[0]->as<hdl_resource_statement>();
 
     Parameters_map parameters = resource.get_parameters();
 
@@ -142,8 +142,8 @@ TEST( analysis_test , sv_module) {
         endinterface
     )";
     sv_analyzer analyzer;
-    auto res = analyzer.analyze("/test/file.sv",test_pattern);
-    auto resource = res[0];
+    auto res = analyzer.analyze("/test/file.sv",test_pattern).get_content();
+    auto resource = res[0]->as<hdl_resource_statement>();
 
 
     std::unordered_map<std::string, HDL_port> test_ports;
@@ -153,10 +153,9 @@ TEST( analysis_test , sv_module) {
     test_ports["data_in"] = {interface_port, {"axi_stream", "slave"}};
     test_ports["data_out"] = {interface_port, {"axi_stream", "master"}};
 
-    HDL_Resource check_res;
+    hdl_resource_statement check_res;
     check_res.set_name("Decoder");
     check_res.set_type(module);
-    check_res.set_path("/test/file.sv");
     check_res.set_line_n(3);
     check_res.set_ports(test_ports);
 
@@ -217,11 +216,10 @@ TEST( analysis_test , sv_module) {
 
     ASSERT_EQ(resource, check_res);
 
-    resource = res[1];
-    check_res = HDL_Resource();
+    resource = res[1]->as<hdl_resource_statement>();
+    check_res = hdl_resource_statement();
     check_res.set_name("test_if");
     check_res.set_type(interface);
-    check_res.set_path("/test/file.sv");
     check_res.set_line_n(30);
     ASSERT_EQ(resource, check_res);
 }
@@ -230,11 +228,10 @@ TEST( analysis_test , vhdl_module) {
 
     vhdl_analyzer analyzer("check_files/test_vhdl_module.vhd");
     analyzer.cleanup_content("`(.*)");
-    auto resource = analyzer.analyze()[0];
-    HDL_Resource check_res;
+    auto resource = analyzer.analyze().get_content()[0]->as<hdl_resource_statement>();
+    hdl_resource_statement check_res;
     check_res.set_name("half_adder");
     check_res.set_type(module);
-    check_res.set_path("check_files/test_vhdl_module.vhd");
     check_res.set_line_n(4);
     auto stmt = std::make_shared<hdl_instance_statement>();
     stmt->set_name("and_component");
@@ -262,7 +259,7 @@ TEST(analysis_test, port_concat_assignment) {
 
     sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze("",test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameters();
 
     auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
@@ -291,7 +288,7 @@ TEST(analysis_test, interfaces_array) {
 
     sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("", test_pattern).get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameters();
 
     auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
@@ -325,7 +322,7 @@ TEST(analysis_test, parameter_array_assignment) {
     )";
 
     sv_analyzer analyzer;
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("", test_pattern).get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameters();
 
     auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
@@ -358,11 +355,9 @@ TEST(analysis_test, included_declaration) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("/tmp/file.sv",test_pattern);
-    EXPECT_EQ(resource[0].getName(), "test_module_2");
-    EXPECT_EQ(resource[0].get_path(), "/tmp/include_test.svh");
-    EXPECT_EQ(resource[1].getName(), "test_module");
-    EXPECT_EQ(resource[1].get_path(), "/tmp/file.sv");
+    auto resource = analyzer.analyze("/tmp/file.sv",test_pattern).get_content();
+    EXPECT_EQ(resource[0]->as<hdl_resource_statement>().getName(), "test_module_2");
+    EXPECT_EQ(resource[1]->as<hdl_resource_statement>().getName(), "test_module");
 }
 
 
@@ -388,13 +383,10 @@ TEST(analysis_test, nested_included_declaration) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("/tmp/file.sv",test_pattern);
-    EXPECT_EQ(resource[0].getName(), "test_module_3");
-    EXPECT_EQ(resource[0].get_path(), "/tmp/include_nested.svh");
-    EXPECT_EQ(resource[1].getName(), "test_module_2");
-    EXPECT_EQ(resource[1].get_path(), "/tmp/include_test.svh");
-    EXPECT_EQ(resource[2].getName(), "test_module");
-    EXPECT_EQ(resource[2].get_path(), "/tmp/file.sv");
+    auto resource = analyzer.analyze("/tmp/file.sv",test_pattern).get_content();
+    EXPECT_EQ(resource[0]->as<hdl_resource_statement>().getName(), "test_module_3");
+    EXPECT_EQ(resource[1]->as<hdl_resource_statement>().getName(), "test_module_2");
+    EXPECT_EQ(resource[2]->as<hdl_resource_statement>().getName(), "test_module");
 }
 
 
@@ -414,7 +406,7 @@ TEST(analysis_test, generate_for_loop) {
     )";
 
     sv_analyzer analyzer;
-    auto resource = analyzer.analyze("", test_pattern)[1];
+    auto resource = analyzer.analyze("", test_pattern).get_content()[1]->as<hdl_resource_statement>();
 
     hdl_loop_statement expected;
 

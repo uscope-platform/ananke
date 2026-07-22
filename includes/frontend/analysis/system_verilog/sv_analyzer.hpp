@@ -32,15 +32,16 @@
 #include "mgp_sv/sv2017.h"
 #include "sv_visitor.hpp"
 #include "antlr4-runtime.h"
+#include "data_model/hdl_file.hpp"
 
 class sv_analyzer {
 public:
     std::pair<std::string, std::vector<std::string>> preprocess(const std::string &path, const std::string_view &file_content);
-    std::vector<HDL_Resource> analyze(const std::string &path, const std::string_view &file_content);
+    hdl_file analyze(const std::string &path, const std::string_view &file_content);
     void set_include_directories(const std::set<std::string> &i_d){include_directories = i_d;}
 private:
 
-    std::vector<HDL_Resource> process_hdl(const std::string &path, const std::string &preprocessed_content);
+    hdl_file process_hdl(const std::string &path, const std::string &preprocessed_content);
     std::set<std::string> include_directories;
 };
 

@@ -289,9 +289,8 @@ TEST( hdl_ast_builder, package_dependency) {
 
     sv_analyzer analyzer;
     
-    auto entities = analyzer.analyze("", test_pattern);
-    entities[0].set_path("/tmp/dep.sv");
-    d_store->store_file({"/dev/zero", "file_hash", entities});
+    auto entities = analyzer.analyze("/tmp/dep.sv", test_pattern);
+    d_store->store_file({"/tmp/dep.sv", "file_hash", entities});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto synth_ast = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];

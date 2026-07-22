@@ -20,12 +20,13 @@
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 #include "data_model/HDL/factories/resource_factory_base.hpp"
+#include "data_model/HDL/statement/hdl_resource_statement.hpp"
 
-class HDL_modules_factory : protected resources_factory_base<HDL_Resource> {
+class HDL_modules_factory : protected resources_factory_base<hdl_resource_statement> {
 
 public:
-    void new_module(const std::string &name, const std::string &path,const dependency_class &type, unsigned int line_n);
-    HDL_Resource get_module();
+    void new_module(const std::string &name, const dependency_class &type, unsigned int line_n);
+    std::shared_ptr<hdl_resource_statement> get_module();
 
     void add_statement(std::shared_ptr<hdl_statement_base> s);
     void add_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type);

@@ -29,8 +29,8 @@ void processor_detection::process_node(const std::shared_ptr<hdl_ast_node> &node
         return;
     }
     auto node_spec = node_spec_opt.value();
-    if(node_spec.has_processors()) {
-        auto processors = node_spec.get_processor_doc();
+    if(node_spec->has_processors()) {
+        auto processors = node_spec->get_processor_doc();
 
         for(auto &proc:processors){
             auto addr_s = proc.get_address();

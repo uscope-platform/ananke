@@ -31,7 +31,7 @@ void parameter_solver::resolve_interface_chain(
         auto node_type = node->get_type();
         auto res = d_store->get_HDL_resource(node_type);
         if (!res.has_value())return false;
-        auto ports = res.value().get_port_specs();
+        auto ports = res.value()->get_port_specs();
         return ports.contains(name) && ports.at(name).direction == interface_port;
     };
 
@@ -98,7 +98,7 @@ void parameter_solver::update_parameters_map(
 ) {
     auto node_parameters = node->get_parameters();
     auto resource = d_store->get_HDL_resource(node->get_type());
-    for(auto &[p_name, param]:resource.value().get_parameters()) {
+    for(auto &[p_name, param]:resource.value()->get_parameters()) {
         std::shared_ptr<HDL_parameter> ast_param;
         if(node_parameters.contains(p_name))
             ast_param = std::make_shared<HDL_parameter>(*node_parameters.get(p_name));
@@ -158,7 +158,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
         return {};
     }
     auto node_overrides = work.node->get_parameters();
-    auto node_parameters = node_spec.value().get_parameters();
+    auto node_parameters = node_spec.value()->get_parameters();
 
     //retrieve default package parameters
     Parameters_map combined_params = node_parameters;
@@ -187,7 +187,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
                     spdlog::critical("Definition for package {} not found while searching for {}",dep.get_package_prefix().back(), dep.print());
                     return {};
                 }
-                auto pkg_solved = process_parameters(package.value().get_parameters(), {});
+                auto pkg_solved = process_parameters(package.value()->get_parameters(), {});
                 for (auto &[pkg_id, pkg_val]: pkg_solved) {
                     qualified_identifier qid{dep.get_package_prefix().back(), "", pkg_id.get_name()};
                     package_parameters[qid] = pkg_val;
@@ -198,9 +198,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
     return package_parameters;
 }
 
-void parameter_solver::propagate_types(HDL_Resource &resource, const std::shared_ptr<data_store> &d_store) {
+void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
 
-    for (auto &[_, param] : resource.get_parameters()) {
+    for (auto &[_, param] : resource->get_parameters()) {
 
         auto deps = param->get_dependencies();
         for (const auto& type:deps.types) {
@@ -210,16 +210,16 @@ void parameter_solver::propagate_types(HDL_Resource &resource, const std::shared
                     spdlog::critical("Definition of package {} not found while propagating types",type.get_package_prefix().back());
                     return;
                 }
-                auto type_def = res.value().get_typedefs()[type.get_name()];
+                auto type_def = res.value()->get_typedefs()[type.get_name()];
                 param->set_type(type_def);
             }
         }
     }
 }
 
-void parameter_solver::propagate_functions(HDL_Resource &resource, const std::shared_ptr<data_store> &d_store) {
+void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
 
-    for (auto &[_, param] : resource.get_parameters()) {
+    for (auto &[_, param] : resource->get_parameters()) {
 
         auto deps = param->get_dependencies();
         for (const auto& fcn:deps.functions) {
@@ -229,10 +229,10 @@ void parameter_solver::propagate_functions(HDL_Resource &resource, const std::sh
                     spdlog::critical("Definition of package {} not found while propagating functions",fcn.get_package_prefix().back());
                     return;
                 }
-                auto fcn_def = res.value().get_function(fcn.get_name());
+                auto fcn_def = res.value()->get_function(fcn.get_name());
                 param->propagate_function(fcn_def);
             } else {
-                param->propagate_function(resource.get_function(fcn.get_name()));
+                param->propagate_function(resource->get_function(fcn.get_name()));
             }
         }
 
@@ -251,7 +251,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
            work.node->get_type(), work.node->get_name());
         return {};
     }
-    auto node_parameters = node_spec.value().get_parameters();
+    auto node_parameters = node_spec.value()->get_parameters();
     auto node_overrides = work.node->get_parameters();
 
     Parameters_map to_solve;

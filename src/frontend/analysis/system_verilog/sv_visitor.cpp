@@ -26,9 +26,6 @@
 #include "data_model/HDL/parameters/components/token/String_token.hpp"
 #include "data_model/HDL/types/HDL_external_type.hpp"
 
-sv_visitor::sv_visitor(std::string p) {
-    path = std::move(p);
-}
 
 void sv_visitor::route_expression_text(const std::string& text) {
     if(loops_factory.in_loop()) {
@@ -81,7 +78,7 @@ void sv_visitor::enterModule_declaration(sv2017::Module_declarationContext *ctx)
     current_declaration_type = "module";
     size_t line_number = ctx->getStart()->getLine();
     auto module_name = ctx->module_header_common()->identifier()->getText();
-    modules_factory.new_module(module_name, path, module, line_number);
+    modules_factory.new_module(module_name, module, line_number);
 }
 
 
@@ -93,7 +90,7 @@ void sv_visitor::enterInterface_declaration(sv2017::Interface_declarationContext
     current_declaration_type = "interface";
     size_t line_number = ctx->getStart()->getLine();
     std::string interface_name = ctx->interface_header()->identifier()->getText();
-    interfaces_factory.new_interface(interface_name, path, line_number);
+    interfaces_factory.new_interface(interface_name, line_number);
 }
 
 void sv_visitor::exitInterface_declaration(sv2017::Interface_declarationContext *ctx) {
@@ -300,7 +297,7 @@ void sv_visitor::exitInterface_header(sv2017::Interface_headerContext *ctx) {
 
 }
 
-std::vector<HDL_Resource> sv_visitor::get_entities() {
+std::vector<std::shared_ptr<hdl_statement_base>> sv_visitor::get_entities() {
     return entities;
 }
 
@@ -424,7 +421,7 @@ void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
 void sv_visitor::enterPackage_declaration(sv2017::Package_declarationContext *ctx) {
     size_t line_number = ctx->getStart()->getLine();
     auto package_name = ctx->identifier()[0]->getText();
-    modules_factory.new_module(package_name, path, package, line_number);
+    modules_factory.new_module(package_name, package, line_number);
 }
 
 void sv_visitor::exitPackage_declaration(sv2017::Package_declarationContext *ctx) {

@@ -66,15 +66,15 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
             ) continue;
 
             if(working_instance->get_dependency_class() == module || working_instance->get_dependency_class() == interface ) {
-
-                auto res_opt = d_store->get_HDL_resource(type);
+                std::string res_path;
+                auto res_opt = d_store->get_HDL_resource(type, res_path);
 
                 if (!res_opt.has_value()) {
                     spdlog::error("Definition of module {} while AST building", type);
                     continue;
                 }
                 auto res = res_opt.value();
-                crash_ctx.set(type, res.get_path());
+                crash_ctx.set(type, res_path);
 
                 spdlog::trace("Processing dependency {} in module {}",working_instance->get_name(), type);
                 auto current_param_values = parameter_solver::override_parameters(wo, d_store);
@@ -87,12 +87,12 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
 
                 std::unordered_map<std::string, std::string> interfaces_map;
                 for (auto &[port_name, port_net] :wo.node->get_ports()) {
-                    auto port_spec = res.get_port_specs()[port_name];
+                    auto port_spec = res->get_port_specs()[port_name];
                     if (port_spec.direction == interface_port) {
                         interfaces_map[port_name] = port_spec.if_info.type;
                     }
                 }
-                for (auto &stmt : res.get_statements()) {
+                for (auto &stmt : res->get_statements()) {
                     if (auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(stmt)) {
                         auto dc = inst->get_dependency_class();
                         if (dc == module || dc == interface) {
@@ -102,12 +102,12 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                             working_instance->add_child(child);
                             child_wo.push_back({child, current_param_values, wo.path + "." + working_instance->get_name(), interfaces_map});
                         } else if (dc == package) {
-                            auto pkg = d_store->get_HDL_resource(inst->get_type());
+                            auto pkg = d_store->get_HDL_resource(inst->get_type(), res_path);
                             if (!pkg.has_value()) {
                                 spdlog::error("Definition of package {} not found while AST building", inst->get_type());
                                 continue;
                             }
-                            auto path = pkg.value().get_path();
+                            auto path = res_path;
                             working_instance->add_package_dependency(path);
                         } else if (dc == memory_init) {
                             auto df = d_store->get_data_file(inst->get_type());
@@ -171,12 +171,15 @@ void HDL_ast_builder_v2::process_quantifier(const std::shared_ptr<HDL_parameter>
     }
 }
 
-std::map<qualified_identifier, resolved_parameter> HDL_ast_builder_v2::process_runtime_parameters(const std::map<qualified_identifier, resolved_parameter> &parameters, const HDL_Resource &res) {
+std::map<qualified_identifier, resolved_parameter> HDL_ast_builder_v2::process_runtime_parameters(
+    const std::map<qualified_identifier, resolved_parameter> &parameters,
+    const std::shared_ptr<hdl_resource_statement> &res
+) {
     std::map<qualified_identifier, resolved_parameter> runtime_parameters;
     for ( auto &[name, value]: parameters) {
         if (value.is_string()) {
             if (value.get_string() == "__RUNTIME_ONLY_PARAMETER__") {
-                auto raw_param = res.get_parameters().get(name.get_name());
+                auto raw_param = res->get_parameters().get(name.get_name());
                 auto val = raw_param->evaluate({});
                 if (val.has_value()) runtime_parameters.insert({name, val.value()});
             }

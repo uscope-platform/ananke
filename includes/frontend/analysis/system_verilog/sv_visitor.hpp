@@ -42,10 +42,8 @@
 using namespace mgp_sv;
 
 class sv_visitor : public sv2017BaseListener {
-
 public:
-    explicit sv_visitor(std::string p);
-
+    sv_visitor() = default;
     void enterModule_declaration(sv2017::Module_declarationContext *ctx) override;
     void exitModule_declaration(sv2017::Module_declarationContext *ctx) override;
     void enterInterface_declaration(sv2017::Interface_declarationContext *ctx) override;
@@ -145,7 +143,7 @@ public:
     void exitReplication(sv2017::ReplicationContext *ctx) override;
 
     static uint32_t parse_number(const std::string& s);
-    std::vector<HDL_Resource> get_entities();
+    std::vector<std::shared_ptr<hdl_statement_base>> get_entities();
 
     void exitData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) override;
 
@@ -217,8 +215,7 @@ private:
     bool in_param_declaration = false;
     bool in_function_var_decl = false;
     bool in_class = false;
-    std::string path;
-    std::vector<HDL_Resource> entities;
+    std::vector<std::shared_ptr<hdl_statement_base>> entities;
 
     std::string current_parameter;
     std::string current_declaration_type;

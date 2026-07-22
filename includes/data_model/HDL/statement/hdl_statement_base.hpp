@@ -32,6 +32,15 @@ public:
         return typeid(*this) == typeid(rhs) && equals(rhs);
     }
 
+    template<typename T>
+        T& as() { return static_cast<T&>(*this); }
+
+    template<typename T>
+        bool is() const {
+        // dynamic_cast with pointers returns nullptr if the cast fails
+        return dynamic_cast<const T*>(this) != nullptr;
+    }
+
     friend void PrintTo(const hdl_statement_base& s, std::ostream* os);
 };
 

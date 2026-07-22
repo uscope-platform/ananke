@@ -19,11 +19,25 @@
 #define ANANKE_HDL_FILE_HPP
 
 #include "data_model/HDL/statement/hdl_statements.hpp"
+#include <cereal/types/vector.hpp>
+
+#include "HDL/HDL_Resource.hpp"
 
 class hdl_file {
 public:
-    void add_statement(const std::shared_ptr<hdl_statement_base> &statement){content.push_back(statement);}
+    void set_content(const std::vector<std::shared_ptr<hdl_statement_base>> &c) {content = c;}
+    std::vector<std::shared_ptr<hdl_statement_base>> get_content() {return content;}
+
+    void set_path(const std::string &p) { path = p; }
+    std::string get_path() { return path; }
+
+    template<class Archive> void serialize(Archive & ar) {
+        ar(content, path);  // cereal supports variant natively
+    }
+
+
 private:
+    std::string path;
     std::vector<std::shared_ptr<hdl_statement_base>> content;
 };
 

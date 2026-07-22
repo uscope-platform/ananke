@@ -79,10 +79,11 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
                 mm_file file(target);
                 auto includes = s_store->get_default_includes();;
                 analyzer.set_include_directories(includes);
-                auto resources = analyzer.analyze(target, file.view());
+                auto analysis_result = analyzer.analyze(target, file.view());
                 std::unordered_map<std::string, std::string> res_map;
-                for (auto &res:resources) {
-                    res_map.insert({res.getName(), res.get_path()});
+                for (auto &res:analysis_result.get_content()) {
+
+                    res_map.insert({res->as<hdl_resource_statement>().getName(), analysis_result.get_path()});
                 }
                 return res_map;
             } catch (std::runtime_error &err) {

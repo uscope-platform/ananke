@@ -34,7 +34,7 @@ void vhdl_analyzer::cleanup_content(const std::string &regex) {
 
 }
 
-std::vector<HDL_Resource> vhdl_analyzer::analyze() {
+hdl_file vhdl_analyzer::analyze() {
 
     std::istringstream istream(processed_content);
 
@@ -53,8 +53,10 @@ std::vector<HDL_Resource> vhdl_analyzer::analyze() {
 
     antlr4::tree::ParseTree *Tree = parser.design_file();
     antlr4::tree::ParseTreeWalker::DEFAULT.walk(&vhdl_modules_explorer, Tree);
-
-    return  vhdl_modules_explorer.get_entities();
+    hdl_file result;
+    result.set_path(path);
+    result.set_content(vhdl_modules_explorer.get_entities());
+    return  result;
 }
 
 void VhParserErrorListener::syntaxError(antlr4::Recognizer *recognizer, antlr4::Token *offendingSymbol, size_t line,

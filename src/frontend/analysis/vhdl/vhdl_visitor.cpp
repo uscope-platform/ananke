@@ -22,22 +22,19 @@ vhdl_visitor::vhdl_visitor(std::string p) {
     path = std::move(p);
 }
 
-std::vector<HDL_Resource> vhdl_visitor::get_entities() {
-    return entities;
-}
 
 void vhdl_visitor::enterEntity_declaration(mgp_vh::vhdlParser::Entity_declarationContext *ctx) {
     std::string module_name = ctx->identifier()[0]->getText();
     size_t line_number = ctx->getStart()->getLine();
-    modules_factory.new_module(module_name, path,module, line_number);
+    modules_factory.new_module(module_name,module, line_number);
 }
 
 void vhdl_visitor::exitArchitecture_body(mgp_vh::vhdlParser::Architecture_bodyContext *ctx) {
     std::string name = ctx->name()->getText();
     for(auto &item:entities){
-        if(item.getName() == name){
-            for (auto &stmt : statement_map[item.getName()]) {
-                item.add_statement(stmt);
+        if(item->as<hdl_resource_statement>().getName() == name){
+            for (auto &stmt : statement_map[item->as<hdl_resource_statement>().getName()]) {
+                item->as<hdl_resource_statement>().add_statement(stmt);
             }
         }
     }

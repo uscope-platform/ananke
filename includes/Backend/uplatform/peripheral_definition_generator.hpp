@@ -34,7 +34,7 @@ public:
     std::unordered_map<std::string, std::string>  get_variant_peripherals() {return variant_peripherals;};
 private:
 
-    void generate_peripheral(const HDL_Resource &res,Parameters_map &parameters, const std::string& inst_name);
+    void generate_peripheral(const std::shared_ptr<hdl_resource_statement> &res,Parameters_map &parameters, const std::string& inst_name);
     nlohmann::json generate_field(field_documentation &doc, const Parameters_map &parameters);
     std::vector<nlohmann::json> generate_simple_module_registers(const std::vector<register_documentation> &r);
     std::vector<nlohmann::json> generate_parametric_module_registers(const std::vector<register_documentation> &r, const Parameters_map &parameters);

@@ -156,9 +156,9 @@ TEST(parameter_processing, package_parameters_in_array_init) {
 
     sv_analyzer analyzer;
 
-    auto resources = analyzer.analyze("", test_pattern);
-    auto& pkg = resources[0];
-    auto& mod = resources[2];
+    auto resources = analyzer.analyze("", test_pattern).get_content();
+    auto& pkg = resources[0]->as<hdl_resource_statement>();
+    auto& mod = resources[2]->as<hdl_resource_statement>();;
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -193,9 +193,9 @@ TEST(parameter_processing, package_parameters_use) {
 
     sv_analyzer analyzer;
 
-    auto resources = analyzer.analyze("", test_pattern);
-    auto& pkg = resources[0];
-    auto& mod = resources[1];
+    auto resources = analyzer.analyze("", test_pattern).get_content();
+    auto& pkg = resources[0]->as<hdl_resource_statement>();;
+    auto& mod = resources[1]->as<hdl_resource_statement>();;
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -494,7 +494,7 @@ TEST(parameter_processing, complex_vector_function_parameter) {
 
     sv_analyzer analyzer;
 
-    std::vector<HDL_Resource> resources = analyzer.analyze("", test_pattern);
+    auto resources = analyzer.analyze("", test_pattern);
 
     d_store->store_file({"/dev/zero", "file_hash", resources});
 
@@ -540,7 +540,7 @@ TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch)
 
     sv_analyzer analyzer;
 
-    std::vector<HDL_Resource> resources = analyzer.analyze("", test_pattern);
+    auto resources = analyzer.analyze("", test_pattern);
 
     d_store->store_file({"/dev/zero", "file_hash", resources});
 
@@ -591,9 +591,9 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
 
     sv_analyzer analyzer;
 
-    auto resources = analyzer.analyze("", test_pattern);
-    auto& pkg = resources[0];
-    auto& mod = resources[1];
+    auto resources = analyzer.analyze("", test_pattern).get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -602,7 +602,7 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
     }
 
     parameter_solver::propagate_functions(mod, nullptr);
-    auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
 
     auto param = solved.at(qualified_identifier("AXI_ADDRESSES")).get_int_array();
     auto param_value = param.get_1d_slice({0, 0});
@@ -643,9 +643,9 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
     sv_analyzer analyzer;
 
 
-    auto resources = analyzer.analyze("", test_pattern);
-    auto& pkg = resources[0];
-    auto& mod = resources[1];
+    auto resources = analyzer.analyze("", test_pattern).get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -654,7 +654,7 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
     }
 
     parameter_solver::propagate_functions(mod, nullptr);
-    auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
 
     auto param = solved.at(qualified_identifier("AXI_ADDRESSES")).get_int_array();
     auto param_value = param.get_1d_slice({0, 0});
@@ -678,11 +678,12 @@ TEST(parameter_processing, function_in_package_initialization) {
 
     sv_analyzer analyzer;
 
-    auto resources = analyzer.analyze("", test_pattern);
-    auto& pkg = resources[0];
+    auto resources = analyzer.analyze("", test_pattern).get_content();
+    auto pkg = std::static_pointer_cast<hdl_resource_statement>(resources[0]);
+
 
     parameter_solver::propagate_functions(pkg, nullptr);
-    auto solved = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(pkg->get_parameters(), {});
     auto param = solved.at(qualified_identifier("RESULT")).get_integer();
     ASSERT_EQ(param, 42);
 }
@@ -711,14 +712,14 @@ TEST(parameter_processing, package_function_called_from_module) {
 
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
 
+    auto file =  analyzer.analyze("", test_pattern);
+    auto resources = file.get_content();
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
-    auto resources = analyzer.analyze("", test_pattern);
-    d_store->store_file({"/dev/zero", "file_hash", resources});
-    auto& pkg = resources[0];
-    auto& mod = resources[1];
-
-    ASSERT_TRUE(mod.get_parameters().contains("RESULT"));
-    auto param = mod.get_parameters().get("RESULT");
+    ASSERT_TRUE(mod->get_parameters().contains("RESULT"));
+    auto param = mod->get_parameters().get("RESULT");
 
     HDL_parameter p;
     p.set_name("RESULT");
@@ -735,7 +736,7 @@ TEST(parameter_processing, package_function_called_from_module) {
     }
 
     parameter_solver::propagate_functions(mod, d_store);
-    auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
     auto solve_param = solved.at(qualified_identifier("RESULT")).get_integer();
     ASSERT_EQ(solve_param, 42);
 }
@@ -768,14 +769,15 @@ TEST(parameter_processing, package_function_called_from_module_and_typedef) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
 
 
-    auto resources = analyzer.analyze("", test_pattern);
-    d_store->store_file({"/dev/zero", "file_hash", resources});
-    auto& pkg = resources[0];
-    auto& pkg2 = resources[1];
-    auto& mod = resources[2];
+    auto file = analyzer.analyze("", test_pattern);
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    auto resources = file.get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg2 = resources[1]->as<hdl_resource_statement>();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
 
-    ASSERT_TRUE(mod.get_parameters().contains("RESULT"));
-    auto param = mod.get_parameters().get("RESULT");
+    ASSERT_TRUE(mod->get_parameters().contains("RESULT"));
+    auto param = mod->get_parameters().get("RESULT");
 
     HDL_parameter p;
     p.set_name("RESULT");
@@ -793,7 +795,7 @@ TEST(parameter_processing, package_function_called_from_module_and_typedef) {
 
     parameter_solver::propagate_types(mod, d_store);
     parameter_solver::propagate_functions(mod, d_store);
-    auto solved = parameter_solver::process_parameters(mod.get_parameters(), ctx);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
     auto solve_param = solved.at(qualified_identifier("RESULT")).get_integer();
     ASSERT_EQ(solve_param, 42);
 }
@@ -864,11 +866,12 @@ TEST(parameter_processing, interface_default_parameters) {
 
     sv_analyzer analyzer;
 
-    auto resources = analyzer.analyze("", test_pattern);
 
-    d_store->store_file({"/dev/zero", "file_hash", resources});
+    auto file = analyzer.analyze("", test_pattern);
+    auto resource = file.get_content()[1]->as<hdl_resource_statement>();
+    d_store->store_file({"/dev/zero", "file_hash", file});
 
-    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resources[1].get_statements()[0]);
+    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
     auto raw_param = inst->get_parameters();
 
 
@@ -916,11 +919,11 @@ TEST(parameter_processing, override_with_interface_param) {
 
     sv_analyzer analyzer;
 
-    auto resources = analyzer.analyze("", test_pattern);
+    auto file = analyzer.analyze("", test_pattern);
+    auto resource = file.get_content()[2]->as<hdl_resource_statement>();
+    d_store->store_file({"/dev/zero", "file_hash", file});
 
-    d_store->store_file({"/dev/zero", "file_hash", resources});
-
-    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resources[2].get_statements()[1]);
+    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[1]);
     auto raw_param = inst->get_parameters();
 
 
@@ -1085,17 +1088,17 @@ TEST(parameter_processing, override_with_package_parameter) {
 
     sv_analyzer analyzer;
 
-    auto resources = analyzer.analyze("", test_pattern);
-    auto& pkg = resources[0];
-    auto& dep = resources[1];
+    auto resources = analyzer.analyze("", test_pattern).get_content();
+    auto pkg = std::static_pointer_cast<hdl_resource_statement>(resources[0]);
+    auto dep = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(),  {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg->get_parameters(),  {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
         ctx[qualified_identifier("test_package", id.get_name())] = val;
     }
 
-    auto dep_params = dep.get_parameters();
+    auto dep_params = dep->get_parameters();
     Parameters_map to_solve;
     for (auto& [name, param] : dep_params) {
         if (name == "param_1") {
@@ -1223,19 +1226,19 @@ TEST(parameter_processing, override_package_function) {
 
     sv_analyzer analyzer;
 
-    auto resources = analyzer.analyze("", test_pattern);
-    auto& pkg = resources[0];
-    auto& dep = resources[1];
+    auto resources = analyzer.analyze("", test_pattern).get_content();
+    auto pkg = std::static_pointer_cast<hdl_resource_statement>(resources[0]);
+    auto dep =  std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
     parameter_solver::propagate_functions(pkg, nullptr);
     parameter_solver::propagate_functions(dep, nullptr);
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(),  {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg->get_parameters(),  {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto& [id, val] : pkg_defaults) {
         ctx[qualified_identifier("test_pack", id.get_name())] = val;
     }
 
-    auto dep_params = dep.get_parameters();
+    auto dep_params = dep->get_parameters();
     Parameters_map to_solve;
     for (auto& [name, param] : dep_params) {
         if (name == "param_1") {
@@ -1769,13 +1772,13 @@ endmodule
     )";
 
     sv_analyzer analyzer;
-
-    auto resources = analyzer.analyze("", test_pattern);
+    auto file = analyzer.analyze("", test_pattern);
+    auto resource = file.get_content()[0]->as<hdl_resource_statement>();
     auto pkg_solved = parameter_solver::process_parameters(
-        resources[0].get_parameters(), {});
+        resource.get_parameters(), {});
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
-    d_store->store_file({"/dev/zero", "file_hash", resources});
+    d_store->store_file({"/dev/zero", "file_hash", file});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top_module"}))[0];

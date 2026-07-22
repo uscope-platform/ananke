@@ -77,28 +77,25 @@ void Repository_walker::collect_analysis_results() {
     for(auto &f : hdl_futures){
         auto [path, file_hash, resource] = f.get();
         if (resource) {
-                d_store->store_file({path, file_hash, std::vector{resource.value()}});
+            d_store->store_file({path, file_hash, resource.value()});
         }
     }
     for(auto &f : scripts_futures){
         auto [path, file_hash, resource] = f.get();
         if (resource) {
-            for (auto &res: resource.value())
-                d_store->store_file({path, file_hash, res});
+            d_store->store_file({path, file_hash, resource.value()});
         }
     }
     for(auto &f : constraints_futures){
         auto [path, file_hash, resource] = f.get();
         if (resource) {
-            for (auto &res: resource.value())
-                d_store->store_file({path, file_hash, res});
+            d_store->store_file({path, file_hash, resource.value()});
         }
     }
     for(auto  &f: data_futures){
         auto [path, file_hash, resource] = f.get();
         if (resource) {
-            for (auto &res: resource.value())
-                d_store->store_file({path, file_hash, res});
+            d_store->store_file({path, file_hash, resource.value()});
         }
     }
     hdl_futures.erase(hdl_futures.begin(), hdl_futures.end());
@@ -234,7 +231,7 @@ bool Repository_walker::file_is_data(const std::filesystem::path &file) {
 
 /// Analyze the target verilog-type file to extract declared and used instantiated design elements
 /// \param file Target file
-file_analysis_context<HDL_Resource> analyze_verilog(
+file_analysis_context<hdl_file> analyze_verilog(
     const std::filesystem::path &file,
     std::set<std::string> i_d, const std::string &old_hash
 ) {
@@ -286,7 +283,7 @@ std::string hash_file(const std::string_view &file_content) {
 
 /// Analyze the target vhdl-type file to extract declared and used instantiated design elements
 /// \param file Target file
-file_analysis_context<HDL_Resource> analyze_vhdl(
+file_analysis_context<hdl_file> analyze_vhdl(
     const std::filesystem::path &file,
     std::set<std::string> i_d,
     const std::string &old_hash
@@ -318,8 +315,7 @@ file_analysis_context<DataFile> analyze_data(
     }
 
     DataFile data(file.stem(), file.string());
-    std::vector res = {data};
-    return {file.string(), hash, res};
+    return {file.string(), hash, data};
 }
 
 /// Analyze the target Script extracting the necessary metadata
@@ -342,8 +338,7 @@ file_analysis_context<Script> analyze_script(
     s.type = ext;
     Script scr(s);
     scr.set_path(file);
-    std::vector ret = {scr};
-    return {file.string(), hash, ret};
+    return {file.string(), hash, scr};
 }
 
 /// Analyze the target constraint file extracting the necessary metadata
@@ -360,8 +355,7 @@ file_analysis_context<Constraints> analyze_constraint(
     }
     Constraints constr(file.stem());
     constr.set_path(file);
-    std::vector ret = {constr};
-    return {file.string(), hash, ret};
+    return {file.string(), hash, constr};
 }
 
 

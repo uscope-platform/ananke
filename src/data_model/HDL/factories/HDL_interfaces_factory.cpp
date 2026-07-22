@@ -16,15 +16,14 @@
 #include "data_model/HDL/factories/HDL_interfaces_factory.hpp"
 
 
-void HDL_interfaces_factory::new_interface(const std::string &name, const std::string &path, unsigned int line_n) {
+void HDL_interfaces_factory::new_interface(const std::string &name,unsigned int line_n) {
     new_basic_resource(name);
-    current_resource.set_path(path);
     current_resource.set_line_n(line_n);
     current_resource.set_type(interface);
 }
 
-HDL_Resource HDL_interfaces_factory::get_interface() {
-    return get_resource();
+std::shared_ptr<hdl_resource_statement> HDL_interfaces_factory::get_interface() {
+    return std::make_shared<hdl_resource_statement>(get_resource());
 }
 
 void HDL_interfaces_factory::add_parameter(const std::shared_ptr<HDL_parameter> &p) {

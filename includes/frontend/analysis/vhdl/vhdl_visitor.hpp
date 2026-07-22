@@ -37,10 +37,10 @@ public:
     void enterArchitecture_body(mgp_vh::vhdlParser::Architecture_bodyContext *ctx) override;
     void exitArchitecture_body(mgp_vh::vhdlParser::Architecture_bodyContext *ctx) override;
     void exitConcurrent_statement(mgp_vh::vhdlParser::Concurrent_statementContext *ctx) override;
-    std::vector<HDL_Resource> get_entities();
+    std::vector<std::shared_ptr<hdl_statement_base>> get_entities() {return entities;}
 private:
     std::string path;
-    std::vector<HDL_Resource>  entities;
+    std::vector<std::shared_ptr<hdl_statement_base>>  entities;
     std::unordered_map<std::string, std::vector<std::shared_ptr<hdl_statement_base>>> statement_map;
     std::string current_architecture;
 

@@ -24,9 +24,8 @@ class dep_resolver : public ::testing::Test {
 protected:
     void SetUp() {
         d_store = std::make_shared<data_store>(true,"/tmp/test_data_store");
-        HDL_Resource mod_entity;
+        hdl_resource_statement mod_entity;
         mod_entity.set_name("test_module");
-        mod_entity.set_path("test/mod.sv");
         mod_entity.set_type(module);
 
         auto s1 = std::make_shared<hdl_instance_statement>();
@@ -43,27 +42,34 @@ protected:
         mod_entity.add_statement(s4);
 
         std::vector entities ={mod_entity};
-        d_store->store_file({"test/mod.sv", "file_hash", entities});
+        hdl_file f;
+        f.set_content({std::make_shared<hdl_resource_statement>(mod_entity)});
+        f.set_path("test/mod.sv");
+        d_store->store_file({"test/mod.sv", "file_hash", f});
         DataFile D("test_mem_init", "test/mem_init.mem");
         d_store->store_file({"test/mem_init.mem", "hash", {D}});
-        HDL_Resource expl_dep;
+
+        hdl_resource_statement expl_dep;
         expl_dep.set_name("expl_dep");
-        expl_dep.set_path("test/explicit/dep.sv");
         expl_dep.set_type(module);
-        entities ={expl_dep};
-        d_store->store_file({"test/explicit/dep.sv", "file_hash", entities});
-        HDL_Resource dep_entity;
+        f.set_path("test/explicit/dep.sv");
+        f.set_content({std::make_shared<hdl_resource_statement>(expl_dep)});
+        d_store->store_file({"test/explicit/dep.sv", "file_hash", f});
+
+        hdl_resource_statement dep_entity;
         dep_entity.set_name("test_dep");
-        dep_entity.set_path("test/dep.sv");
         dep_entity.set_type(module);
-        entities ={dep_entity};
-        d_store->store_file({"test/dep.sv", "file_hash", entities});
-        HDL_Resource pkg_entity;
+        f.set_path("test/dep.sv");
+        f.set_content({std::make_shared<hdl_resource_statement>(dep_entity)});
+        d_store->store_file({"test/dep.sv", "file_hash", f});
+
+        hdl_resource_statement pkg_entity;
         pkg_entity.set_name("test_package");
-        pkg_entity.set_path("test/pkg.sv");
         pkg_entity.set_type(package);
-        entities ={pkg_entity};
-        d_store->store_file({"test/pkg.sv", "file_hash", entities});
+
+        f.set_path("test/pkg.sv");
+        f.set_content({std::make_shared<hdl_resource_statement>(pkg_entity)});
+        d_store->store_file({"test/pkg.sv", "file_hash", f});
     }
 
     virtual void TearDown() {

@@ -25,12 +25,10 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_resource_statement)
 hdl_resource_statement::hdl_resource_statement() {
     hdl_dependency_type = module;
     name = "";
-    path = "";
 }
 
 hdl_resource_statement::hdl_resource_statement(const hdl_resource_statement &c) {
     name = c.name;
-    path = c.path;
     line_n = c.line_n;
     hdl_dependency_type = c.hdl_dependency_type;
     parameters_spec = c.parameters_spec;
@@ -90,7 +88,6 @@ bool hdl_resource_statement::is_empty() {
     bool ret = true;
 
     ret &= name.empty();
-    ret &= path.empty();
     ret &= hdl_dependency_type == module;
     ret &= processor_docs.empty();
     ret &= port_specs.empty();
@@ -127,7 +124,6 @@ bool operator==(const hdl_resource_statement &lhs, const hdl_resource_statement 
 
     ret &= lhs.name == rhs.name;
     ret &= lhs.line_n == rhs.line_n;
-    ret &= lhs.path == rhs.path;
     ret &= lhs.hdl_dependency_type == rhs.hdl_dependency_type;
     ret &= lhs.processor_docs == rhs.processor_docs;
     ret &= lhs.port_specs == rhs.port_specs;
@@ -148,7 +144,7 @@ bool operator<(const hdl_resource_statement &lhs, const hdl_resource_statement &
 void PrintTo(const hdl_resource_statement &res, std::ostream *os) {
     std::string result = "\n----------------------------------------------------";
     result += "\nHDL Resource:\n  NAME: " + res.name;
-    result += "\n  PATH: " + res.path + "[" + std::to_string(res.line_n) + "]";
+    result += "\n  LINE: "  + std::to_string(res.line_n) ;
     result += "\n  PARAMETERS: \n";
     for (const auto& [item_name, item] : res.parameters_spec) {
         result += item->to_string() + "\n";

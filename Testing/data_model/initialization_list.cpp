@@ -508,7 +508,7 @@ TEST(Initialization_list, get_array_dependencies) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("",test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto params = resource.get_parameters();
     auto deps_a = params.get("INITIAL_REGISTER_VALUES")->get_dependencies();
@@ -549,7 +549,7 @@ TEST(Initialization_list, concatenation_of_packed_arrays) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("",test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto p = parameter_solver::process_parameters(resource.get_parameters(), {});
     auto param = p[qualified_identifier("INITIAL_REGISTER_VALUES")];

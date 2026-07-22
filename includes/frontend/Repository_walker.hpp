@@ -41,11 +41,11 @@ template<typename  T>
 struct file_analysis_context {
     std::string path;
     std::string hash;
-    std::optional<std::vector<T>> resource;
+    std::optional<T> resource;
 };
 
-static file_analysis_context<HDL_Resource> analyze_verilog(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
-static file_analysis_context<HDL_Resource> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
+static file_analysis_context<hdl_file> analyze_verilog(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
+static file_analysis_context<hdl_file> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
 static file_analysis_context<Script>  analyze_script(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
 static file_analysis_context<DataFile>  analyze_data(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
 static file_analysis_context<Constraints>  analyze_constraint(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
@@ -86,7 +86,7 @@ private:
     std::shared_ptr<settings_store> s_store;
     std::shared_ptr<data_store> d_store;
 
-    std::vector<std::future<file_analysis_context<HDL_Resource>>> hdl_futures;
+    std::vector<std::future<file_analysis_context<hdl_file>>> hdl_futures;
     std::vector<std::future<file_analysis_context<Script>>> scripts_futures;
     std::vector<std::future<file_analysis_context<Constraints>>> constraints_futures;
     std::vector<std::future<file_analysis_context<DataFile>>> data_futures;

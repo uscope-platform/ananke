@@ -25,13 +25,14 @@
 #include "antlr4-runtime.h"
 #include "mgp_vh/vhdlLexer.h"
 #include "mgp_vh/vhdlParser.h"
+#include "data_model/hdl_file.hpp"
 
 class vhdl_analyzer {
 
 public:
     explicit vhdl_analyzer(const std::string& file_path);
     void cleanup_content(const std::string& regex);
-    std::vector<HDL_Resource> analyze();
+    hdl_file analyze();
 
 private:
     std::string path;

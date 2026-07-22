@@ -76,21 +76,21 @@ peripheral_definition_generator::peripheral_definition_generator(std::shared_ptr
     peripheral_defs = periph_buffer;
 }
 
-void peripheral_definition_generator::generate_peripheral(const HDL_Resource &res, Parameters_map &parameters, const std::string& inst_name) {
+void peripheral_definition_generator::generate_peripheral(const std::shared_ptr<hdl_resource_statement> &res, Parameters_map &parameters, const std::string& inst_name) {
 
     nlohmann::json specs;
 
-    if(peripheral_defs.contains(res.getName())) return;
-    std::string periph_name = res.getName();
+    if(peripheral_defs.contains(res->getName())) return;
+    std::string periph_name = res->getName();
 
-    if(res.get_documentation().is_aliased()){
-        periph_name= res.get_documentation().get_alias();
-        alias_map[res.getName()] = periph_name;
+    if(res->get_documentation().is_aliased()){
+        periph_name= res->get_documentation().get_alias();
+        alias_map[res->getName()] = periph_name;
     }
 
     specs["version"] = ver;
 
-    auto mod_doc = res.get_documentation();
+    auto mod_doc = res->get_documentation();
 
     if(mod_doc.is_variant()){
         std::string variant = parameters.get(mod_doc.get_variant_parameter())->get_string_value();

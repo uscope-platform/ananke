@@ -57,8 +57,6 @@ public:
     void set_name(const std::string &n) { name = n; }
     const std::string &getName() const { return name; }
 
-    void set_path(const std::string &p) { path = p; }
-    std::string get_path() { return path; }
 
     void set_type(dependency_class t) { hdl_dependency_type = t; }
     dependency_class get_type() { return hdl_dependency_type; }
@@ -97,13 +95,12 @@ public:
 
     template<class Archive>
     void serialize(Archive & ar) {
-        ar(name, path, hdl_dependency_type, parameters_spec, port_specs, doc, processor_docs,
+        ar(name, hdl_dependency_type, parameters_spec, port_specs, doc, processor_docs,
             line_n, typedefs, statements);
     }
 
 private:
     std::string name;
-    std::string path;
     unsigned int line_n = 0;
     dependency_class hdl_dependency_type = module;
     std::unordered_map<std::string, HDL_port> port_specs;

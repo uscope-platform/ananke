@@ -99,8 +99,8 @@ TEST_F(repository_walker , directory_analysis) {
 
 
     file_name = "repository_walker/test_sv_module.sv";
-    auto res = d_store->get_file<std::vector<HDL_Resource>>(file_name);
-
+    auto content = d_store->get_file<hdl_file>(file_name)->get_content();
+    auto res = content[0]->as<hdl_resource_statement>();
     std::unordered_map<std::string, HDL_port> test_ports;
 
     test_ports["clock"] = {input_port};
@@ -108,26 +108,22 @@ TEST_F(repository_walker , directory_analysis) {
     test_ports["data_in"] = {interface_port, {"axi_stream", "slave"}};
     test_ports["data_out"] = {interface_port, {"axi_stream", "master"}};
 
-    HDL_Resource sv_res;
+    hdl_resource_statement sv_res;
     sv_res.set_name("Decoder");
     sv_res.set_type(module);
-    sv_res.set_path(file_name);
     sv_res.set_ports(test_ports);
     sv_res.set_line_n(2);
-    ASSERT_TRUE(res.has_value());
-    ASSERT_EQ(res.value(), std::vector{sv_res});
+    ASSERT_EQ(res, sv_res);
 
 
     file_name = "repository_walker/test_vhdl_module.vhd";
-    HDL_Resource vh_res;
+    hdl_resource_statement vh_res;
     vh_res.set_name("half_adder");
     vh_res.set_type(module);
-    vh_res.set_path(file_name);
     vh_res.set_line_n(4);
 
-    res = d_store->get_file<std::vector<HDL_Resource>>(file_name);
-    ASSERT_TRUE(res.has_value());
-    ASSERT_EQ(res.value(), std::vector{vh_res});
+    res = d_store->get_file<hdl_file>(file_name)->get_content()[0]->as<hdl_resource_statement>();
+    ASSERT_EQ(res, vh_res);
 
 }
 

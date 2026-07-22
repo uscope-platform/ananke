@@ -31,11 +31,38 @@ data_store::data_store(bool e, std::string cache_dir_path) {
     clean_up_caches();
 }
 
-std::optional<HDL_Resource> data_store::get_HDL_resource(const std::string& name) {
+std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_HDL_resource(const std::string& name) {
     for (auto &file: cache | std::views::values) {
-        if (!std::holds_alternative<std::vector<HDL_Resource>>(file.content)) continue;
-        for (auto &res:std::get<std::vector<HDL_Resource>>(file.content)) {
-            if (res.getName() == name) return res;
+        if (!std::holds_alternative<hdl_file>(file.content)) continue;
+        for (auto &res:std::get<hdl_file>(file.content).get_content()) {
+            if (!res->is<hdl_resource_statement>()) continue;
+            if (res->as<hdl_resource_statement>().getName() == name) return std::static_pointer_cast<hdl_resource_statement>(res);
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_HDL_resource(const std::string &name,
+    std::string &path) {
+    for (auto &file: cache | std::views::values) {
+        if (!std::holds_alternative<hdl_file>(file.content)) continue;
+        for (auto &res:std::get<hdl_file>(file.content).get_content()) {
+            if (!res->is<hdl_resource_statement>()) continue;
+            if (res->as<hdl_resource_statement>().getName() == name) {
+                path = file.path;
+                return std::static_pointer_cast<hdl_resource_statement>(res);
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<hdl_file> data_store::get_hdl_file_by_resource(const std::string &name) {
+    for (auto &file: cache | std::views::values) {
+        if (!std::holds_alternative<hdl_file>(file.content)) continue;
+        for (auto &res:std::get<hdl_file>(file.content).get_content()) {
+            if (!res->is<hdl_resource_statement>()) continue;
+            if (res->as<hdl_resource_statement>().getName() == name) return std::get<hdl_file>(file.content);
         }
     }
     return std::nullopt;

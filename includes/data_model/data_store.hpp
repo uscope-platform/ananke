@@ -26,6 +26,7 @@
 #include "Script.hpp"
 #include "Constraints.hpp"
 #include "DataFile.hpp"
+#include "hdl_file.hpp"
 
 
 class data_store {
@@ -36,7 +37,7 @@ public:
         Script,
         DataFile,
         Constraints,
-        std::vector<HDL_Resource>
+        hdl_file
     >;
 
     struct cached_item {
@@ -56,7 +57,9 @@ public:
     [[nodiscard]] std::string get_hash(const std::string &name) const;
     bool contains(const std::string &name)const;
 
-    std::optional<HDL_Resource> get_HDL_resource(const std::string& name);
+    std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name);
+    std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, std::string &path);
+    std::optional<hdl_file> get_hdl_file_by_resource(const std::string& name);
     std::optional<Script> get_script(std::string& name);
     std::optional<DataFile> get_data_file(const std::string& name);
     std::optional<Constraints> get_constraint(const std::string& name);

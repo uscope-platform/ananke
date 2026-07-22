@@ -37,7 +37,7 @@ TEST(function_processing, simple_function_scalar) {
 
     sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze("",test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
     auto functions = resource.get_functions();
 
     EXPECT_EQ(functions.size(), 1);
@@ -80,7 +80,7 @@ TEST(function_processing, simple_function_array) {
 
     sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
     auto functions = resource.get_functions();
 
     EXPECT_EQ(functions.size(), 1);
@@ -122,7 +122,7 @@ TEST(function_processing, simple_loop_function) {
 
     sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto functions = resource.get_functions();
 
@@ -176,7 +176,7 @@ TEST(function_processing, parametric_loop_function) {
 
     sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze("",test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto functions = resource.get_functions();
 
@@ -231,7 +231,7 @@ TEST(function_processing, complex_loop_function) {
 
     sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze("",test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto functions = resource.get_functions();
 
@@ -297,7 +297,7 @@ TEST(function_processing, parametrized_function) {
 
     sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze("",test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto functions = resource.get_functions();
 
@@ -332,8 +332,8 @@ TEST(function_processing, function_in_package) {
 
     sv_analyzer analyzer;
 
-    auto resources = analyzer.analyze("", test_pattern);
-    auto& pkg = resources[0];
+    auto resources = analyzer.analyze("", test_pattern).get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
 
     EXPECT_EQ(pkg.get_type(), package);
     EXPECT_EQ(pkg.getName(), "test_pkg");
@@ -370,7 +370,7 @@ TEST(function_processing, package_assignment) {
 
     sv_analyzer analyzer;
     
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
 
     auto functions = resource.get_functions();
 
@@ -407,7 +407,7 @@ TEST(function_processing, local_variable_scalar) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern)[0];
+    auto resource = analyzer.analyze("",test_pattern).get_content()[0]->as<hdl_resource_statement>();
     auto functions = resource.get_functions();
 
     EXPECT_EQ(functions.size(), 1);
