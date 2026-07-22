@@ -44,7 +44,6 @@ protected:
         std::vector entities ={mod_entity};
         hdl_file f;
         f.set_content({std::make_shared<hdl_resource_statement>(mod_entity)});
-        f.set_path("test/mod.sv");
         d_store->store_file({"test/mod.sv", "file_hash", f});
         DataFile D("test_mem_init", "test/mem_init.mem");
         d_store->store_file({"test/mem_init.mem", "hash", {D}});
@@ -52,14 +51,12 @@ protected:
         hdl_resource_statement expl_dep;
         expl_dep.set_name("expl_dep");
         expl_dep.set_type(module);
-        f.set_path("test/explicit/dep.sv");
         f.set_content({std::make_shared<hdl_resource_statement>(expl_dep)});
         d_store->store_file({"test/explicit/dep.sv", "file_hash", f});
 
         hdl_resource_statement dep_entity;
         dep_entity.set_name("test_dep");
         dep_entity.set_type(module);
-        f.set_path("test/dep.sv");
         f.set_content({std::make_shared<hdl_resource_statement>(dep_entity)});
         d_store->store_file({"test/dep.sv", "file_hash", f});
 
@@ -67,7 +64,6 @@ protected:
         pkg_entity.set_name("test_package");
         pkg_entity.set_type(package);
 
-        f.set_path("test/pkg.sv");
         f.set_content({std::make_shared<hdl_resource_statement>(pkg_entity)});
         d_store->store_file({"test/pkg.sv", "file_hash", f});
     }

@@ -76,7 +76,6 @@ TEST( data_store_test , evict_hdl_entity) {
     test_entity->set_type(module);
     test_entity->set_line_n(15);
     hdl_file f;
-    f.set_path("/test/path");
     f.set_content({test_entity});
     store_1->store_file({"/test/path", "test_hash", f});
     store_1->evict_file("/test/path");
@@ -123,7 +122,6 @@ TEST( data_store_test , store_interface_vect) {
     test_res_1->set_type(interface);
     test_res_2->set_type(interface);
     hdl_file f;
-    f.set_path("/bin/sh");
     f.set_content({test_res_1,test_res_2});
     store->store_file({
         "/bin/sh",
@@ -154,7 +152,6 @@ TEST( data_store_test , store_hdl_vect) {
     test_file_2->set_name("test_2");
     test_file_2->set_type(module);
     hdl_file f;
-    f.set_path("/bin/sh");
     f.set_content({test_file_1, test_file_2});
     store->store_file({
        "/bin/sh",
@@ -235,7 +232,6 @@ TEST( data_store_test , resource_clean_up) {
     test_entity->set_type(module);
     test_entity->set_line_n(15);
     hdl_file f;
-    f.set_path("/test");
     f.set_content({test_entity});
     store_1->store_file({"/test", "hash", f});
     delete store_1;

@@ -109,7 +109,6 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
     sv_visitor sv_modules_explorer;
     antlr4::tree::ParseTreeWalker::DEFAULT.walk(&sv_modules_explorer, Tree);
     result.set_content(sv_modules_explorer.get_entities());
-    result.set_path(path);
     return result;
 }
 

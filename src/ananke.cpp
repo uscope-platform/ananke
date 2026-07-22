@@ -83,7 +83,7 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
                 std::unordered_map<std::string, std::string> res_map;
                 for (auto &res:analysis_result.get_content()) {
 
-                    res_map.insert({res->as<hdl_resource_statement>().getName(), analysis_result.get_path()});
+                    res_map.insert({res->as<hdl_resource_statement>().getName(), target});
                 }
                 return res_map;
             } catch (std::runtime_error &err) {

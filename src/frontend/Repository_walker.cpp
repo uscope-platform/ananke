@@ -74,34 +74,17 @@ void Repository_walker::analyze_dir() {
 
 void Repository_walker::collect_analysis_results() {
     pool.wait_for_tasks();
-    for(auto &f : hdl_futures){
-        auto [path, file_hash, resource] = f.get();
-        if (resource) {
-            d_store->store_file({path, file_hash, resource.value()});
+    auto store = [this](auto &futures) {
+        for(auto &f : futures) {
+            auto [path, file_hash, resource] = f.get();
+            if (resource) d_store->store_file({path, file_hash, resource.value()});
         }
-    }
-    for(auto &f : scripts_futures){
-        auto [path, file_hash, resource] = f.get();
-        if (resource) {
-            d_store->store_file({path, file_hash, resource.value()});
-        }
-    }
-    for(auto &f : constraints_futures){
-        auto [path, file_hash, resource] = f.get();
-        if (resource) {
-            d_store->store_file({path, file_hash, resource.value()});
-        }
-    }
-    for(auto  &f: data_futures){
-        auto [path, file_hash, resource] = f.get();
-        if (resource) {
-            d_store->store_file({path, file_hash, resource.value()});
-        }
-    }
-    hdl_futures.erase(hdl_futures.begin(), hdl_futures.end());
-    scripts_futures.erase(scripts_futures.begin(), scripts_futures.end());
-    constraints_futures.erase(constraints_futures.begin(), constraints_futures.end());
-    data_futures.erase(data_futures.begin(), data_futures.end());
+        futures.clear();
+    };
+    store(hdl_futures);
+    store(scripts_futures);
+    store(constraints_futures);
+    store(data_futures);
 
     working_threads =0;
 }

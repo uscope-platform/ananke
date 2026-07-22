@@ -62,7 +62,6 @@ public:
 
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, std::string &path);
-    std::optional<hdl_file> get_hdl_file_by_resource(const std::string& name);
     std::optional<Script> get_script(std::string& name);
     std::optional<DataFile> get_data_file(const std::string& name);
     std::optional<Constraints> get_constraint(const std::string& name);

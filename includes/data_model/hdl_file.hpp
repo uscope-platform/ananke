@@ -24,18 +24,13 @@
 class hdl_file {
 public:
     void set_content(const std::vector<std::shared_ptr<hdl_statement_base>> &c) {content = c;}
-    std::vector<std::shared_ptr<hdl_statement_base>> get_content() {return content;}
-
-    void set_path(const std::string &p) { path = p; }
-    std::string get_path() { return path; }
+    const std::vector<std::shared_ptr<hdl_statement_base>>& get_content() const {return content;}
 
     template<class Archive> void serialize(Archive & ar) {
-        ar(content, path);  // cereal supports variant natively
+        ar(content);
     }
 
-
 private:
-    std::string path;
     std::vector<std::shared_ptr<hdl_statement_base>> content;
 };
 
