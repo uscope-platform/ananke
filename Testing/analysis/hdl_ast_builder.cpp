@@ -328,7 +328,7 @@ TEST( hdl_ast_builder, memory_dependency) {
     d_store->store_file({"/dev/zero", "file_hash", entities});
 
     DataFile d("mem", "/tmp/mem.dat");
-    d_store->store_data_file({d}, "", "");
+    d_store->store_file({"/tmp/mem.dat", "hash", {d}});
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto synth_ast = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];

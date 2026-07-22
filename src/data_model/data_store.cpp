@@ -82,17 +82,16 @@ void data_store::store_constraint(const std::vector<Constraints> &vect, const st
         cache.constraints_hash[path]= hash;
 }
 
-    DataFile data_store::get_data_file(const std::string &name) {
-        return cache.data[name];
+ std::optional<DataFile> data_store::get_data_file(const std::string &name) {
+    for (auto &[_, file]: cache.cache_content) {
+        if (!std::holds_alternative<DataFile>(file.content)) continue;
+        auto df = std::get<DataFile>(file.content);
+        if (df.get_name() == name) return df;
+    }
+    return std::nullopt;
     }
 
 
-void data_store::store_data_file(const std::vector<DataFile> &vect, const std::string &hash,const std::string &path) {
-    for(auto &item: vect){
-        cache.data[item.get_name()] = item;
-    }
-    cache.data_hash[path] = hash;
-}
 
 
 bool data_store::is_primitive(const std::string &name) {
@@ -229,10 +228,6 @@ void data_store::evict_constraint(const std::string &name) {
     cache.constraints.erase(name);
 }
 
-
-void data_store::evict_data_file(const std::string &name) {
-    cache.data.erase(name);
-}
 
 std::unordered_map<std::string, HDL_Resource> data_store::get_hdl_cache() {
     std::unordered_map<std::string, HDL_Resource> ret_val;

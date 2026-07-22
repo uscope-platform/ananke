@@ -101,7 +101,6 @@ void Repository_walker::collect_analysis_results() {
         if (resource) {
             for (auto &res: resource.value())
                 d_store->store_file({path, file_hash, res});
-            d_store->store_data_file(resource.value(), file_hash, path);
         }
     }
     hdl_futures.erase(hdl_futures.begin(), hdl_futures.end());

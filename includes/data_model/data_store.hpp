@@ -61,12 +61,8 @@ public:
 
     std::optional<HDL_Resource> get_HDL_resource(const std::string& name);
     std::optional<Script> get_script(std::string& name);
+    std::optional<DataFile> get_data_file(const std::string& name);
     // OLD IF
-
-
-    DataFile get_data_file(const std::string& name);
-    void store_data_file(const std::vector<DataFile> & vect, const std::string &hash,const std::string &path);
-    void evict_data_file(const std::string& name);
 
     Constraints get_constraint(std::string& name);
     void store_constraint(const std::vector<Constraints> & vect, const std::string &hash,const std::string &path);

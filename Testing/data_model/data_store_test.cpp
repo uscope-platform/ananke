@@ -57,13 +57,13 @@ TEST( data_store_test , evict_data_file) {
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
     DataFile test_df("test","/data/file/path");
 
-    store_1->store_data_file({test_df}, "", "");
-    store_1->evict_data_file(test_df.get_name());
+    store_1->store_file({"/data/file/path", "hash", {test_df}});
+    store_1->evict_file("/data/file/path");
     std::string n = "test";
-    DataFile test_item = store_1->get_data_file(n);
+    auto test_item = store_1->get_data_file(n);
 
     delete store_1;
-    ASSERT_EQ(test_item, DataFile());
+    ASSERT_FALSE(test_item);
 
 }
 
@@ -107,27 +107,6 @@ TEST( data_store_test , ser_des_data_File) {
     archive_in(data_in);
     ASSERT_EQ(data_out, data_in);
 
-}
-
-
-
-
-TEST( data_store_test , store_data_file_vect) {
-
-    auto *store = new data_store(true, "/tmp/test_data_store");
-    DataFile test_df_1("test_1","/path/1");
-    DataFile test_df_2("test_2","/path/2");
-    std::vector<DataFile> test_vect = {test_df_1,test_df_2};
-    store->store_data_file(test_vect, "", "");
-    std::string name = "test_1";
-    DataFile test_res_1 = store->get_data_file(name);
-    name = "test_2";
-    DataFile test_res_2 = store->get_data_file(name);
-    std::vector<DataFile> res_vect = {test_res_1, test_res_2};
-
-    delete store;
-    ASSERT_EQ(test_vect[0], res_vect[0]);
-    ASSERT_EQ(test_vect[1], res_vect[1]);
 }
 
 
@@ -237,7 +216,7 @@ TEST( data_store_test , data_file_clean_up) {
 
     auto *store_1 = new data_store(true,"/tmp/test_data_store");
     DataFile test_df("test","/data/file/path");
-    store_1->store_data_file({test_df}, "", "");
+    store_1->store_file({"/data/file/path", "hash", {test_df}});
     delete store_1;
     auto *store_2 = new data_store(true,"/tmp/test_data_store");
     std::string name = "test";

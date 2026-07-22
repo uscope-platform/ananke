@@ -45,7 +45,7 @@ protected:
         std::vector entities ={mod_entity};
         d_store->store_file({"test/mod.sv", "file_hash", entities});
         DataFile D("test_mem_init", "test/mem_init.mem");
-        d_store->store_data_file({D}, "", "");
+        d_store->store_file({"test/mem_init.mem", "hash", {D}});
         HDL_Resource expl_dep;
         expl_dep.set_name("expl_dep");
         expl_dep.set_path("test/explicit/dep.sv");
