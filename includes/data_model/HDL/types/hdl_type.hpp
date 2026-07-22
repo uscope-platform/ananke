@@ -34,7 +34,7 @@ public:
       T& as() { return static_cast<T&>(*this); }
 
     template<typename T>
-        bool is() const {
+    bool is() const {
         // dynamic_cast with pointers returns nullptr if the cast fails
         return dynamic_cast<const T*>(this) != nullptr;
     }

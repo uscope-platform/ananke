@@ -22,12 +22,15 @@
 #include <set>
 #include <fstream>
 
+
+#include "data_model/source_file.hpp"
 #include "data_model/HDL/HDL_Resource.hpp"
 #include "Script.hpp"
 #include "Constraints.hpp"
 #include "DataFile.hpp"
 
 struct cache_t{
+    std::unordered_map<std::string, source_file> cache_content;
     std::unordered_map<std::string, HDL_Resource> hdl;
     std::unordered_map<std::string, HDL_Resource> interfaces;
     std::unordered_map<std::string, Script> scripts;
@@ -49,6 +52,12 @@ struct cache_t{
 class data_store {
 public:
     data_store(bool e, std::string cache_dir_path);
+    // NEW IF
+    void store_file(const source_file &file);
+    template<typename T> std::optional<T> get_file(const std::string &name) const;
+    [[nodiscard]] std::optional<std::string> get_hash(const std::string &name) const;
+    bool contains(const std::string &name)const;
+    // OLD IF
     HDL_Resource get_HDL_resource(const std::string& name);
     void store_hdl_entity(std::vector<HDL_Resource> & vect, const std::string &hash,const std::string &path);
     void evict_hdl_entity(const std::string& name);
@@ -116,7 +125,13 @@ private:
 };
 
 
+template<typename T>
+std::optional<T> data_store::get_file(const std::string &name) const {
+    if (!cache.cache_content.contains(name)) return std::nullopt;
+    if (const auto* val = std::get_if<T>(&cache.cache_content.at(name).content)) {
+        return *val;
+    }
 
-
-
+    return std::nullopt;
+}
 #endif //ANANKE_DATA_STORE_HPP

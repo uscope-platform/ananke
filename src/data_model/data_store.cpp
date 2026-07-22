@@ -36,6 +36,20 @@ HDL_Resource data_store::get_HDL_resource(const std::string& name) {
     return cache.hdl[name];
 }
 
+void data_store::store_file(const source_file &file) {
+    cache.cache_content.insert({file.path, file});
+}
+
+
+std::optional<std::string> data_store::get_hash(const std::string &name) const {
+    if (!cache.cache_content.contains(name)) return std::nullopt;
+    return cache.cache_content.at(name).hash;
+}
+
+bool data_store::contains(const std::string &name) const {
+    return cache.cache_content.contains(name);
+}
+
 void data_store::store_hdl_entity(std::vector<HDL_Resource>& vect,const std::string &hash, const std::string &path) {
     for(auto &item: vect){
         if(item.get_type()==interface){

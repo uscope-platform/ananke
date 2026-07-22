@@ -64,39 +64,46 @@ TEST_F(repository_walker , directory_analysis) {
     auto constraints_results = d_store->get_constraints_cache();
     auto data_results = d_store->get_data_cache();
 
-    ASSERT_TRUE(hdl_results.size() == 2);
-    ASSERT_TRUE(script_results.size() == 2);
-    ASSERT_TRUE(data_results.size() == 1);
-    ASSERT_TRUE(constraints_results.size() == 1);
+    // NEW CHECKS
 
-    DataFile d("data", "repository_walker/data.dat");
-    std::unordered_map<std::string,DataFile> data_check;
-    data_check["data"] = d;
-    ASSERT_EQ(data_results, data_check);
+    auto file_name = "repository_walker/data.dat";
+    auto d = d_store->get_file<DataFile>(file_name);
+    DataFile check_d("data", "repository_walker/data.dat");
+    ASSERT_TRUE(d.has_value());
+    ASSERT_EQ(d.value(), check_d);
 
+
+    file_name = "repository_walker/script_1.tcl";
     script_specs s;
     s.name = "script_1";
     s.type = "tcl";
-    Script s1(s);
+    auto check_s  = Script(s);
+    check_s.set_path(file_name);
+    auto s1 = d_store->get_file<Script>(file_name);
+    ASSERT_TRUE(s1.has_value());
+    ASSERT_EQ(s1.value(), check_s);
 
-    s1.set_path("repository_walker/script_1.tcl");
-    std::unordered_map<std::string,Script> script_check;
-    script_check["script_1"] = s1;
-
+    file_name = "repository_walker/script_2.py";
     s.name = "script_2";
     s.type = "py";
-    Script s2(s);
-    s2.set_path("repository_walker/script_2.py");
-    script_check["script_2"] = s2;
+    check_s = Script(s);
+    check_s.set_path(file_name);
 
-    ASSERT_EQ(script_results, script_check);
+    auto s2 = d_store->get_file<Script>(file_name);
+    ASSERT_TRUE(s2.has_value());
+    ASSERT_EQ(s2.value(), check_s);
 
-    Constraints c("constraints");
-    c.set_path("repository_walker/constraints.xdc");
-    std::unordered_map<std::string,Constraints> constraints_check;
-    constraints_check["constraints"] = c;
-    ASSERT_EQ(constraints_results, constraints_check);
 
+    file_name = "repository_walker/constraints.xdc";
+    auto c = d_store->get_file<Constraints>(file_name);
+    Constraints check_c("constraints");
+    check_c.set_path(file_name);
+    ASSERT_TRUE(c.has_value());
+    ASSERT_EQ(c.value(), check_c);
+
+
+    file_name = "repository_walker/test_sv_module.sv";
+    auto res = d_store->get_file<std::vector<HDL_Resource>>(file_name);
 
     std::unordered_map<std::string, HDL_port> test_ports;
 
@@ -105,24 +112,27 @@ TEST_F(repository_walker , directory_analysis) {
     test_ports["data_in"] = {interface_port, {"axi_stream", "slave"}};
     test_ports["data_out"] = {interface_port, {"axi_stream", "master"}};
 
-
     HDL_Resource sv_res;
     sv_res.set_name("Decoder");
     sv_res.set_type(module);
-    sv_res.set_path("repository_walker/test_sv_module.sv");
+    sv_res.set_path(file_name);
     sv_res.set_ports(test_ports);
     sv_res.set_line_n(2);
+    ASSERT_TRUE(res.has_value());
+    ASSERT_EQ(res.value(), std::vector{sv_res});
 
+
+    file_name = "repository_walker/test_vhdl_module.vhd";
     HDL_Resource vh_res;
     vh_res.set_name("half_adder");
     vh_res.set_type(module);
-    vh_res.set_path("repository_walker/test_vhdl_module.vhd");
+    vh_res.set_path(file_name);
     vh_res.set_line_n(4);
-    std::unordered_map<std::string,HDL_Resource> hdl_check;
-    hdl_check["Decoder"] = sv_res;
-    hdl_check["half_adder"] = vh_res;
 
-    ASSERT_EQ(hdl_results, hdl_check);
+    res = d_store->get_file<std::vector<HDL_Resource>>(file_name);
+    ASSERT_TRUE(res.has_value());
+    ASSERT_EQ(res.value(), std::vector{vh_res});
+
 }
 
 

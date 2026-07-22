@@ -76,19 +76,35 @@ void Repository_walker::collect_analysis_results() {
     pool.wait_for_tasks();
     for(auto &f : hdl_futures){
         auto [path, file_hash, resource] = f.get();
-        if (resource) d_store->store_hdl_entity(resource.value(), file_hash, path);
+        if (resource) {
+            for (auto &res: resource.value())
+                d_store->store_file({path, file_hash, std::vector{res}});
+            d_store->store_hdl_entity(resource.value(), file_hash, path);
+        }
     }
     for(auto &f : scripts_futures){
         auto [path, file_hash, resource] = f.get();
-        if (resource) d_store->store_script(resource.value(), file_hash, path);
+        if (resource) {
+            for (auto &res: resource.value())
+                d_store->store_file({path, file_hash, res});
+            d_store->store_script(resource.value(), file_hash, path);
+        }
     }
     for(auto &f : constraints_futures){
         auto [path, file_hash, resource] = f.get();
-        if (resource) d_store->store_constraint(resource.value(), file_hash, path);
+        if (resource) {
+            for (auto &res: resource.value())
+                d_store->store_file({path, file_hash, res});
+            d_store->store_constraint(resource.value(), file_hash, path);
+        }
     }
     for(auto  &f: data_futures){
         auto [path, file_hash, resource] = f.get();
-        if (resource) d_store->store_data_file(resource.value(), file_hash, path);
+        if (resource) {
+            for (auto &res: resource.value())
+                d_store->store_file({path, file_hash, res});
+            d_store->store_data_file(resource.value(), file_hash, path);
+        }
     }
     hdl_futures.erase(hdl_futures.begin(), hdl_futures.end());
     scripts_futures.erase(scripts_futures.begin(), scripts_futures.end());
