@@ -21,8 +21,6 @@
 #include "data_model/HDL/statement/hdl_statements.hpp"
 #include <cereal/types/vector.hpp>
 
-#include "HDL/HDL_Resource.hpp"
-
 class hdl_file {
 public:
     void set_content(const std::vector<std::shared_ptr<hdl_statement_base>> &c) {content = c;}

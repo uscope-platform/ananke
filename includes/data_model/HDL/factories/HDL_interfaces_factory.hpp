@@ -17,7 +17,6 @@
 #define ANANKE_HDL_INTERFACES_FACTORY_HPP
 
 
-#include "data_model/HDL/HDL_Resource.hpp"
 #include "resource_factory_base.hpp"
 #include "data_model/HDL/statement/hdl_resource_statement.hpp"
 

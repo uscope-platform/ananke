@@ -45,7 +45,6 @@ private:
 
     std::string ver;
     std::shared_ptr<data_store> d_store;
-    std::vector<HDL_Resource> submodules_to_generate;
 
     std::unordered_map<std::string, std::string> variant_peripherals;
 

@@ -14,7 +14,7 @@
 //  limitations under the License.
 
 #include "data_model/HDL/factories/resource_factory_base.hpp"
-#include "data_model/HDL/HDL_Resource.hpp"
+
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/statement/hdl_resource_statement.hpp"
 
@@ -54,6 +54,5 @@ T resources_factory_base<T>::get_resource() {
 
 
 
-template class resources_factory_base<HDL_Resource>;
 template class resources_factory_base<hdl_resource_statement>;
 template class resources_factory_base<HDL_parameter>;

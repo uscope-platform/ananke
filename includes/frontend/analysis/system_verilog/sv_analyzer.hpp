@@ -22,7 +22,6 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 
-#include "data_model/HDL/HDL_Resource.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 #include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"

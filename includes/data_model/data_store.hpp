@@ -22,7 +22,10 @@
 #include <set>
 #include <fstream>
 
-#include "data_model/HDL/HDL_Resource.hpp"
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/memory.hpp>
+#include <utility>
+
 #include "Script.hpp"
 #include "Constraints.hpp"
 #include "DataFile.hpp"

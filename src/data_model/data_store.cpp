@@ -15,7 +15,6 @@
 
 #include "data_model/data_store.hpp"
 
-#include <utility>
 
 
 data_store::data_store(bool e, std::string cache_dir_path) {

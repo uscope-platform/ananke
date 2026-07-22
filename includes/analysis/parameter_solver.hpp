@@ -18,8 +18,8 @@
 #define ANANKE_PARAMETER_SOLVING_PASS_HPP
 
 #include "analysis/passes/pass_base.hpp"
-#include "data_model/HDL/HDL_Resource.hpp"
 #include "data_model/HDL/statement/hdl_function_statement.hpp"
+#include "data_model/HDL/types/HDL_struct_type.hpp"
 #include "analysis/topological_sorter.hpp"
 #include "data_model/data_store.hpp"
 

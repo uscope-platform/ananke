@@ -16,14 +16,15 @@
 
 #include <gtest/gtest.h>
 
-#include "data_model/HDL/HDL_Resource.hpp"
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/memory.hpp>
+
 #include "data_model/HDL/statement/hdl_instance_statement.hpp"
+#include "data_model/HDL/statement/hdl_resource_statement.hpp"
 
 
-
-
-TEST( HDL_resource_test , is_interface) {
-    HDL_Resource resource;
+TEST(HDL_resource_test, is_interface) {
+    hdl_resource_statement resource;
 
     ASSERT_FALSE(resource.is_interface());
 }
@@ -32,10 +33,9 @@ TEST( HDL_resource_test , is_interface) {
 TEST( HDL_resource_test , ser_des_hdl_resource) {
 
 
-    HDL_Resource hdl_out;
+    hdl_resource_statement hdl_out;
     hdl_out.set_name("test");
     hdl_out.set_type(module);
-    hdl_out.set_path("/bin/sh");
     hdl_out.set_line_n(13);
     std::stringstream os;
     {
@@ -45,13 +45,13 @@ TEST( HDL_resource_test , ser_des_hdl_resource) {
 
     std::string json_str = os.str();
     std::stringstream is(json_str);
-    HDL_Resource hdl_in;
+    hdl_resource_statement hdl_in;
     cereal::BinaryInputArchive archive_in(is);
     archive_in(hdl_in);
 
     ASSERT_EQ(hdl_out, hdl_in);
 
-    std::shared_ptr<HDL_Resource> hdl_out_ptr = std::make_shared<HDL_Resource>(hdl_out);
+    std::shared_ptr<hdl_resource_statement> hdl_out_ptr = std::make_shared<hdl_resource_statement>(hdl_out);
 
     std::stringstream os_ptr;
     {
@@ -64,28 +64,19 @@ TEST( HDL_resource_test , ser_des_hdl_resource) {
 
     cereal::BinaryInputArchive archive_in_ptr(is_ptr);
 
-    HDL_Resource hdl_in_inner;
+    hdl_resource_statement hdl_in_inner;
     archive_in_ptr(hdl_in_inner);
 
-    std::shared_ptr<HDL_Resource> hdl_in_ptr = std::make_shared<HDL_Resource>(hdl_in_inner);
+    std::shared_ptr<hdl_resource_statement> hdl_in_ptr = std::make_shared<hdl_resource_statement>(hdl_in_inner);
 
     ASSERT_EQ(*hdl_out_ptr, *hdl_in_ptr);
 
 
 }
 
-TEST( HDL_resource_test , get_path) {
-
-    HDL_Resource res;
-    res.set_name("test_module");
-    res.set_type(module);
-    res.set_path("/test_path/test.sv");
-
-    ASSERT_EQ(res.get_path(), "/test_path/test.sv");
-}
 
 TEST( HDL_resource_test , get_statements) {
-    HDL_Resource test_item;
+    hdl_resource_statement test_item;
     auto s1 = std::make_shared<hdl_instance_statement>();
     s1->set_name("inst"); s1->set_type("test_module_1"); s1->set_dependency_class(module);
     test_item.add_statement(s1);
@@ -100,10 +91,9 @@ TEST( HDL_resource_test , get_statements) {
 
 TEST( HDL_resource_test , get_name) {
 
-    HDL_Resource test_item;
+    hdl_resource_statement test_item;
     test_item.set_name("test");
     test_item.set_type(module);
-    test_item.set_path("/test/test.sv");
 
     ASSERT_EQ(test_item.getName(), "test");
 }

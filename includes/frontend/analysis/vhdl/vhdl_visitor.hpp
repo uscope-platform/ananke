@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 #include <stack>
-#include "data_model/HDL/HDL_Resource.hpp"
+
 #include "data_model/HDL/statement/hdl_instance_statement.hpp"
 #include "data_model/HDL/factories/HDL_modules_factory.hpp"
 
