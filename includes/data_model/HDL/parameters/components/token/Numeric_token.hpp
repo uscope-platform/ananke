@@ -35,7 +35,7 @@ public:
     std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
 
     std::string print() const override;
-    int64_t get_size() override;
+    int64_t get_size();
 
 
     friend bool operator==(const Numeric_token &lhs, const Numeric_token &rhs);

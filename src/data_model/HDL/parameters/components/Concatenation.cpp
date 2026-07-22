@@ -16,6 +16,7 @@
 
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
 
@@ -87,7 +88,8 @@ std::optional<resolved_parameter> Concatenation::evaluate(const std::map<qualifi
                 sizes[i] = 1;
                 for (auto &ps : fields_sizes[concat_size-i-1].packed_sizes) sizes[i] *= ps;
             } else {
-                sizes[i] = components[concat_size-i-1]->get_size();
+                auto num = std::dynamic_pointer_cast<Numeric_token>(components[concat_size-i-1]);
+                sizes[i] = num ? num->get_size() : 0;
                 if (sizes[i] <= 0) sizes[i] = raw_value.get_integer().get_size();
             }
         }

@@ -35,7 +35,6 @@ public:
     virtual void propagate_function(const hdl_function_statement &def) {}
     virtual std::optional<resolved_parameter> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {return std::nullopt;}
     virtual std::string print() const {return "";}
-    virtual int64_t get_size() {return 0;}
 
 
 
