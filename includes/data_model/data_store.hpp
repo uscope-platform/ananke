@@ -29,25 +29,6 @@
 #include "Constraints.hpp"
 #include "DataFile.hpp"
 
-struct cache_t{
-    std::unordered_map<std::string, source_file> cache_content;
-    std::unordered_map<std::string, HDL_Resource> hdl;
-    std::unordered_map<std::string, HDL_Resource> interfaces;
-    std::unordered_map<std::string, Script> scripts;
-    std::unordered_map<std::string, Constraints> constraints;
-    std::unordered_map<std::string, DataFile> data;
-
-    std::unordered_map<std::string, std::string> hdl_hash;
-    std::unordered_map<std::string, std::string> scripts_hash;
-    std::unordered_map<std::string, std::string> constraints_hash;
-    std::unordered_map<std::string, std::string> data_hash;
-
-    template <class Archive>
-    void serialize( Archive & ar )
-    {
-        ar( hdl, scripts, constraints, interfaces, data, hdl_hash, scripts_hash, constraints_hash, data_hash);
-    }
-};
 
 class data_store {
 public:
@@ -68,12 +49,6 @@ public:
     void remove_stale_info(const std::filesystem::path& p);
     bool is_primitive(const std::string &name);
 
-    std::unordered_map<std::string, HDL_Resource> get_hdl_cache();
-    std::unordered_map<std::string, Script> get_scripts_cache() const {return cache.scripts;};
-    std::unordered_map<std::string, Constraints> get_constraints_cache() const {return cache.constraints;};
-    std::unordered_map<std::string, DataFile> get_data_cache() const {return cache.data;};
-
-
     static void clear_cache(const std::string &cache_dir_path) {
         std::filesystem::remove_all( cache_dir_path + "/unified_cache");
     }
@@ -83,7 +58,8 @@ private:
     void load_cache();
     void store_cache();
 
-    cache_t cache;
+
+    std::unordered_map<std::string, source_file> cache;
     bool ephemeral;
 
     std::string store_path;
@@ -113,8 +89,8 @@ private:
 
 template<typename T>
 std::optional<T> data_store::get_file(const std::string &name) const {
-    if (!cache.cache_content.contains(name)) return std::nullopt;
-    if (const auto* val = std::get_if<T>(&cache.cache_content.at(name).content)) {
+    if (!cache.contains(name)) return std::nullopt;
+    if (const auto* val = std::get_if<T>(&cache.at(name).content)) {
         return *val;
     }
 

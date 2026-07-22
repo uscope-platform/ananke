@@ -59,10 +59,6 @@ protected:
 TEST_F(repository_walker , directory_analysis) {
 
     Repository_walker walker(s_store,d_store, false,{"repository_walker/ignored_dir","repository_walker/ignored_dir_2" });
-    auto hdl_results = d_store->get_hdl_cache();
-    auto script_results = d_store->get_scripts_cache();
-    auto constraints_results = d_store->get_constraints_cache();
-    auto data_results = d_store->get_data_cache();
 
     // NEW CHECKS
 

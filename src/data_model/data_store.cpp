@@ -32,7 +32,7 @@ data_store::data_store(bool e, std::string cache_dir_path) {
 }
 
 std::optional<HDL_Resource> data_store::get_HDL_resource(const std::string& name) {
-    for (auto &file: cache.cache_content | std::views::values) {
+    for (auto &file: cache | std::views::values) {
         if (!std::holds_alternative<std::vector<HDL_Resource>>(file.content)) continue;
         for (auto &res:std::get<std::vector<HDL_Resource>>(file.content)) {
             if (res.getName() == name) return res;
@@ -42,26 +42,26 @@ std::optional<HDL_Resource> data_store::get_HDL_resource(const std::string& name
 }
 
 void data_store::store_file(const source_file &file) {
-    cache.cache_content.insert({file.path, file});
+    cache.insert({file.path, file});
 }
 
 void data_store::evict_file(const std::string &file) {
-    cache.cache_content.erase(file);
+    cache.erase(file);
 }
 
 
 std::string data_store::get_hash(const std::string &name) const {
-    if (!cache.cache_content.contains(name)) return "";
-    return cache.cache_content.at(name).hash;
+    if (!cache.contains(name)) return "";
+    return cache.at(name).hash;
 }
 
 bool data_store::contains(const std::string &name) const {
-    return cache.cache_content.contains(name);
+    return cache.contains(name);
 }
 
 
 std::optional<Script> data_store::get_script(std::string &name) {
-    for (auto &file: cache.cache_content | std::views::values) {
+    for (auto &file: cache | std::views::values) {
         if (!std::holds_alternative<Script>(file.content)) continue;
         auto scr = std::get<Script>(file.content);
         if (scr.get_name() == name) return scr;
@@ -70,7 +70,7 @@ std::optional<Script> data_store::get_script(std::string &name) {
 }
 
 std::optional<Constraints> data_store::get_constraint(const std::string &name) {
-    for (auto &file: cache.cache_content | std::views::values) {
+    for (auto &file: cache | std::views::values) {
         if (!std::holds_alternative<Constraints>(file.content)) continue;
         auto c = std::get<Constraints>(file.content);
         if (c.get_name() == name) return c;
@@ -80,7 +80,7 @@ std::optional<Constraints> data_store::get_constraint(const std::string &name) {
 
 
  std::optional<DataFile> data_store::get_data_file(const std::string &name) {
-    for (auto &[_, file]: cache.cache_content) {
+    for (auto &[_, file]: cache) {
         if (!std::holds_alternative<DataFile>(file.content)) continue;
         auto df = std::get<DataFile>(file.content);
         if (df.get_name() == name) return df;
@@ -123,110 +123,16 @@ void data_store::store_cache() {
 
 void data_store::clean_up_caches() {
     std::vector<std::string> evicted_items;
-    for (auto  [key, val] : cache.hdl){
-        if(!std::filesystem::exists(val.get_path())){
-            evicted_items.push_back(key);
+    for (auto &path: cache | std::views::keys) {
+        if(!std::filesystem::exists(path)){
+           cache.erase(path);
         }
-    }
-    for (const auto &item : evicted_items){
-        cache.hdl.erase(item);
-    }
-    evicted_items.clear();
-
-    for (auto  [key, val] : cache.interfaces){
-        if(!std::filesystem::exists(val.get_path())){
-            evicted_items.push_back(key);
-        }
-    }
-    for (const auto &item : evicted_items){
-        cache.interfaces.erase(item);
-    }
-    evicted_items.clear();
-
-
-    for (auto  [key, val] : cache.scripts){
-        if(!std::filesystem::exists(val.get_path())){
-            evicted_items.push_back(key);
-        }
-    }
-    for (const auto &item : evicted_items){
-        cache.scripts.erase(item);
-    }
-    evicted_items.clear();
-
-
-    for (auto  [key, val] : cache.constraints){
-        if(!std::filesystem::exists(val.get_path())){
-            evicted_items.push_back(key);
-        }
-    }
-    for (const auto &item : evicted_items){
-        cache.constraints.erase(item);
     }
 }
 
 void data_store::remove_stale_info(const std::filesystem::path& p) {
     std::vector<std::string> evicted_items;
-
-    for (auto  [key, val] : cache.hdl){
-        if(val.get_path()==p.string()){
-            evicted_items.push_back(key);
-        }
-    }
-    for (const auto &item : evicted_items){
-        cache.hdl.erase(item);
-    }
-    evicted_items.clear();
-
-    for (auto  [key, val] : cache.interfaces){
-        if(val.get_path()==p.string()){
-            evicted_items.push_back(key);
-        }
-    }
-    for (const auto &item : evicted_items){
-        cache.interfaces.erase(item);
-    }
-    evicted_items.clear();
-
-
-    for (auto  [key, val] : cache.scripts){
-        if(val.get_path()==p.string()){
-            evicted_items.push_back(key);
-        }
-    }
-    for (const auto &item : evicted_items){
-        cache.scripts.erase(item);
-    }
-    evicted_items.clear();
-
-    for (auto  [key, val] : cache.constraints){
-        if(val.get_path()==p.string()){
-            evicted_items.push_back(key);
-        }
-    }
-    for (const auto &item : evicted_items){
-        cache.constraints.erase(item);
-    }
-    evicted_items.clear();
-
-    for (auto  [key, val] : cache.data){
-        if(val.get_path()==p.string()){
-            evicted_items.push_back(key);
-        }
-    }
-    for (const auto &item : evicted_items){
-        cache.data.erase(item);
-    }
-
+    cache.erase(p);
 }
 
-
-std::unordered_map<std::string, HDL_Resource> data_store::get_hdl_cache() {
-    std::unordered_map<std::string, HDL_Resource> ret_val;
-
-    ret_val.insert(cache.hdl.begin(), cache.hdl.end());
-    ret_val.insert(cache.interfaces.begin(), cache.interfaces.end());
-
-    return ret_val;
-}
 
