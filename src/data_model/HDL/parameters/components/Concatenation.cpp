@@ -88,6 +88,7 @@ std::optional<resolved_parameter> Concatenation::evaluate(const std::map<qualifi
                 for (auto &ps : fields_sizes[concat_size-i-1].packed_sizes) sizes[i] *= ps;
             } else {
                 sizes[i] = components[concat_size-i-1]->get_size();
+                if (sizes[i] <= 0) sizes[i] = raw_value.get_integer().get_size();
             }
         }
         result = pack_values(values, sizes);

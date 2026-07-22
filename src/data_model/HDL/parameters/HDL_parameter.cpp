@@ -95,6 +95,11 @@ std::optional<resolved_parameter> HDL_parameter::cast_result(
         }
         if (t.get_signed() && !in->get_integer().get_signed()) {
         }
+        if (sizes.has_value() && !sizes->packed_sizes.empty()) {
+            auto val = in->get_integer();
+            val.set_size(sizes->packed_sizes[0]);
+            return val;
+        }
     }
     return in;
 

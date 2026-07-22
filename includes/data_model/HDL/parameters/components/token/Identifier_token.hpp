@@ -38,7 +38,7 @@ public:
     bool is_subscripted() const {return !array_index.empty();}
 
     std::string print() const override;
-    int64_t get_size() override {return  container_size;}
+    int64_t get_size() override {return 0;}
 
     friend bool operator==(const Identifier_token &lhs, const Identifier_token &rhs);
 
@@ -62,7 +62,6 @@ private:
     bool isEqual(const Expression_base& other) const override;
 
     qualified_identifier id;
-    int64_t container_size = 0;
     std::vector<std::shared_ptr<Expression_base>> array_index;
 };
 

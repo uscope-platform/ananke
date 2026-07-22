@@ -57,8 +57,7 @@ std::string Numeric_token::print() const {
 }
 
 int64_t Numeric_token::get_size() {
-    if (binary_size != 0) return binary_size;
-    return container_size;
+    return binary_size;
 }
 
 bool operator==(const Numeric_token &lhs, const Numeric_token &rhs) {

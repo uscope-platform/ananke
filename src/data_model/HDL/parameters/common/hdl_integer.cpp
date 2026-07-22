@@ -17,7 +17,7 @@
 #include "data_model/HDL/parameters/common/hdl_integer.hpp"
 
 void hdl_integer::set_size(const int64_t v) {
-    value = v;
+    size = v;
     wide = false;
 }
 
@@ -32,6 +32,7 @@ void hdl_integer::set_value(const int1024_t v) {
 }
 
 uint64_t hdl_integer::get_size() {
+    if (size > 0) return size;
     if(value == 0) return 1;
     auto n_bits = std::log2(value);
     if(std::isinf(n_bits)) {

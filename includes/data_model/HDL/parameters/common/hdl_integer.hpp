@@ -166,7 +166,6 @@ public:
     friend bool operator==(const hdl_integer &lhs, const hdl_integer &rhs) {
         bool ret = true;
         ret &= lhs.value == rhs.value;
-        ret &= lhs.size == rhs.size;
         ret &= lhs.signedness == rhs.signedness;
         ret &= lhs.wide_value == rhs.wide_value;
         return ret;

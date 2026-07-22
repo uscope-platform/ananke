@@ -22,7 +22,6 @@ CEREAL_REGISTER_TYPE(Identifier_token)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Identifier_token)
 
 Identifier_token::Identifier_token(const Identifier_token &c) {
-    container_size = c.container_size;
     id = c.id;
     array_index = c.array_index;
 }
@@ -93,15 +92,11 @@ bool operator==(const Identifier_token &lhs, const Identifier_token &rhs) {
     bool ret_val = true;
     ret_val &= lhs.id == rhs.id;
     ret_val &= lhs.array_index == rhs.array_index;
-    ret_val &= lhs.container_size == rhs.container_size;
     return ret_val;
 }
 
 void Identifier_token::set_container_sizes(const resolved_type &s,
     const std::map<qualified_identifier, resolved_parameter> &context) {
-    container_size = 1;
-    for (auto &ps : s.packed_sizes) container_size *= ps;
-    for (auto &us : s.unpacked_sizes) container_size *= us;
 }
 
 std::string Identifier_token::print_index(const std::vector<std::shared_ptr<Expression_base>> &index) const {
