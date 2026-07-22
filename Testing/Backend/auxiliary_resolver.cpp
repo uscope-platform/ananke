@@ -38,7 +38,7 @@ protected:
 
         Constraints c("test_constr");
         c.set_path("/test/constraints.xdc");
-        d_store->store_constraint({c}, "", "");
+        d_store->store_file({"/test/constraints.xdc", "hash", {c}});
     }
 
     virtual void TearDown() {

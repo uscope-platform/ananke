@@ -23,13 +23,13 @@ TEST( data_store_test , evict_constr) {
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
     Constraints test_constr("test");
 
-    store_1->store_constraint({test_constr}, "", "");
-    store_1->evict_constraint(test_constr.get_name());
+    store_1->store_file({"/test/constraint/file", "hash", {test_constr}});
+    store_1->evict_file("/test/constraint/file");
     std::string n = "test";
-    Constraints test_item = store_1->get_constraint(n);
+    auto test_item = store_1->get_constraint(n);
 
     delete store_1;
-    ASSERT_EQ(test_item, Constraints());
+    EXPECT_FALSE(test_item);
 
 }
 
@@ -173,40 +173,19 @@ TEST( data_store_test , store_hdl_vect) {
     ASSERT_EQ(test_res_2, res_vect[1]);
 }
 
-TEST( data_store_test , store_const_vect) {
-
-    auto *store = new data_store(true, "/tmp/test_data_store");
-    Constraints test_const_1( "test_1");
-    Constraints test_const_2("test_2");
-    std::vector<Constraints> test_vect = {test_const_1,test_const_2};
-    store->store_constraint(test_vect, "", "");
-    std::string name = "test_1";
-    Constraints test_result_1 = store->get_constraint(name);
-    name = "test_2";
-    Constraints test_result_2 = store->get_constraint(name);
-    std::vector<Constraints> res_vect = {test_result_1, test_result_2};
-
-    store->evict_constraint("test_1");
-    store->evict_constraint("test_2");
-
-    delete store;
-    ASSERT_EQ(test_vect[0], res_vect[0]);
-    ASSERT_EQ(test_vect[1], res_vect[1]);
-}
-
 
 TEST( data_store_test , constr_clean_up) {
 
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
     Constraints test_constr("test");
     test_constr.set_path("/test");
-    store_1->store_constraint({test_constr}, "", "");
+    store_1->store_file({"/test/constraint/file", "hash", {test_constr}});
     delete store_1;
     auto *store_2 = new data_store(true, "/tmp/test_data_store");
     std::string name = "test";
-    Constraints result = store_2->get_constraint(name);
-    ASSERT_EQ(result, Constraints());
-    store_2->evict_constraint(test_constr.get_name());
+    auto result = store_2->get_constraint(name);
+    ASSERT_FALSE(result);
+    store_2->evict_file("/test");
     delete store_2;
 
 }

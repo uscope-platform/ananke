@@ -62,11 +62,8 @@ public:
     std::optional<HDL_Resource> get_HDL_resource(const std::string& name);
     std::optional<Script> get_script(std::string& name);
     std::optional<DataFile> get_data_file(const std::string& name);
+    std::optional<Constraints> get_constraint(const std::string& name);
     // OLD IF
-
-    Constraints get_constraint(std::string& name);
-    void store_constraint(const std::vector<Constraints> & vect, const std::string &hash,const std::string &path);
-    void evict_constraint(const std::string& name);
 
     void remove_stale_info(const std::filesystem::path& p);
     bool is_primitive(const std::string &name);

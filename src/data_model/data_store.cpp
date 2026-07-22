@@ -32,7 +32,7 @@ data_store::data_store(bool e, std::string cache_dir_path) {
 }
 
 std::optional<HDL_Resource> data_store::get_HDL_resource(const std::string& name) {
-    for (auto &[_, file]: cache.cache_content) {
+    for (auto &file: cache.cache_content | std::views::values) {
         if (!std::holds_alternative<std::vector<HDL_Resource>>(file.content)) continue;
         for (auto &res:std::get<std::vector<HDL_Resource>>(file.content)) {
             if (res.getName() == name) return res;
@@ -61,7 +61,7 @@ bool data_store::contains(const std::string &name) const {
 
 
 std::optional<Script> data_store::get_script(std::string &name) {
-    for (auto &[_, file]: cache.cache_content) {
+    for (auto &file: cache.cache_content | std::views::values) {
         if (!std::holds_alternative<Script>(file.content)) continue;
         auto scr = std::get<Script>(file.content);
         if (scr.get_name() == name) return scr;
@@ -69,18 +69,15 @@ std::optional<Script> data_store::get_script(std::string &name) {
     return std::nullopt;
 }
 
-Constraints data_store::get_constraint(std::string &name) {
-
-    return cache.constraints[name];
-}
-
-
-void data_store::store_constraint(const std::vector<Constraints> &vect, const std::string &hash,const std::string &path) {
-    for(const auto &item: vect){
-        cache.constraints[item.get_name()] = item;
+std::optional<Constraints> data_store::get_constraint(const std::string &name) {
+    for (auto &file: cache.cache_content | std::views::values) {
+        if (!std::holds_alternative<Constraints>(file.content)) continue;
+        auto c = std::get<Constraints>(file.content);
+        if (c.get_name() == name) return c;
     }
-        cache.constraints_hash[path]= hash;
+    return std::nullopt;
 }
+
 
  std::optional<DataFile> data_store::get_data_file(const std::string &name) {
     for (auto &[_, file]: cache.cache_content) {
@@ -221,11 +218,6 @@ void data_store::remove_stale_info(const std::filesystem::path& p) {
         cache.data.erase(item);
     }
 
-}
-
-
-void data_store::evict_constraint(const std::string &name) {
-    cache.constraints.erase(name);
 }
 
 

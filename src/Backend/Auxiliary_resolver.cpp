@@ -56,11 +56,12 @@ std::unordered_set<std::string> Auxiliary_resolver::get_constraints(const std::v
     for(auto item : names){
         std::string constraint_name = item.get_name();
         if (constraint_name.ends_with(".xdc")) constraint_name.resize(constraint_name.size() - 4);
-        Constraints cnstr = d_store->get_constraint(constraint_name);
-        if(cnstr == Constraints()){
-            throw std::runtime_error("ERROR: constraint file " + constraint_name+ " not found!");
+        auto cnstr = d_store->get_constraint(constraint_name);
+        if (!cnstr) {
+            spdlog::error("Constraint file {} not found", constraint_name);
+            continue;
         }
-        ret_val.insert(cnstr.get_path());
+        ret_val.insert(cnstr.value().get_path());
     }
     return ret_val;
 }
