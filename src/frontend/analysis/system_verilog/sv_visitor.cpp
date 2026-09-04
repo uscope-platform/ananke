@@ -1135,11 +1135,6 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
     }else if(ctx->replication_assignment()){
         params_factory.start_packed_assignment();
         params_factory.stop_packed_assignment();
-    } else {
-        if (ctx->constant_param_expression()) {
-            auto val = ctx->constant_param_expression()->getText();
-            params_factory.add_component(sv_parsing_helpers::make_value(val));
-        }
     }
     if (!in_class) {
         auto param = params_factory.get_parameter();

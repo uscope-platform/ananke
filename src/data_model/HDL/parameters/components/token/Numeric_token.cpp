@@ -257,15 +257,11 @@ std::pair<resolved_parameter, int64_t> Numeric_token::process_wide_integer(const
                                                                            bool signed_number, int64_t explicit_size) {
     hdl_integer res;
 
-    std::string prefixed_string;
-    switch (base) {
-        case 16: prefixed_string = "0x" + std::string(raw_string); break;
-        case 10: prefixed_string = std::string(raw_string); break;
-        case 8: prefixed_string = '0' + std::string(raw_string); break;
-        case 2: prefixed_string = "0b" + std::string(raw_string); break;
-
-    }
-    wide_integer wide_num(prefixed_string.c_str());
+    wide_integer wide_num;
+    std::stringstream ss;
+    std::string test =  std::string(raw_string);
+    ss << std::setbase(base) << test;
+    ss >> wide_num;
 
     res.set_value(wide_num);
     res.set_signed(signed_number);

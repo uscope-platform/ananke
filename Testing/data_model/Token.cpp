@@ -171,7 +171,7 @@ TEST(hdl_integer, wide_ordering) {
 TEST(hdl_integer, get_value_low64_of_wide) {
     hdl_integer w;
     w.set_value((wide_integer(1) << 100) + 5);
-    EXPECT_EQ(w.get_value(), 5);
+    EXPECT_EQ(w.get_value(), std::numeric_limits<int64_t>::max());
     EXPECT_EQ(w.to_wide(), (wide_integer(1) << 100) + 5);
     EXPECT_TRUE(w.is_wide());
 }

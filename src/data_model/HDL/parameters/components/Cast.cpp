@@ -127,13 +127,12 @@ std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<q
             spdlog::warn("Cast size must be a positive integer");
             return content_val.value();
         }
-        if (cast_size >= 1024) {
-            spdlog::warn("Cast size {} exceeds supported width, truncating to 1024 bits", cast_size);
-            cast_size = 1024;
-        }
-        wide_integer mask = (wide_integer(1) << cast_size) - 1;
+        bool is_signed = raw_value.get_signed();
+
+        wide_integer casted_val = execute_size_cast(raw_value.to_wide(), cast_size, is_signed);
+
         hdl_integer result;
-        result.set_value(raw_value.to_wide() & mask);
+        result.set_value(casted_val);
         result.set_size(cast_size);
         return result;
     }
@@ -210,4 +209,25 @@ bool Cast::isEqual(const Expression_base &other) const {
     res &= type_cast == rhs.type_cast;
     res &= target_type == rhs.target_type;
     return res;
+}
+
+wide_integer Cast::execute_size_cast(wide_integer val, int64_t cast_size, bool is_signed)  {
+    if (cast_size <= 0) return val;
+
+    // Step 1: Force bit truncation to [0, 2^cast_size - 1] range
+    wide_integer modulus = wide_integer(1) << cast_size;
+
+    // Boost modulo handles negative values by keeping sign, so we force positive modulo:
+    wide_integer truncated = (val % modulus + modulus) % modulus;
+
+    // Step 2: Handle sign extension for Verilog signed expressions
+    if (is_signed) {
+        wide_integer sign_bit = wide_integer(1) << (cast_size - 1);
+        if (boost::multiprecision::bit_test(truncated, static_cast<unsigned>(cast_size - 1))) {
+            // Bit N-1 is set: convert back to negative signed integer in two's complement
+            truncated -= modulus;
+        }
+    }
+
+    return truncated;
 }

@@ -26,67 +26,29 @@
 #include <cereal/types/variant.hpp>
 #include <cereal/types/string.hpp>
 
-#include "third_party/uintwide_t.h"
 #include "third_party/boost/multiprecision/cpp_int.hpp"
 
 
-using wide_integer = math::wide_integer::int1024_t;
+using wide_integer = boost::multiprecision::number<
+    boost::multiprecision::cpp_int_backend<>,
+    boost::multiprecision::et_off
+>;
 
-namespace math {
-    namespace wide_integer {
-        inline void to_json(nlohmann::json& j, const int1024_t& val) {
-            std::stringstream ss;
-            // Check sign manually because stream formatting can vary by library version
-            if (val < 0) {
-                // Negate to print absolute value safely
-                int1024_t abs_val = -val;
-                ss << "-0x" << std::hex << abs_val;
-            } else {
-                ss << "0x" << std::hex << val;
-            }
-            j = ss.str();
-        }
+namespace cereal {
 
-        inline void from_json(const nlohmann::json& j, int1024_t& val) {
-            std::string s = j.get<std::string>();
-            bool is_negative = false;
-
-            if (s.rfind('-', 0) == 0) {
-                is_negative = true;
-                s = s.substr(1);
-            }
-            if (s.rfind("0x", 0) == 0 || s.rfind("0X", 0) == 0) {
-                s = s.substr(2);
-            }
-
-            val = int1024_t(("0x" + s).c_str());
-            if (is_negative) {
-                val = -val;
-            }
-        }
-
-        template <class Archive>
-            void save(Archive& ar, const int1024_t& val) {
-            std::stringstream ss;
-            if (val < 0) {
-                ss << '-' << std::hex << (-val);
-            } else {
-                ss << std::hex << val;
-            }
-            ar(ss.str()); // Save it safely as a string
-        }
-
-        template <class Archive>
-        void load(Archive& ar, int1024_t& val) {
-            std::string s;
-            ar(s); // Load the string representation
-            bool is_negative = s.rfind('-', 0) == 0;
-            if (is_negative) s = s.substr(1);
-            val = int1024_t(("0x" + s).c_str());
-            if (is_negative) val = -val;
-        }
+    // Save boost::multiprecision::number as a string representation
+    template <class Archive, class Backend, boost::multiprecision::expression_template_option ExpressionTemplates>
+    std::string save_minimal(Archive const &, boost::multiprecision::number<Backend, ExpressionTemplates> const & num) {
+        return num.str();
     }
-}
+
+    // Load boost::multiprecision::number from a string representation
+    template <class Archive, class Backend, boost::multiprecision::expression_template_option ExpressionTemplates>
+    void load_minimal(Archive const &, boost::multiprecision::number<Backend, ExpressionTemplates> & num, std::string const & str) {
+        num = boost::multiprecision::number<Backend, ExpressionTemplates>(str);
+    }
+
+} // namespace cereal
 
 class hdl_integer {
 
@@ -294,13 +256,14 @@ public:
         j["value"] = val.get_value();
         j["size"] = val.size;
         j["signedness"] = val.signedness;
-        j["wide_value"] = val.to_wide();
+        auto str = "0x" + val.to_wide().str(0, std::ios_base::hex);
+        j["wide_value"] = str;
         j["wide"] = val.is_wide();
     }
 
     friend void from_json(const nlohmann::json& j, hdl_integer& val) {
         if (j.at("wide").get<bool>()) {
-            val.content = j.at("wide_value").get<wide_integer>();
+            val.content = boost::multiprecision::cpp_int(j.at("wide_value").get<std::string>());
         } else {
             val.content = j.at("value").get<int64_t>();
         }

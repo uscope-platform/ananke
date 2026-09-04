@@ -2459,7 +2459,23 @@ TEST(parameter_extraction, int_real_equality) {
     EXPECT_EQ(defaults.at(qualified_identifier("E2")).get_integer(), 1);
 }
 
+
 TEST(parameter_extraction, wide_size_cast) {
+    auto test_pattern = R"(
+        module test_mod ();
+            parameter [127:0] V = 128'hFEDCBA9876543210FEDCBA9876543210;
+            parameter X = 63'(V);
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto x = defaults.at(qualified_identifier("X")).get_integer();
+    EXPECT_EQ(x.get_value(), static_cast<int64_t>(0x7EDCBA9876543210));
+}
+
+
+TEST(parameter_extraction, borderline_wide_size_cast) {
     auto test_pattern = R"(
         module test_mod ();
             parameter [127:0] V = 128'hFEDCBA9876543210FEDCBA9876543210;
@@ -2470,7 +2486,8 @@ TEST(parameter_extraction, wide_size_cast) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     auto x = defaults.at(qualified_identifier("X")).get_integer();
-    EXPECT_EQ(x.get_value(), static_cast<int64_t>(0xFEDCBA9876543210));
+    EXPECT_TRUE(x.is_wide());
+    EXPECT_EQ(x.to_wide(), wide_integer("0xFEDCBA9876543210"));
 }
 
 TEST(parameter_extraction, wide_packed_concatenation) {

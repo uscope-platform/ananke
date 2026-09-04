@@ -77,6 +77,8 @@ protected:
     [[nodiscard]] bool isEqual(const Expression_base& other) const override;
 
 private:
+    wide_integer execute_size_cast(wide_integer val, int64_t cast_size, bool is_signed = false);
+
     bool type_cast = false;
     std::string target_type;
     std::shared_ptr<Expression_base> content;
