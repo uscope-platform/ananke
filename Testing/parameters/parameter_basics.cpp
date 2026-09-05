@@ -2690,3 +2690,60 @@ TEST(parameter_extraction, result_width_truncation) {
     EXPECT_EQ(defaults.at(qualified_identifier("B")).get_integer(), 0);
     EXPECT_EQ(defaults.at(qualified_identifier("C")).get_integer(), 8);
 }
+
+TEST(parameter_extraction, ternary_in_cast) {
+    auto test_pattern = R"(
+
+        module test_mod #(
+        )();
+            localparam integer TEST_PARAM =  unsigned'(3>7 ? 64 : 32);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
+    auto parameters = resource->get_parameters();
+
+    Parameters_map check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+    Cast c;
+    c.set_type_cast();
+    c.set_target_type("unsigned");
+    Ternary t;
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Numeric_token>("3"));
+    e.set_rhs(std::make_shared<Numeric_token>("7"));
+    e.set_operation(Expression_v2::greater);
+    t.set_condition(std::make_shared<Expression_v2>(e));
+    t.set_true_value(
+        std::make_shared<Numeric_token>("64"));
+
+    t.set_false_value(
+        std::make_shared<Numeric_token>("32"));
+
+    c.set_content(std::make_shared<Ternary>(t));
+    p->set_name("TEST_PARAM");
+    p->set_raw_value(std::make_shared<Cast>(c));
+    p->set_type(Type_engine::create_primitive_type("integer"));
+    check_params.insert(p);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for(const auto& [name, item]:check_params){
+        ASSERT_TRUE(parameters.contains(name));
+        ASSERT_EQ(*item, *parameters.get(name));
+    }
+
+
+    parameter_solver::propagate_functions(resource, d_store);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    qualified_identifier sid = qualified_identifier("TEST_PARAM");
+    EXPECT_EQ(defaults[sid], 32);
+}

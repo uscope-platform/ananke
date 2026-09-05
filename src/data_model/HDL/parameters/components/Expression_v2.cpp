@@ -43,6 +43,9 @@ namespace {
 }
 
 std::shared_ptr<Expression_base> Expression_v2::unwrap(Expression_v2 expr) {
+    if (!expr.lhs && !expr.rhs && expr.operation == none) {
+        return nullptr;
+    }
     if (expr.lhs && !expr.rhs && expr.operation == none) {
         return expr.lhs;
     }
