@@ -15,6 +15,7 @@
 
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include "data_model/HDL/types/resolved_type.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include "data_model/HDL/parameters/components/Replication.hpp"
 #include "data_model/HDL/types/HDL_struct_type.hpp"
@@ -31,7 +32,21 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <limits>
 #include <sstream>
+
+int64_t HDL_function_call::declared_member_width(
+    const std::shared_ptr<hdl_type> &member_type,
+    const std::map<qualified_identifier, resolved_parameter> &context,
+    int64_t fallback
+) {
+    if (!member_type) return fallback;
+    auto resolved = member_type->evaluate_type(context);
+    if (!resolved || resolved->packed_sizes.empty()) return fallback;
+    uint64_t width = packed_width(*resolved);
+    if (width == 0 || width > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) return fallback;
+    return static_cast<int64_t>(width);
+}
 
 
 CEREAL_REGISTER_TYPE(HDL_function_call)
@@ -144,7 +159,15 @@ void HDL_function_call::walk_body(
                         }
                         if (val.value().is_integer()) {
                             value_map[idx] = val.value().get_integer();
-                            size_map[idx] = val.value().get_integer().get_size();
+                            // Pack at the declared member width so producer and
+                            // consumer (extract_struct_fields) agree; indexed
+                            // member assignments keep the previous behavior.
+                            if (asgn->get_index()) {
+                                size_map[idx] = val.value().get_integer().get_size();
+                            } else {
+                                size_map[idx] = declared_member_width(
+                                    members[i].type, ctx, val.value().get_integer().get_size());
+                            }
                         } else if (val.value().is_int_array()) {
                             auto slice = val.value().get_int_array().get_1d_slice({0, 0});
                             if (slice.empty()) {

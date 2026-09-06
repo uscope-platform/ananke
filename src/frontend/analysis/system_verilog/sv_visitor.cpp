@@ -832,18 +832,12 @@ void sv_visitor::exitParameter_override(sv2017::Parameter_overrideContext *ctx) 
     modules_factory.add_statement(stmt);
 }
 
-namespace {
-
-// True when an expression sits inside [...] dimension bounds as opposed to a
-// plain value expression (e.g. a variable initializer).
-bool expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
+bool sv_visitor::expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
     for (auto *p = node ? node->parent : nullptr; p; p = p->parent) {
         if (dynamic_cast<sv2017::Variable_dimensionContext *>(p)) return true;
     }
     return false;
 }
-
-} // namespace
 
 void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
     if (loops_factory.in_loop() && loops_factory.in_body()) {

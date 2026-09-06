@@ -723,6 +723,47 @@ TEST(parameter_extraction, packed_struct_returning_function_reverse_order) {
         ASSERT_EQ(value, defaults.at(name));
     }
 }
+
+TEST(parameter_extraction, packed_struct_returning_computed_fields) {
+    // Struct fields copied from another struct carry minimal (unset) widths,
+    // so packing must use the declared member widths: a=3, b=5 in 16-bit
+    // fields packs as 3 + 5*65536. (Member layout follows the existing
+    // function-packing convention, member[0] at LSB.)
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            typedef struct packed {
+                logic [15:0] a;
+                logic [15:0] b;
+            } pair_t;
+
+            localparam pair_t U = '{16'd3, 16'd5};
+
+            function pair_t build();
+                build.a = U.a;
+                build.b = U.b;
+            endfunction
+
+            parameter pair_t P = build();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, d_store);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    qualified_identifier sid = qualified_identifier("P");
+    ASSERT_TRUE(defaults.contains(sid));
+    EXPECT_EQ(defaults[sid], 327683);
+}
+
 TEST(parameter_extraction, concat_and_assignment_in_function) {
     auto test_pattern = R"(
 

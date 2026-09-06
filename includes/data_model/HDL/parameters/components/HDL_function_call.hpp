@@ -67,6 +67,11 @@ public:
     }
 
 private:
+    static int64_t declared_member_width(
+        const std::shared_ptr<hdl_type> &member_type,
+        const std::map<qualified_identifier, resolved_parameter> &context,
+        int64_t fallback
+    );
     static void walk_body(
         const std::string &fcn_name,
         const std::vector<std::shared_ptr<hdl_statement_base>> &stmts,

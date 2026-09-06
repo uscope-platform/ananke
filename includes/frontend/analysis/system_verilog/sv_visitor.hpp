@@ -239,6 +239,9 @@ public:
 private:
     void route_expression_text(const std::string& text);
     void route_expression_component(const std::shared_ptr<Expression_base>& ec);
+    // True when an expression sits inside [...] dimension bounds as opposed
+    // to a plain value expression (e.g. a variable initializer).
+    static bool expression_in_decl_dimensions(antlr4::tree::ParseTree *node);
     void process_operation(Expression_v2::expression_operator op);
     std::shared_ptr<hdl_type> setup_data_type(sv2017::Data_type_or_implicitContext *dtoi);
     std::shared_ptr<hdl_type> resolve_data_type(sv2017::Data_typeContext *dt);
