@@ -22,6 +22,7 @@
 
 #include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 #include "data_model/HDL/statement/hdl_parameter_override_statement.hpp"
+#include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include "data_model/HDL/parameters/components/token/Real_token.hpp"
 #include "data_model/HDL/parameters/components/token/Time_token.hpp"
@@ -294,6 +295,7 @@ void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
         !(ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type() &&
           ctx->data_type_or_implicit()->data_type()->struct_union())) {
         in_function_var_decl = true;
+        pending_function_local_init = f_factory.get_last_value();
         setup_data_type(ctx->data_type_or_implicit());
         type_engine.start_range();
         return;
@@ -348,6 +350,28 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
         auto param = std::make_shared<HDL_parameter>(var_name);
         param->set_type(t);
         f_factory.add_local_variable(param);
+        // Preserve `type x = <expr>;` initializers by desugaring to a bare
+        // declaration plus an assignment in body position: the existing
+        // solver machinery (deps, substitution, walk_body seeding) then
+        // applies unchanged. Only for a single `= expr` declarator outside
+        // loops (loop machinery owns for-init and loop-body decls, as
+        // before), and only if a fresh expression actually completed during
+        // this declaration (otherwise assignment_value is stale).
+        if (!loops_factory.in_loop() && var_decls->variable_decl_assignment().size() == 1 &&
+            decl->ASSIGN() != nullptr && decl->expression() != nullptr) {
+            auto init = f_factory.get_last_value();
+            if (init && init != pending_function_local_init) {
+                auto stmt = std::make_shared<hdl_assignment_statement>();
+                stmt->set_target(var_name);
+                stmt->set_value(init);
+                f_factory.add_statement(stmt);
+                if (conditionals_factory.is_active()) {
+                    auto last = f_factory.pop_last();
+                    if (last) conditionals_factory.add_statement(last);
+                }
+            }
+        }
+        pending_function_local_init.reset();
         return;
     }
     if (ctx->type_declaration()) {
@@ -805,11 +829,28 @@ void sv_visitor::exitParameter_override(sv2017::Parameter_overrideContext *ctx) 
     modules_factory.add_statement(stmt);
 }
 
+namespace {
+
+// True when an expression sits inside [...] dimension bounds as opposed to a
+// plain value expression (e.g. a variable initializer).
+bool expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
+    for (auto *p = node ? node->parent : nullptr; p; p = p->parent) {
+        if (dynamic_cast<sv2017::Variable_dimensionContext *>(p)) return true;
+    }
+    return false;
+}
+
+} // namespace
+
 void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
     if (loops_factory.in_loop() && loops_factory.in_body()) {
         loops_factory.start_expression(ctx->primary() == nullptr);
     }
-    if(type_engine.active() || type_engine.is_ranging()){
+    // Initializers of function-local variables belong to the function, even
+    // though ranging is still active for the declaration: only [...] dimension
+    // bounds stay on the type-engine path.
+    bool function_local_init = in_function_var_decl && !expression_in_decl_dimensions(ctx);
+    if ((type_engine.active() || type_engine.is_ranging()) && !function_local_init) {
         type_engine.start_expression();
     } else if(!in_streaming_slice && !in_type_argument && (params_factory.is_component_relevant()|| params_factory.is_param_assignment() || params_factory.is_param_override())) {
         if (auto primary = dynamic_cast<sv2017::PrimaryAssigContext*>(ctx->primary())) {
@@ -834,7 +875,8 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
     if (loops_factory.in_loop() && loops_factory.in_body()) {
         loops_factory.stop_expression(ctx->primary() == nullptr);
     }
-    if (type_engine.active() || type_engine.is_ranging()) {
+    bool function_local_init = in_function_var_decl && !expression_in_decl_dimensions(ctx);
+    if ((type_engine.active() || type_engine.is_ranging()) && !function_local_init) {
         type_engine.stop_expression();
     } else if(!in_streaming_slice && !in_type_argument && (params_factory.is_component_relevant() || params_factory.is_param_assignment() || params_factory.is_param_override())) {
         if (auto primary = dynamic_cast<sv2017::PrimaryAssigContext*>(ctx->primary())) {

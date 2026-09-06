@@ -246,6 +246,9 @@ private:
 
     bool in_param_declaration = false;
     bool in_function_var_decl = false;
+    // Assignment value seen when a function-local declaration started; used to
+    // tell a real initializer apart from a stale value at declaration end.
+    std::shared_ptr<Expression_base> pending_function_local_init;
     bool in_class = false;
     bool had_error = false;
     std::vector<std::shared_ptr<hdl_statement_base>> entities;

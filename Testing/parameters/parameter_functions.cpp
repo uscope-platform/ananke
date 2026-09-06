@@ -781,6 +781,32 @@ TEST(parameter_extraction, return_statement_function_parameter) {
     EXPECT_EQ(defaults[tcid], 42);
 }
 
+TEST(parameter_extraction, initialized_local_function_parameter) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer compute(input integer a);
+                int t = a + 10;
+                compute = t;
+            endfunction
+
+            parameter integer TEST_PARAM = compute(5);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    qualified_identifier sid = qualified_identifier("TEST_PARAM");
+    ASSERT_TRUE(defaults.contains(sid));
+    EXPECT_EQ(defaults[sid], 15);
+}
+
 TEST(parameter_extraction, nested_call_function_parameter) {
     // Repro for KNOWN_ISSUES.md #11: a user call nested inside another
     // function's body parses but never receives its definition (single-pass

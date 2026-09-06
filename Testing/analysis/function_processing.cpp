@@ -742,6 +742,50 @@ TEST(function_processing, repro_ternary_in_function_body) {
     EXPECT_EQ(check_f, result);
 }
 
+TEST(function_processing, initialized_local_in_function) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer compute(input integer a);
+                int t = a + 10;
+                compute = t;
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+    check_f.add_argument("a");
+
+    auto lv = std::make_shared<HDL_parameter>("t");
+    lv->set_type(Type_engine::create_primitive_type("int"));
+    check_f.add_local_variable(lv);
+
+    auto init = std::make_shared<Expression_v2>();
+    init->set_lhs(std::make_shared<Identifier_token>(qualified_identifier("a")));
+    init->set_rhs(std::make_shared<Numeric_token>("10"));
+    init->set_operation(Expression_v2::add);
+    auto s_init = std::make_shared<hdl_assignment_statement>();
+    s_init->set_target("t");
+    s_init->set_value(init);
+    check_f.add_statement(s_init);
+
+    auto s_ret = std::make_shared<hdl_assignment_statement>();
+    s_ret->set_target("compute");
+    s_ret->set_value(std::make_shared<Identifier_token>(qualified_identifier("t")));
+    check_f.add_statement(s_ret);
+
+    EXPECT_EQ(check_f, result);
+}
+
 TEST(function_processing, return_statement_in_function) {
     auto test_pattern = R"(
         module test_mod #(
