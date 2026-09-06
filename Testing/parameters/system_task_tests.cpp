@@ -383,6 +383,20 @@ TEST(system_task, bits_packed_dim) {
     EXPECT_EQ(defaults.at(qualified_identifier("B")).get_integer(), 32);
 }
 
+TEST(system_task, bits_type_argument_no_dependency) {
+    auto test_pattern = R"(
+        module test_mod ();
+            parameter B = $bits(logic [7:0]);
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto param = resource.get_parameters().get("B");
+    EXPECT_TRUE(param->get_dependencies().data.empty());
+    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    EXPECT_EQ(defaults.at(qualified_identifier("B")).get_integer(), 8);
+}
+
 TEST(system_task, bits_dependency) {
     auto test_pattern = R"(
         module test_mod ();

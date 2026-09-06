@@ -269,6 +269,9 @@ std::shared_ptr<Expression_base> sv_visitor::build_data_type_expression(sv2017::
         name = dt->package_or_class_scoped_path()->getText();
     }
     auto id_token = std::make_shared<Identifier_token>(qualified_identifier(name));
+    // Resolved-type placeholder (e.g. $bits argument): carries the type for
+    // evaluation but is not a readable value, so no data dependency.
+    id_token->set_type_placeholder(true);
 
     if (base->is<HDL_simple_type>()) {
         auto simple = base->as<HDL_simple_type>();

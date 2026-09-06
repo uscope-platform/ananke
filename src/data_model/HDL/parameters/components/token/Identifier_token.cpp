@@ -27,6 +27,7 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Identifier_token)
 Identifier_token::Identifier_token(const Identifier_token &c) {
     id = c.id;
     array_index = c.array_index;
+    type_placeholder = c.type_placeholder;
 }
 
 Identifier_token::Identifier_token(const qualified_identifier &q_i) {
@@ -35,7 +36,7 @@ Identifier_token::Identifier_token(const qualified_identifier &q_i) {
 
 parameter_deps_t Identifier_token::get_dependencies() const {
     parameter_deps_t result;
-    result.data.insert(id);
+    if (!type_placeholder) result.data.insert(id);
     for (const auto &idx : array_index) {
         result.merge(idx->get_dependencies());
     }
@@ -129,6 +130,7 @@ std::string Identifier_token::print_index(const std::vector<std::shared_ptr<Expr
 bool Identifier_token::isEqual(const Expression_base &other) const {
     const auto& rhs = static_cast<const Identifier_token&>(other);
     bool res = id == rhs.id;
+    res &= type_placeholder == rhs.type_placeholder;
     if (array_index.size() != rhs.array_index.size()) return false;
     for (size_t i = 0; i < array_index.size(); i++) {
         res &= *array_index[i] == *rhs.array_index[i];

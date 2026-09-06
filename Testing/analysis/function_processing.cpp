@@ -283,6 +283,10 @@ TEST(function_processing, loop_function_with_clog2_local) {
     body_stmt->set_target("msb");
     body_stmt->set_value(std::make_shared<Identifier_token>(qualified_identifier("i")));
     loop_stmt->add_body_stmt(body_stmt);
+    auto init_msb = std::make_shared<hdl_assignment_statement>();
+    init_msb->set_target("msb");
+    init_msb->set_value(std::make_shared<Numeric_token>("0"));
+    check_f.add_statement(init_msb);
     check_f.add_statement(loop_stmt);
 
     auto ret_stmt = std::make_shared<hdl_assignment_statement>();
@@ -694,6 +698,45 @@ TEST(function_processing, repro_relational_in_function_body) {
     stmt->set_value(std::make_shared<Numeric_token>("0"));
     check_cond.add_to_else(stmt);
     check_f.add_statement(std::make_shared<hdl_conditional_statement>(check_cond));
+
+    EXPECT_EQ(check_f, result);
+}
+
+TEST(function_processing, repro_user_call_in_function_body) {
+    // Repro for KNOWN_ISSUES.md #4: `helper(a)` parses as bare `helper`;
+    // no call node is built and the argument is lost.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer helper(input integer x);
+                helper = x * 2;
+            endfunction
+
+            function integer compute(input integer a);
+                compute = helper(a);
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+    check_f.add_argument("a");
+
+    HDL_function_call call("helper");
+    call.add_argument(std::make_shared<Identifier_token>(qualified_identifier("a")));
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("compute");
+    stmt->set_value(std::make_shared<HDL_function_call>(call));
+    check_f.add_statement(stmt);
 
     EXPECT_EQ(check_f, result);
 }

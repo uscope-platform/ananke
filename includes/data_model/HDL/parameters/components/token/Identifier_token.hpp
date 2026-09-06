@@ -51,6 +51,11 @@ public:
 
     void set_expression_type(const std::shared_ptr<hdl_type> &t) { expression_type = t; }
     std::shared_ptr<hdl_type> get_expression_type() const { return expression_type; }
+    // Marks an identifier that stands in for a *type* (e.g. the argument of
+    // $bits(logic [7:0])) rather than a readable value: it carries no data
+    // dependency, the type itself rides along as expression_type.
+    void set_type_placeholder(bool v) { type_placeholder = v; }
+    bool is_type_placeholder() const { return type_placeholder; }
 
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(
@@ -58,7 +63,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(id, array_index);
+        ar(id, array_index, type_placeholder);
     }
 
 private:
@@ -69,6 +74,7 @@ private:
     qualified_identifier id;
     std::vector<std::shared_ptr<Expression_base>> array_index;
     std::shared_ptr<hdl_type> expression_type;
+    bool type_placeholder = false;
 };
 
 
