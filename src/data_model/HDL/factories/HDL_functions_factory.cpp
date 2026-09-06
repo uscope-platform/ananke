@@ -17,6 +17,8 @@
 #include "data_model/HDL/factories/parameters/cast_factory.hpp"
 #include "data_model/HDL/factories/parameters/concatenation_factory.hpp"
 #include "data_model/HDL/factories/parameters/replication_factory.hpp"
+#include "data_model/HDL/factories/parameters/function_calls_factory.hpp"
+#include "data_model/HDL/factories/parameters/ternary_factory.hpp"
 
 void HDL_functions_factory::start_assignment(const std::string &n) {
     current_assigned_variable = n;
@@ -196,6 +198,59 @@ void HDL_functions_factory::advance_cast() {
 
 void HDL_functions_factory::start_expression() {
     expr_factory_.start_expression(false);
+}
+
+void HDL_functions_factory::start_function_call(const std::string &name) {
+    auto calls = std::make_unique<function_calls_factory>();
+    calls->start_function(name);
+    consumer_stack.push(std::move(calls));
+    expr_factory_.pause();
+    expr_factory_.push_level();
+}
+
+void HDL_functions_factory::stop_function_call() {
+    if (top_as<function_calls_factory>()) {
+        auto call = consumer_stack.top()->result();
+        consumer_stack.pop();
+        expr_factory_.pop_level();
+        if (!consumer_stack.empty()) {
+            consumer_stack.top()->consume(call);
+        } else if (expr_factory_.active()) {
+            expr_factory_.consume(call);
+        } else {
+            assignment_value = call;
+        }
+    }
+}
+
+void HDL_functions_factory::add_call_argument(const std::shared_ptr<Expression_base> &ec) {
+    if (top_as<function_calls_factory>()) {
+        consumer_stack.top()->consume(ec);
+    } else {
+        add_component(ec);
+    }
+}
+
+void HDL_functions_factory::start_ternary() {
+    expr_factory_.push_level();
+    auto ternary = std::make_unique<ternary_factory>();
+    ternary->start_conditional();
+    consumer_stack.push(std::move(ternary));
+}
+
+void HDL_functions_factory::stop_ternary() {
+    expr_factory_.pop_level();
+    if (top_as<ternary_factory>()) {
+        auto result = consumer_stack.top()->result();
+        consumer_stack.pop();
+        if (!consumer_stack.empty()) {
+            consumer_stack.top()->consume(result);
+        } else if (expr_factory_.active()) {
+            expr_factory_.consume(result);
+        } else {
+            assignment_value = result;
+        }
+    }
 }
 
 void HDL_functions_factory::stop_expression() {

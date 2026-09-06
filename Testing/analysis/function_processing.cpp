@@ -20,6 +20,8 @@
 #include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
+#include "data_model/HDL/parameters/components/HDL_builtin_function.hpp"
+#include "data_model/HDL/parameters/components/Ternary.hpp"
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 #include "data_model/HDL/statement/hdl_loop_statement.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"
@@ -600,6 +602,142 @@ TEST(function_processing, struct_returning_function) {
     s1->set_target("compute_addr.size");
     s1->set_value(std::make_shared<Numeric_token>("32'h400"));
     check_f.add_statement(s1);
+
+    EXPECT_EQ(check_f, result);
+}
+
+TEST(function_processing, repro_system_task_in_function_body) {
+    // Repro for KNOWN_ISSUES.md #1: `$clog2(a)` parses as bare `a`;
+    // the system-task wrapper is dropped.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer compute(input integer a);
+                compute = $clog2(a);
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+    check_f.add_argument("a");
+
+    auto field = std::make_shared<Identifier_token>(qualified_identifier("a"));
+    auto clog2 = std::make_shared<HDL_builtin_function>(HDL_builtin_function::function::clog2);
+    clog2->add_argument(field);
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("compute");
+    stmt->set_value(clog2);
+    check_f.add_statement(stmt);
+
+    EXPECT_EQ(check_f, result);
+}
+
+TEST(function_processing, repro_relational_in_function_body) {
+    // Repro for KNOWN_ISSUES.md #2: a relational in a non-first statement
+    // loses its operator and rhs (`if(a > 32)` -> `if(a)`).
+    // As the only statement it parses fine; state seems to leak across statements.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer compute(input integer a);
+                compute = a;
+                if(a > 32)begin
+                    compute = 1;
+                end else begin
+                    compute = 0;
+                end
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+    check_f.add_argument("a");
+
+    auto first = std::make_shared<hdl_assignment_statement>();
+    first->set_target("compute");
+    first->set_value(std::make_shared<Identifier_token>(qualified_identifier("a")));
+    check_f.add_statement(first);
+
+    hdl_conditional_statement check_cond;
+
+    auto cond = std::make_shared<Expression_v2>();
+    auto field = std::make_shared<Identifier_token>(qualified_identifier("a"));
+    cond->set_lhs(field);
+    cond->set_rhs(std::make_shared<Numeric_token>("32"));
+    cond->set_operation(Expression_v2::greater);
+    check_cond.add_branch(cond);
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("compute");
+    stmt->set_value(std::make_shared<Numeric_token>("1"));
+    check_cond.add_to_branch(stmt);
+    stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("compute");
+    stmt->set_value(std::make_shared<Numeric_token>("0"));
+    check_cond.add_to_else(stmt);
+    check_f.add_statement(std::make_shared<hdl_conditional_statement>(check_cond));
+
+    EXPECT_EQ(check_f, result);
+}
+
+TEST(function_processing, repro_ternary_in_function_body) {
+    // Repro for KNOWN_ISSUES.md #3: the ternary collapses to its (mangled)
+    // condition (`(a > 32) ? b : 0` -> `a>0`).
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer compute(input integer a, input integer b);
+                compute = (a > 32) ? b : 0;
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+    check_f.add_argument("a");
+    check_f.add_argument("b");
+
+    auto cond = std::make_shared<Expression_v2>();
+    auto cond_field = std::make_shared<Identifier_token>(qualified_identifier("a"));
+    cond->set_lhs(cond_field);
+    cond->set_rhs(std::make_shared<Numeric_token>("32"));
+    cond->set_operation(Expression_v2::greater);
+    auto true_field = std::make_shared<Identifier_token>(qualified_identifier("b"));
+    auto ternary = std::make_shared<Ternary>();
+    ternary->set_condition(cond);
+    ternary->set_true_value(true_field);
+    ternary->set_false_value(std::make_shared<Numeric_token>("0"));
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("compute");
+    stmt->set_value(ternary);
+    check_f.add_statement(stmt);
 
     EXPECT_EQ(check_f, result);
 }

@@ -22,7 +22,6 @@ void topological_sorter::analyze(const Parameters_map &p, const std::map<qualifi
 
 
     for (auto &[name, parameter]:p) {
-        auto stop = name == "RVFI";
         auto deps_list = parameter->get_dependencies();
         if (!topo_map.contains(qualified_identifier(name))) topo_map[qualified_identifier(name)] = {};
         for (auto &dep:deps_list.data) {

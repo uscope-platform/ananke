@@ -68,6 +68,11 @@ public:
 
     void start_expression();
     void stop_expression();
+    void start_function_call(const std::string &name);
+    void stop_function_call();
+    void add_call_argument(const std::shared_ptr<Expression_base> &ec);
+    void start_ternary();
+    void stop_ternary();
     void pause() { paused = true; }
     void resume() { paused = false; }
     bool is_paused() const { return paused; }
@@ -75,6 +80,7 @@ public:
 
     void start_bit_selection();
     std::shared_ptr<Expression_base> get_last_value() const { return assignment_value; }
+    int get_expression_level() const { return expr_factory_.get_level(); }
 
     void stop_bit_selection();
 

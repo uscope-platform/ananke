@@ -494,7 +494,7 @@ void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
             spdlog::warn("Unknown system function {} encountered while parsing a parameter expression", call_name);
         }
         if (f_factory.is_active()) {
-            // TODO: sort out calls in functions
+            f_factory.start_function_call(call_name);
         } else {
             params_factory.start_function_call(call_name);
         }
@@ -512,7 +512,7 @@ void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
                 in_type_argument = true;
                 auto ec = build_data_type_expression(ctx->data_type());
                 if (f_factory.is_active()) {
-                    f_factory.add_component(ec);
+                    f_factory.add_call_argument(ec);
                 } else {
                     params_factory.add_component(ec, true);
                 }
@@ -624,6 +624,9 @@ void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
     in_type_argument = false;
     if(params_factory.is_component_relevant()) {
         params_factory.stop_function_call();
+    }
+    if (f_factory.is_active()) {
+        f_factory.stop_function_call();
     }
 }
 
@@ -818,6 +821,9 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
         }
     } else if (f_factory.is_active()) {
             f_factory.start_expression();
+            if(ctx->QUESTIONMARK()){
+                f_factory.start_ternary();
+            }
     }
     if (deps_factory.is_valid_dependency()) {
         deps_factory.start_expression(ctx->primary() == nullptr);
@@ -840,8 +846,15 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
         }
         params_factory.stop_expression_new(ctx->primary() == nullptr);
     }else if (f_factory.is_active()) {
+        if(ctx->QUESTIONMARK()){
+            f_factory.stop_ternary();
+        }
         f_factory.stop_expression();
-        if (conditionals_factory.is_active() && !conditionals_factory.has_condition())
+        // Nested sub-expressions exit here too, while assignment_value still
+        // holds the previous statement's value: only take the condition once
+        // the outermost expression just completed (level back to 0).
+        if (conditionals_factory.is_active() && !conditionals_factory.has_condition()
+            && f_factory.get_expression_level() == 0)
             conditionals_factory.set_condition(f_factory.get_last_value());
     }
     if (deps_factory.is_valid_dependency()) {
