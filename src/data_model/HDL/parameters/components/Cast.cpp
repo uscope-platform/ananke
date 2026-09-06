@@ -37,6 +37,11 @@ Cast::Cast(Cast &&other) noexcept {
     content = other.content;
 }
 
+void Cast::propagate_function(const hdl_function_statement &def) {
+    if (content) content->propagate_function(def);
+    if (size) size->propagate_function(def);
+}
+
 parameter_deps_t Cast::get_dependencies() const {
     parameter_deps_t deps;
     deps.merge(content->get_dependencies());

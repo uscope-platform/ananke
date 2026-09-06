@@ -423,35 +423,51 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
 
 void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
 
-    for (auto &[_, param] : resource->get_parameters()) {
+    // Bodies populated below can reveal further (nested) calls, so repeat
+    // until no new definition is propagated. Each (parameter, function) pair
+    // is attempted once, which also bounds (mutually) recursive functions.
+    std::map<std::string, std::set<qualified_identifier>> attempted;
+    bool progress = true;
+    while (progress) {
+        progress = false;
+        for (auto &[name, param] : resource->get_parameters()) {
 
-        auto deps = param->get_dependencies();
-        for (const auto& fcn:deps.functions) {
-            if (!fcn.get_package_prefix().empty()) {
-                auto res = d_store->get_HDL_resource(fcn.get_package_prefix().back());
-                if (!res.has_value()) {
-                    spdlog::critical("Definition of package {} not found while propagating functions",fcn.get_package_prefix().back());
-                    return;
-                }
-                auto fcn_def = res.value()->get_function(fcn.get_name());
-                if (!fcn_def) {
-                    spdlog::critical("Function {}::{}, not found in the specified package",fcn.get_package_prefix().back(), fcn.get_name());
-                    continue;
-                }
-                param->propagate_function(fcn_def.value());
-            } else {
-                if (auto local_fcn = resource->get_function(fcn.get_name())) {
-                    param->propagate_function(local_fcn.value());
+            auto deps = param->get_dependencies();
+            for (const auto& fcn:deps.functions) {
+                if (attempted[name].contains(fcn)) continue;
+                attempted[name].insert(fcn);
+                if (!fcn.get_package_prefix().empty()) {
+                    if (!d_store) continue;
+                    auto res = d_store->get_HDL_resource(fcn.get_package_prefix().back());
+                    if (!res.has_value()) {
+                        spdlog::critical("Definition of package {} not found while propagating functions",fcn.get_package_prefix().back());
+                        return;
+                    }
+                    auto fcn_def = res.value()->get_function(fcn.get_name());
+                    if (!fcn_def) {
+                        spdlog::critical("Function {}::{}, not found in the specified package",fcn.get_package_prefix().back(), fcn.get_name());
+                        continue;
+                    }
+                    param->propagate_function(fcn_def.value());
+                    progress = true;
                 } else {
-                    std::string path;
-                    d_store->get_HDL_resource(resource->getName(), path);
-                    auto standalone_function = d_store->get_standalone_function(fcn.get_name(), path);
-                    if (standalone_function) param->propagate_function(standalone_function.value());
+                    if (auto local_fcn = resource->get_function(fcn.get_name())) {
+                        param->propagate_function(local_fcn.value());
+                        progress = true;
+                    } else if (d_store) {
+                        std::string path;
+                        d_store->get_HDL_resource(resource->getName(), path);
+                        auto standalone_function = d_store->get_standalone_function(fcn.get_name(), path);
+                        if (standalone_function) {
+                            param->propagate_function(standalone_function.value());
+                            progress = true;
+                        }
+                    }
+
                 }
-
             }
-        }
 
+        }
     }
 }
 

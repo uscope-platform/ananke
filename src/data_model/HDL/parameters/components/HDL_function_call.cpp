@@ -55,6 +55,16 @@ parameter_deps_t HDL_function_call::get_dependencies() const {
 
 
 void HDL_function_call::propagate_function(const hdl_function_statement &def) {
+    // Forward first so nested calls visible from earlier rounds resolve.
+    // Bodies filled below are deliberately not traversed in this pass; the
+    // solver fixpoint picks them up in later rounds. This ordering also keeps
+    // directly recursive functions terminating.
+    for (auto &arg : arguments) {
+        if (arg) arg->propagate_function(def);
+    }
+    for (auto &stmt : body) {
+        if (stmt) stmt->propagate_function(def);
+    }
     if(def.get_name() == function_name) {
         body.clear();
         for (const auto &stmt : def.get_body())
@@ -72,6 +82,17 @@ void HDL_function_call::propagate_function(const hdl_function_statement &def) {
                         asgn->get_index()->propagate_expression(qualified_identifier(arg_names[i]), arg_val);
                 }
             }
+        }
+    }
+}
+
+void HDL_function_call::propagate_expression(const qualified_identifier &constant_id,
+                                             const std::shared_ptr<Expression_base> &value) {
+    for (auto &arg : arguments) {
+        if (arg && arg->is<Identifier_token>() && arg->as<Identifier_token>().get_value() == constant_id) {
+            arg = value;
+        } else if (arg) {
+            arg->propagate_expression(constant_id, value);
         }
     }
 }

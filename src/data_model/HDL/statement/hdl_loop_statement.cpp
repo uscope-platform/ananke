@@ -34,6 +34,14 @@ parameter_deps_t hdl_loop_statement::get_dependencies() const {
     return deps;
 }
 
+void hdl_loop_statement::propagate_function(const hdl_function_statement &def) {
+    if (init) init->propagate_function(def);
+    if (end_condition) end_condition->propagate_function(def);
+    if (iteration) iteration->propagate_function(def);
+    for (auto &stmt : loop_body)
+        if (stmt) stmt->propagate_function(def);
+}
+
 std::unique_ptr<hdl_statement_base> hdl_loop_statement::clone() const {
     auto c = std::make_unique<hdl_loop_statement>();
     c->init = std::make_shared<HDL_parameter>(*init);

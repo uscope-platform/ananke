@@ -72,6 +72,7 @@ public:
     void stop_expression();
     void start_function_call(const std::string &name);
     void stop_function_call();
+    void set_function_package_prefix(const std::string &p);
     void add_call_argument(const std::shared_ptr<Expression_base> &ec);
     void start_ternary();
     void stop_ternary();

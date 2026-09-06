@@ -1235,6 +1235,15 @@ void sv_visitor::enterPrimaryCall(sv2017::PrimaryCallContext *ctx) {
         } else {
             params_factory.start_function_assignment(call_text);
         }
+    } else if (f_factory.is_active()) {
+        std::string call_text = ctx->primary()->getText();
+        auto pos = call_text.find("::");
+        if (pos != std::string::npos) {
+            f_factory.start_function_call(call_text.substr(pos + 2));
+            f_factory.set_function_package_prefix(call_text.substr(0, pos));
+        } else {
+            f_factory.start_function_call(call_text);
+        }
     }
 }
 
@@ -1242,6 +1251,8 @@ void sv_visitor::enterPrimaryCall(sv2017::PrimaryCallContext *ctx) {
 void sv_visitor::exitPrimaryCall(sv2017::PrimaryCallContext *ctx) {
     if(params_factory.is_component_relevant()) {
         params_factory.stop_function_assignment();
+    } else if (f_factory.is_active()) {
+        f_factory.stop_function_call();
     }
 }
 

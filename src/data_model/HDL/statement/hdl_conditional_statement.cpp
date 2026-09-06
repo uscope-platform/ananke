@@ -59,6 +59,17 @@ parameter_deps_t hdl_conditional_statement::get_dependencies() const {
     return deps;
 }
 
+void hdl_conditional_statement::propagate_function(const hdl_function_statement &def) {
+    for (auto &b : branches) {
+        if (b.condition)
+            b.condition->propagate_function(def);
+        for (auto &stmt : b.body)
+            if (stmt) stmt->propagate_function(def);
+    }
+    for (auto &stmt : else_body)
+        if (stmt) stmt->propagate_function(def);
+}
+
 std::unique_ptr<hdl_statement_base> hdl_conditional_statement::clone() const {
     auto c = std::make_unique<hdl_conditional_statement>();
     for (const auto &b : branches) {

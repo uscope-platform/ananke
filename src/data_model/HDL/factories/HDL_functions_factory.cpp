@@ -223,6 +223,12 @@ void HDL_functions_factory::stop_function_call() {
     }
 }
 
+void HDL_functions_factory::set_function_package_prefix(const std::string &p) {
+    if (top_as<function_calls_factory>()) {
+        top_as<function_calls_factory>()->set_package_prefix(p);
+    }
+}
+
 void HDL_functions_factory::add_call_argument(const std::shared_ptr<Expression_base> &ec) {
     if (top_as<function_calls_factory>()) {
         consumer_stack.top()->consume(ec);

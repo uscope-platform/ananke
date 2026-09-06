@@ -149,6 +149,11 @@ bool operator==(const Expression_v2 &lhs, const Expression_v2 &rhs) {
     return lhs.operation == rhs.operation;
 }
 
+void Expression_v2::propagate_function(const hdl_function_statement &def) {
+    if (lhs) lhs->propagate_function(def);
+    if (rhs) rhs->propagate_function(def);
+}
+
 parameter_deps_t Expression_v2::get_dependencies() const {
     parameter_deps_t deps;
     if (lhs) {

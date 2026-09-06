@@ -28,6 +28,11 @@ parameter_deps_t hdl_assignment_statement::get_dependencies() const {
     return deps;
 }
 
+void hdl_assignment_statement::propagate_function(const hdl_function_statement &def) {
+    if (value) value->propagate_function(def);
+    if (index) index->propagate_function(def);
+}
+
 std::unique_ptr<hdl_statement_base> hdl_assignment_statement::clone() const {
     auto c = std::make_unique<hdl_assignment_statement>();
     c->target = target;
