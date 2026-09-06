@@ -1695,6 +1695,29 @@ void sv_visitor::exitBlocking_assignment(sv2017::Blocking_assignmentContext *ctx
 
 }
 
+void sv_visitor::enterJump_statement(sv2017::Jump_statementContext *ctx) {
+    // `return expr;` assigns to the function itself. Only `return` carries a
+    // value; `break`/`continue` are not supported in constant evaluation.
+    if (!f_factory.is_active() || !ctx->expression() || !ctx->KW_RETURN()) return;
+    if (loops_factory.in_loop()) {
+        if (loops_factory.in_body())
+            loops_factory.start_assignment(f_factory.get_function_name());
+    } else {
+        f_factory.start_return();
+    }
+}
+
+void sv_visitor::exitJump_statement(sv2017::Jump_statementContext *ctx) {
+    if (!f_factory.is_active() || !ctx->expression() || !ctx->KW_RETURN()) return;
+    if (!loops_factory.in_loop()) {
+        f_factory.finish_assignment();
+        if (conditionals_factory.is_active()) {
+            auto last = f_factory.pop_last();
+            if (last) conditionals_factory.add_statement(last);
+        }
+    }
+}
+
 void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
     if(f_factory.is_active()) {
         auto hier = ctx->package_or_class_scoped_hier_id_with_select();

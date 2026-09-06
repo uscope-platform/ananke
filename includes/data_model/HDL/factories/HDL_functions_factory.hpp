@@ -35,6 +35,8 @@ public:
         active = true;
     }
     void start_assignment(const std::string &n);
+    void start_return() { start_assignment(f.get_name()); }
+    std::string get_function_name() const { return f.get_name(); }
     void add_argument(const std::string &a);
     void add_local_variable(const std::shared_ptr<HDL_parameter> &p) { f.add_local_variable(p); }
     void add_component(const std::shared_ptr<Expression_base> &c);

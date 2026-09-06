@@ -742,4 +742,39 @@ TEST(function_processing, repro_ternary_in_function_body) {
     EXPECT_EQ(check_f, result);
 }
 
+TEST(function_processing, return_statement_in_function) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer compute(input integer a);
+                return a + 1;
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+    check_f.add_argument("a");
+
+    auto ret = std::make_shared<Expression_v2>();
+    ret->set_lhs(std::make_shared<Identifier_token>(qualified_identifier("a")));
+    ret->set_rhs(std::make_shared<Numeric_token>("1"));
+    ret->set_operation(Expression_v2::add);
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("compute");
+    stmt->set_value(ret);
+    check_f.add_statement(stmt);
+
+    EXPECT_EQ(check_f, result);
+}
+
 

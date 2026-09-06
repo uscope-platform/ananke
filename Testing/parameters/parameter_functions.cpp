@@ -755,3 +755,28 @@ TEST(parameter_extraction, concat_and_assignment_in_function) {
     EXPECT_EQ(defaults[sid], 26);
 
 }
+
+TEST(parameter_extraction, return_statement_function_parameter) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer compute(input integer a);
+                return a + 1;
+            endfunction
+
+            parameter integer TEST_PARAM = compute(41);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    qualified_identifier tcid = qualified_identifier("TEST_PARAM");
+    ASSERT_TRUE(defaults.contains(tcid));
+    EXPECT_EQ(defaults[tcid], 42);
+}

@@ -211,6 +211,9 @@ public:
 
     void exitBlocking_assignment(sv2017::Blocking_assignmentContext *ctx) override;
 
+    void enterJump_statement(sv2017::Jump_statementContext *ctx) override;
+    void exitJump_statement(sv2017::Jump_statementContext *ctx) override;
+
     void enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) override;
     void exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) override;
 
