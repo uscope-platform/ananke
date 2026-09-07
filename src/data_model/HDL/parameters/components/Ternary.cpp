@@ -13,7 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #include "data_model/HDL/parameters/components/Ternary.hpp"
 
 #include <spdlog/spdlog.h>
@@ -23,7 +22,6 @@
 
 CEREAL_REGISTER_TYPE(Ternary)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Ternary)
-
 
 void Ternary::propagate_function(const hdl_function_def_ptr &def) {
     if (condition) condition->propagate_function(def);
@@ -38,14 +36,6 @@ parameter_deps_t Ternary::get_dependencies() const {
     ret_val.merge(false_value->get_dependencies());
 
     return ret_val;
-}
-
-
-void Ternary::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Expression_base> &value) {
-    condition->propagate_expression(constant_id, value);
-    true_value->propagate_expression(constant_id, value);
-    false_value->propagate_expression(constant_id, value);
 }
 
 std::expected<resolved_parameter, solver_errors> Ternary::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) {
@@ -102,7 +92,6 @@ std::string Ternary::print() const {
     if (false_value) oss << false_value->print();
     return oss.str();
 }
-
 
 bool Ternary::isEqual(const Expression_base &other) const {
     const auto& rhs = static_cast<const Ternary&>(other);

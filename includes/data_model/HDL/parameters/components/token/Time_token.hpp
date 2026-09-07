@@ -13,10 +13,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #ifndef ANANKE_TIME_TOKEN_HPP
 #define ANANKE_TIME_TOKEN_HPP
-
 
 #include "../Expression_base.hpp"
 
@@ -39,7 +37,6 @@ public:
     void set_value(const resolved_parameter &v) {value = v;}
     std::optional<resolved_parameter> get_value() const {return value;}
 
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override {}
     std::optional<resolved_type> resolve_expression_type(
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
 
@@ -53,6 +50,5 @@ private:
 
     resolved_parameter value;
 };
-
 
 #endif //ANANKE_TIME_TOKEN_HPP

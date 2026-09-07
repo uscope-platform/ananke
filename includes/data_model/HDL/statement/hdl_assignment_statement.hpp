@@ -13,7 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #ifndef ANANKE_HDL_ASSIGNMENT_STATEMENT_HPP
 #define ANANKE_HDL_ASSIGNMENT_STATEMENT_HPP
 
@@ -27,7 +26,6 @@ class hdl_assignment_statement : public hdl_statement_base {
 public:
     parameter_deps_t get_dependencies() const override;
     void propagate_function(const hdl_function_def_ptr &def) override;
-    std::unique_ptr<hdl_statement_base> clone() const override;
     bool equals(const hdl_statement_base& other) const override;
     std::string print() const override;
 
@@ -49,6 +47,5 @@ private:
     std::shared_ptr<Expression_base> index;
     std::shared_ptr<Expression_base> value;
 };
-
 
 #endif //ANANKE_HDL_ASSIGNMENT_STATEMENT_HPP

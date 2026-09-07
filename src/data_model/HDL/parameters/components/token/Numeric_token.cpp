@@ -13,7 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #include <charconv>
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 
@@ -67,14 +66,6 @@ bool operator==(const Numeric_token &lhs, const Numeric_token &rhs) {
     ret_val &= lhs.value == rhs.value;
     ret_val &= lhs.binary_size == rhs.binary_size;
     return ret_val;
-}
-
-void Numeric_token::set_container_sizes(const resolved_type &s,
-                                        const std::map<qualified_identifier, resolved_parameter> &context) {
-    // If the token was unconstrained/unsized, snap its binary_size to the target signal width
-    if (!sized_explicit && !s.packed_sizes.empty()) {
-        binary_size = s.packed_sizes.front();
-    }
 }
 
 std::optional<resolved_type> Numeric_token::resolve_expression_type(

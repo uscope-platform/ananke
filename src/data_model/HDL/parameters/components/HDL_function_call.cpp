@@ -49,7 +49,6 @@ int64_t HDL_function_call::declared_member_width(
     return static_cast<int64_t>(width);
 }
 
-
 CEREAL_REGISTER_TYPE(HDL_function_call)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, HDL_function_call)
 
@@ -87,7 +86,6 @@ parameter_deps_t HDL_function_call::get_dependencies() const {
     return retval;
 }
 
-
 void HDL_function_call::propagate_function(const hdl_function_def_ptr &def) {
     if (!def) return;
     // Forward into argument subtrees first (per-site nodes) so nested calls
@@ -117,17 +115,6 @@ void HDL_function_call::propagate_function(const hdl_function_def_ptr &def) {
         // functions still terminate.
         for (const auto &stmt : linked_->get_body()) {
             if (stmt) stmt->propagate_function(def);
-        }
-    }
-}
-
-void HDL_function_call::propagate_expression(const qualified_identifier &constant_id,
-                                             const std::shared_ptr<Expression_base> &value) {
-    for (auto &arg : arguments) {
-        if (arg && arg->is<Identifier_token>() && arg->as<Identifier_token>().get_value() == constant_id) {
-            arg = value;
-        } else if (arg) {
-            arg->propagate_expression(constant_id, value);
         }
     }
 }
@@ -386,7 +373,6 @@ void HDL_function_call::apply_return_order_reversal(
     }
 }
 
-
 std::optional<resolved_type> HDL_function_call::resolve_expression_type(
     const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) const {
     if (linked_ && linked_->get_return_type()) {
@@ -394,15 +380,6 @@ std::optional<resolved_type> HDL_function_call::resolve_expression_type(
     }
     return std::nullopt;
 }
-
-void HDL_function_call::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
-    // Dead since single-phase evaluation: sizing travels with evaluate().
-    // The old body walk mutated shared definitions across call sites, so it
-    // must not come back. Kept as a no-op until the virtual is removed.
-    (void)s;
-    (void)context;
-}
-
 
 std::string HDL_function_call::print() const {
     std::ostringstream result;
@@ -422,7 +399,6 @@ bool HDL_function_call::empty() const {
 
 bool HDL_function_call::isEqual(const Expression_base &other) const {
     bool is_equal = true;
-
 
     const auto& rhs = static_cast<const HDL_function_call&>(other);
     is_equal &= function_name == rhs.function_name;

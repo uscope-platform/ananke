@@ -29,7 +29,6 @@ class HDL_parameter;
 class hdl_function_statement : public hdl_statement_base {
 public:
     parameter_deps_t get_dependencies() const override;
-    std::unique_ptr<hdl_statement_base> clone() const override;
     bool equals(const hdl_statement_base& other) const override;
     std::string print() const override;
 
@@ -81,7 +80,5 @@ private:
     std::vector<std::shared_ptr<hdl_statement_base>> body;
     std::vector<std::shared_ptr<HDL_parameter>> local_variables;
 };
-
-
 
 #endif //ANANKE_HDL_FUNCTION_HPP

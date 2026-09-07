@@ -33,19 +33,6 @@ parameter_deps_t hdl_instance_statement::get_dependencies() const {
     return deps;
 }
 
-std::unique_ptr<hdl_statement_base> hdl_instance_statement::clone() const {
-    auto c = std::make_unique<hdl_instance_statement>();
-    c->name = name;
-    c->type = type;
-    c->dep_class = dep_class;
-    c->parameters = parameters;
-    c->ports_map = ports_map;
-    c->wildcard_assignment = wildcard_assignment;
-    c->groups = groups;
-    c->array_quantifier = array_quantifier;
-    return c;
-}
-
 bool hdl_instance_statement::equals(const hdl_statement_base& other) const {
     const auto& rhs = static_cast<const hdl_instance_statement&>(other);
     bool ret = name == rhs.name;

@@ -50,10 +50,6 @@ parameter_deps_t hdl_resource_statement::get_dependencies() const {
     return deps;
 }
 
-std::unique_ptr<hdl_statement_base> hdl_resource_statement::clone() const {
-    return std::make_unique<hdl_resource_statement>(*this);
-}
-
 bool hdl_resource_statement::equals(const hdl_statement_base& other) const {
     return *this == static_cast<const hdl_resource_statement&>(other);
 }

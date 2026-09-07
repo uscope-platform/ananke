@@ -13,13 +13,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #ifndef ANANKE_TERNARY_HPP
 #define ANANKE_TERNARY_HPP
 
 #include <memory>
 #include "Expression_base.hpp"
-
 
 class Ternary : public Expression_base{
 public:
@@ -32,15 +30,12 @@ public:
     std::shared_ptr<Expression_base> get_false_value() const { return false_value; }
 
     [[nodiscard]] parameter_deps_t get_dependencies()const override;
-    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
     void propagate_function(const hdl_function_def_ptr &def) override;
     std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
     [[nodiscard]] std::string print() const override;
 
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override {}
     std::optional<resolved_type> resolve_expression_type(
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
-
 
     template<class Archive>
     void serialize( Archive & ar ) {
@@ -56,6 +51,5 @@ private:
     std::shared_ptr<Expression_base> false_value;
 
 };
-
 
 #endif //ANANKE_TERNARY_HPP

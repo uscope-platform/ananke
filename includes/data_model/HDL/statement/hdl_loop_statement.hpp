@@ -28,7 +28,6 @@ class hdl_loop_statement : public hdl_statement_base {
 public:
     parameter_deps_t get_dependencies() const override;
     void propagate_function(const hdl_function_def_ptr &def) override;
-    std::unique_ptr<hdl_statement_base> clone() const override;
     bool equals(const hdl_statement_base& other) const override;
     std::string print() const override;
 
@@ -55,6 +54,5 @@ private:
     std::shared_ptr<Expression_base> iteration;
     std::vector<std::shared_ptr<hdl_statement_base>> loop_body;
 };
-
 
 #endif //ANANKE_HDL_LOOP_STATEMENT_HPP

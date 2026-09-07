@@ -51,16 +51,13 @@ parameter_deps_t Cast::get_dependencies() const {
 
 std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
     if (type_cast) {
-        // Mirror of set_container_sizes: the incoming container type is what
-        // the member would have held; fall back to the member when absent.
-        // An empty-but-present type still proceeds (width defaults to 64
-        // below), exactly like a member holding an empty type did.
-        std::optional<resolved_type> effective = expected_type ? expected_type : container_size;
-        if (!effective) return std::unexpected{missing_value};
+        // The container width comes from the incoming expected type (an
+        // empty-but-present type still proceeds, defaulting to 64 below).
+        if (!expected_type) return std::unexpected{missing_value};
         auto content_val = content->evaluate(context, expected_type);
         if (!content_val.has_value()) return std::unexpected{missing_value};
         uint64_t container = 64;
-        if (!effective->packed_sizes.empty()) container = packed_width(*effective);
+        if (!expected_type->packed_sizes.empty()) container = packed_width(*expected_type);
         if (target_type == "signed" || target_type == "unsigned") {
             if (!content_val.value().is_integer()) {
                 spdlog::warn("Casting of non scalar integer values is not supported");
@@ -168,41 +165,11 @@ std::string Cast::print() const {
     return  prefix + "'(" + content->print() + ")";
 }
 
-void Cast::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Expression_base> &value) {
-
-    content->propagate_expression(constant_id, value);
-    if (size) size->propagate_expression(constant_id, value);
-}
-
-
-
-void Cast::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
-    container_size = s;
-    if (type_cast)
-        content->set_container_sizes(s, context);
-    else {
-        if (!size) return;
-        auto cast_size = size->evaluate(context);
-        if (!cast_size.has_value() || !cast_size.value().is_integer()) return;
-        resolved_type t;
-        t.packed_sizes.push_back(cast_size.value().get_integer().get_value());
-        t.packed_ascending.push_back(true);
-        content->set_container_sizes(t, context);
-    }
-}
-
 std::optional<resolved_type> Cast::resolve_expression_type(
     const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) const {
     if (type_cast) {
-        // Mirror of set_container_sizes: the incoming container type is what
-        // the member would have held; fall back to the member when absent.
-        std::optional<resolved_type> effective = expected_type;
-        if (!effective || (effective->packed_sizes.empty() && effective->unpacked_sizes.empty())) {
-            effective = container_size;
-        }
-        if (effective && (!effective->packed_sizes.empty() || !effective->unpacked_sizes.empty())) {
-            return effective;
+        if (expected_type && (!expected_type->packed_sizes.empty() || !expected_type->unpacked_sizes.empty())) {
+            return expected_type;
         }
         if (target_type == "real" || target_type == "shortreal" || target_type == "realtime") {
             resolved_type result;
@@ -228,7 +195,6 @@ std::optional<resolved_type> Cast::resolve_expression_type(
     if (content) return content->resolve_expression_type(context, type_cast ? expected_type : std::nullopt);
     return std::nullopt;
 }
-
 
 bool Cast::isEqual(const Expression_base &other) const {
 

@@ -25,10 +25,6 @@ parameter_deps_t hdl_import_stmt::get_dependencies() const {
     return {};
 }
 
-std::unique_ptr<hdl_statement_base> hdl_import_stmt::clone() const {
-    return std::make_unique<hdl_import_stmt>(*this);
-}
-
 bool hdl_import_stmt::equals(const hdl_statement_base &other) const {
     const auto &rhs = static_cast<const hdl_import_stmt &>(other);
     return library == rhs.library

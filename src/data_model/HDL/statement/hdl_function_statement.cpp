@@ -13,7 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #include "data_model/HDL/statement/hdl_function_statement.hpp"
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
@@ -41,18 +40,6 @@ parameter_deps_t hdl_function_statement::get_dependencies() const {
         if (v) deps.merge(v->get_dependencies());
     }
     return deps;
-}
-
-std::unique_ptr<hdl_statement_base> hdl_function_statement::clone() const {
-    auto result = std::make_unique<hdl_function_statement>();
-    result->name = name;
-    result->argument_names = argument_names;
-    result->return_type = return_type;
-    result->return_unpacked_range_left = return_unpacked_range_left;
-    result->return_unpacked_range_right = return_unpacked_range_right;
-    result->body = body;
-    result->local_variables = local_variables;
-    return result;
 }
 
 bool hdl_function_statement::equals(const hdl_statement_base& other) const {

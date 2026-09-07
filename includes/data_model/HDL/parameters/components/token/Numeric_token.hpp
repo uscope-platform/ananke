@@ -13,11 +13,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #ifndef ANANKE_NUMERIC_TOKEN_HPP
 #define ANANKE_NUMERIC_TOKEN_HPP
-
-
 
 #include "../Expression_base.hpp"
 
@@ -25,7 +22,6 @@ class Numeric_token: public Expression_base {
 public:
     Numeric_token() = default;
     Numeric_token(const Numeric_token &c);
-
 
     explicit Numeric_token(const std::string &s);
     explicit Numeric_token(std::variant<hdl_integer, double> n, int64_t b_s);
@@ -37,18 +33,15 @@ public:
     std::string print() const override;
     int64_t get_size();
 
-
     friend bool operator==(const Numeric_token &lhs, const Numeric_token &rhs);
 
     void set_value(const resolved_parameter &v) {value = v;}
     std::optional<resolved_parameter> get_value() const {return value;}
 
-
     void set_binary_size(int64_t s) {binary_size = s;}
     void set_sized_explicit(bool e) {sized_explicit = e;}
     [[nodiscard]] bool is_sized_explicit() const {return sized_explicit;}
 
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
 
@@ -85,17 +78,13 @@ private:
     static std::pair<resolved_parameter, int64_t> process_wide_integer(const std::string_view &s, uint8_t base,
         bool signed_number, int64_t explicit_size);
 
-
     bool isEqual(const Expression_base& other) const override;
-
 
     resolved_parameter value = 0;
 
     int64_t binary_size = 0;
     bool sized_explicit = false;
 
-
 };
-
 
 #endif //ANANKE_NUMERIC_TOKEN_HPP

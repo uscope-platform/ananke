@@ -44,14 +44,12 @@ public:
         dist_poisson, dist_chi_square, dist_t, dist_erlang
     };
 
-
     static std::optional<function> from_sv(std::string_view name);
     static std::optional<function> from_vhdl(std::string_view name);
     static std::optional<function> parse(std::string_view name);
     static std::string_view sv_name(function f);
 
     static bool is_known(std::string_view name);
-
 
     HDL_builtin_function() = default;
     explicit HDL_builtin_function(function f) : function_kind(f) {}
@@ -67,8 +65,6 @@ public:
     std::string print() const override;
     parameter_deps_t get_dependencies() const override;
     void propagate_function(const hdl_function_def_ptr &def) override {}
-    void set_container_sizes(const resolved_type &s,
-                             const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
 

@@ -13,10 +13,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #ifndef ANANKE_CAST_HPP
 #define ANANKE_CAST_HPP
-
 
 #include "Expression_base.hpp"
 
@@ -30,7 +28,6 @@ public:
         Expression_base::operator =(other);
         content = other.content;
         type_cast = other.type_cast;
-        container_size = other.container_size;
         target_type = other.target_type;
         size = other.size;
         return *this;
@@ -42,7 +39,6 @@ public:
         Expression_base::operator =(std::move(other));
         type_cast = other.type_cast;
         target_type = other.target_type;
-        container_size = other.container_size;
         if (other.content != nullptr) content = std::move(other.content);
         size = std::move(other.size);
         return *this;
@@ -60,12 +56,10 @@ public:
     std::shared_ptr<Expression_base> get_size_expr() const { return size; }
 
     [[nodiscard]] parameter_deps_t get_dependencies()const override;
-    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
     void propagate_function(const hdl_function_def_ptr &def) override;
     std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
     [[nodiscard]] std::string print() const override;
 
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
 
@@ -84,8 +78,6 @@ private:
     std::string target_type;
     std::shared_ptr<Expression_base> content;
     std::shared_ptr<Expression_base> size;
-    std::optional<resolved_type> container_size = std::nullopt;
 };
-
 
 #endif //ANANKE_CAST_HPP

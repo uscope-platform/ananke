@@ -114,28 +114,6 @@ bool Expression_v2::isEqual(const Expression_base &other) const {
     return operation == other_exp->operation;
 }
 
-void Expression_v2::set_container_sizes(const resolved_type &s,
-    const std::map<qualified_identifier, resolved_parameter> &context) {
-    resolved_type r;
-    r.packed_sizes.push_back(64);
-    if (lhs) lhs->set_container_sizes(r);
-    if (rhs) rhs->set_container_sizes(r);
-}
-
-void Expression_v2::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Expression_base> &value) {
-    if (lhs && lhs->is<Identifier_token>() && lhs->as<Identifier_token>().get_value() == constant_id) {
-        lhs = value;
-    } else if (lhs) {
-        lhs->propagate_expression(constant_id, value);
-    }
-    if (rhs && rhs->is<Identifier_token>() && rhs->as<Identifier_token>().get_value() == constant_id) {
-        rhs = value;
-    } else if (rhs) {
-        rhs->propagate_expression(constant_id, value);
-    }
-}
-
 bool operator==(const Expression_v2 &lhs, const Expression_v2 &rhs) {
     if (lhs.lhs && rhs.lhs) {
         if (!(*lhs.lhs == *rhs.lhs)) return false;

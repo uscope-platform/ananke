@@ -31,21 +31,15 @@ class hdl_function_statement;
 // through the link (same alias mirrored in hdl_statement_base.hpp).
 using hdl_function_def_ptr = std::shared_ptr<const hdl_function_statement>;
 
-
 class Expression_base {
 public:
 
     virtual ~Expression_base() = default;
 
     virtual parameter_deps_t get_dependencies()const {return {};}
-    virtual void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value){}
     virtual void propagate_function(const hdl_function_def_ptr &def) {}
     virtual std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) { (void)expected_type; return std::unexpected{missing_value};}
     virtual std::string print() const {return "";}
-
-
-
-    virtual void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) = 0;
 
     virtual std::optional<resolved_type> resolve_expression_type(
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const {
@@ -64,7 +58,6 @@ public:
     bool operator==(const Expression_base& other) const {
         return typeid(*this) == typeid(other) && isEqual(other);
     }
-
 
     hdl_integer pack_values(const std::vector<hdl_integer> &components, const std::vector<int64_t> &sizes) {
         hdl_integer packed_result = 0;
@@ -88,6 +81,5 @@ public:
 protected:
     virtual bool isEqual(const Expression_base& other) const = 0;
 };
-
 
 #endif //ANANKE_PARAMETER_VALUE_BASE_HPP

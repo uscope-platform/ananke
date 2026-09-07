@@ -926,11 +926,6 @@ std::optional<resolved_type> HDL_builtin_function::resolve_expression_type(
     return std::nullopt;
 }
 
-void HDL_builtin_function::set_container_sizes(
-    const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
-    // Builtins resolve their arguments at evaluation time; no container sizing.
-}
-
 std::string HDL_builtin_function::print() const {
     return std::string(sv_name(function_kind));
 }

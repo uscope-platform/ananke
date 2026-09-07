@@ -13,7 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #ifndef ANANKE_REPLICATION_HPP
 #define ANANKE_REPLICATION_HPP
 
@@ -31,14 +30,12 @@ public:
 
     Replication &operator=(Replication &&other) noexcept;
 
-
     void set_item(std::shared_ptr<Expression_base> item){ repeated_item = std::move(item);}
     std::shared_ptr<Expression_base> get_item()const { return repeated_item;}
     void set_size(const std::shared_ptr<Expression_base> &expr);
     std::shared_ptr<Expression_base> get_size() const { return repetition_size; }
 
     parameter_deps_t get_dependencies()const override;
-    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
     void propagate_function(const hdl_function_def_ptr &def) override;
     std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
 
@@ -55,9 +52,6 @@ public:
         return std::tie(*lhs.repetition_size, *lhs.repeated_item) ==  std::tie(*rhs.repetition_size, *rhs.repeated_item);
     }
 
-
-
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
 
@@ -78,10 +72,8 @@ public:
         return res;
     }
 private:
-    bool packing = false;
     std::shared_ptr<Expression_base>  repetition_size;
     std::shared_ptr<Expression_base> repeated_item;
 };
-
 
 #endif //ANANKE_REPLICATION_HPP

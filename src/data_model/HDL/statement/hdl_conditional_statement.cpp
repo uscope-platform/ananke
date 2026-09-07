@@ -70,20 +70,6 @@ void hdl_conditional_statement::propagate_function(const hdl_function_def_ptr &d
         if (stmt) stmt->propagate_function(def);
 }
 
-std::unique_ptr<hdl_statement_base> hdl_conditional_statement::clone() const {
-    auto c = std::make_unique<hdl_conditional_statement>();
-    for (const auto &b : branches) {
-        hdl_conditional_branch cb;
-        cb.condition = b.condition;
-        for (const auto &s : b.body)
-            cb.body.push_back(s->clone());
-        c->branches.push_back(std::move(cb));
-    }
-    for (const auto &s : else_body)
-        c->else_body.push_back(s->clone());
-    return c;
-}
-
 bool hdl_conditional_statement::equals(const hdl_statement_base& other) const {
     const auto& rhs = static_cast<const hdl_conditional_statement&>(other);
 

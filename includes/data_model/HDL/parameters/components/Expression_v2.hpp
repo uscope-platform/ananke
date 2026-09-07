@@ -13,7 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #ifndef ANANKE_EXPRESSION_V2_HPP
 #define ANANKE_EXPRESSION_V2_HPP
 
@@ -21,7 +20,6 @@
 #include <spdlog/spdlog.h>
 
 #include "Expression_base.hpp"
-
 
 class Expression_v2 : public Expression_base {
 public:
@@ -141,12 +139,10 @@ public:
 
     friend bool operator==(const Expression_v2 &lhs, const Expression_v2 &rhs);
     std::string print() const override;
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
     std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
     parameter_deps_t get_dependencies()const override;
-    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
     void propagate_function(const hdl_function_def_ptr &def) override;
 
     template<class Archive>
@@ -168,8 +164,5 @@ private:
     std::shared_ptr<Expression_base> rhs;
     expression_operator operation = none;
 };
-
-
-
 
 #endif //ANANKE_EXPRESSION_V2_HPP

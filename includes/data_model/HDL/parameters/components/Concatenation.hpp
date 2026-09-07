@@ -13,7 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #ifndef ANANKE_CONCATENATION_HPP
 #define ANANKE_CONCATENATION_HPP
 
@@ -31,15 +30,10 @@ public:
     Concatenation(const Concatenation &other);
     Concatenation(Concatenation &&other) noexcept;
 
-
     void set_default_init() {default_initialization = true;}
 
     Concatenation &operator=(const Concatenation &other) {
         if (this != &other) {
-            container_size = other.container_size;
-            unpacked_dimension = other.unpacked_dimension;
-            unpacked_ascending = other.unpacked_ascending;
-            packing = other.packing;
             default_initialization = other.default_initialization;
             components = other.components;
         }
@@ -48,10 +42,6 @@ public:
 
     Concatenation &operator=(Concatenation &&other) noexcept {
         if (this != &other) {
-            container_size = other.container_size;
-            unpacked_dimension = other.unpacked_dimension;
-            unpacked_ascending = other.unpacked_ascending;
-            packing = other.packing;
             default_initialization = other.default_initialization;
             components = std::move(other.components);
         }
@@ -59,28 +49,21 @@ public:
     }
 
     parameter_deps_t get_dependencies()const override;
-    void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
 
     void propagate_function(const hdl_function_def_ptr &def) override;
     std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
     std::string print() const override;
 
-
     friend bool operator==(const Concatenation &lhs, const Concatenation &rhs) {
         auto ret = true;
         if(lhs.components.size() != rhs.components.size()) return false;
-        ret &= lhs.container_size == rhs.container_size;
-        ret &= lhs.packing == rhs.packing;
         ret &= lhs.default_initialization == rhs.default_initialization;
-        ret &= lhs.unpacked_dimension == rhs.unpacked_dimension;
-        ret &= lhs.unpacked_ascending == rhs.unpacked_ascending;
         for(int i = 0; i < lhs.components.size(); i++) {
             ret &= *lhs.components[i] == *rhs.components[i];
         }
         return ret;
     }
 
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
 
@@ -91,16 +74,7 @@ public:
 
 private:
 
-    void process_struct_size(
-        const std::vector<struct_member_resolved_type> &members,
-        uint64_t size, const std::map<qualified_identifier, resolved_parameter> &context);
-
-    bool packing = false;
     bool default_initialization = false;
-    std::vector<uint64_t> unpacked_dimension  = {};
-    std::vector<bool> unpacked_ascending = {};
-    std::vector<struct_member_resolved_type> fields_sizes;
-    int64_t container_size = 0;
 
     std::vector<std::shared_ptr<Expression_base>> components;
 
@@ -119,15 +93,10 @@ private:
         );
 
         if(components.size() != rhs.components.size()) return false;
-        ret &= container_size == rhs.container_size;
-        ret &= packing == rhs.packing;
         ret &= default_initialization == rhs.default_initialization;
-        ret &= unpacked_dimension == rhs.unpacked_dimension;
-        ret &= unpacked_ascending == rhs.unpacked_ascending;
 
         return ret;
     }
 };
-
 
 #endif //ANANKE_CONCATENATION_HPP

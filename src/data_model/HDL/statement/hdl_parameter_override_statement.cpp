@@ -27,14 +27,6 @@ parameter_deps_t hdl_parameter_override_statement::get_dependencies() const {
     return deps;
 }
 
-std::unique_ptr<hdl_statement_base> hdl_parameter_override_statement::clone() const {
-    auto c = std::make_unique<hdl_parameter_override_statement>();
-    c->instance_path = instance_path;
-    c->parameter_name = parameter_name;
-    c->value = value;
-    return c;
-}
-
 bool hdl_parameter_override_statement::equals(const hdl_statement_base &other) const {
     const auto& rhs = static_cast<const hdl_parameter_override_statement&>(other);
     return instance_path == rhs.instance_path

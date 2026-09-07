@@ -27,7 +27,6 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Replication)
 
 static constexpr int64_t MAX_REPLICATION_SIZE = 1'000'000;
 
-
 Replication::Replication(const Replication &other) {
     repetition_size = other.repetition_size;
     repeated_item = other.repeated_item;
@@ -63,25 +62,6 @@ parameter_deps_t Replication::get_dependencies()const {
     return result;
 }
 
-void Replication::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Expression_base> &value) {
-
-    if (repetition_size) {
-        if (repetition_size->is<Identifier_token>() && repetition_size->as<Identifier_token>().get_value() == constant_id) {
-            repetition_size = value;
-        } else {
-            repetition_size->propagate_expression(constant_id, value);
-        }
-    }
-    if (repeated_item) {
-        if (repeated_item->is<Identifier_token>() && repeated_item->as<Identifier_token>().get_value() == constant_id) {
-            repeated_item = value;
-        } else {
-            repeated_item->propagate_expression(constant_id, value);
-        }
-    }
-}
-
 void Replication::propagate_function(const hdl_function_def_ptr &def) {
     if (repetition_size) repetition_size->propagate_function(def);
     if (repeated_item) repeated_item->propagate_function(def);
@@ -89,10 +69,10 @@ void Replication::propagate_function(const hdl_function_def_ptr &def) {
 
 std::expected<resolved_parameter, solver_errors> Replication::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
     if (!repetition_size || !repeated_item) return std::unexpected{missing_value};
-    // Mirror of set_container_sizes (which only derived the packing flag and
-    // never touched children): children keep plain evaluation, the flag
-    // comes from the incoming type when present.
-    const bool packing_l = expected_type ? expected_type->unpacked_sizes.empty() : packing;
+    // Packing comes only from the incoming container type; without one the
+    // construction default (unpacked) applies. Children always evaluate
+    // plain, as the old pass never touched them.
+    const bool packing_l = expected_type ? expected_type->unpacked_sizes.empty() : false;
     mdarray<hdl_integer> result;
     auto raw_size = repetition_size->evaluate(context);
     if (!raw_size.has_value()) return std::unexpected{missing_value};
@@ -176,10 +156,6 @@ std::string Replication::print() const {
     if (repeated_item) oss << repeated_item->print();
     oss << "}}";
     return oss.str();
-}
-
-void Replication::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
-    packing = s.unpacked_sizes.empty();
 }
 
 std::optional<resolved_type> Replication::resolve_expression_type(

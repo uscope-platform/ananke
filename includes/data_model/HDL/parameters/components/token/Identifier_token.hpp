@@ -57,7 +57,6 @@ public:
     void set_type_placeholder(bool v) { type_placeholder = v; }
     bool is_type_placeholder() const { return type_placeholder; }
 
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
 
@@ -76,6 +75,5 @@ private:
     std::shared_ptr<hdl_type> expression_type;
     bool type_placeholder = false;
 };
-
 
 #endif //ANANKE_IDENTIFIER_TOKEN_HPP

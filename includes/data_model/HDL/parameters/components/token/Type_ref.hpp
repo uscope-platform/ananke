@@ -13,7 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #ifndef ANANKE_TYPE_REF_HPP
 #define ANANKE_TYPE_REF_HPP
 
@@ -42,9 +41,6 @@ public:
 
     qualified_identifier get_target() const { return target; }
 
-    void set_container_sizes(const resolved_type &,
-        const std::map<qualified_identifier, resolved_parameter> &) override {}
-
     friend bool operator==(const Type_ref &lhs, const Type_ref &rhs) {
         return lhs.target == rhs.target;
     }
@@ -61,6 +57,5 @@ private:
 
     qualified_identifier target;
 };
-
 
 #endif //ANANKE_TYPE_REF_HPP

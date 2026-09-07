@@ -42,16 +42,6 @@ void hdl_loop_statement::propagate_function(const hdl_function_def_ptr &def) {
         if (stmt) stmt->propagate_function(def);
 }
 
-std::unique_ptr<hdl_statement_base> hdl_loop_statement::clone() const {
-    auto c = std::make_unique<hdl_loop_statement>();
-    c->init = std::make_shared<HDL_parameter>(*init);
-    c->end_condition = end_condition;
-    c->iteration = iteration;
-    for (const auto& s : loop_body)
-        c->loop_body.push_back(s->clone());
-    return c;
-}
-
 bool hdl_loop_statement::equals(const hdl_statement_base &other) const {
     const auto& rhs = static_cast<const hdl_loop_statement&>(other);
 

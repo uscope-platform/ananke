@@ -13,7 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #ifndef ANANKE_HDL_FUNCTION_CALL_HPP
 #define ANANKE_HDL_FUNCTION_CALL_HPP
 
@@ -24,7 +23,6 @@
 #include "data_model/HDL/statement/hdl_conditional_statement.hpp"
 
 #include <map>
-
 
 class HDL_function_call : public Expression_base{
 public:
@@ -40,8 +38,6 @@ public:
     std::string get_package_prefix() const {return package_prefix;}
     parameter_deps_t get_dependencies() const override;
     void propagate_function(const hdl_function_def_ptr &def) override;
-    void propagate_expression(const qualified_identifier &constant_id,
-                              const std::shared_ptr<Expression_base> &value) override;
     std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
 
     std::optional<resolved_type> resolve_expression_type(
@@ -55,11 +51,6 @@ public:
         bool return_unpacked_ascending,
         bool container_unpacked_ascending
     );
-
-    // Dead since single-phase evaluation (phase 2): sizing travels with
-    // evaluate() instead. Kept as a no-op until the virtual itself is
-    // removed in phase 4.
-    void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
 
     std::string print() const override;
 
@@ -106,6 +97,5 @@ private:
 
     bool isEqual(const Expression_base& other) const override;
 };
-
 
 #endif //ANANKE_HDL_FUNCTION_CALL_HPP

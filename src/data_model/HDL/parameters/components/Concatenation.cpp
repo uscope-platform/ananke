@@ -13,7 +13,6 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 #include <spdlog/spdlog.h>
@@ -25,9 +24,9 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Concatenation)
 
 namespace {
 // Sizing derivation shared by evaluate/resolve when an incoming container
-// type is present. Mirrors set_container_sizes branch for branch (which stays
-// untouched until it is deleted): same derivation and per-component
-// narrowing, but written to locals instead of members.
+// type is present. It replaces the old set_container_sizes pass (deleted
+// with it): same branch structure and per-component narrowing, but computed
+// into locals instead of mutating members.
 struct concat_expected_sizing {
     bool packing = false;
     std::vector<uint64_t> unpacked_dimension;
@@ -88,24 +87,13 @@ concat_expected_sizing derive_concat_sizing(const resolved_type &s, size_t n_com
 Concatenation::Concatenation(const Concatenation &other) {
 
     components = other.components;
-    container_size = other.container_size;
     default_initialization = other.default_initialization;
-    packing = other.packing;
-    fields_sizes = other.fields_sizes;
-    unpacked_dimension = other.unpacked_dimension;
-    unpacked_ascending = other.unpacked_ascending;
 }
 
 Concatenation::Concatenation(Concatenation &&other) noexcept {
     components = other.components;
-    fields_sizes = other.fields_sizes;
-    container_size = other.container_size;
     default_initialization = other.default_initialization;
-    packing = other.packing;
-    unpacked_dimension = other.unpacked_dimension;
-    unpacked_ascending = other.unpacked_ascending;
 }
-
 
 parameter_deps_t Concatenation::get_dependencies() const{
     parameter_deps_t result;
@@ -113,17 +101,6 @@ parameter_deps_t Concatenation::get_dependencies() const{
         result.merge(comp->get_dependencies());
     }
     return result;
-}
-
-void Concatenation::propagate_expression(const qualified_identifier &constant_id,
-    const std::shared_ptr<Expression_base> &value) {
-    for (auto &comp:components) {
-        if (comp->is<Identifier_token>() && comp->as<Identifier_token>().get_value() == constant_id) {
-            comp = value;
-        } else {
-            comp->propagate_expression(constant_id, value);
-        }
-    }
 }
 
 void Concatenation::propagate_function(const hdl_function_def_ptr &def) {
@@ -135,16 +112,9 @@ void Concatenation::propagate_function(const hdl_function_def_ptr &def) {
 std::expected<resolved_parameter, solver_errors> Concatenation::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type){
     std::expected<resolved_parameter, solver_errors> result;
     auto concat_size = components.size();
-    // Locals mirror the set_container_sizes derivation (see
-    // derive_concat_sizing): with an incoming container type they hold what
-    // the members would have held after sizing; otherwise the members are
-    // used unchanged, exactly as before.
+    // Sizing comes only from the incoming container type (see
+    // derive_concat_sizing); without one the construction defaults apply.
     concat_expected_sizing cur;
-    cur.packing = packing;
-    cur.unpacked_dimension = unpacked_dimension;
-    cur.unpacked_ascending = unpacked_ascending;
-    cur.container_size = container_size;
-    cur.fields_sizes = fields_sizes;
     cur.child_sizing.resize(components.size());
     if (expected_type) cur = derive_concat_sizing(*expected_type, components.size());
     if (cur.packing) {
@@ -267,54 +237,13 @@ std::string Concatenation::print()  const{
     return oss.str();
 }
 
-
-void Concatenation::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
-
-    if (s.struct_sizes.empty()) {
-
-        resolved_type content_sizes;
-        unpacked_dimension = s.unpacked_sizes;
-        unpacked_ascending = s.unpacked_ascending;
-        if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) {
-            container_size = 32;
-            packing = true;
-            return;
-        };
-        if (!s.unpacked_sizes.empty()) {
-            if (s.unpacked_sizes.size()>1) {
-                content_sizes.unpacked_sizes.insert(content_sizes.unpacked_sizes.end(), s.unpacked_sizes.begin(), s.unpacked_sizes.end()-1);
-                content_sizes.unpacked_ascending.insert(content_sizes.unpacked_ascending.end(), s.unpacked_ascending.begin(), s.unpacked_ascending.end()-1);
-            }
-            content_sizes.packed_sizes = s.packed_sizes;
-            content_sizes.packed_ascending = s.packed_ascending;
-            container_size = s.unpacked_sizes.back();
-            packing = false;
-        } else {
-            container_size = s.packed_sizes.back();
-            packing = true;
-            content_sizes.packed_sizes.insert(content_sizes.packed_sizes.end(), s.packed_sizes.begin(), s.packed_sizes.end());
-            content_sizes.packed_ascending.insert(content_sizes.packed_ascending.end(), s.packed_ascending.begin(), s.packed_ascending.end());
-        }
-        for (auto &item:components) {
-            item->set_container_sizes(content_sizes, context);
-        }
-    } else {
-        packing = s.packed_struct;
-        process_struct_size(s.struct_sizes, packed_width(s), context);
-    }
-
-
-}
-
 std::optional<resolved_type> Concatenation::resolve_expression_type(
     const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) const {
-    // Locals mirror the set_container_sizes derivation: with an incoming
-    // container type they hold what the members would have held after sizing
-    // (including the per-component narrowing); otherwise the members are
-    // used unchanged, exactly as before.
-    bool packing_l = packing;
-    std::vector<uint64_t> unpacked_dimension_l = unpacked_dimension;
-    std::vector<bool> unpacked_ascending_l = unpacked_ascending;
+    // Sizing comes only from the incoming container type (see
+    // derive_concat_sizing); without one the construction defaults apply.
+    bool packing_l = false;
+    std::vector<uint64_t> unpacked_dimension_l;
+    std::vector<bool> unpacked_ascending_l;
     std::vector<std::optional<resolved_type>> child_sizing(components.size());
     if (expected_type) {
         auto derived = derive_concat_sizing(*expected_type, components.size());
@@ -369,22 +298,3 @@ std::optional<resolved_type> Concatenation::resolve_expression_type(
     return result;
 }
 
-void Concatenation::process_struct_size(
-    const std::vector<struct_member_resolved_type> &members,
-    uint64_t size,
-    const std::map<qualified_identifier, resolved_parameter> &context
-) {
-    container_size = size;
-    fields_sizes = members;
-    size_t n = std::min(members.size(), components.size());
-    for (int i = 0; i < n; i++) {
-        resolved_type rt;
-        rt.packed_sizes = members[i].packed_sizes;
-        rt.unpacked_sizes = members[i].unpacked_sizes;
-        rt.struct_sizes = members[i].members;
-        if (!members[i].members.empty()) {
-            rt.packed_struct = true;
-        }
-        components[i]->set_container_sizes(rt, context);
-    }
-}

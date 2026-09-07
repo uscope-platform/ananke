@@ -42,7 +42,6 @@ public:
     hdl_resource_statement(const hdl_resource_statement &c);
 
     parameter_deps_t get_dependencies() const override;
-    std::unique_ptr<hdl_statement_base> clone() const override;
     bool equals(const hdl_statement_base& other) const override;
     std::string print() const override;
 
@@ -57,7 +56,6 @@ public:
     void set_architecture(const std::string &a) { architecture = a; }
     std::string get_architecture() const { return architecture; }
     const std::string &getName() const { return name; }
-
 
     void set_type(dependency_class t) { hdl_dependency_type = t; }
     dependency_class get_type() { return hdl_dependency_type; }

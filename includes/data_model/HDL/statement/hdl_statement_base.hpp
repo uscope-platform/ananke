@@ -29,7 +29,6 @@ public:
     virtual ~hdl_statement_base() = default;
     virtual parameter_deps_t get_dependencies() const = 0;
     virtual void propagate_function(const hdl_function_def_ptr &def) {}
-    virtual std::unique_ptr<hdl_statement_base> clone() const = 0;
     virtual bool equals(const hdl_statement_base& other) const = 0;
     virtual std::string print() const = 0;
 
@@ -48,6 +47,5 @@ public:
 
     friend void PrintTo(const hdl_statement_base& s, std::ostream* os);
 };
-
 
 #endif //ANANKE_HDL_STATEMENT_BASE_HPP

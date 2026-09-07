@@ -33,14 +33,6 @@ void hdl_assignment_statement::propagate_function(const hdl_function_def_ptr &de
     if (index) index->propagate_function(def);
 }
 
-std::unique_ptr<hdl_statement_base> hdl_assignment_statement::clone() const {
-    auto c = std::make_unique<hdl_assignment_statement>();
-    c->target = target;
-    c->index = index;
-    c->value = value;
-    return c;
-}
-
 bool hdl_assignment_statement::equals(const hdl_statement_base& other) const {
     const auto& rhs = static_cast<const hdl_assignment_statement&>(other);
     bool res = target == rhs.target;

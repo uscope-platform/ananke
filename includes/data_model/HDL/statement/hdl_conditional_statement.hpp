@@ -22,7 +22,6 @@
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 
-
 struct hdl_conditional_branch {
     std::shared_ptr<Expression_base> condition;
     std::vector<std::shared_ptr<hdl_statement_base>> body;
@@ -33,12 +32,10 @@ struct hdl_conditional_branch {
     }
 };
 
-
 class hdl_conditional_statement : public hdl_statement_base {
 public:
     parameter_deps_t get_dependencies() const override;
     void propagate_function(const hdl_function_def_ptr &def) override;
-    std::unique_ptr<hdl_statement_base> clone() const override;
     bool equals(const hdl_statement_base& other) const override;
     std::string print() const override;
 
@@ -64,6 +61,5 @@ private:
     std::vector<hdl_conditional_branch> branches;
     std::vector<std::shared_ptr<hdl_statement_base>> else_body;
 };
-
 
 #endif //ANANKE_HDL_CONDITIONAL_STATEMENT_HPP

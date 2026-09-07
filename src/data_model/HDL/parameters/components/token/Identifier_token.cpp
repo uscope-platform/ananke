@@ -98,16 +98,11 @@ std::string Identifier_token::print() const {
     }
 }
 
-
 bool operator==(const Identifier_token &lhs, const Identifier_token &rhs) {
     bool ret_val = true;
     ret_val &= lhs.id == rhs.id;
     ret_val &= lhs.array_index == rhs.array_index;
     return ret_val;
-}
-
-void Identifier_token::set_container_sizes(const resolved_type &s,
-    const std::map<qualified_identifier, resolved_parameter> &context) {
 }
 
 std::optional<resolved_type> Identifier_token::resolve_expression_type(
@@ -125,7 +120,6 @@ std::string Identifier_token::print_index(const std::vector<std::shared_ptr<Expr
     }
     return ret_val;
 }
-
 
 bool Identifier_token::isEqual(const Expression_base &other) const {
     const auto& rhs = static_cast<const Identifier_token&>(other);
