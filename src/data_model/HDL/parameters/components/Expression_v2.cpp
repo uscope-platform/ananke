@@ -28,15 +28,16 @@ namespace {
     // This is the deterministic width used for rotate/shift semantics (unsized
     // integer literals model a 32-bit container).
     uint64_t expr_width(const std::shared_ptr<Expression_base> &e,
-                        const std::map<qualified_identifier, resolved_parameter> &context) {
+                        const std::map<qualified_identifier, resolved_parameter> &context,
+                        const std::optional<resolved_type> &child_sizing = std::nullopt) {
         if (!e) return 0;
-        auto t = e->resolve_expression_type(context);
+        auto t = e->resolve_expression_type(context, child_sizing);
         if (t && !t->is_real && !t->packed_sizes.empty()) {
             uint64_t w = 1;
             for (auto ps : t->packed_sizes) w *= ps;
             if (w > 0) return w;
         }
-        auto v = e->evaluate(context);
+        auto v = e->evaluate(context, child_sizing);
         if (v && v->is_integer()) return v->get_integer().get_size();
         return 64;
     }
@@ -166,14 +167,23 @@ parameter_deps_t Expression_v2::get_dependencies() const {
 }
 
 std::optional<resolved_type> Expression_v2::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context) const {
+    const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) const {
+    // Mirror of set_container_sizes: when this node was reached with a
+    // container type, operands were unconditionally sized as 64-bit packed.
+    // With no expected type the operands keep their own (default) sizing.
+    std::optional<resolved_type> operand_sizing;
+    if (expected_type) {
+        resolved_type r;
+        r.packed_sizes.push_back(64);
+        operand_sizing = r;
+    }
     if (operation == none) {
-        if (lhs && !rhs) return lhs ? lhs->resolve_expression_type(context) : std::nullopt;
+        if (lhs && !rhs) return lhs ? lhs->resolve_expression_type(context, operand_sizing) : std::nullopt;
         return std::nullopt;
     }
 
-    auto lhs_t = lhs ? lhs->resolve_expression_type(context) : std::nullopt;
-    auto rhs_t = rhs ? rhs->resolve_expression_type(context) : std::nullopt;
+    auto lhs_t = lhs ? lhs->resolve_expression_type(context, operand_sizing) : std::nullopt;
+    auto rhs_t = rhs ? rhs->resolve_expression_type(context, operand_sizing) : std::nullopt;
 
     auto width_of = [](const std::optional<resolved_type> &t) -> uint64_t {
         if (!t) return 0;
@@ -231,18 +241,28 @@ std::optional<resolved_type> Expression_v2::resolve_expression_type(
 }
 
 std::expected<resolved_parameter, solver_errors> Expression_v2::evaluate(
-    const std::map<qualified_identifier, resolved_parameter> &context) {
+    const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
 
     std::expected<resolved_parameter, solver_errors> r_val, l_val;
     resolved_parameter ret_val;
 
+    // Mirror of set_container_sizes: when reached with a container type the
+    // operands were unconditionally sized as 64-bit packed; otherwise they
+    // keep their own (default) sizing.
+    std::optional<resolved_type> operand_sizing;
+    if (expected_type) {
+        resolved_type r;
+        r.packed_sizes.push_back(64);
+        operand_sizing = r;
+    }
+
     if (operation == none) {
-        if (lhs && !rhs) return lhs->evaluate(context);
+        if (lhs && !rhs) return lhs->evaluate(context, operand_sizing);
         return std::unexpected{missing_arguments};
     }
 
-    if (lhs) l_val = lhs->evaluate(context);
-    if (rhs) r_val = rhs->evaluate(context);
+    if (lhs) l_val = lhs->evaluate(context, operand_sizing);
+    if (rhs) r_val = rhs->evaluate(context, operand_sizing);
     if (operation == logic_neg || operation == bitwise_neg ||
         operation == reduction_and || operation == reduction_nand ||
         operation == reduction_or || operation == reduction_nor ||
@@ -267,7 +287,7 @@ std::expected<resolved_parameter, solver_errors> Expression_v2::evaluate(
         }
         std::variant<hdl_integer, double> res;
         if (operation == rotate_left || operation == rotate_right) {
-            res = evaluate_rotate(context, operand_a, operand_b);
+            res = evaluate_rotate(context, operand_a, operand_b, operand_sizing);
         } else {
             res = evaluate_binary_expression(operand_a, operand_b);
         }
@@ -280,15 +300,17 @@ std::expected<resolved_parameter, solver_errors> Expression_v2::evaluate(
     // left operand width for shifts and unary ops), so wide values do not leak
     // past their container.
     if (ret_val.is_integer()) {
+        // Operand widths mirror the sized state: the operands were sized as
+        // 64-bit packed when this node was reached with a container type.
         auto operand_width = [&](const std::shared_ptr<Expression_base> &e) -> uint64_t {
             if (!e) return 0;
-            auto t = e->resolve_expression_type(context);
+            auto t = e->resolve_expression_type(context, operand_sizing);
             if (t && !t->is_real) {
                 uint64_t w = 1;
                 for (auto ps : t->packed_sizes) w *= ps;
                 if (w > 0) return w;
             }
-            auto v = e->evaluate(context);
+            auto v = e->evaluate(context, operand_sizing);
             if (v && v->is_integer()) return v->get_integer().get_size();
             return 64;
         };
@@ -332,7 +354,8 @@ std::expected<resolved_parameter, solver_errors> Expression_v2::evaluate(
 
 std::variant<hdl_integer, double> Expression_v2::evaluate_rotate(
     const std::map<qualified_identifier, resolved_parameter> &context,
-    resolved_parameter op_a, resolved_parameter op_b) {
+    resolved_parameter op_a, resolved_parameter op_b,
+    const std::optional<resolved_type> &operand_sizing) {
     if (!op_a.is_integer() || !op_b.is_integer()) {
         spdlog::warn("The rotate operator is only defined between integers");
         return 0;
@@ -341,7 +364,7 @@ std::variant<hdl_integer, double> Expression_v2::evaluate_rotate(
     // Container width of the left operand, derived from its resolved type.
     // Unsized integer literals model a 32-bit container, which makes the
     // rotate deterministic (vs. the natural bit length of the value).
-    uint64_t width = expr_width(lhs, context);
+    uint64_t width = expr_width(lhs, context, operand_sizing);
     if (width <= 0) width = 64;
 
     auto i_a = op_a.get_integer();

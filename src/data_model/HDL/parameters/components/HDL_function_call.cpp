@@ -151,19 +151,20 @@ void HDL_function_call::walk_body(
     std::map<qualified_identifier, resolved_parameter> ctx,
     std::map<int64_t, hdl_integer> &value_map,
     std::map<int64_t, int64_t> &size_map,
-    const std::shared_ptr<hdl_type> &rt
+    const std::shared_ptr<hdl_type> &rt,
+    const std::optional<resolved_type> &expected_type
 ) {
     for (const auto &stmt : stmts) {
         if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
             if (!asgn->get_value()) continue;
-            auto val = asgn->get_value()->evaluate(ctx);
+            auto val = asgn->get_value()->evaluate(ctx, expected_type);
             if (!val.has_value()) continue;
 
             const auto &target = asgn->get_target();
             if (target == fcn_name) {
                 int64_t idx = 0;
                 if (asgn->get_index()) {
-                    auto idx_res = asgn->get_index()->evaluate(ctx);
+                    auto idx_res = asgn->get_index()->evaluate(ctx, expected_type);
                     if (!idx_res.has_value() || !idx_res.value().is_integer()) continue;
                     idx = idx_res.value().get_integer().get_value();
                 }
@@ -186,7 +187,7 @@ void HDL_function_call::walk_body(
                     if (members[i].name == field_name) {
                         int64_t idx = static_cast<int64_t>(i);
                         if (asgn->get_index()) {
-                            auto idx_res = asgn->get_index()->evaluate(ctx);
+                            auto idx_res = asgn->get_index()->evaluate(ctx, expected_type);
                             if (!idx_res.has_value() || !idx_res.value().is_integer()) continue;
                             idx = idx_res.value().get_integer().get_value();
                         }
@@ -222,32 +223,48 @@ void HDL_function_call::walk_body(
             for (auto &idx : indices) {
                 auto loop_ctx = ctx;
                 loop_ctx[loop_var] = resolved_parameter(idx);
-                walk_body(fcn_name, loop->get_body(), loop_ctx, value_map, size_map, rt);
+                walk_body(fcn_name, loop->get_body(), loop_ctx, value_map, size_map, rt, expected_type);
             }
         } else if (auto cond = std::dynamic_pointer_cast<hdl_conditional_statement>(stmt)) {
             bool matched = false;
             for (auto &branch : cond->get_branches()) {
                 if (branch.condition) {
-                    auto result = branch.condition->evaluate(ctx);
+                    auto result = branch.condition->evaluate(ctx, expected_type);
                     if (result.has_value() && result.value().is_integer() && result.value().get_integer() != 0) {
                         matched = true;
-                        walk_body(fcn_name, branch.body, ctx, value_map, size_map, rt);
+                        walk_body(fcn_name, branch.body, ctx, value_map, size_map, rt, expected_type);
                         break;
                     }
                 }
             }
             if (!matched)
-                walk_body(fcn_name, cond->get_else_body(), ctx, value_map, size_map, rt);
+                walk_body(fcn_name, cond->get_else_body(), ctx, value_map, size_map, rt, expected_type);
         }
     }
 }
 
-std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
+std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
     if (body.empty()) return std::unexpected{empty_body};
+
+    // Locals mirror the set_container_sizes flag derivation: with an incoming
+    // container type they hold what the members would have held after sizing;
+    // otherwise the members are used unchanged, exactly as before.
+    const bool packing_l = expected_type ? expected_type->unpacked_sizes.empty() : packing;
+    bool container_unpacked_ascending_l = container_unpacked_ascending;
+    bool has_return_unpacked_ascending_l = has_return_unpacked_ascending;
+    bool return_unpacked_ascending_l = return_unpacked_ascending;
+    if (expected_type) {
+        const auto &s = *expected_type;
+        container_unpacked_ascending_l = s.unpacked_ascending.empty() ? true : s.unpacked_ascending[0];
+        if (s.return_unpacked_ascending.has_value()) {
+            return_unpacked_ascending_l = s.return_unpacked_ascending.value();
+            has_return_unpacked_ascending_l = true;
+        }
+    }
 
     std::map<int64_t, hdl_integer> value_map;
     std::map<int64_t, int64_t> size_map;
-    walk_body(function_name, body, context, value_map, size_map, return_type);
+    walk_body(function_name, body, context, value_map, size_map, return_type, expected_type);
 
     if (value_map.empty()) return std::unexpected{missing_value};
 
@@ -272,9 +289,11 @@ std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(con
         return resolved_parameter(values[0]);
     }
 
-    apply_return_order_reversal(values, sizes, context);
+    apply_return_order_reversal(values, sizes, context, packing_l,
+        has_return_unpacked_ascending_l, return_unpacked_ascending_l,
+        container_unpacked_ascending_l);
 
-    if (packing) {
+    if (packing_l) {
         return resolved_parameter(pack_values(values, sizes));
     }
 
@@ -286,8 +305,13 @@ std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(con
 void HDL_function_call::apply_return_order_reversal(
     std::vector<hdl_integer> &values,
     std::vector<int64_t> &value_sizes,
-    const std::map<qualified_identifier, resolved_parameter> &context
+    const std::map<qualified_identifier, resolved_parameter> &context,
+    bool packing,
+    bool has_return_unpacked_ascending,
+    bool return_unpacked_ascending,
+    bool container_unpacked_ascending
 ) {
+    (void)context;
     if (packing || !has_return_unpacked_ascending) return;
     if (return_unpacked_ascending != container_unpacked_ascending) {
         std::reverse(values.begin(), values.end());
@@ -297,7 +321,7 @@ void HDL_function_call::apply_return_order_reversal(
 
 
 std::optional<resolved_type> HDL_function_call::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context) const {
+    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) const {
     if (return_type) {
         return return_type->evaluate_type(context);
     }

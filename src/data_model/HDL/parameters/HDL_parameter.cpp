@@ -79,8 +79,10 @@ std::expected<resolved_parameter, solver_errors>  HDL_parameter::evaluate(const 
             container_size->return_unpacked_ascending = lower->get_integer() < upper->get_integer();
         }
     }
-    raw_value->set_container_sizes(container_size.value(), context);
-    auto val = raw_value->evaluate(context);
+    // Single-phase evaluation: the container type travels alongside the
+    // context instead of being stamped onto (possibly shared) nodes by
+    // set_container_sizes. Nodes derive per-site sizing locally from it.
+    auto val = raw_value->evaluate(context, container_size);
     if (!val) return std::unexpected{val.error()};
     if (type->is<HDL_simple_type>()) {
         return cast_result(val.value(), container_size);

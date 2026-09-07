@@ -53,19 +53,21 @@ void Streaming::propagate_function(const hdl_function_statement &def) {
     if (slice_size) slice_size->propagate_function(def);
 }
 
-std::expected<resolved_parameter, solver_errors> Streaming::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
+std::expected<resolved_parameter, solver_errors> Streaming::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
     if (components.empty()) return std::unexpected{missing_arguments};
 
+    // Mirror of set_container_sizes: the incoming container type was
+    // forwarded to components and slice size unchanged.
     // Evaluate all components; use declared literal width when available.
     std::vector<hdl_integer> values;
     std::vector<int64_t> widths;
     int64_t total_width = 0;
     for (const auto &comp : components) {
-        auto v = comp->evaluate(context);
+        auto v = comp->evaluate(context, expected_type);
         if (!v.has_value() || !v.value().is_integer()) return std::unexpected{missing_value};
         auto raw = v.value().get_integer();
         int64_t w = 0;
-        auto comp_t = comp->resolve_expression_type(context);
+        auto comp_t = comp->resolve_expression_type(context, expected_type);
         if (comp_t) w = static_cast<int64_t>(packed_width(*comp_t));
         if (w <= 0) w = raw.get_size();
         widths.push_back(w);
@@ -85,7 +87,7 @@ std::expected<resolved_parameter, solver_errors> Streaming::evaluate(const std::
     // Determine slice size (default 1).
     int64_t slice = 1;
     if (slice_size) {
-        auto s = slice_size->evaluate(context);
+        auto s = slice_size->evaluate(context, expected_type);
         if (s.has_value() && s.value().is_integer() && s.value().get_integer().get_value() > 0)
             slice = s.value().get_integer().get_value();
     }
@@ -136,10 +138,12 @@ void Streaming::set_container_sizes(const resolved_type &s,
 }
 
 std::optional<resolved_type> Streaming::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context) const {
+    const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) const {
     uint64_t total_bits = 0;
     for (const auto &comp : components) {
-        auto comp_t = comp->resolve_expression_type(context);
+        // Mirror of set_container_sizes: the incoming container type was
+        // forwarded to components unchanged.
+        auto comp_t = comp->resolve_expression_type(context, expected_type);
         if (!comp_t) return std::nullopt;
         if (comp_t->is_real) {
             resolved_type result;

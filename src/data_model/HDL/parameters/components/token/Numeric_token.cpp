@@ -47,7 +47,7 @@ Numeric_token::Numeric_token(std::variant<hdl_integer, double> n, int64_t b_s) {
 }
 
 std::expected<resolved_parameter, solver_errors> Numeric_token::evaluate(
-    const std::map<qualified_identifier, resolved_parameter> &context) {
+    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) {
     return value;
 }
 
@@ -78,7 +78,7 @@ void Numeric_token::set_container_sizes(const resolved_type &s,
 }
 
 std::optional<resolved_type> Numeric_token::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context) const {
+    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) const {
     resolved_type result;
     if (value.is_real()) {
         result.is_real = true;

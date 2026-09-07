@@ -63,14 +63,14 @@ public:
     const std::vector<std::shared_ptr<Expression_base>>& get_arguments() const { return arguments; }
 
     std::expected<resolved_parameter, solver_errors> evaluate(
-        const std::map<qualified_identifier, resolved_parameter> &context) override;
+        const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
     std::string print() const override;
     parameter_deps_t get_dependencies() const override;
     void propagate_function(const hdl_function_statement &def) override {}
     void set_container_sizes(const resolved_type &s,
                              const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(
-        const std::map<qualified_identifier, resolved_parameter> &context) const override;
+        const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
 
     template<class Archive>
     void serialize(Archive & ar) {

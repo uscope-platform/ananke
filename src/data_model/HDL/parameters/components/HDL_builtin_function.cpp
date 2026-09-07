@@ -246,7 +246,7 @@ std::string format_string(const std::string &fmt, const std::vector<resolved_par
 
 } // namespace
 
-std::expected<resolved_parameter, solver_errors> HDL_builtin_function::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
+std::expected<resolved_parameter, solver_errors> HDL_builtin_function::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) {
     switch (function_kind) {
         case function::bits: case function::size:
         case function::left: case function::right:
@@ -916,7 +916,7 @@ std::expected<resolved_parameter, solver_errors> HDL_builtin_function::evaluate_
     return type_cast_engine::to_unsigned(val->get_integer(), container);
 }
 std::optional<resolved_type> HDL_builtin_function::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context) const {
+    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) const {
     if (function_kind == function::signed_fn || function_kind == function::unsigned_fn) {
         if (!arguments.empty()) return arguments[0]->resolve_expression_type(context);
     }

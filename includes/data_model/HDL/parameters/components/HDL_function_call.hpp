@@ -42,14 +42,18 @@ public:
     void propagate_function(const hdl_function_statement &def) override;
     void propagate_expression(const qualified_identifier &constant_id,
                               const std::shared_ptr<Expression_base> &value) override;
-    std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
+    std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
 
     std::optional<resolved_type> resolve_expression_type(
-        const std::map<qualified_identifier, resolved_parameter> &context) const override;
+        const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
     void apply_return_order_reversal(
         std::vector<hdl_integer> &values,
         std::vector<int64_t> &value_sizes,
-        const std::map<qualified_identifier, resolved_parameter> &context
+        const std::map<qualified_identifier, resolved_parameter> &context,
+        bool packing,
+        bool has_return_unpacked_ascending,
+        bool return_unpacked_ascending,
+        bool container_unpacked_ascending
     );
 
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
@@ -78,7 +82,8 @@ private:
         std::map<qualified_identifier, resolved_parameter> ctx,
         std::map<int64_t, hdl_integer> &value_map,
         std::map<int64_t, int64_t> &size_map,
-        const std::shared_ptr<hdl_type> &rt
+        const std::shared_ptr<hdl_type> &rt,
+        const std::optional<resolved_type> &expected_type = std::nullopt
     );
 
     std::string function_name;

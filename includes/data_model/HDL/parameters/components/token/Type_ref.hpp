@@ -32,7 +32,7 @@ public:
     }
 
     std::expected<resolved_parameter, solver_errors> evaluate(
-        const std::map<qualified_identifier, resolved_parameter> &) override {
+        const std::map<qualified_identifier, resolved_parameter> &, const std::optional<resolved_type> & = std::nullopt) override {
         return std::unexpected{missing_value};
     }
 

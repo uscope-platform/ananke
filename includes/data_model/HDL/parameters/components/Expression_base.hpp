@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 #include <expected>
+#include <optional>
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"
 #include "data_model/HDL/types/resolved_type.hpp"
@@ -35,7 +36,7 @@ public:
     virtual parameter_deps_t get_dependencies()const {return {};}
     virtual void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value){}
     virtual void propagate_function(const hdl_function_statement &def) {}
-    virtual std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {return std::unexpected{missing_value};}
+    virtual std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) { (void)expected_type; return std::unexpected{missing_value};}
     virtual std::string print() const {return "";}
 
 
@@ -43,7 +44,7 @@ public:
     virtual void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) = 0;
 
     virtual std::optional<resolved_type> resolve_expression_type(
-        const std::map<qualified_identifier, resolved_parameter> &context) const {
+        const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const {
         return std::nullopt;
     }
 

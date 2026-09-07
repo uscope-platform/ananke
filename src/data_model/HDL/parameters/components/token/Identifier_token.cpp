@@ -50,7 +50,7 @@ void Identifier_token::propagate_function(const hdl_function_statement &def) {
 }
 
 std::expected<resolved_parameter, solver_errors> Identifier_token::evaluate(
-    const std::map<qualified_identifier, resolved_parameter> &context) {
+    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) {
     auto it = context.find(id);
     if (it != context.end()) {
         const auto &resolved = it->second;
@@ -111,7 +111,7 @@ void Identifier_token::set_container_sizes(const resolved_type &s,
 }
 
 std::optional<resolved_type> Identifier_token::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context) const {
+    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) const {
     if (expression_type) {
         return expression_type->evaluate_type(context);
     }

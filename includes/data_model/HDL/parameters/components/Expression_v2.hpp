@@ -143,8 +143,8 @@ public:
     std::string print() const override;
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(
-        const std::map<qualified_identifier, resolved_parameter> &context) const override;
-    std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context) override;
+        const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) const override;
+    std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
     parameter_deps_t get_dependencies()const override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
     void propagate_function(const hdl_function_statement &def) override;
@@ -160,7 +160,8 @@ private:
     std::variant<hdl_integer, double> evaluate_binary_expression(resolved_parameter op_a, resolved_parameter op_b);
     std::variant<hdl_integer, double> evaluate_rotate(
         const std::map<qualified_identifier, resolved_parameter> &context,
-        resolved_parameter op_a, resolved_parameter op_b);
+        resolved_parameter op_a, resolved_parameter op_b,
+        const std::optional<resolved_type> &operand_sizing = std::nullopt);
     std::variant<hdl_integer, double> evaluate_unary_expression(resolved_parameter operand);
 
     std::shared_ptr<Expression_base> lhs;

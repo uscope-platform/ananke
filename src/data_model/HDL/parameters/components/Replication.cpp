@@ -87,8 +87,12 @@ void Replication::propagate_function(const hdl_function_statement &def) {
     if (repeated_item) repeated_item->propagate_function(def);
 }
 
-std::expected<resolved_parameter, solver_errors> Replication::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
+std::expected<resolved_parameter, solver_errors> Replication::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
     if (!repetition_size || !repeated_item) return std::unexpected{missing_value};
+    // Mirror of set_container_sizes (which only derived the packing flag and
+    // never touched children): children keep plain evaluation, the flag
+    // comes from the incoming type when present.
+    const bool packing_l = expected_type ? expected_type->unpacked_sizes.empty() : packing;
     mdarray<hdl_integer> result;
     auto raw_size = repetition_size->evaluate(context);
     if (!raw_size.has_value()) return std::unexpected{missing_value};
@@ -108,7 +112,7 @@ std::expected<resolved_parameter, solver_errors> Replication::evaluate(const std
         auto comp_t = repeated_item->resolve_expression_type(context);
         if (comp_t) repeated_size = static_cast<int64_t>(packed_width(*comp_t));
         if (repeated_size <= 0) repeated_size = item.value().get_integer().get_size();
-        if (!packing) {
+        if (!packing_l) {
             repeated_value = std::vector(size, item.value().get_integer());
         } else {
             return pack_repetition(item.value().get_integer() , repeated_size, size);
@@ -137,7 +141,7 @@ std::expected<resolved_parameter, solver_errors> Replication::evaluate(const std
         auto comp_t = repeated_item->resolve_expression_type(context);
         if (comp_t) repeated_size = static_cast<int64_t>(packed_width(*comp_t));
         if (repeated_size <= 0) repeated_size = item.value().get_integer().get_size();
-        if (!packing) {
+        if (!packing_l) {
             repeated_value = std::vector(size, item.value().get_integer());
         } else {
             return pack_repetition(item.value().get_integer() , repeated_size, size);
@@ -179,7 +183,7 @@ void Replication::set_container_sizes(const resolved_type &s, const std::map<qua
 }
 
 std::optional<resolved_type> Replication::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context) const {
+    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) const {
     auto item_t = repeated_item ? repeated_item->resolve_expression_type(context) : std::nullopt;
     if (!item_t) return std::nullopt;
 

@@ -49,13 +49,18 @@ parameter_deps_t Cast::get_dependencies() const {
     return deps;
 }
 
-std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
+std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
     if (type_cast) {
-        if (!container_size) return std::unexpected{missing_value};
-        auto content_val = content->evaluate(context);
+        // Mirror of set_container_sizes: the incoming container type is what
+        // the member would have held; fall back to the member when absent.
+        // An empty-but-present type still proceeds (width defaults to 64
+        // below), exactly like a member holding an empty type did.
+        std::optional<resolved_type> effective = expected_type ? expected_type : container_size;
+        if (!effective) return std::unexpected{missing_value};
+        auto content_val = content->evaluate(context, expected_type);
         if (!content_val.has_value()) return std::unexpected{missing_value};
         uint64_t container = 64;
-        if (!container_size->packed_sizes.empty()) container = packed_width(*container_size);
+        if (!effective->packed_sizes.empty()) container = packed_width(*effective);
         if (target_type == "signed" || target_type == "unsigned") {
             if (!content_val.value().is_integer()) {
                 spdlog::warn("Casting of non scalar integer values is not supported");
@@ -116,7 +121,19 @@ std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<q
         spdlog::warn("Cast to unsupported type '{}' not evaluated, defaulting to 0", target_type);
         return 0;
     } else {
-        auto content_val = content->evaluate(context);
+        // Mirror of set_container_sizes: the content was sized with the
+        // cast-width type. Evaluate the size first to rebuild it locally.
+        std::optional<resolved_type> content_sizing;
+        if (size) {
+            if (auto early_size = size->evaluate(context);
+                early_size.has_value() && early_size.value().is_integer()) {
+                resolved_type t;
+                t.packed_sizes.push_back(early_size.value().get_integer().get_value());
+                t.packed_ascending.push_back(true);
+                content_sizing = t;
+            }
+        }
+        auto content_val = content->evaluate(context, content_sizing);
         if (!content_val.has_value()) return std::unexpected{missing_value};
         if (!content_val.value().is_integer()) return content_val.value();
         if (!size) return std::unexpected{missing_value};
@@ -176,10 +193,16 @@ void Cast::set_container_sizes(const resolved_type &s, const std::map<qualified_
 }
 
 std::optional<resolved_type> Cast::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context) const {
+    const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) const {
     if (type_cast) {
-        if (container_size && (!container_size->packed_sizes.empty() || !container_size->unpacked_sizes.empty())) {
-            return container_size;
+        // Mirror of set_container_sizes: the incoming container type is what
+        // the member would have held; fall back to the member when absent.
+        std::optional<resolved_type> effective = expected_type;
+        if (!effective || (effective->packed_sizes.empty() && effective->unpacked_sizes.empty())) {
+            effective = container_size;
+        }
+        if (effective && (!effective->packed_sizes.empty() || !effective->unpacked_sizes.empty())) {
+            return effective;
         }
         if (target_type == "real" || target_type == "shortreal" || target_type == "realtime") {
             resolved_type result;
@@ -199,7 +222,10 @@ std::optional<resolved_type> Cast::resolve_expression_type(
             return result;
         }
     }
-    if (content) return content->resolve_expression_type(context);
+    // Mirror of set_container_sizes: size-casts never forwarded through here
+    // (valid sizes return early above with content left untouched), while
+    // type-casts forwarded the incoming container type unchanged.
+    if (content) return content->resolve_expression_type(context, type_cast ? expected_type : std::nullopt);
     return std::nullopt;
 }
 

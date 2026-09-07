@@ -38,12 +38,12 @@ Real_token::Real_token(const std::string &s) {
 }
 
 std::expected<resolved_parameter, solver_errors> Real_token::evaluate(
-    const std::map<qualified_identifier, resolved_parameter> &context) {
+    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) {
     return value;
 }
 
 std::optional<resolved_type> Real_token::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context) const {
+    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) const {
     resolved_type result;
     result.is_real = true;
     return result;

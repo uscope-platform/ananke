@@ -48,7 +48,7 @@ void Ternary::propagate_expression(const qualified_identifier &constant_id,
     false_value->propagate_expression(constant_id, value);
 }
 
-std::expected<resolved_parameter, solver_errors> Ternary::evaluate(const std::map<qualified_identifier, resolved_parameter> &context) {
+std::expected<resolved_parameter, solver_errors> Ternary::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) {
     auto condition_value = condition->evaluate(context);
     if (!condition_value.has_value()) return std::unexpected{missing_value};
     bool cond_true;
@@ -68,7 +68,7 @@ std::expected<resolved_parameter, solver_errors> Ternary::evaluate(const std::ma
 }
 
 std::optional<resolved_type> Ternary::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context) const {
+    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) const {
     auto t_t = true_value ? true_value->resolve_expression_type(context) : std::nullopt;
     auto f_t = false_value ? false_value->resolve_expression_type(context) : std::nullopt;
 
