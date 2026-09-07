@@ -33,6 +33,7 @@
 #include <cctype>
 #include <cstring>
 #include <limits>
+#include <set>
 #include <sstream>
 
 int64_t HDL_function_call::declared_member_width(
@@ -58,78 +59,64 @@ void HDL_function_call::add_argument(const std::shared_ptr<Expression_base> &p) 
 
 parameter_deps_t HDL_function_call::get_dependencies() const {
     parameter_deps_t retval;
-    for (auto &arg:arguments) {
-        retval.merge(arg->get_dependencies());
+    for (auto &arg : arguments) {
+        if (arg) retval.merge(arg->get_dependencies());
     }
-    for(auto &s:body) {
-        retval.merge(s->get_dependencies());
+    if (linked_) {
+        // True dependencies only: the shared definition body's deps minus
+        // the formal parameters (bound at evaluation, so not external deps).
+        // This also drops the false CVA6Cfg-style cycle with no sorter
+        // hacks. Nested function references are kept so the solver fixpoint
+        // keeps discovering nested calls.
+        const auto arg_names = linked_->get_arguments_names();
+        const std::set<std::string> formals(arg_names.begin(), arg_names.end());
+        const auto body_deps = linked_->get_dependencies();
+        for (const auto &d : body_deps.data) {
+            if (!d.get_package_prefix().empty()) {
+                retval.data.insert(d);
+                continue;
+            }
+            const auto inst = d.get_instance();
+            const std::string &root = inst.empty() ? d.get_name() : inst.front();
+            if (!formals.contains(root)) retval.data.insert(d);
+        }
+        retval.functions.insert(body_deps.functions.begin(), body_deps.functions.end());
+        retval.types.insert(body_deps.types.begin(), body_deps.types.end());
     }
     retval.functions.insert(qualified_identifier(package_prefix, function_name));
     return retval;
 }
 
 
-void HDL_function_call::propagate_function(const hdl_function_statement &def) {
-    // Forward first so nested calls visible from earlier rounds resolve.
-    // Bodies filled below are deliberately not traversed in this pass; the
-    // solver fixpoint picks them up in later rounds. This ordering also keeps
-    // directly recursive functions terminating.
+void HDL_function_call::propagate_function(const hdl_function_def_ptr &def) {
+    if (!def) return;
+    // Forward into argument subtrees first (per-site nodes) so nested calls
+    // visible from earlier rounds resolve. This writes nothing but
+    // idempotent links (same shared_ptr value from every site).
     for (auto &arg : arguments) {
         if (arg) arg->propagate_function(def);
     }
-    for (auto &stmt : body) {
-        if (stmt) stmt->propagate_function(def);
-    }
-    if(def.get_name() == function_name) {
-        body.clear();
-        for (const auto &stmt : def.get_body())
-            body.push_back(stmt->clone());
-        return_type = def.get_return_type();
-        auto arg_names = def.get_arguments_names();
-        for (int i =0;i<arg_names.size(); i++) {
-            if (i >= static_cast<int>(arguments.size())) break;
-            auto arg_val = arguments[i];
-            for (auto &stmt : body) {
-                if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
-                    if (asgn->get_value())
-                        asgn->get_value()->propagate_expression(qualified_identifier(arg_names[i]), arg_val);
-                    if (asgn->get_index())
-                        asgn->get_index()->propagate_expression(qualified_identifier(arg_names[i]), arg_val);
-                }
+    if (def->get_name() == function_name) {
+        if (linked_ != def) {
+            linked_ = def;
+            // First link of this definition: cascade it into the shared
+            // body so nested calls can link in later fixpoint rounds.
+            // Nested nodes only record their own links — no values are
+            // rewritten, so sharing stays safe by construction.
+            for (const auto &stmt : linked_->get_body()) {
+                if (stmt) stmt->propagate_function(def);
             }
         }
-        // Enum members declared in the function scope are constants: fold
-        // references to them into literals, exactly as if written out.
-        // Runs after formal substitution so formals win on name clashes.
-        // The grafted literal is freshly built per definition, and only the
-        // clone's own pointers are reseated, so no shared state is mutated.
-        for (const auto &local : def.get_local_variables()) {
-            if (!local || !local->get_type() || !local->get_type()->is<HDL_enum_type>()) continue;
-            for (const auto &member : local->get_type()->as<HDL_enum_type>().members) {
-                if (!member.value.has_value()) continue;
-                auto lit = std::make_shared<Numeric_token>(std::to_string(member.value.value()));
-                qualified_identifier mid(member.name);
-                for (auto &stmt : body) {
-                    if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
-                        if (asgn->get_value()) {
-                            if (asgn->get_value()->is<Identifier_token>() &&
-                                asgn->get_value()->as<Identifier_token>().get_value() == mid) {
-                                asgn->set_value(lit);
-                            } else {
-                                asgn->get_value()->propagate_expression(mid, lit);
-                            }
-                        }
-                        if (asgn->get_index()) {
-                            if (asgn->get_index()->is<Identifier_token>() &&
-                                asgn->get_index()->as<Identifier_token>().get_value() == mid) {
-                                asgn->set_index(lit);
-                            } else {
-                                asgn->get_index()->propagate_expression(mid, lit);
-                            }
-                        }
-                    }
-                }
-            }
+        return;
+    }
+    if (linked_) {
+        // A different function: cascade into the already-linked body so
+        // nested calls keep resolving as the fixpoint delivers new defs.
+        // Same-definition deliveries short-circuit inside nested calls
+        // (linked_ == def skips the cascade), so directly recursive
+        // functions still terminate.
+        for (const auto &stmt : linked_->get_body()) {
+            if (stmt) stmt->propagate_function(def);
         }
     }
 }
@@ -244,15 +231,93 @@ void HDL_function_call::walk_body(
 }
 
 std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
-    if (body.empty()) return std::unexpected{empty_body};
+    if (!linked_) return std::unexpected{empty_body};
+
+    const auto arg_names = linked_->get_arguments_names();
+
+    // 1. Each actual is evaluated once in the caller context (the old
+    // substitution re-evaluated a formal at every use). The call's own
+    // expected type is threaded so actuals size exactly as the grafted
+    // expressions did under the old per-site body sizing.
+    std::vector<std::optional<resolved_parameter>> actual_vals;
+    actual_vals.reserve(arg_names.size());
+    for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (i < arguments.size() && arguments[i]) {
+            auto v = arguments[i]->evaluate(context, expected_type);
+            if (v.has_value() && v.value().is_integer()) {
+                // Width lift: the old substitution grafted the actual NODE,
+                // so body truncation saw the node's resolved width (unsized
+                // literals resolve to at least 32). A bound VALUE read back
+                // through an Identifier would otherwise fall back to the
+                // parse-minimal size (e.g. 5+7 truncated to 3 bits = 4).
+                // Widen-only: explicit small sizes are preserved.
+                auto iv = v.value().get_integer();
+                if (auto t = arguments[i]->resolve_expression_type(context, expected_type);
+                    t && !t->is_real && !t->packed_sizes.empty()) {
+                    const auto w = packed_width(*t);
+                    if (w > iv.get_size()) {
+                        iv.set_size(static_cast<int64_t>(w));
+                        v.value() = resolved_parameter(iv);
+                    }
+                }
+                actual_vals.emplace_back(v.value());
+            }
+            else if (v.has_value()) actual_vals.emplace_back(v.value());
+            else actual_vals.emplace_back(std::nullopt);
+        } else {
+            // Fewer actuals than formals: leave the formal unbound, exactly
+            // like the old substitution (which simply skipped it), so reads
+            // miss in the context and the assignment is skipped.
+            actual_vals.emplace_back(std::nullopt);
+        }
+    }
+
+    std::map<qualified_identifier, resolved_parameter> call_ctx = context;
+
+    // 2. Enum members declared in the function scope are constants.
+    // Bound before formals so formals win on name clashes (as before).
+    for (const auto &local : linked_->get_local_variables()) {
+        if (!local || !local->get_type() || !local->get_type()->is<HDL_enum_type>()) continue;
+        for (const auto &member : local->get_type()->as<HDL_enum_type>().members) {
+            if (!member.value.has_value()) continue;
+            call_ctx[qualified_identifier(member.name)] =
+                resolved_parameter(hdl_integer(static_cast<int64_t>(member.value.value())));
+        }
+    }
+
+    // 3. Bind formals. A struct actual passed by identifier re-keys the
+    // caller's already-split field entries (extract_struct_fields output)
+    // under the formal name, so formal.field reads resolve with no type
+    // info and no tree rewriting. Only the local call_ctx is written.
+    for (size_t i = 0; i < arg_names.size(); ++i) {
+        if (!actual_vals[i].has_value()) continue;
+        call_ctx[qualified_identifier(arg_names[i])] = actual_vals[i].value();
+        if (i < arguments.size() && arguments[i] && arguments[i]->is<Identifier_token>()) {
+            const auto &actual_id = arguments[i]->as<Identifier_token>().get_value();
+            std::vector<std::string> actual_path = actual_id.get_instance();
+            actual_path.push_back(actual_id.get_name());
+            for (const auto &[key, val] : context) {
+                const auto key_inst = key.get_instance();
+                if (key_inst.size() < actual_path.size()) continue;
+                if (!std::equal(actual_path.begin(), actual_path.end(), key_inst.begin())) continue;
+                std::vector<std::string> new_inst;
+                new_inst.push_back(arg_names[i]);
+                new_inst.insert(new_inst.end(), key_inst.begin() + actual_path.size(), key_inst.end());
+                qualified_identifier rekeyed(key.get_name());
+                if (!key.get_package_prefix().empty()) rekeyed.set_package_prefix(key.get_package_prefix());
+                rekeyed.set_instance_prefix(new_inst);
+                call_ctx[rekeyed] = val;
+            }
+        }
+    }
 
     // Locals mirror the set_container_sizes flag derivation: with an incoming
     // container type they hold what the members would have held after sizing;
     // otherwise the members are used unchanged, exactly as before.
-    const bool packing_l = expected_type ? expected_type->unpacked_sizes.empty() : packing;
-    bool container_unpacked_ascending_l = container_unpacked_ascending;
-    bool has_return_unpacked_ascending_l = has_return_unpacked_ascending;
-    bool return_unpacked_ascending_l = return_unpacked_ascending;
+    const bool packing_l = expected_type ? expected_type->unpacked_sizes.empty() : false;
+    bool container_unpacked_ascending_l = false;
+    bool has_return_unpacked_ascending_l = false;
+    bool return_unpacked_ascending_l = false;
     if (expected_type) {
         const auto &s = *expected_type;
         container_unpacked_ascending_l = s.unpacked_ascending.empty() ? true : s.unpacked_ascending[0];
@@ -262,9 +327,11 @@ std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(con
         }
     }
 
+    // 4. Walk the SHARED definition body read-only. Nothing here writes
+    // through linked_: per-site state lives in call_ctx and the maps below.
     std::map<int64_t, hdl_integer> value_map;
     std::map<int64_t, int64_t> size_map;
-    walk_body(function_name, body, context, value_map, size_map, return_type, expected_type);
+    walk_body(function_name, linked_->get_body(), call_ctx, value_map, size_map, linked_->get_return_type(), expected_type);
 
     if (value_map.empty()) return std::unexpected{missing_value};
 
@@ -322,31 +389,18 @@ void HDL_function_call::apply_return_order_reversal(
 
 std::optional<resolved_type> HDL_function_call::resolve_expression_type(
     const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) const {
-    if (return_type) {
-        return return_type->evaluate_type(context);
+    if (linked_ && linked_->get_return_type()) {
+        return linked_->get_return_type()->evaluate_type(context);
     }
     return std::nullopt;
 }
 
 void HDL_function_call::set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context) {
-    packing = s.unpacked_sizes.empty();
-    container_unpacked_ascending = s.unpacked_ascending.empty() ? true : s.unpacked_ascending[0];
-    if (s.return_unpacked_ascending.has_value()) {
-        return_unpacked_ascending = s.return_unpacked_ascending.value();
-        has_return_unpacked_ascending = true;
-    }
-    if (s.packed_sizes.empty() && s.unpacked_sizes.empty()) return;
-    for (auto &stmt : body) {
-        if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
-            if (asgn->get_value()) asgn->get_value()->set_container_sizes(s, context);
-        } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
-            for (auto &bs : loop->get_body()) {
-                if (auto la = std::dynamic_pointer_cast<hdl_assignment_statement>(bs)) {
-                    if (la->get_value()) la->get_value()->set_container_sizes(s, context);
-                }
-            }
-        }
-    }
+    // Dead since single-phase evaluation: sizing travels with evaluate().
+    // The old body walk mutated shared definitions across call sites, so it
+    // must not come back. Kept as a no-op until the virtual is removed.
+    (void)s;
+    (void)context;
 }
 
 
@@ -376,9 +430,9 @@ bool HDL_function_call::isEqual(const Expression_base &other) const {
     for (int i = 0; i< arguments.size(); i++) {
         is_equal &= *arguments[i] == *rhs.arguments[i];
     }
-    is_equal &= body.size() == rhs.body.size();
-    for (size_t i = 0; i < body.size(); i++)
-        is_equal &= *body[i] == *rhs.body[i];
+    // Deliberately link-insensitive: equality is structural on the call, so
+    // it is stable across propagation (the old body compare flipped from
+    // false to true as bodies filled in).
     is_equal &= package_prefix == rhs.package_prefix;
     return is_equal;
 }

@@ -34,7 +34,7 @@ parameter_deps_t hdl_loop_statement::get_dependencies() const {
     return deps;
 }
 
-void hdl_loop_statement::propagate_function(const hdl_function_statement &def) {
+void hdl_loop_statement::propagate_function(const hdl_function_def_ptr &def) {
     if (init) init->propagate_function(def);
     if (end_condition) end_condition->propagate_function(def);
     if (iteration) iteration->propagate_function(def);

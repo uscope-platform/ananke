@@ -37,7 +37,7 @@ Cast::Cast(Cast &&other) noexcept {
     content = other.content;
 }
 
-void Cast::propagate_function(const hdl_function_statement &def) {
+void Cast::propagate_function(const hdl_function_def_ptr &def) {
     if (content) content->propagate_function(def);
     if (size) size->propagate_function(def);
 }

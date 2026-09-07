@@ -49,7 +49,7 @@ TEST(function_processing, simple_function_scalar) {
     EXPECT_TRUE(functions.contains("CTRL_ADDR_CALC"));
 
     auto call = HDL_function_call("CTRL_ADDR_CALC");
-    call.propagate_function(functions["CTRL_ADDR_CALC"]);
+    call.propagate_function(std::make_shared<const hdl_function_statement>(functions["CTRL_ADDR_CALC"]));
 
     hdl_function_statement check_f;
     check_f.set_name("CTRL_ADDR_CALC");

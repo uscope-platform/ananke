@@ -48,7 +48,7 @@ void Streaming::propagate_expression(const qualified_identifier &constant_id,
     }
 }
 
-void Streaming::propagate_function(const hdl_function_statement &def) {
+void Streaming::propagate_function(const hdl_function_def_ptr &def) {
     for (auto &comp : components) comp->propagate_function(def);
     if (slice_size) slice_size->propagate_function(def);
 }

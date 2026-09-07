@@ -126,7 +126,7 @@ void Concatenation::propagate_expression(const qualified_identifier &constant_id
     }
 }
 
-void Concatenation::propagate_function(const hdl_function_statement &def) {
+void Concatenation::propagate_function(const hdl_function_def_ptr &def) {
     for (auto &comp:components) {
         comp->propagate_function(def);
     }

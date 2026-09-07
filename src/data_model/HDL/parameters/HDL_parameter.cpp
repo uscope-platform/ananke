@@ -114,12 +114,13 @@ std::expected<resolved_parameter, solver_errors> HDL_parameter::cast_result(
 }
 
 
-void HDL_parameter::propagate_function(const hdl_function_statement &def) {
-    if (raw_value) raw_value->propagate_function(def);
+void HDL_parameter::propagate_function(const hdl_function_def_ptr &def) {
+    if (def && raw_value) raw_value->propagate_function(def);
+    if (!def) return;
     auto call = std::dynamic_pointer_cast<HDL_function_call>(raw_value);
-    if (call && call->get_name() == def.get_name()) {
-        return_unpacked_range_left = def.get_return_unpacked_range_left();
-        return_unpacked_range_right = def.get_return_unpacked_range_right();
+    if (call && call->get_name() == def->get_name()) {
+        return_unpacked_range_left = def->get_return_unpacked_range_left();
+        return_unpacked_range_right = def->get_return_unpacked_range_right();
     }
 }
 

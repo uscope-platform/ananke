@@ -26,6 +26,10 @@
 #include "data_model/HDL/parameters/common/solver_errors.hpp"
 
 class hdl_function_statement;
+// Stable shared handle to a function definition. Call sites link this
+// instead of cloning bodies; the pointed-to definition is never mutated
+// through the link (same alias mirrored in hdl_statement_base.hpp).
+using hdl_function_def_ptr = std::shared_ptr<const hdl_function_statement>;
 
 
 class Expression_base {
@@ -35,7 +39,7 @@ public:
 
     virtual parameter_deps_t get_dependencies()const {return {};}
     virtual void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value){}
-    virtual void propagate_function(const hdl_function_statement &def) {}
+    virtual void propagate_function(const hdl_function_def_ptr &def) {}
     virtual std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) { (void)expected_type; return std::unexpected{missing_value};}
     virtual std::string print() const {return "";}
 

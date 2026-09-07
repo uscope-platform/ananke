@@ -39,7 +39,7 @@ public:
     void add_package_prefix(const std::string &p){package_prefix = p;}
     std::string get_package_prefix() const {return package_prefix;}
     parameter_deps_t get_dependencies() const override;
-    void propagate_function(const hdl_function_statement &def) override;
+    void propagate_function(const hdl_function_def_ptr &def) override;
     void propagate_expression(const qualified_identifier &constant_id,
                               const std::shared_ptr<Expression_base> &value) override;
     std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
@@ -56,18 +56,26 @@ public:
         bool container_unpacked_ascending
     );
 
+    // Dead since single-phase evaluation (phase 2): sizing travels with
+    // evaluate() instead. Kept as a no-op until the virtual itself is
+    // removed in phase 4.
     void set_container_sizes(const resolved_type &s, const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
-
-    void set_return_type(const std::shared_ptr<hdl_type> &t) { return_type = t; }
-    std::shared_ptr<hdl_type> get_return_type() const { return return_type; }
 
     std::string print() const override;
 
     [[nodiscard]] bool empty() const;
 
+    // The linked shared definition, if propagate_function resolved one.
+    // Exposed read-only so tests can prove the definition is never mutated.
+    [[nodiscard]] hdl_function_def_ptr get_linked_definition() const { return linked_; }
+
     template<class Archive>
     void serialize(Archive & ar) {
-        ar(function_name, arguments, body, package_prefix);
+        // NOTE: linked_ is deliberately excluded: definitions live in their
+        // owning resource/file and are re-linked by propagate_functions
+        // before solving (stale disk caches self-invalidate via the schema
+        // hash, so no unlinked call can be loaded as linked).
+        ar(function_name, arguments, package_prefix);
     }
 
 private:
@@ -90,13 +98,11 @@ private:
     std::string package_prefix;
     std::vector<std::shared_ptr<Expression_base>> arguments;
 
-    std::vector<std::shared_ptr<hdl_statement_base>> body;
-    std::shared_ptr<hdl_type> return_type;
-
-    bool packing = false;
-    bool container_unpacked_ascending = false;
-    bool has_return_unpacked_ascending = false;
-    bool return_unpacked_ascending = false;
+    // Link to the shared definition. Set once (idempotently) by
+    // propagate_function; never cloned, never written through — the const
+    // pointee makes definition mutation a compile error. All per-site state
+    // lives in evaluation contexts, never here.
+    hdl_function_def_ptr linked_;
 
     bool isEqual(const Expression_base& other) const override;
 };

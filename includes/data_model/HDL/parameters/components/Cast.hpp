@@ -61,7 +61,7 @@ public:
 
     [[nodiscard]] parameter_deps_t get_dependencies()const override;
     void propagate_expression(const qualified_identifier &constant_id, const std::shared_ptr<Expression_base> &value) override;
-    void propagate_function(const hdl_function_statement &def) override;
+    void propagate_function(const hdl_function_def_ptr &def) override;
     std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
     [[nodiscard]] std::string print() const override;
 

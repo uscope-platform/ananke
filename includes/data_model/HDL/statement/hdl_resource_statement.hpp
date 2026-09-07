@@ -84,6 +84,10 @@ public:
     }
     std::unordered_map<std::string, hdl_function_statement> get_functions();
     std::optional<hdl_function_statement> get_function(const std::string &fname);
+    // Stable shared handle to the stored definition. Unlike get_function
+    // (which returns a copy), the pointed-to statement stays alive as long as
+    // anyone holds the handle, so call sites can link it without cloning.
+    std::shared_ptr<const hdl_function_statement> get_function_shared(const std::string &fname) const;
 
     void set_documentation(module_documentation &d) { doc = d; }
     module_documentation get_documentation() const { return doc; }

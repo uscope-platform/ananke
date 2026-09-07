@@ -365,12 +365,18 @@ void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement>
     // Resolve unqualified (imported) package references: after `import pkg::*`,
     // a module param may call a package function or use a package type by its
     // bare name. Mirror propagate_functions/propagate_types for the no-prefix case.
+    // One immutable snapshot per imported function: every site in this
+    // resource links the same handle (see propagate_functions above).
+    std::map<std::string, hdl_function_def_ptr> stable_defs;
     for (auto &[_, param] : resource->get_parameters()) {
         for (auto &fcn : param->get_dependencies().functions) {
             if (!fcn.get_package_prefix().empty()) continue;
             auto it = imported_functions.find(fcn.get_name());
-            if (it != imported_functions.end())
-                param->propagate_function(it->second);
+            if (it != imported_functions.end()) {
+                auto &stable = stable_defs[fcn.get_name()];
+                if (!stable) stable = std::make_shared<const hdl_function_statement>(it->second);
+                param->propagate_function(stable);
+            }
         }
         for (auto &type : param->get_dependencies().types) {
             if (!type.get_package_prefix().empty()) continue;
@@ -443,23 +449,27 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
                         spdlog::critical("Definition of package {} not found while propagating functions",fcn.get_package_prefix().back());
                         return;
                     }
-                    auto fcn_def = res.value()->get_function(fcn.get_name());
+                    auto fcn_def = res.value()->get_function_shared(fcn.get_name());
                     if (!fcn_def) {
                         spdlog::critical("Function {}::{}, not found in the specified package",fcn.get_package_prefix().back(), fcn.get_name());
                         continue;
                     }
-                    param->propagate_function(fcn_def.value());
+                    param->propagate_function(fcn_def);
                     progress = true;
                 } else {
-                    if (auto local_fcn = resource->get_function(fcn.get_name())) {
-                        param->propagate_function(local_fcn.value());
+                    if (auto local_fcn = resource->get_function_shared(fcn.get_name())) {
+                        param->propagate_function(local_fcn);
                         progress = true;
                     } else if (d_store) {
                         std::string path;
                         d_store->get_HDL_resource(resource->getName(), path);
                         auto standalone_function = d_store->get_standalone_function(fcn.get_name(), path);
                         if (standalone_function) {
-                            param->propagate_function(standalone_function.value());
+                            // No stable owner exists for standalone copies, so
+                            // snapshot once per attempt; all of this
+                            // parameter's sites share the immutable snapshot.
+                            auto stable = std::make_shared<const hdl_function_statement>(standalone_function.value());
+                            param->propagate_function(stable);
                             progress = true;
                         }
                     }

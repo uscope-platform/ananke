@@ -90,11 +90,16 @@ std::unordered_map<std::string, hdl_function_statement> hdl_resource_statement::
 }
 
 std::optional<hdl_function_statement> hdl_resource_statement::get_function(const std::string &fname) {
-    for (auto &stmt : statements) {
-        auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
-        if (f && f->get_name() == fname) return *f;
-    }
+    if (auto f = get_function_shared(fname)) return *f;
     return std::nullopt;
+}
+
+std::shared_ptr<const hdl_function_statement> hdl_resource_statement::get_function_shared(const std::string &fname) const {
+    for (const auto &stmt : statements) {
+        auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
+        if (f && f->get_name() == fname) return f;
+    }
+    return nullptr;
 }
 
 void hdl_resource_statement::set_parameters(Parameters_map p) {

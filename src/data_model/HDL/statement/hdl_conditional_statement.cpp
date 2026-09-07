@@ -59,7 +59,7 @@ parameter_deps_t hdl_conditional_statement::get_dependencies() const {
     return deps;
 }
 
-void hdl_conditional_statement::propagate_function(const hdl_function_statement &def) {
+void hdl_conditional_statement::propagate_function(const hdl_function_def_ptr &def) {
     for (auto &b : branches) {
         if (b.condition)
             b.condition->propagate_function(def);

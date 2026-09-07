@@ -1039,3 +1039,101 @@ TEST(parameter_extraction, anonymous_enum_local_function_parameter) {
     ASSERT_TRUE(defaults.contains(sid));
     EXPECT_EQ(defaults[sid], 42);
 }
+
+namespace {
+// Print-snapshot of a function's body statements. Used to prove the shared
+// definition is never mutated by solving (any pointer reseat in an
+// expression changes its print).
+std::string snapshot_function_body(const std::shared_ptr<hdl_resource_statement> &resource, const std::string &fname) {
+    auto def = resource->get_function_shared(fname);
+    if (!def) return "<missing>";
+    std::string s;
+    for (const auto &stmt : def->get_body()) {
+        if (stmt) {
+            s += stmt->print();
+            s += "\n";
+        }
+    }
+    return s;
+}
+}
+
+TEST(parameter_extraction, function_multi_site_no_cross_contamination) {
+    // KNOWN_ISSUES.md item 1 repro: two call sites of the same function with
+    // different actuals must not corrupt each other, in either solve order,
+    // and the shared definition must come out identical to how it went in.
+    // The old clone+substitute design solved Z as 1 (stuck always-true).
+    const char *pattern_yz = R"(
+        module test_mod #(
+        )();
+            function integer compute2(input integer a);
+                bit f = (a == 32) ? 1'b1 : 1'b0;
+                compute2 = f;
+            endfunction
+            parameter integer Y = compute2(32);
+            parameter integer Z = compute2(64);
+        endmodule
+    )";
+    const char *pattern_zy = R"(
+        module test_mod #(
+        )();
+            function integer compute2(input integer a);
+                bit f = (a == 32) ? 1'b1 : 1'b0;
+                compute2 = f;
+            endfunction
+            parameter integer Z = compute2(64);
+            parameter integer Y = compute2(32);
+        endmodule
+    )";
+    for (const char *pattern : {pattern_yz, pattern_zy}) {
+        sv_analyzer analyzer;
+        auto resource = std::static_pointer_cast<hdl_resource_statement>(
+            analyzer.analyze("", pattern).value().get_content()[0]);
+
+        const std::string before = snapshot_function_body(resource, "compute2");
+        ASSERT_NE(before, "<missing>");
+
+        parameter_solver::propagate_functions(resource, nullptr);
+        auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+        EXPECT_EQ(defaults[qualified_identifier("Y")], 1);
+        EXPECT_EQ(defaults[qualified_identifier("Z")], 0);
+        EXPECT_EQ(snapshot_function_body(resource, "compute2"), before);
+    }
+}
+
+TEST(parameter_extraction, function_nested_call_solves) {
+    // Depth-2 nesting through the shared link: the nested call links during
+    // the solver fixpoint cascade, binds in the chained caller context, and
+    // neither definition is mutated.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer helper(input integer x);
+                helper = x * 2;
+            endfunction
+            function integer compute(input integer a);
+                compute = helper(a) + 1;
+            endfunction
+            parameter integer TEST_PARAM = compute(5);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(
+        analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    const std::string helper_before = snapshot_function_body(resource, "helper");
+    const std::string compute_before = snapshot_function_body(resource, "compute");
+    ASSERT_NE(helper_before, "<missing>");
+    ASSERT_NE(compute_before, "<missing>");
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    qualified_identifier sid = qualified_identifier("TEST_PARAM");
+    ASSERT_TRUE(defaults.contains(sid));
+    EXPECT_EQ(defaults[sid], 11);
+    EXPECT_EQ(snapshot_function_body(resource, "helper"), helper_before);
+    EXPECT_EQ(snapshot_function_body(resource, "compute"), compute_before);
+}

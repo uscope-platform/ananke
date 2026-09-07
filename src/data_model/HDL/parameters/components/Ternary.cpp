@@ -25,7 +25,7 @@ CEREAL_REGISTER_TYPE(Ternary)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Ternary)
 
 
-void Ternary::propagate_function(const hdl_function_statement &def) {
+void Ternary::propagate_function(const hdl_function_def_ptr &def) {
     if (condition) condition->propagate_function(def);
     if (true_value) true_value->propagate_function(def);
     if (false_value) false_value->propagate_function(def);

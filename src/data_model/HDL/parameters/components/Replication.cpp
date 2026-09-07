@@ -82,7 +82,7 @@ void Replication::propagate_expression(const qualified_identifier &constant_id,
     }
 }
 
-void Replication::propagate_function(const hdl_function_statement &def) {
+void Replication::propagate_function(const hdl_function_def_ptr &def) {
     if (repetition_size) repetition_size->propagate_function(def);
     if (repeated_item) repeated_item->propagate_function(def);
 }

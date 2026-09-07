@@ -66,7 +66,7 @@ public:
         const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type = std::nullopt) override;
     std::string print() const override;
     parameter_deps_t get_dependencies() const override;
-    void propagate_function(const hdl_function_statement &def) override {}
+    void propagate_function(const hdl_function_def_ptr &def) override {}
     void set_container_sizes(const resolved_type &s,
                              const std::map<qualified_identifier, resolved_parameter> &context = {}) override;
     std::optional<resolved_type> resolve_expression_type(

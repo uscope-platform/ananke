@@ -90,7 +90,7 @@ public:
 
     std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context);
     std::expected<resolved_parameter, solver_errors> cast_result(const  resolved_parameter &in, const std::optional<resolved_type> &sizes);
-    void propagate_function(const hdl_function_statement &def);
+    void propagate_function(const hdl_function_def_ptr &def);
     explicit operator std::string();
 
     bool is_array() const{return type && !type->is_scalar();}

@@ -28,7 +28,7 @@ parameter_deps_t hdl_assignment_statement::get_dependencies() const {
     return deps;
 }
 
-void hdl_assignment_statement::propagate_function(const hdl_function_statement &def) {
+void hdl_assignment_statement::propagate_function(const hdl_function_def_ptr &def) {
     if (value) value->propagate_function(def);
     if (index) index->propagate_function(def);
 }
