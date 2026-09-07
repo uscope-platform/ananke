@@ -822,6 +822,48 @@ TEST(parameter_extraction, return_statement_function_parameter) {
     EXPECT_EQ(defaults[tcid], 42);
 }
 
+TEST(parameter_extraction, case_statement_function_parameter) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            parameter integer SEL_M = 1;
+            parameter integer SEL_D = 5;
+            function integer compute_m();
+                case (SEL_M)
+                    0, 1: compute_m = 10;
+                    2: compute_m = 20;
+                    default: compute_m = 30;
+                endcase
+            endfunction
+            function integer compute_d();
+                case (SEL_D)
+                    0, 1: compute_d = 10;
+                    2: compute_d = 20;
+                    default: compute_d = 30;
+                endcase
+            endfunction
+
+            parameter integer P_M = compute_m();
+            parameter integer P_D = compute_d();
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    qualified_identifier mid = qualified_identifier("P_M");
+    ASSERT_TRUE(defaults.contains(mid));
+    EXPECT_EQ(defaults[mid], 10);
+    qualified_identifier did = qualified_identifier("P_D");
+    ASSERT_TRUE(defaults.contains(did));
+    EXPECT_EQ(defaults[did], 30);
+}
+
 TEST(parameter_extraction, initialized_local_function_parameter) {
     auto test_pattern = R"(
         module test_mod #(

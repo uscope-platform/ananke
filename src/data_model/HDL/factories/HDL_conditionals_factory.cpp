@@ -35,7 +35,7 @@ void HDL_conditionals_factory::add_branch() {
 }
 
 void HDL_conditionals_factory::push_nested() {
-    _statement_stack.push({std::move(_statement), std::move(_if_stack), _body_item_depth});
+    _statement_stack.push({std::move(_statement), std::move(_if_stack), _body_item_depth, in_else});
     _statement = hdl_conditional_statement();
     _if_stack = std::stack<if_frame>();
     _if_stack.push({0, false});
@@ -90,6 +90,7 @@ hdl_conditional_statement HDL_conditionals_factory::get_conditional() {
     _statement = std::move(saved.statement);
     _if_stack = std::move(saved.if_stack);
     _body_item_depth = saved.body_item_depth;
+    in_else = saved.in_else;
     _statement_stack.pop();
     if (!ret.is_empty())
         add_statement(std::make_shared<hdl_conditional_statement>(ret));

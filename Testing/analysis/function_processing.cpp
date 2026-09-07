@@ -829,6 +829,73 @@ TEST(function_processing, initialized_local_in_function) {
     EXPECT_EQ(check_f, result);
 }
 
+TEST(function_processing, case_statement_in_function) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer compute(input integer a);
+                case (a)
+                    0, 1: compute = 10;
+                    2: compute = 20;
+                    default: compute = 30;
+                endcase
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+    check_f.add_argument("a");
+    hdl_conditional_statement check_cond;
+
+    auto sel = std::make_shared<Identifier_token>(qualified_identifier("a"));
+    auto eq0 = std::make_shared<Expression_v2>();
+    eq0->set_lhs(sel);
+    eq0->set_rhs(std::make_shared<Numeric_token>("0"));
+    eq0->set_operation(Expression_v2::case_equal);
+    auto eq1 = std::make_shared<Expression_v2>();
+    eq1->set_lhs(sel);
+    eq1->set_rhs(std::make_shared<Numeric_token>("1"));
+    eq1->set_operation(Expression_v2::case_equal);
+    auto or_cond = std::make_shared<Expression_v2>();
+    or_cond->set_lhs(eq0);
+    or_cond->set_rhs(eq1);
+    or_cond->set_operation(Expression_v2::logical_or);
+    check_cond.add_branch(or_cond);
+    auto s0 = std::make_shared<hdl_assignment_statement>();
+    s0->set_target("compute");
+    s0->set_value(std::make_shared<Numeric_token>("10"));
+    check_cond.add_to_branch(s0);
+
+    auto eq2 = std::make_shared<Expression_v2>();
+    eq2->set_lhs(sel);
+    eq2->set_rhs(std::make_shared<Numeric_token>("2"));
+    eq2->set_operation(Expression_v2::case_equal);
+    check_cond.add_branch(eq2);
+    auto s1 = std::make_shared<hdl_assignment_statement>();
+    s1->set_target("compute");
+    s1->set_value(std::make_shared<Numeric_token>("20"));
+    check_cond.add_to_branch(s1);
+
+    check_cond.add_branch(std::make_shared<Numeric_token>("1"));
+    auto s2 = std::make_shared<hdl_assignment_statement>();
+    s2->set_target("compute");
+    s2->set_value(std::make_shared<Numeric_token>("30"));
+    check_cond.add_to_branch(s2);
+
+    check_f.add_statement(std::make_shared<hdl_conditional_statement>(check_cond));
+
+    EXPECT_EQ(check_f, result);
+}
+
 TEST(function_processing, return_statement_in_function) {
     auto test_pattern = R"(
         module test_mod #(

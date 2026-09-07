@@ -895,6 +895,13 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
         if (conditionals_factory.is_active() && !conditionals_factory.has_condition()
             && f_factory.get_expression_level() == 0)
             conditionals_factory.set_condition(f_factory.get_last_value());
+        // Case-item values complete here one by one; collect them for the
+        // branch condition built when the item body starts.
+        if (!case_stack.empty() && case_stack.back().in_values
+            && f_factory.get_expression_level() == 0) {
+            if (auto v = f_factory.get_last_value())
+                case_stack.back().item_values.push_back(v);
+        }
     }
     if (deps_factory.is_valid_dependency()) {
         deps_factory.stop_expression(ctx->primary() == nullptr);
@@ -920,7 +927,74 @@ void sv_visitor::exitConditional_statement(sv2017::Conditional_statementContext 
         f_factory.add_statement(ptr);
 }
 
+void sv_visitor::enterCase_statement(sv2017::Case_statementContext *ctx) {
+    // Plain `case` in function bodies desugars to an if/else-if chain.
+    // casex/casez, matches and inside keep previous behavior, as do cases
+    // outside functions. The conditional is activated lazily at the first
+    // item body so the selector itself is never taken as a condition.
+    if (!f_factory.is_active() || !ctx->case_keyword() || !ctx->case_keyword()->KW_CASE()) return;
+    case_stack.push_back({});
+}
+
+void sv_visitor::exitCase_statement(sv2017::Case_statementContext *) {
+    if (case_stack.empty()) return;
+    case_stack.pop_back();
+    auto stmt = conditionals_factory.get_conditional();
+    if (stmt.is_empty()) return;
+    auto ptr = std::make_shared<hdl_conditional_statement>(stmt);
+    if (loops_factory.in_loop())
+        loops_factory.add_statement(ptr);
+    else if (f_factory.is_active())
+        f_factory.add_statement(ptr);
+}
+
+void sv_visitor::enterCase_item(sv2017::Case_itemContext *ctx) {
+    if (case_stack.empty() || !f_factory.is_active()) return;
+    auto &frame = case_stack.back();
+    frame.in_values = true;
+    frame.is_default = ctx->KW_DEFAULT() != nullptr;
+    frame.item_values.clear();
+    if (!frame.selector) frame.selector = f_factory.get_last_value();
+}
+
 void sv_visitor::enterStatement_or_null(sv2017::Statement_or_nullContext *) {
+    // A case-item body starts: freeze the collected values into a branch.
+    // A default with no prior branches is modeled as an always-true branch,
+    // which is equivalent to an else for evaluation purposes.
+    if (!case_stack.empty() && case_stack.back().in_values) {
+        auto &frame = case_stack.back();
+        frame.in_values = false;
+        if (!frame.cond_started) {
+            frame.cond_started = true;
+            if (!conditionals_factory.is_active())
+                conditionals_factory.new_conditional();
+            else
+                conditionals_factory.push_nested();
+        }
+        conditionals_factory.add_branch();
+        if (frame.is_default) {
+            conditionals_factory.set_condition(std::make_shared<Numeric_token>("1"));
+        } else if (frame.selector && !frame.item_values.empty()) {
+            std::shared_ptr<Expression_base> cond;
+            for (auto &v : frame.item_values) {
+                auto eq = std::make_shared<Expression_v2>();
+                eq->set_lhs(frame.selector);
+                eq->set_rhs(v);
+                eq->set_operation(Expression_v2::case_equal);
+                if (!cond) {
+                    cond = eq;
+                } else {
+                    auto or_expr = std::make_shared<Expression_v2>();
+                    or_expr->set_lhs(cond);
+                    or_expr->set_rhs(eq);
+                    or_expr->set_operation(Expression_v2::logical_or);
+                    cond = or_expr;
+                }
+            }
+            conditionals_factory.set_condition(cond);
+        }
+        frame.item_values.clear();
+    }
     if (conditionals_factory.is_active())
         conditionals_factory.enter_body_item();
 }

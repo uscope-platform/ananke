@@ -185,6 +185,9 @@ public:
 
     void enterConditional_statement(sv2017::Conditional_statementContext *ctx) override;
     void exitConditional_statement(sv2017::Conditional_statementContext *ctx) override;
+    void enterCase_statement(sv2017::Case_statementContext *ctx) override;
+    void exitCase_statement(sv2017::Case_statementContext *ctx) override;
+    void enterCase_item(sv2017::Case_itemContext *ctx) override;
     void enterStatement_or_null(sv2017::Statement_or_nullContext *ctx) override;
     void exitStatement_or_null(sv2017::Statement_or_nullContext *ctx) override;
 
@@ -279,6 +282,15 @@ private:
 
     std::string instance_prefix;
     std::string instance_item;
+
+    struct pending_case_t {
+        std::shared_ptr<Expression_base> selector;
+        std::vector<std::shared_ptr<Expression_base>> item_values;
+        bool in_values = false;
+        bool is_default = false;
+        bool cond_started = false;
+    };
+    std::vector<pending_case_t> case_stack;
 };
 
 

@@ -45,6 +45,7 @@ private:
         hdl_conditional_statement statement;
         std::stack<if_frame> if_stack;
         int body_item_depth = 0;
+        bool in_else = false;
     };
 
     hdl_conditional_statement _statement;
