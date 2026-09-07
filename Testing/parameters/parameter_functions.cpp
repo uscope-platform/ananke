@@ -1137,3 +1137,100 @@ TEST(parameter_extraction, function_nested_call_solves) {
     EXPECT_EQ(snapshot_function_body(resource, "helper"), helper_before);
     EXPECT_EQ(snapshot_function_body(resource, "compute"), compute_before);
 }
+
+TEST(parameter_extraction, function_call_sites_stable_across_solves) {
+    // Reverse direction of KNOWN_ISSUES.md item 1: solving must never mutate
+    // the caller's own trees (the old grafting aliased caller nodes into
+    // bodies, letting later passes mutate call sites). Solving the same
+    // resource twice must print identical call sites and solve identical
+    // values.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer compute2(input integer a);
+                bit f = (a == 32) ? 1'b1 : 1'b0;
+                compute2 = f;
+            endfunction
+            parameter integer Y = compute2(32);
+            parameter integer Z = compute2(64);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(
+        analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    auto call_print = [&](const std::string &name) {
+        return resource->get_parameters().get(name)->get_expression()->print();
+    };
+    const std::string y_before = call_print("Y");
+    const std::string z_before = call_print("Z");
+    ASSERT_EQ(y_before, "compute2(32)");
+    ASSERT_EQ(z_before, "compute2(64)");
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto first = parameter_solver::process_parameters(resource->get_parameters(), {});
+    ASSERT_EQ(first[qualified_identifier("Y")], 1);
+    ASSERT_EQ(first[qualified_identifier("Z")], 0);
+
+    EXPECT_EQ(call_print("Y"), y_before);
+    EXPECT_EQ(call_print("Z"), z_before);
+
+    auto second = parameter_solver::process_parameters(resource->get_parameters(), {});
+    EXPECT_EQ(second[qualified_identifier("Y")], 1);
+    EXPECT_EQ(second[qualified_identifier("Z")], 0);
+    EXPECT_EQ(call_print("Y"), y_before);
+    EXPECT_EQ(call_print("Z"), z_before);
+}
+
+TEST(parameter_extraction, function_formal_shadows_caller_name) {
+    // A formal must hide a same-named caller parameter inside the body:
+    // Y must be 1 (the bound actual), not 100 (the leaked caller value).
+    // Actuals themselves still evaluate in the caller context (see the
+    // mixed test below: a comes from the caller, b is caller-visible).
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            parameter integer a = 100;
+            function integer f(input integer a);
+                f = a;
+            endfunction
+            parameter integer Y = f(1);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(
+        analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    ASSERT_TRUE(defaults.contains(qualified_identifier("Y")));
+    EXPECT_EQ(defaults[qualified_identifier("Y")], 1);
+}
+
+TEST(parameter_extraction, function_actuals_evaluate_in_caller_context) {
+    // Companion to the shadowing test: non-formal names stay visible from
+    // the caller context, and actuals are evaluated there before binding.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            parameter integer b = 5;
+            function integer f(input integer a);
+                f = a + b;
+            endfunction
+            parameter integer Y = f(b);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(
+        analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    ASSERT_TRUE(defaults.contains(qualified_identifier("Y")));
+    EXPECT_EQ(defaults[qualified_identifier("Y")], 10);
+}
