@@ -19,6 +19,7 @@
 #include "data_model/HDL/factories/parameters/replication_factory.hpp"
 #include "data_model/HDL/factories/parameters/function_calls_factory.hpp"
 #include "data_model/HDL/factories/parameters/ternary_factory.hpp"
+#include "data_model/HDL/factories/parameters/streaming_factory.hpp"
 
 void HDL_functions_factory::start_assignment(const std::string &n) {
     current_assigned_variable = n;
@@ -242,6 +243,40 @@ void HDL_functions_factory::start_ternary() {
     auto ternary = std::make_unique<ternary_factory>();
     ternary->start_conditional();
     consumer_stack.push(std::move(ternary));
+}
+
+void HDL_functions_factory::start_streaming() {
+    expr_factory_.push_level();
+    auto stream = std::make_unique<streaming_factory>();
+    stream->start_streaming();
+    stream->set_direction(pending_stream_direction);
+    if (pending_stream_slice_size) stream->set_slice_size(pending_stream_slice_size);
+    pending_stream_direction = Streaming::left;
+    pending_stream_slice_size = nullptr;
+    consumer_stack.push(std::move(stream));
+}
+
+void HDL_functions_factory::stop_streaming() {
+    if (top_as<streaming_factory>()) {
+        expr_factory_.pop_level();
+        auto result = consumer_stack.top()->result();
+        consumer_stack.pop();
+        if (!consumer_stack.empty()) {
+            consumer_stack.top()->consume(result);
+        } else if (expr_factory_.active()) {
+            expr_factory_.consume(result);
+        } else {
+            assignment_value = result;
+        }
+    }
+}
+
+void HDL_functions_factory::set_stream_direction(Streaming::stream_direction d) {
+    pending_stream_direction = d;
+}
+
+void HDL_functions_factory::set_stream_slice_size(const std::shared_ptr<Expression_base> &s) {
+    pending_stream_slice_size = s;
 }
 
 void HDL_functions_factory::stop_ternary() {

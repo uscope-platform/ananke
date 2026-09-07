@@ -920,3 +920,36 @@ TEST(parameter_extraction, nested_call_function_parameter) {
     ASSERT_TRUE(defaults.contains(sid));
     EXPECT_EQ(defaults[sid], 20);
 }
+
+TEST(parameter_extraction, streaming_function_parameter) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            parameter [7:0] SRC = 8'hAB;
+            function logic [7:0] compute();
+                compute = {<<{SRC}};
+            endfunction
+            function logic [7:0] compute_arg(input logic [7:0] a);
+                compute_arg = {<<{a}};
+            endfunction
+
+            parameter logic [7:0] P_SRC = compute();
+            parameter logic [7:0] P_ARG = compute_arg(8'hAB);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    qualified_identifier sid = qualified_identifier("P_SRC");
+    ASSERT_TRUE(defaults.contains(sid));
+    EXPECT_EQ(defaults[sid], 0xD5);
+    qualified_identifier aid = qualified_identifier("P_ARG");
+    ASSERT_TRUE(defaults.contains(aid));
+    EXPECT_EQ(defaults[aid], 0xD5);
+}

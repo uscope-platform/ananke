@@ -70,7 +70,7 @@ void sv_visitor::route_expression_text(const std::string& text) {
     } else if(!in_streaming_slice && !in_type_argument && params_factory.is_component_relevant()){
         params_factory.add_component(sv_parsing_helpers::make_value(text));
     }
-    if (f_factory.is_active()) {
+    if (f_factory.is_active() && !in_streaming_slice) {
         f_factory.add_component(sv_parsing_helpers::make_value(text));
     }
     if(deps_factory.is_valid_dependency()){
@@ -98,7 +98,7 @@ void sv_visitor::route_expression_component(const std::shared_ptr<Expression_bas
         loops_factory.add_component(routed ? clone(ec) : ec);
         routed = true;
     }
-    if (f_factory.is_active()) {
+    if (f_factory.is_active() && !in_streaming_slice) {
         f_factory.add_component(routed ? clone(ec) : ec);
         routed = true;
     }
@@ -857,7 +857,7 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
         if(ctx->QUESTIONMARK()){
             params_factory.start_ternary_operator();
         }
-    } else if (f_factory.is_active()) {
+    } else if (f_factory.is_active() && !in_streaming_slice) {
             f_factory.start_expression();
             if(ctx->QUESTIONMARK()){
                 f_factory.start_ternary();
@@ -884,7 +884,7 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
             params_factory.stop_ternary();
         }
         params_factory.stop_expression_new(ctx->primary() == nullptr);
-    }else if (f_factory.is_active()) {
+    }else if (f_factory.is_active() && !in_streaming_slice) {
         if(ctx->QUESTIONMARK()){
             f_factory.stop_ternary();
         }
@@ -1067,7 +1067,7 @@ void sv_visitor::process_operation(Expression_v2::expression_operator op) {
     params_factory.set_operation(op);
     type_engine.set_operation(op);
     if (loops_factory.in_loop()) loops_factory.set_operation(op);
-    if (f_factory.is_active()) f_factory.set_operation(op);
+    if (f_factory.is_active() && !in_streaming_slice) f_factory.set_operation(op);
     if (deps_factory.is_valid_dependency()) deps_factory.set_operation(op);
 }
 
@@ -1505,8 +1505,16 @@ void sv_visitor::exitConcatenation(sv2017::ConcatenationContext *ctx) {
 }
 
 void sv_visitor::enterStreaming_concatenation(sv2017::Streaming_concatenationContext *ctx) {
-    if (f_factory.is_active()) return;
     in_streaming_slice = ctx->slice_size() != nullptr;
+    if (f_factory.is_active()) {
+        if (ctx->stream_operator()) {
+            if (ctx->stream_operator()->SHIFT_LEFT())
+                f_factory.set_stream_direction(Streaming::left);
+            else
+                f_factory.set_stream_direction(Streaming::right);
+        }
+        return;
+    }
     if (ctx->stream_operator()) {
         if (ctx->stream_operator()->SHIFT_LEFT())
             params_factory.set_stream_direction(Streaming::left);
@@ -1520,18 +1528,28 @@ void sv_visitor::exitStreaming_concatenation(sv2017::Streaming_concatenationCont
 }
 
 void sv_visitor::enterStream_concatenation(sv2017::Stream_concatenationContext *ctx) {
-    if (f_factory.is_active()) return;
     in_streaming_slice = false;
+    if (f_factory.is_active()) {
+        f_factory.start_streaming();
+        return;
+    }
     params_factory.start_streaming();
 }
 
 void sv_visitor::exitStream_concatenation(sv2017::Stream_concatenationContext *ctx) {
-    if (f_factory.is_active()) return;
+    if (f_factory.is_active()) {
+        f_factory.stop_streaming();
+        return;
+    }
     params_factory.stop_streaming();
 }
 
 void sv_visitor::exitSlice_size(sv2017::Slice_sizeContext *ctx) {
     std::string text = ctx->getText();
+    if (f_factory.is_active()) {
+        f_factory.set_stream_slice_size(sv_parsing_helpers::make_value(text));
+        return;
+    }
     params_factory.set_stream_slice_size(sv_parsing_helpers::make_value(text));
 }
 

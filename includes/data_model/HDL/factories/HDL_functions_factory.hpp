@@ -25,6 +25,7 @@
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
+#include "data_model/HDL/parameters/components/Streaming.hpp"
 
 class HDL_functions_factory {
 public:
@@ -62,6 +63,10 @@ public:
 
     void start_concat();
     void stop_concat();
+    void start_streaming();
+    void stop_streaming();
+    void set_stream_direction(Streaming::stream_direction d);
+    void set_stream_slice_size(const std::shared_ptr<Expression_base> &s);
 
     void start_cast(bool expression_size);
     void stop_cast();
@@ -99,6 +104,8 @@ private:
     expressions_factory expr_factory_;
     bool paused = false;
     bool active = false;
+    Streaming::stream_direction pending_stream_direction = Streaming::left;
+    std::shared_ptr<Expression_base> pending_stream_slice_size;
     bool in_bit_selection = false;
     std::stack<std::unique_ptr<factory_base>> consumer_stack;
     hdl_function_statement f;

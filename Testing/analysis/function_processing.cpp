@@ -22,6 +22,7 @@
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "data_model/HDL/parameters/components/HDL_builtin_function.hpp"
 #include "data_model/HDL/parameters/components/Ternary.hpp"
+#include "data_model/HDL/parameters/components/Streaming.hpp"
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 #include "data_model/HDL/statement/hdl_loop_statement.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"
@@ -892,6 +893,42 @@ TEST(function_processing, case_statement_in_function) {
     check_cond.add_to_branch(s2);
 
     check_f.add_statement(std::make_shared<hdl_conditional_statement>(check_cond));
+
+    EXPECT_EQ(check_f, result);
+}
+
+TEST(function_processing, streaming_in_function) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function logic [15:0] compute(input logic [7:0] a, input logic [7:0] b);
+                compute = {<<{a, b}};
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+    check_f.add_argument("a");
+    check_f.add_argument("b");
+
+    auto stream = std::make_shared<Streaming>();
+    stream->set_direction(Streaming::left);
+    stream->add_component(std::make_shared<Identifier_token>(qualified_identifier("a")));
+    stream->add_component(std::make_shared<Identifier_token>(qualified_identifier("b")));
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("compute");
+    stmt->set_value(stream);
+    check_f.add_statement(stmt);
 
     EXPECT_EQ(check_f, result);
 }

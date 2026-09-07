@@ -17,6 +17,7 @@
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
@@ -62,11 +63,23 @@ parameter_deps_t Replication::get_dependencies()const {
     return result;
 }
 
-
 void Replication::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Expression_base> &value) {
-    if (repetition_size) repetition_size->propagate_expression(constant_id, value);
-    if (repeated_item) repeated_item->propagate_expression(constant_id, value);
+
+    if (repetition_size) {
+        if (repetition_size->is<Identifier_token>() && repetition_size->as<Identifier_token>().get_value() == constant_id) {
+            repetition_size = value;
+        } else {
+            repetition_size->propagate_expression(constant_id, value);
+        }
+    }
+    if (repeated_item) {
+        if (repeated_item->is<Identifier_token>() && repeated_item->as<Identifier_token>().get_value() == constant_id) {
+            repeated_item = value;
+        } else {
+            repeated_item->propagate_expression(constant_id, value);
+        }
+    }
 }
 
 void Replication::propagate_function(const hdl_function_statement &def) {

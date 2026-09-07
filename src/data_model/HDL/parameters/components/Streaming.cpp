@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include "data_model/HDL/parameters/components/Streaming.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 
 #include <sstream>
 #include <cereal/types/polymorphic.hpp>
@@ -28,11 +29,23 @@ parameter_deps_t Streaming::get_dependencies() const {
     if (slice_size) result.merge(slice_size->get_dependencies());
     return result;
 }
-
 void Streaming::propagate_expression(const qualified_identifier &constant_id,
     const std::shared_ptr<Expression_base> &value) {
-    for (auto &comp : components) comp->propagate_expression(constant_id, value);
-    if (slice_size) slice_size->propagate_expression(constant_id, value);
+
+    for (auto &comp : components) {
+        if (comp->is<Identifier_token>() && comp->as<Identifier_token>().get_value() == constant_id) {
+            comp = value;
+        } else {
+            comp->propagate_expression(constant_id, value);
+        }
+    }
+    if (slice_size) {
+        if (slice_size->is<Identifier_token>() && slice_size->as<Identifier_token>().get_value() == constant_id) {
+            slice_size = value;
+        } else {
+            slice_size->propagate_expression(constant_id, value);
+        }
+    }
 }
 
 void Streaming::propagate_function(const hdl_function_statement &def) {
