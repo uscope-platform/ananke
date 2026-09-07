@@ -252,6 +252,7 @@ private:
 
     bool in_param_declaration = false;
     bool in_function_var_decl = false;
+    bool in_function_composite_decl = false;
     // Assignment value seen when a function-local declaration started; used to
     // tell a real initializer apart from a stale value at declaration end.
     std::shared_ptr<Expression_base> pending_function_local_init;

@@ -294,14 +294,29 @@ std::shared_ptr<Expression_base> sv_visitor::build_data_type_expression(sv2017::
 }
 
 void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
-    if (f_factory.is_active() && !ctx->type_declaration() &&
-        !(ctx->data_type_or_implicit() && ctx->data_type_or_implicit()->data_type() &&
-          ctx->data_type_or_implicit()->data_type()->struct_union())) {
-        in_function_var_decl = true;
-        pending_function_local_init = f_factory.get_last_value();
-        setup_data_type(ctx->data_type_or_implicit());
-        type_engine.start_range();
-        return;
+    if (f_factory.is_active() && !ctx->type_declaration()) {
+        auto dtoi = ctx->data_type_or_implicit();
+        auto dt = dtoi && dtoi->data_type() ? dtoi->data_type() : nullptr;
+        if (dt && dt->struct_union() &&
+            (dt->struct_union()->KW_STRUCT() || dt->struct_union()->KW_UNION())) {
+            // Anonymous struct/union local: same composite flow as the module
+            // path, finalized into a local instead of a module parameter.
+            in_function_composite_decl = true;
+            pending_function_local_init = f_factory.get_last_value();
+            if (dt->struct_union()->KW_STRUCT())
+                type_engine.start_composite_type_declaration(Type_engine::struct_type);
+            else
+                type_engine.start_composite_type_declaration(Type_engine::union_type);
+            top_level_struct_started = true;
+            return;
+        }
+        if (!(dt && dt->struct_union())) {
+            in_function_var_decl = true;
+            pending_function_local_init = f_factory.get_last_value();
+            setup_data_type(ctx->data_type_or_implicit());
+            type_engine.start_range();
+            return;
+        }
     }
     if (ctx->type_declaration()) {
         if (ctx->type_declaration()->data_type() &&
@@ -360,6 +375,39 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
         // loops (loop machinery owns for-init and loop-body decls, as
         // before), and only if a fresh expression actually completed during
         // this declaration (otherwise assignment_value is stale).
+        if (!loops_factory.in_loop() && var_decls->variable_decl_assignment().size() == 1 &&
+            decl->ASSIGN() != nullptr && decl->expression() != nullptr) {
+            auto init = f_factory.get_last_value();
+            if (init && init != pending_function_local_init) {
+                auto stmt = std::make_shared<hdl_assignment_statement>();
+                stmt->set_target(var_name);
+                stmt->set_value(init);
+                f_factory.add_statement(stmt);
+                if (conditionals_factory.is_active()) {
+                    auto last = f_factory.pop_last();
+                    if (last) conditionals_factory.add_statement(last);
+                }
+            }
+        }
+        pending_function_local_init.reset();
+        return;
+    }
+    if (in_function_composite_decl) {
+        in_function_composite_decl = false;
+        auto var_decls = ctx->list_of_variable_decl_assignments();
+        auto decl = var_decls && !var_decls->variable_decl_assignment().empty() ? var_decls->variable_decl_assignment(0) : nullptr;
+        if (!decl || !decl->identifier()) {
+            spdlog::warn("Malformed variable declaration, skipping file");
+            had_error = true;
+            return;
+        }
+        auto var_name = decl->identifier()->getText();
+        auto t = type_engine.stop_composite_type_declaration("", true);
+        if (!t) t = Type_engine::create_primitive_type("implicit");
+        auto param = std::make_shared<HDL_parameter>(var_name);
+        param->set_type(t);
+        f_factory.add_local_variable(param);
+        // Same initializer desugar as the simple path above.
         if (!loops_factory.in_loop() && var_decls->variable_decl_assignment().size() == 1 &&
             decl->ASSIGN() != nullptr && decl->expression() != nullptr) {
             auto init = f_factory.get_last_value();
@@ -846,7 +894,7 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
     // Initializers of function-local variables belong to the function, even
     // though ranging is still active for the declaration: only [...] dimension
     // bounds stay on the type-engine path.
-    bool function_local_init = in_function_var_decl && !expression_in_decl_dimensions(ctx);
+    bool function_local_init = (in_function_var_decl || in_function_composite_decl) && !expression_in_decl_dimensions(ctx);
     if ((type_engine.active() || type_engine.is_ranging()) && !function_local_init) {
         type_engine.start_expression();
     } else if(!in_streaming_slice && !in_type_argument && (params_factory.is_component_relevant()|| params_factory.is_param_assignment() || params_factory.is_param_override())) {
@@ -872,7 +920,7 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
     if (loops_factory.in_loop() && loops_factory.in_body()) {
         loops_factory.stop_expression(ctx->primary() == nullptr);
     }
-    bool function_local_init = in_function_var_decl && !expression_in_decl_dimensions(ctx);
+    bool function_local_init = (in_function_var_decl || in_function_composite_decl) && !expression_in_decl_dimensions(ctx);
     if ((type_engine.active() || type_engine.is_ranging()) && !function_local_init) {
         type_engine.stop_expression();
     } else if(!in_streaming_slice && !in_type_argument && (params_factory.is_component_relevant() || params_factory.is_param_assignment() || params_factory.is_param_override())) {
