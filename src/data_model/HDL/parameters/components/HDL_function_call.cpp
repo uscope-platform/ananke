@@ -98,6 +98,39 @@ void HDL_function_call::propagate_function(const hdl_function_statement &def) {
                 }
             }
         }
+        // Enum members declared in the function scope are constants: fold
+        // references to them into literals, exactly as if written out.
+        // Runs after formal substitution so formals win on name clashes.
+        // The grafted literal is freshly built per definition, and only the
+        // clone's own pointers are reseated, so no shared state is mutated.
+        for (const auto &local : def.get_local_variables()) {
+            if (!local || !local->get_type() || !local->get_type()->is<HDL_enum_type>()) continue;
+            for (const auto &member : local->get_type()->as<HDL_enum_type>().members) {
+                if (!member.value.has_value()) continue;
+                auto lit = std::make_shared<Numeric_token>(std::to_string(member.value.value()));
+                qualified_identifier mid(member.name);
+                for (auto &stmt : body) {
+                    if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
+                        if (asgn->get_value()) {
+                            if (asgn->get_value()->is<Identifier_token>() &&
+                                asgn->get_value()->as<Identifier_token>().get_value() == mid) {
+                                asgn->set_value(lit);
+                            } else {
+                                asgn->get_value()->propagate_expression(mid, lit);
+                            }
+                        }
+                        if (asgn->get_index()) {
+                            if (asgn->get_index()->is<Identifier_token>() &&
+                                asgn->get_index()->as<Identifier_token>().get_value() == mid) {
+                                asgn->set_index(lit);
+                            } else {
+                                asgn->get_index()->propagate_expression(mid, lit);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

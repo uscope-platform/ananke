@@ -310,6 +310,15 @@ void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
             top_level_struct_started = true;
             return;
         }
+        if (dt && dt->KW_ENUM()) {
+            // Anonymous enum local: same composite flow, finalized into a
+            // local instead of a module parameter.
+            in_function_composite_decl = true;
+            pending_function_local_init = f_factory.get_last_value();
+            type_engine.start_composite_type_declaration(Type_engine::enum_type);
+            top_level_struct_started = true;
+            return;
+        }
         if (!(dt && dt->struct_union())) {
             in_function_var_decl = true;
             pending_function_local_init = f_factory.get_last_value();

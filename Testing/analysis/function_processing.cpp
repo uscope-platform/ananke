@@ -982,6 +982,53 @@ TEST(function_processing, anonymous_struct_local_in_function) {
     EXPECT_EQ(check_f, result);
 }
 
+TEST(function_processing, anonymous_enum_local_in_function) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer compute(input integer a);
+                enum {IDLE, RUN, DONE} state;
+                compute = a;
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    EXPECT_FALSE(resource.get_parameters().contains("state"));
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("compute"));
+    auto result = functions["compute"];
+
+    hdl_function_statement check_f;
+    check_f.set_name("compute");
+    check_f.add_argument("a");
+
+    HDL_enum_type check_enum;
+    enum_member m;
+    m.name = "IDLE";
+    m.value = 0;
+    check_enum.members.push_back(m);
+    m.name = "RUN";
+    m.value = 1;
+    check_enum.members.push_back(m);
+    m.name = "DONE";
+    m.value = 2;
+    check_enum.members.push_back(m);
+    auto lv = std::make_shared<HDL_parameter>("state");
+    lv->set_type(std::make_shared<HDL_enum_type>(check_enum));
+    check_f.add_local_variable(lv);
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("compute");
+    stmt->set_value(std::make_shared<Identifier_token>(qualified_identifier("a")));
+    check_f.add_statement(stmt);
+
+    EXPECT_EQ(check_f, result);
+}
+
 TEST(function_processing, return_statement_in_function) {
     auto test_pattern = R"(
         module test_mod #(
