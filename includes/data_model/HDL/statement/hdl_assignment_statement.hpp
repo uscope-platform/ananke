@@ -29,8 +29,9 @@ public:
     bool equals(const hdl_statement_base& other) const override;
     std::string print() const override;
 
-    void set_target(const std::string& n) { target = n; }
-    std::string get_target() const { return target; }
+    void set_target(const std::string& n) { target = qualified_identifier(n); }
+    void set_target(const qualified_identifier& q) { target = q; }
+    const qualified_identifier &get_target() const { return target; }
 
     void set_index(const std::shared_ptr<Expression_base>& idx) { index = idx; }
     std::shared_ptr<Expression_base> get_index() const { return index; }
@@ -43,7 +44,7 @@ public:
         ar(target, index, value);
     }
 private:
-    std::string target;
+    qualified_identifier target;
     std::shared_ptr<Expression_base> index;
     std::shared_ptr<Expression_base> value;
 };

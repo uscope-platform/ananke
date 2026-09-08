@@ -600,11 +600,15 @@ TEST(function_processing, struct_returning_function) {
     check_f.set_return_type(result.get_return_type());
 
     auto s0 = std::make_shared<hdl_assignment_statement>();
-    s0->set_target("compute_addr.base");
+    qualified_identifier t0("base");
+    t0.set_instance_prefix({"compute_addr"});
+    s0->set_target(t0);
     s0->set_value(std::make_shared<Numeric_token>("32'h1000"));
     check_f.add_statement(s0);
     auto s1 = std::make_shared<hdl_assignment_statement>();
-    s1->set_target("compute_addr.size");
+    qualified_identifier t1("size");
+    t1.set_instance_prefix({"compute_addr"});
+    s1->set_target(t1);
     s1->set_value(std::make_shared<Numeric_token>("32'h400"));
     check_f.add_statement(s1);
 

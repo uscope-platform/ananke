@@ -63,12 +63,23 @@ parameter_deps_t HDL_function_call::get_dependencies() const {
     }
     if (linked_) {
         // True dependencies only: the shared definition body's deps minus
-        // the formal parameters (bound at evaluation, so not external deps).
-        // This also drops the false CVA6Cfg-style cycle with no sorter
+        // intra-function roots. Formals are bound at evaluation; locals
+        // (e.g. the CVA6-style return struct built via cfg.FIELD assigns and
+        // read back as cfg.FIELD) resolve inside the per-site call context,
+        // never externally. This drops both the false CVA6Cfg-style cycle
+        // and return-struct leaf matches (cfg.FETCH_WIDTH) with no sorter
         // hacks. Nested function references are kept so the solver fixpoint
         // keeps discovering nested calls.
         const auto arg_names = linked_->get_arguments_names();
-        const std::set<std::string> formals(arg_names.begin(), arg_names.end());
+        std::set<std::string> intra_roots(arg_names.begin(), arg_names.end());
+        // All function-scope locals: like formals, body reads of these names
+        // resolve inside the per-site call context, never externally. (Names
+        // alone are used rather than struct-typed filtering because locals
+        // declared with package-qualified types surface as HDL_external_type
+        // until typedef propagation resolves them.)
+        for (const auto &local : linked_->get_local_variables()) {
+            if (local) intra_roots.insert(local->get_name());
+        }
         const auto body_deps = linked_->get_dependencies();
         for (const auto &d : body_deps.data) {
             if (!d.get_package_prefix().empty()) {
@@ -77,7 +88,7 @@ parameter_deps_t HDL_function_call::get_dependencies() const {
             }
             const auto inst = d.get_instance();
             const std::string &root = inst.empty() ? d.get_name() : inst.front();
-            if (!formals.contains(root)) retval.data.insert(d);
+            if (!intra_roots.contains(root)) retval.data.insert(d);
         }
         retval.functions.insert(body_deps.functions.begin(), body_deps.functions.end());
         retval.types.insert(body_deps.types.begin(), body_deps.types.end());
@@ -132,10 +143,42 @@ void HDL_function_call::walk_body(
         if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
             if (!asgn->get_value()) continue;
             auto val = asgn->get_value()->evaluate(ctx, expected_type);
-            if (!val.has_value()) continue;
 
-            const auto &target = asgn->get_target();
-            if (target == fcn_name) {
+            const qualified_identifier &target = asgn->get_target();
+            if (target.get_instance().empty() && target.get_name() == fcn_name) {
+                if (!val.has_value()) {
+                    // return <struct-local>: the whole struct was never
+                    // entered as one value, but its per-field assigns live in
+                    // ctx under instance keys — pack the still-missing return
+                    // slots from them (direct funcname.field assigns win).
+                    if (!asgn->get_index() && rt && rt->is<HDL_struct_type>() &&
+                        asgn->get_value() && asgn->get_value()->is<Identifier_token>()) {
+                        const auto &rid = asgn->get_value()->as<Identifier_token>().get_value();
+                        if (rid.get_instance().empty() && rid.get_package_prefix().empty() &&
+                            rid.get_name() != fcn_name) {
+                            const auto &members = rt->as<HDL_struct_type>().member;
+                            for (size_t i = 0; i < members.size(); ++i) {
+                                const int64_t midx = static_cast<int64_t>(i);
+                                if (value_map.contains(midx)) continue;
+                                qualified_identifier fkey(members[i].name);
+                                fkey.set_instance_prefix({rid.get_name()});
+                                auto fit = ctx.find(fkey);
+                                if (fit == ctx.end()) continue;
+                                if (fit->second.is_integer()) {
+                                    value_map[midx] = fit->second.get_integer();
+                                    size_map[midx] = declared_member_width(
+                                        members[i].type, ctx, fit->second.get_integer().get_size());
+                                } else if (fit->second.is_int_array()) {
+                                    auto slice = fit->second.get_int_array().get_1d_slice({0, 0});
+                                    if (slice.empty()) continue;
+                                    value_map[midx] = slice[0];
+                                    size_map[midx] = 0;
+                                }
+                            }
+                        }
+                    }
+                    continue;
+                }
                 int64_t idx = 0;
                 if (asgn->get_index()) {
                     auto idx_res = asgn->get_index()->evaluate(ctx, expected_type);
@@ -154,8 +197,9 @@ void HDL_function_call::walk_body(
                     value_map[idx] = slice[0];
                     size_map[idx] = 0;
                 }
-            } else if (rt && rt->is<HDL_struct_type>() && target.starts_with(fcn_name + ".")) {
-                std::string field_name = target.substr(fcn_name.size() + 1);
+            } else if (rt && rt->is<HDL_struct_type>() && target.get_instance().size() == 1 && target.get_instance().front() == fcn_name) {
+                if (!val.has_value()) continue;
+                std::string field_name = target.get_name();
                 const auto& members = rt->as<HDL_struct_type>().member;
                 for (size_t i = 0; i < members.size(); ++i) {
                     if (members[i].name == field_name) {
@@ -189,7 +233,8 @@ void HDL_function_call::walk_body(
                     }
                 }
             } else {
-                ctx[qualified_identifier(target)] = val.value();
+                if (!val.has_value()) continue;
+                ctx[target] = val.value();
             }
         } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
             auto indices = loop_solver::solve_loop(*loop, ctx);
@@ -294,6 +339,27 @@ std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(con
                 if (!key.get_package_prefix().empty()) rekeyed.set_package_prefix(key.get_package_prefix());
                 rekeyed.set_instance_prefix(new_inst);
                 call_ctx[rekeyed] = val;
+            }
+            // Package-qualified struct actuals (pkg::cfg): package constants
+            // reach the caller context as package-flat field entries because
+            // the package export flattens them (instance info dropped at
+            // parameter_solver.cpp retrieve_package_parameters). Re-key those
+            // under the formal root as well so formal.field reads resolve.
+            // The entry matching the actual's own name is the whole value
+            // (already bound above) and is skipped. Structured-key matching
+            // only — no string parsing. Assumes package field names are
+            // unique; a same-named scalar package param would collide
+            // (inherited from the export flattening, not introduced here).
+            const auto actual_pkg = actual_id.get_package_prefix();
+            if (!actual_pkg.empty()) {
+                for (const auto &[key, val] : context) {
+                    if (key.get_package_prefix() != actual_pkg) continue;
+                    if (!key.get_instance().empty()) continue;
+                    if (key.get_name() == actual_id.get_name()) continue;
+                    qualified_identifier rekeyed(key.get_name());
+                    rekeyed.set_instance_prefix({arg_names[i]});
+                    call_ctx[rekeyed] = val;
+                }
             }
         }
     }

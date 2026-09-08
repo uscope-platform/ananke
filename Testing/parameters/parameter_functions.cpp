@@ -1234,3 +1234,126 @@ TEST(parameter_extraction, function_actuals_evaluate_in_caller_context) {
     ASSERT_TRUE(defaults.contains(qualified_identifier("Y")));
     EXPECT_EQ(defaults[qualified_identifier("Y")], 10);
 }
+
+TEST(parameter_extraction, function_return_struct_read_leaks_into_dependencies) {
+    // Repro for the CVA6 build_config issue: intra-function reads of the
+    // return struct under construction (cfg.FETCH_WIDTH) leak into the
+    // call's dependencies. They are bound inside the body, so no FETCH_WIDTH
+    // entry should survive dependency filtering (the sorter leaf-matches it
+    // against any same-named parameter).
+    auto test_pattern = R"(
+        package config_pkg;
+            typedef struct packed {
+                logic [31:0] XLEN;
+                logic [31:0] FETCH_WIDTH;
+            } my_cfg_t;
+        endpackage
+
+        package build_pkg;
+            function integer build_config(config_pkg::my_cfg_t CVA6Cfg);
+                config_pkg::my_cfg_t cfg;
+                cfg.XLEN = CVA6Cfg.XLEN;
+                cfg.FETCH_WIDTH = CVA6Cfg.XLEN;
+                build_config = cfg.FETCH_WIDTH;
+            endfunction
+        endpackage
+
+        module test_mod #(
+            parameter integer RESULT = build_pkg::build_config(0)
+        )();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[2]);
+    parameter_solver::propagate_functions(mod, d_store);
+
+    auto param = mod->get_parameters().get("RESULT");
+    auto call = std::dynamic_pointer_cast<HDL_function_call>(param->get_expression());
+    ASSERT_TRUE(call);
+    ASSERT_TRUE(call->get_linked_definition());
+
+    const auto deps = param->get_dependencies();
+    EXPECT_TRUE(deps.functions.contains(qualified_identifier("build_pkg", "build_config")));
+    for (const auto &d : deps.data) {
+        EXPECT_NE(d.get_name(), "FETCH_WIDTH") << "leaked dep: " << d.print();
+        if (!d.get_instance().empty()) {
+            EXPECT_NE(d.get_instance().front(), "CVA6Cfg") << "leaked dep: " << d.print();
+            EXPECT_NE(d.get_instance().front(), "cfg") << "leaked dep: " << d.print();
+        }
+    }
+}
+
+TEST(parameter_extraction, function_struct_local_return_solves) {
+    // End-to-end CVA6 shape: struct formal, struct-typed return-var local
+    // built via cfg.FIELD assigns, field reads back, package-qualified
+    // actual, `return cfg`. Asserts solved field values, definition
+    // immutability, and dependency cleanliness together.
+    auto test_pattern = R"(
+        package config_pkg;
+            typedef struct packed {
+                logic [31:0] XLEN;
+                logic [31:0] FETCH_WIDTH;
+            } my_cfg_t;
+            parameter my_cfg_t user_cfg = '{32'd32, 32'd2};
+        endpackage
+
+        package build_pkg;
+            function config_pkg::my_cfg_t build_config(config_pkg::my_cfg_t CVA6Cfg);
+                config_pkg::my_cfg_t cfg;
+                cfg.XLEN = CVA6Cfg.XLEN;
+                cfg.FETCH_WIDTH = CVA6Cfg.XLEN + 32'd2;
+                return cfg;
+            endfunction
+        endpackage
+
+        module test_mod #(
+            parameter config_pkg::my_cfg_t RESULT = build_pkg::build_config(config_pkg::user_cfg)
+        )();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    auto file = analyzer.analyze("", test_pattern).value();
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    auto resources = file.get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
+
+    const std::string def_before = snapshot_function_body(
+        std::static_pointer_cast<hdl_resource_statement>(resources[1]), "build_config");
+    ASSERT_NE(def_before, "<missing>");
+
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto &[id, val] : pkg_defaults) {
+        ctx[qualified_identifier("config_pkg", id.get_name())] = val;
+    }
+
+    parameter_solver::propagate_types(mod, d_store);
+    parameter_solver::propagate_functions(mod, d_store);
+
+    auto param = mod->get_parameters().get("RESULT");
+    for (const auto &d : param->get_dependencies().data) {
+        EXPECT_NE(d.get_name(), "FETCH_WIDTH") << "leaked dep: " << d.print();
+        if (!d.get_instance().empty()) {
+            EXPECT_NE(d.get_instance().front(), "CVA6Cfg") << "leaked dep: " << d.print();
+            EXPECT_NE(d.get_instance().front(), "cfg") << "leaked dep: " << d.print();
+        }
+    }
+
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
+    qualified_identifier sid = qualified_identifier("RESULT");
+    ASSERT_TRUE(solved.contains(sid));
+    ASSERT_TRUE(solved.at(sid).is_integer());
+    // Producer packs member[0] (XLEN=32) at LSB, member[1] (32+2=34) above.
+    EXPECT_EQ(solved.at(sid).get_integer().get_value(), (34LL << 32) | 32);
+    EXPECT_EQ(snapshot_function_body(
+        std::static_pointer_cast<hdl_resource_statement>(resources[1]), "build_config"), def_before);
+}

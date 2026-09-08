@@ -1925,13 +1925,16 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
             had_error = true;
             return;
         }
-        auto var_name = hier->package_or_class_scoped_path()->getText();
+        auto leaf = hier->package_or_class_scoped_path()->getText();
+        std::vector<std::string> dotted;
         for (size_t i = 0; i < hier->DOT().size(); ++i) {
             auto bit_sel = hier->identifier_with_bit_select(i);
             if (bit_sel && bit_sel->identifier())
-                var_name += "." + bit_sel->identifier()->getText();
+                dotted.push_back(bit_sel->identifier()->getText());
         }
         if(loops_factory.in_loop()) {
+            auto var_name = leaf;
+            for (auto &d : dotted) var_name += "." + d;
             loops_factory.start_assignment(var_name);
             if (loops_factory.in_body()) {
                 auto var_token = sv_parsing_helpers::make_value(var_name);
@@ -1941,7 +1944,17 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
                 loops_factory.add_component(var_token);
             }
         } else {
-            f_factory.start_assignment(var_name);
+            // Structured target mirroring the read representation
+            // (exitPrimaryPath): instance = all-but-last segment, name =
+            // last. Writes and reads therefore meet by qualified_identifier
+            // equality with no solver-side string handling.
+            qualified_identifier target_qi(dotted.empty() ? leaf : dotted.back());
+            if (!dotted.empty()) {
+                std::vector<std::string> inst = {leaf};
+                inst.insert(inst.end(), dotted.begin(), dotted.end() - 1);
+                target_qi.set_instance_prefix(inst);
+            }
+            f_factory.start_assignment(target_qi);
         }
 
     }

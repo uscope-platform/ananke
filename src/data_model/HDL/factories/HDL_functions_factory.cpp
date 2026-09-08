@@ -21,7 +21,7 @@
 #include "data_model/HDL/factories/parameters/ternary_factory.hpp"
 #include "data_model/HDL/factories/parameters/streaming_factory.hpp"
 
-void HDL_functions_factory::start_assignment(const std::string &n) {
+void HDL_functions_factory::start_assignment(const qualified_identifier &n) {
     current_assigned_variable = n;
     bit_index = std::make_shared<Expression_v2>();
 }

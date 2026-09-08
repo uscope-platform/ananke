@@ -359,39 +359,41 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
     }
     return package_parameters;
 }
+
 void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement> &resource,
         const std::map<std::string, hdl_function_statement> &imported_functions,
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
-    // Resolve unqualified (imported) package references: after `import pkg::*`,
-    // a module param may call a package function or use a package type by its
-    // bare name. Mirror propagate_functions/propagate_types for the no-prefix case.
-    // One immutable snapshot per imported function: every site in this
-    // resource links the same handle (see propagate_functions above).
-    std::map<std::string, hdl_function_def_ptr> stable_defs;
+    std::map<std::string, hdl_function_def_ptr> linked_definitions;
     for (auto &[_, param] : resource->get_parameters()) {
         for (auto &fcn : param->get_dependencies().functions) {
             if (!fcn.get_package_prefix().empty()) continue;
-            auto it = imported_functions.find(fcn.get_name());
-            if (it != imported_functions.end()) {
-                auto &stable = stable_defs[fcn.get_name()];
-                if (!stable) stable = std::make_shared<const hdl_function_statement>(it->second);
-                param->propagate_function(stable);
+            if (!imported_functions.contains(fcn.get_name())) continue;
+            auto &linked_definition = linked_definitions.try_emplace(fcn.get_name()).first->second;
+            if (!linked_definition) {
+                auto definition_snapshot =
+                    std::make_shared<hdl_function_statement>(imported_functions.at(fcn.get_name()));
+                auto return_type = definition_snapshot->get_return_type();
+                if (return_type && return_type->is<HDL_external_type>()) {
+                    auto external_name = return_type->as<HDL_external_type>().get_value().get_name();
+                    if (imported_types.contains(external_name) && imported_types.at(external_name))
+                        definition_snapshot->set_return_type(imported_types.at(external_name));
+                }
+                linked_definition = std::move(definition_snapshot);
             }
+            param->propagate_function(linked_definition);
         }
         for (auto &type : param->get_dependencies().types) {
             if (!type.get_package_prefix().empty()) continue;
-            auto it = imported_types.find(type.get_name());
-            if (it != imported_types.end())
-                param->set_type(it->second);
+            if (imported_types.contains(type.get_name()))
+                param->set_type(imported_types.at(type.get_name()));
         }
         // A declared type name that wasn't resolvable at parse time keeps its
         // name on the (dimensionless) placeholder type; swap in the imported
         // typedef so the real width/orientation is used.
         if (param->get_type() && param->get_type()->is<HDL_simple_type>()) {
             auto &simple = param->get_type()->as<HDL_simple_type>();
-            auto it = imported_types.find(simple.get_type_name());
-            if (it != imported_types.end())
-                param->set_type(it->second);
+            if (imported_types.contains(simple.get_type_name()))
+                param->set_type(imported_types.at(simple.get_type_name()));
         }
     }
 }
@@ -427,6 +429,42 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
     }
 }
 
+namespace {
+// Resolves a function definition's external return type in place (no-op if
+// already resolved or unresolvable). Owner-side, pre-solve bookkeeping like
+// the param set_type writes in propagate_types: deterministic (same typedef
+// object every time), idempotent, and independent of call sites — it never
+// carries per-site values, so sharing stays safe. Needed because evaluation
+// packs struct returns per the return type's member order, which an
+// unresolved external type cannot provide.
+void resolve_function_return_type(const std::shared_ptr<hdl_function_statement> &def,
+                                  const std::shared_ptr<data_store> &d_store) {
+    if (!def || !d_store) return;
+    auto rt = def->get_return_type();
+    if (!rt || !rt->is<HDL_external_type>()) return;
+    auto &ext = rt->as<HDL_external_type>();
+    if (ext.get_value().get_package_prefix().empty()) return;
+    auto res = d_store->get_HDL_resource(ext.get_value().get_package_prefix()[0]);
+    if (!res.has_value()) return;
+    auto type_def = res.value()->get_typedefs()[ext.get_value().get_name()];
+    if (type_def) def->set_return_type(type_def);
+}
+
+
+
+// Mutable-handle variant of get_function_shared for the resolution above:
+// links keep using the const handle; only this owner-side pass writes.
+std::shared_ptr<hdl_function_statement> find_function_def(
+    const std::shared_ptr<hdl_resource_statement> &owner, const std::string &fname) {
+    if (!owner) return nullptr;
+    for (const auto &stmt : owner->get_statements()) {
+        auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
+        if (f && f->get_name() == fname) return f;
+    }
+    return nullptr;
+}
+}
+
 void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
 
     // Bodies populated below can reveal further (nested) calls, so repeat
@@ -454,10 +492,12 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
                         spdlog::critical("Function {}::{}, not found in the specified package",fcn.get_package_prefix().back(), fcn.get_name());
                         continue;
                     }
+                    resolve_function_return_type(find_function_def(res.value(), fcn.get_name()), d_store);
                     param->propagate_function(fcn_def);
                     progress = true;
                 } else {
                     if (auto local_fcn = resource->get_function_shared(fcn.get_name())) {
+                        resolve_function_return_type(find_function_def(resource, fcn.get_name()), d_store);
                         param->propagate_function(local_fcn);
                         progress = true;
                     } else if (d_store) {
@@ -468,8 +508,11 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
                             // No stable owner exists for standalone copies, so
                             // snapshot once per attempt; all of this
                             // parameter's sites share the immutable snapshot.
-                            auto stable = std::make_shared<const hdl_function_statement>(standalone_function.value());
-                            param->propagate_function(stable);
+                            auto definition_snapshot =
+                                std::make_shared<hdl_function_statement>(standalone_function.value());
+                            resolve_function_return_type(definition_snapshot, d_store);
+                            hdl_function_def_ptr linked_definition = definition_snapshot;
+                            param->propagate_function(linked_definition);
                             progress = true;
                         }
                     }

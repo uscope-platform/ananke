@@ -18,6 +18,7 @@
 #include "data_model/HDL/statement/hdl_resource_statement.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "data_model/HDL/types/HDL_struct_type.hpp"
+#include "data_model/HDL/types/HDL_external_type.hpp"
 
 
 void HDL_modules_factory::new_module(const std::string &name, const dependency_class &type, unsigned int line_n) {
@@ -63,6 +64,13 @@ std::shared_ptr<hdl_resource_statement> HDL_modules_factory::get_module() {
                     function->set_return_unpacked_bounds(udims[0].first_bound, udims[0].second_bound);
                 }
             }
+        } else if (auto sep = it->second.find("::"); sep != std::string::npos) {
+            // Package-qualified return type from another package: keep it as
+            // an external reference instead of dropping it, so later passes
+            // (typedef propagation, struct-return packing) can resolve it.
+            qualified_identifier ext_qi(it->second.substr(sep + 2));
+            ext_qi.set_package_prefix({it->second.substr(0, sep)});
+            function->set_return_type(std::make_shared<HDL_external_type>(ext_qi));
         }
     }
     function_return_types.clear();

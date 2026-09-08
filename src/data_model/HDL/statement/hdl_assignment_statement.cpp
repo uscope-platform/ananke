@@ -43,7 +43,7 @@ bool hdl_assignment_statement::equals(const hdl_statement_base& other) const {
 
 std::string hdl_assignment_statement::print() const {
     std::ostringstream oss;
-    oss << target;
+    oss << target.print();
     if (index) oss << "[" << index->print() << "]";
     oss << " = ";
     if (value) oss << value->print();

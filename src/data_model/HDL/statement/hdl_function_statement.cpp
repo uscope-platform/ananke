@@ -27,7 +27,8 @@ bool hdl_function_statement::is_scalar() const {
     auto assignment = std::dynamic_pointer_cast<hdl_assignment_statement>(body[0]);
     return body.size() == 1
         && assignment != nullptr
-        && assignment->get_target() == name
+        && assignment->get_target().get_instance().empty()
+        && assignment->get_target().get_name() == name
         && assignment->get_index() == nullptr;
 }
 
