@@ -202,6 +202,16 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
             auto struct_fields = extract_struct_fields(param, res.value(), next.value(), ctx);
             ctx.insert(struct_fields.begin(), struct_fields.end());
             solved_parameters.insert(struct_fields.begin(), struct_fields.end());
+            if (!struct_fields.empty()) {
+                std::ostringstream summary;
+                bool first = true;
+                for (const auto &[fid, fval] : struct_fields) {
+                    if (!first) summary << " ";
+                    first = false;
+                    summary << fid.print() << "=" << fval;
+                }
+                spdlog::trace("Solved struct parameter {}: {}", next.value().print(), summary.str());
+            }
             auto enum_values = extract_enum_values(param);
             ctx.insert(enum_values.begin(), enum_values.end());
             solved_parameters.insert(enum_values.begin(), enum_values.end());
@@ -353,8 +363,20 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
                 auto pkg_solved = process_parameters(package.value()->get_parameters(), package_parameters);
 
                 for (auto &[pkg_id, pkg_val] : pkg_solved) {
-                    qualified_identifier qid{pkg_name, "", pkg_id.get_name()};
+                    // Canonical instance-preserving form (pkg::S.F): the
+                    // instance path survives so structured reads resolve.
+                    qualified_identifier qid(pkg_id.get_name());
+                    qid.set_package_prefix({pkg_name});
+                    const auto inst = pkg_id.get_instance();
+                    if (!inst.empty()) qid.set_instance_prefix(inst);
                     package_parameters[qid] = pkg_val;
+                    // Flat legacy alias for bare pkg::FIELD reads (no struct
+                    // root). First-wins: mirrors the old flattening.
+                    if (!inst.empty()) {
+                        qualified_identifier flat(pkg_name, pkg_id.get_name());
+                        if (!package_parameters.contains(flat))
+                            package_parameters[flat] = pkg_val;
+                    }
                 }
             }
         }
