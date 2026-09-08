@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 #include <filesystem>
+#include <thread>
 
 #include "data_model/mm_file.hpp"
 #include "frontend/analysis/system_verilog/sv_analyzer.hpp"
@@ -723,6 +724,22 @@ endmodule)";
     auto param = ast[0]->get_parameters().get("RESULT");
     ASSERT_TRUE(param->get_value().has_value());
     ASSERT_EQ(param->get_value()->get_integer().get_value(), 42);
+}
+
+TEST(hdl_ast_builder, sv_module_header_import) {
+    // `import` inside the module header must parse and be captured as a
+    // file-level import statement.
+    auto content = R"(module top import test_pkg::*;
+    #(parameter int RESULT = 1)();
+endmodule)";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", content).value();
+    bool found = false;
+    for (auto &stmt : file.get_content()) {
+        auto imp = std::dynamic_pointer_cast<hdl_import_stmt>(stmt);
+        if (imp && imp->get_package() == "test_pkg" && imp->is_wildcard()) found = true;
+    }
+    EXPECT_TRUE(found);
 }
 
 TEST(hdl_ast_builder, sv_imported_type) {

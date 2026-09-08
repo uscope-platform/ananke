@@ -335,11 +335,7 @@ void HDL_parameters_factory::stop_cast() {
             }
         }
 
-        if (!consumer_stack.empty()) {
-            consumer_stack.top()->consume(cast_value);
-        } else {
-            expr_factory.consume(cast_value);
-        }
+        expr_factory.consume(cast_value);
     }
 }
 
