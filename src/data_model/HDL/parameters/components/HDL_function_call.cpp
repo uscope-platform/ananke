@@ -414,6 +414,17 @@ std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(con
         container_unpacked_ascending_l);
 
     if (packing_l) {
+        // Producer/consumer agreement (and SV packed layout: the first
+        // declared member is most significant). walk_body keys slots by
+        // member index, so reverse into MSB-first order before packing —
+        // matching what struct literals produce and what
+        // extract_struct_fields splits. Concatenation is unaffected (it
+        // pre-reverses into pack_values itself); non-struct packed returns
+        // keep their existing order.
+        if (linked_ && linked_->get_return_type() && linked_->get_return_type()->is<HDL_struct_type>()) {
+            std::reverse(values.begin(), values.end());
+            std::reverse(sizes.begin(), sizes.end());
+        }
         return resolved_parameter(pack_values(values, sizes));
     }
 

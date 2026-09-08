@@ -676,7 +676,7 @@ TEST(parameter_extraction, packed_struct_returning_function) {
 
 
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {qualified_identifier("TEST_PARAM"), hdl_integer(0xBEBECAFE)}
+        {qualified_identifier("TEST_PARAM"), hdl_integer(0xCAFEBEBE)}
     };
     for (const auto& [name, value] : check_defaults) {
         ASSERT_TRUE(defaults.contains(name));
@@ -716,7 +716,7 @@ TEST(parameter_extraction, packed_struct_returning_function_reverse_order) {
 
 
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
-        {qualified_identifier("TEST_PARAM"), hdl_integer(0xBEBECAFE)}
+        {qualified_identifier("TEST_PARAM"), hdl_integer(0xCAFEBEBE)}
     };
     for (const auto& [name, value] : check_defaults) {
         ASSERT_TRUE(defaults.contains(name));
@@ -727,8 +727,9 @@ TEST(parameter_extraction, packed_struct_returning_function_reverse_order) {
 TEST(parameter_extraction, packed_struct_returning_computed_fields) {
     // Struct fields copied from another struct carry minimal (unset) widths,
     // so packing must use the declared member widths: a=3, b=5 in 16-bit
-    // fields packs as 3 + 5*65536. (Member layout follows the existing
-    // function-packing convention, member[0] at LSB.)
+    // fields packs as 3*65536 + 5. (Member layout follows the SV packed
+    // convention, member[0] most significant, matching struct literals and
+    // extract_struct_fields.)
     auto test_pattern = R"(
         module test_mod #(
         )();
@@ -761,7 +762,7 @@ TEST(parameter_extraction, packed_struct_returning_computed_fields) {
 
     qualified_identifier sid = qualified_identifier("P");
     ASSERT_TRUE(defaults.contains(sid));
-    EXPECT_EQ(defaults[sid], 327683);
+    EXPECT_EQ(defaults[sid], 196613);
 }
 
 TEST(parameter_extraction, concat_and_assignment_in_function) {
@@ -1352,8 +1353,69 @@ TEST(parameter_extraction, function_struct_local_return_solves) {
     qualified_identifier sid = qualified_identifier("RESULT");
     ASSERT_TRUE(solved.contains(sid));
     ASSERT_TRUE(solved.at(sid).is_integer());
-    // Producer packs member[0] (XLEN=32) at LSB, member[1] (32+2=34) above.
-    EXPECT_EQ(solved.at(sid).get_integer().get_value(), (34LL << 32) | 32);
+    // SV packed layout: member[0] (XLEN=32) most significant, member[1]
+    // (32+2=34) least significant — matching struct literals and
+    // extract_struct_fields, so downstream XLEN reads come back correct.
+    EXPECT_EQ(solved.at(sid).get_integer().get_value(), (32LL << 32) | 34);
     EXPECT_EQ(snapshot_function_body(
         std::static_pointer_cast<hdl_resource_statement>(resources[1]), "build_config"), def_before);
+}
+
+TEST(parameter_extraction, repro_struct_field_downstream_uses) {
+    // Downstream uses of a function-produced struct: plain field read,
+    // struct-field-driven size cast (CVA6Cfg.XLEN'(…) shape), and keyed
+    // struct literal. Characterizes what works before fixing.
+    auto test_pattern = R"(
+        package config_pkg;
+            typedef struct packed {
+                logic [31:0] XLEN;
+                logic [31:0] FETCH_WIDTH;
+            } my_cfg_t;
+            parameter my_cfg_t user_cfg = '{32'd32, 32'd2};
+        endpackage
+
+        package build_pkg;
+            function config_pkg::my_cfg_t build_config(config_pkg::my_cfg_t CVA6Cfg);
+                config_pkg::my_cfg_t cfg;
+                cfg.XLEN = CVA6Cfg.XLEN;
+                cfg.FETCH_WIDTH = CVA6Cfg.XLEN + 32'd2;
+                return cfg;
+            endfunction
+        endpackage
+
+        module test_mod #(
+            parameter config_pkg::my_cfg_t RESULT = build_pkg::build_config(config_pkg::user_cfg)
+        )();
+            parameter integer XL = RESULT.XLEN;
+            parameter integer W = RESULT.XLEN'(1);
+            parameter config_pkg::my_cfg_t K = '{XLEN: 32'd7, FETCH_WIDTH: 32'd9};
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    auto file = analyzer.analyze("", test_pattern).value();
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    auto resources = file.get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
+
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto &[id, val] : pkg_defaults) {
+        ctx[qualified_identifier("config_pkg", id.get_name())] = val;
+    }
+
+    parameter_solver::propagate_types(mod, d_store);
+    parameter_solver::propagate_functions(mod, d_store);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
+
+    printf("XL=%s W=%s K=%s\n",
+        solved.contains(qualified_identifier("XL")) ?
+            std::to_string(solved.at(qualified_identifier("XL")).get_integer()).c_str() : "MISSING",
+        solved.contains(qualified_identifier("W")) ?
+            std::to_string(solved.at(qualified_identifier("W")).get_integer()).c_str() : "MISSING",
+        solved.contains(qualified_identifier("K")) ? "present" : "MISSING");
+    EXPECT_EQ(solved.at(qualified_identifier("XL")).get_integer(), 32);
+    EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer(), 1);
 }
