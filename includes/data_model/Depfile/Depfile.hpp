@@ -55,7 +55,7 @@ public:
     std::vector<std::string> excluded_modules;
     std::vector<Constraints> constraints;
     std::unordered_map<std::string, bus_specs> bus;
-
+    std::unordered_map<std::string, std::string> deconfliction;
     Depfile();
     Depfile(const Depfile &other) = default;
     Depfile(Depfile &&other) noexcept = default;

@@ -91,6 +91,9 @@ void Depfile::set_content(const nlohmann::json &file_content) {
             });
         }
     }
+    if (file_content.contains("deconfliction")) {
+        deconfliction = file_content.at("deconfliction");
+    }
 }
 
 
