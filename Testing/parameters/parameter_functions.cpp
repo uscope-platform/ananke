@@ -1332,9 +1332,19 @@ TEST(parameter_extraction, function_struct_local_return_solves) {
     ASSERT_NE(def_before, "<missing>");
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    // Seed exactly as retrieve_package_parameters exports: instance-preserving
+    // canonical form plus the flat legacy alias for bare pkg::FIELD reads.
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto &[id, val] : pkg_defaults) {
-        ctx[qualified_identifier("config_pkg", id.get_name())] = val;
+        qualified_identifier qid(id.get_name());
+        qid.set_package_prefix({"config_pkg"});
+        const auto inst = id.get_instance();
+        if (!inst.empty()) qid.set_instance_prefix(inst);
+        ctx[qid] = val;
+        if (!inst.empty()) {
+            qualified_identifier flat("config_pkg", id.get_name());
+            if (!ctx.contains(flat)) ctx[flat] = val;
+        }
     }
 
     parameter_solver::propagate_types(mod, d_store);
@@ -1361,10 +1371,10 @@ TEST(parameter_extraction, function_struct_local_return_solves) {
         std::static_pointer_cast<hdl_resource_statement>(resources[1]), "build_config"), def_before);
 }
 
-TEST(parameter_extraction, repro_struct_field_downstream_uses) {
+TEST(parameter_extraction, struct_field_downstream_uses) {
     // Downstream uses of a function-produced struct: plain field read,
     // struct-field-driven size cast (CVA6Cfg.XLEN'(…) shape), and keyed
-    // struct literal. Characterizes what works before fixing.
+    // struct literal. Locks the ::-field, package-export, and re-key fixes.
     auto test_pattern = R"(
         package config_pkg;
             typedef struct packed {
@@ -1401,9 +1411,19 @@ TEST(parameter_extraction, repro_struct_field_downstream_uses) {
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    // Seed exactly as retrieve_package_parameters exports: instance-preserving
+    // canonical form plus the flat legacy alias for bare pkg::FIELD reads.
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto &[id, val] : pkg_defaults) {
-        ctx[qualified_identifier("config_pkg", id.get_name())] = val;
+        qualified_identifier qid(id.get_name());
+        qid.set_package_prefix({"config_pkg"});
+        const auto inst = id.get_instance();
+        if (!inst.empty()) qid.set_instance_prefix(inst);
+        ctx[qid] = val;
+        if (!inst.empty()) {
+            qualified_identifier flat("config_pkg", id.get_name());
+            if (!ctx.contains(flat)) ctx[flat] = val;
+        }
     }
 
     parameter_solver::propagate_types(mod, d_store);
@@ -1412,6 +1432,244 @@ TEST(parameter_extraction, repro_struct_field_downstream_uses) {
 
     EXPECT_EQ(solved.at(qualified_identifier("XL")).get_integer(), 32);
     EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer(), 1);
+}
+
+TEST(parameter_extraction, interrupt_shaped_uses) {
+    // Full CVA6 interrupt shape: package enum constant as cast content,
+    // replication inside a keyed literal, and a local type whose dimensions
+    // depend on a function-produced struct field. Package enum members are
+    // seeded into ctx exactly as retrieve_package_parameters exports them.
+    auto test_pattern = R"(
+        package config_pkg;
+            typedef struct packed {
+                logic [31:0] XLEN;
+                logic [31:0] FETCH_WIDTH;
+            } my_cfg_t;
+            typedef enum logic [1:0] {IRQ_S = 3, IRQ_M = 5} irq_t;
+            parameter my_cfg_t user_cfg = '{32'd32, 32'd2};
+        endpackage
+
+        package build_pkg;
+            function config_pkg::my_cfg_t build_config(config_pkg::my_cfg_t CVA6Cfg);
+                config_pkg::my_cfg_t cfg;
+                cfg.XLEN = CVA6Cfg.XLEN;
+                cfg.FETCH_WIDTH = CVA6Cfg.XLEN + 32'd2;
+                return cfg;
+            endfunction
+        endpackage
+
+        module test_mod #(
+            parameter config_pkg::my_cfg_t RESULT = build_pkg::build_config(config_pkg::user_cfg)
+        )();
+            parameter integer XL2 = RESULT.XLEN;
+            parameter integer Q = (5 << 1) | 3;
+            localparam type itype_t = struct packed {
+                logic [RESULT.XLEN-1:0] f0;
+                logic [RESULT.XLEN-1:0] f1;
+            };
+            localparam itype_t I = '{
+                f0: (RESULT.XLEN'(1) << (RESULT.XLEN - 1)) | RESULT.XLEN'(config_pkg::IRQ_S),
+                f1: {2{2'b01}}
+            };
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    auto file = analyzer.analyze("", test_pattern).value();
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    auto resources = file.get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
+
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto &[id, val] : pkg_defaults) {
+        qualified_identifier qid(id.get_name());
+        qid.set_package_prefix({"config_pkg"});
+        const auto inst = id.get_instance();
+        if (!inst.empty()) qid.set_instance_prefix(inst);
+        ctx[qid] = val;
+        if (!inst.empty()) {
+            qualified_identifier flat("config_pkg", id.get_name());
+            if (!ctx.contains(flat)) ctx[flat] = val;
+        }
+    }
+    ctx[qualified_identifier("config_pkg", "", "IRQ_S")] = 3;
+    ctx[qualified_identifier("config_pkg", "", "IRQ_M")] = 5;
+
+    parameter_solver::propagate_types(mod, d_store);
+    parameter_solver::propagate_functions(mod, d_store);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
+
+    ASSERT_TRUE(solved.contains(qualified_identifier("XL2")));
+    EXPECT_EQ(solved.at(qualified_identifier("XL2")).get_integer(), 32);
+    ASSERT_TRUE(solved.contains(qualified_identifier("Q")));
+    EXPECT_EQ(solved.at(qualified_identifier("Q")).get_integer(), 11);
+}
+
+
+TEST(parameter_extraction, wide_struct_member_roundtrip) {
+    // A >1024-bit packed struct must pack bit-exactly (shift/mask caps) and
+    // its members must read back through package-qualified dotted selects
+    // (::-branch + instance-preserving export). U == 7*2^1056 + 9.
+    auto test_pattern = R"(
+        package config_pkg;
+            typedef struct packed {
+                logic [31:0] A;
+                logic [1023:0] W;
+                logic [31:0] B;
+            } wide_t;
+            parameter wide_t U = '{32'd7, 1024'({64'd0}), 32'd9};
+        endpackage
+        module test_mod #(
+        )();
+            parameter integer A = config_pkg::U.A;
+            parameter integer B = config_pkg::U.B;
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    auto file = analyzer.analyze("", test_pattern).value();
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    auto resources = file.get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto &[id, val] : pkg_defaults) {
+        qualified_identifier qid(id.get_name());
+        qid.set_package_prefix({"config_pkg"});
+        const auto inst = id.get_instance();
+        if (!inst.empty()) qid.set_instance_prefix(inst);
+        ctx[qid] = val;
+        if (!inst.empty()) {
+            qualified_identifier flat("config_pkg", id.get_name());
+            if (!ctx.contains(flat)) ctx[flat] = val;
+        }
+    }
+    parameter_solver::propagate_types(mod, d_store);
+    parameter_solver::propagate_functions(mod, d_store);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
+    EXPECT_EQ(solved.at(qualified_identifier("A")).get_integer(), 7);
+    EXPECT_EQ(solved.at(qualified_identifier("B")).get_integer(), 9);
+    EXPECT_EQ(pkg_defaults.at(qualified_identifier("U")).get_integer().to_wide().str(),
+              "5404723255734155000562543590669331166637026017566661180489767098205613620666379654860392326011886106362569980812903150099672932287981240608478903959599188115885246162170274847226212898996934945635522360799061643523918351684466739236170667608429400994818383772226377055611930474497274466420380754701698470471015755415561");
+}
+
+TEST(parameter_extraction, huge_struct_member_roundtrip) {
+    // Tens-of-kb packed struct (CVA6 shapes): members round-trip through the
+    // package export and single-bit selects past bit 1023 resolve.
+    // H == 0x80000007 * 2^40032 + 9, 40064 bits total.
+    auto test_pattern = R"(
+        package config_pkg;
+            typedef struct packed {
+                logic [31:0] A;
+                logic [39999:0] W;
+                logic [31:0] B;
+            } huge_t;
+            parameter huge_t H = '{32'h80000007, 40000'({64'd0}), 32'd9};
+        endpackage
+        module test_mod #(
+        )();
+            parameter integer A = config_pkg::H.A;
+            parameter integer B = config_pkg::H.B;
+            parameter integer TOPBIT = config_pkg::H[40063];
+            parameter integer BOTBIT = config_pkg::H[0];
+            parameter integer WBIT = config_pkg::H[32];
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    auto file = analyzer.analyze("", test_pattern).value();
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    auto resources = file.get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    for (auto &[id, val] : pkg_defaults) {
+        qualified_identifier qid(id.get_name());
+        qid.set_package_prefix({"config_pkg"});
+        const auto inst = id.get_instance();
+        if (!inst.empty()) qid.set_instance_prefix(inst);
+        ctx[qid] = val;
+        if (!inst.empty()) {
+            qualified_identifier flat("config_pkg", id.get_name());
+            if (!ctx.contains(flat)) ctx[flat] = val;
+        }
+    }
+    parameter_solver::propagate_types(mod, d_store);
+    parameter_solver::propagate_functions(mod, d_store);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
+    EXPECT_EQ(solved.at(qualified_identifier("A")).get_integer(), 0x80000007LL);
+    EXPECT_EQ(solved.at(qualified_identifier("B")).get_integer(), 9);
+    EXPECT_EQ(solved.at(qualified_identifier("TOPBIT")).get_integer(), 1);
+    EXPECT_EQ(solved.at(qualified_identifier("BOTBIT")).get_integer(), 1);
+    EXPECT_EQ(solved.at(qualified_identifier("WBIT")).get_integer(), 0);
+}
+
+TEST(parameter_extraction, package_localparam_struct_shapes) {
+    // localparams in one package typed by another package's struct, with an
+    // unsized cast, a cross-package enum member, replication, and a sized
+    // cast of an expression. Keys are in member order (out-of-order keyed
+    // literals assemble positionally — separate deferred work).
+    auto test_pattern = R"(
+        package config_pkg;
+            typedef struct packed {
+                logic [31:0] X;
+                logic [31:0] Y;
+            } pair_t;
+            typedef enum logic [1:0] {E_ZERO = 0, E_ONE = 1} e_t;
+        endpackage
+        package user_pkg;
+            localparam integer A = 5;
+            localparam config_pkg::pair_t P = '{X: unsigned'(A), Y: config_pkg::E_ONE};
+            localparam config_pkg::pair_t Q = '{X: 32'd7, Y: 32'd9};
+            localparam integer R = {2{2'b01}};
+            localparam integer S = 32'(A + 1);
+        endpackage
+        module test_mod #(
+        )();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    auto resources = file.get_content();
+    auto pkg = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    parameter_solver::propagate_types(pkg, d_store);
+    std::map<qualified_identifier, resolved_parameter> pctx;
+    pctx[qualified_identifier("config_pkg", "", "E_ZERO")] = 0;
+    pctx[qualified_identifier("config_pkg", "", "E_ONE")] = 1;
+    auto solved = parameter_solver::process_parameters(pkg->get_parameters(), pctx);
+    EXPECT_EQ(solved.at(qualified_identifier("A")).get_integer(), 5);
+    EXPECT_EQ(solved.at(qualified_identifier("P")).get_integer(), (5LL << 32) | 1);
+    EXPECT_EQ(solved.at(qualified_identifier("Q")).get_integer(), (7LL << 32) | 9);
+    EXPECT_EQ(solved.at(qualified_identifier("R")).get_integer(), 5);
+    EXPECT_EQ(solved.at(qualified_identifier("S")).get_integer(), 6);
+}
+
+TEST(parameter_extraction, cast_in_binary_inside_literal) {
+    // A cast inside an enclosing binary expression inside a stacked consumer
+    // (struct literal) must not fragment: stop_cast routes the completed
+    // cast operand-first. Consumer-first routing solved f0 as 2 here.
+    auto test_pattern = R"(
+        package p;
+            typedef struct packed { logic [31:0] f0; logic [31:0] f1; } s_t;
+            parameter s_t V = '{f0: (8'(1) << 2), f1: 32'd5};
+        endpackage
+        module test_mod #(
+        )();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    auto resources = file.get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto solved = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer(), (4LL << 32) | 5);
 }
 
 TEST(parameter_extraction, package_function_owner_disambiguates) {

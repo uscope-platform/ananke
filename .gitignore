@@ -9,7 +9,7 @@ cmake-build-debug
 .idea/**/dictionaries
 .idea/**/shelf
 
-
+**/.DS_Store
 cmake-build-release/
 
 cmake-build-debug-coverage/

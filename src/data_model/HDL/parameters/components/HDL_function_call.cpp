@@ -335,32 +335,14 @@ std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(con
                 std::vector<std::string> new_inst;
                 new_inst.push_back(arg_names[i]);
                 new_inst.insert(new_inst.end(), key_inst.begin() + actual_path.size(), key_inst.end());
+                // NOTE: the package prefix is deliberately dropped — the
+                // formal is a call-local binding and the body reads it
+                // package-less (CVA6Cfg.XLEN, not pkg::CVA6Cfg.XLEN).
                 qualified_identifier rekeyed(key.get_name());
-                if (!key.get_package_prefix().empty()) rekeyed.set_package_prefix(key.get_package_prefix());
                 rekeyed.set_instance_prefix(new_inst);
                 call_ctx[rekeyed] = val;
             }
-            // Package-qualified struct actuals (pkg::cfg): package constants
-            // reach the caller context as package-flat field entries because
-            // the package export flattens them (instance info dropped at
-            // parameter_solver.cpp retrieve_package_parameters). Re-key those
-            // under the formal root as well so formal.field reads resolve.
-            // The entry matching the actual's own name is the whole value
-            // (already bound above) and is skipped. Structured-key matching
-            // only — no string parsing. Assumes package field names are
-            // unique; a same-named scalar package param would collide
-            // (inherited from the export flattening, not introduced here).
-            const auto actual_pkg = actual_id.get_package_prefix();
-            if (!actual_pkg.empty()) {
-                for (const auto &[key, val] : context) {
-                    if (key.get_package_prefix() != actual_pkg) continue;
-                    if (!key.get_instance().empty()) continue;
-                    if (key.get_name() == actual_id.get_name()) continue;
-                    qualified_identifier rekeyed(key.get_name());
-                    rekeyed.set_instance_prefix({arg_names[i]});
-                    call_ctx[rekeyed] = val;
-                }
-            }
+
         }
     }
 

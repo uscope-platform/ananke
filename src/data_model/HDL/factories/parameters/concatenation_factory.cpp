@@ -29,6 +29,10 @@ void concatenation_factory::consume(const std::shared_ptr<Expression_base> &expr
     new_concatenation.add_component(expr);
 }
 
+void concatenation_factory::add_key(const std::string &key) {
+    new_concatenation.add_component_key(key);
+}
+
 bool concatenation_factory::active() const {
  return factory_active;
 }

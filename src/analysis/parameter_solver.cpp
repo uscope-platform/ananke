@@ -384,9 +384,75 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
     return package_parameters;
 }
 
+void parameter_solver::remap_keyed_literals(const std::shared_ptr<Expression_base> &expr,
+    const std::shared_ptr<hdl_type> &type) {
+    if (!expr) return;
+    if (expr->is<Concatenation>()) {
+        auto &concat = expr->as<Concatenation>();
+        const bool was_keyed = !concat.get_component_keys().empty();
+        bool reordered = false;
+        std::shared_ptr<HDL_struct_type> st;
+        if (type && type->is<HDL_struct_type>())
+            st = std::dynamic_pointer_cast<HDL_struct_type>(type);
+        if (was_keyed && st) {
+            std::vector<std::string> names;
+            for (auto &m : st->member) names.push_back(m.name);
+            reordered = concat.reorder_by_member_names(names);
+        }
+        const bool aligned = !was_keyed || (reordered && concat.get_component_keys().empty());
+        auto comps = concat.get_components();
+        for (size_t i = 0; i < comps.size(); ++i) {
+            std::shared_ptr<hdl_type> child;
+            if (aligned && st && i < st->member.size()) child = st->member[i].type;
+            remap_keyed_literals(comps[i], child);
+        }
+        return;
+    }
+    if (expr->is<Expression_v2>()) {
+        auto &e = expr->as<Expression_v2>();
+        remap_keyed_literals(e.get_lhs(), type);
+        remap_keyed_literals(e.get_rhs(), type);
+        return;
+    }
+    if (expr->is<Ternary>()) {
+        auto &t = expr->as<Ternary>();
+        remap_keyed_literals(t.get_condition(), type);
+        remap_keyed_literals(t.get_true_value(), type);
+        remap_keyed_literals(t.get_false_value(), type);
+        return;
+    }
+    if (expr->is<Cast>()) {
+        auto &c = expr->as<Cast>();
+        remap_keyed_literals(c.get_content(), type);
+        remap_keyed_literals(c.get_size_expr(), type);
+        return;
+    }
+    if (expr->is<Replication>()) {
+        auto &r = expr->as<Replication>();
+        remap_keyed_literals(r.get_item(), type);
+        remap_keyed_literals(r.get_size(), type);
+        return;
+    }
+    if (expr->is<Streaming>()) {
+        for (auto &c : expr->as<Streaming>().get_components()) remap_keyed_literals(c, type);
+        return;
+    }
+    // Call arguments initialize formals whose types are unknown here: start
+    // a fresh (untyped) context instead of carrying the outer struct type.
+    if (expr->is<HDL_function_call>()) {
+        for (auto &a : expr->as<HDL_function_call>().get_arguments()) remap_keyed_literals(a, nullptr);
+        return;
+    }
+    if (expr->is<HDL_builtin_function>()) {
+        for (auto &a : expr->as<HDL_builtin_function>().get_arguments()) remap_keyed_literals(a, nullptr);
+        return;
+    }
+
+}
+
 void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement> &resource,
-        const std::map<std::string, hdl_function_statement> &imported_functions,
-        const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
+                                         const std::map<std::string, hdl_function_statement> &imported_functions,
+                                         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
     std::map<std::string, hdl_function_def_ptr> linked_definitions;
     for (auto &[_, param] : resource->get_parameters()) {
         for (auto &fcn : param->get_dependencies().functions) {
@@ -434,6 +500,10 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
                 auto type_def = res.value()->get_typedefs()[type_name];
                 if (type_def) {
                     param->set_type(type_def);
+                    // Dimensions inside the typedef live in the defining
+                    // package's scope; stamp it so foreign-context type
+                    // evaluation can overlay that scope (idempotent).
+                    type_def->set_defining_package(pkg_name);
                 }
             }
         }
@@ -448,8 +518,13 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
                 }
                 auto type_def = res.value()->get_typedefs()[type.get_name()];
                 param->set_type(type_def);
+                if (type_def) type_def->set_defining_package(type.get_package_prefix().back());
             }
         }
+    }
+
+    for (auto &[_, param] : resource->get_parameters()) {
+        remap_keyed_literals(param->get_expression(), param->get_type());
     }
 }
 
@@ -472,7 +547,10 @@ void resolve_function_return_type(const std::shared_ptr<hdl_function_statement> 
                                                     ext.get_value().get_name());
     if (!res.has_value()) return;
     auto type_def = res.value()->get_typedefs()[ext.get_value().get_name()];
-    if (type_def) def->set_return_type(type_def);
+    if (type_def) {
+        def->set_return_type(type_def);
+        type_def->set_defining_package(ext.get_value().get_package_prefix()[0]);
+    }
 }
 
 
@@ -713,7 +791,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_str
                 uint64_t offset = 0;
                 for (int i = st.member.size() - 1; i >= 0; i--) {
                     uint64_t w = packed_width(type_info->struct_sizes[i].packed_sizes);
-                    wide_integer mask = (w >= 1024) ? wide_integer(-1) : (wide_integer(1) << w) - 1;
+                    // Exact mask at any width: the old >=1024 fallback (-1,
+                    // i.e. no mask) leaked all higher members into wide
+                    // fields such as the 1024-bit PMA regions.
+                    wide_integer mask = hdl_integer::width_mask(static_cast<int64_t>(w)).to_wide();
                     emit_field(st.member[i].name,
                                make_hdl((raw >> static_cast<size_t>(offset)) & mask),
                                st.member[i].type);
@@ -728,7 +809,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_str
                     auto s = m.type->evaluate_type(ctx);
                     if (s) w = packed_width(*s);
                 }
-                wide_integer mask = (w >= 1024) ? wide_integer(-1) : (wide_integer(1) << w) - 1;
+                wide_integer mask = hdl_integer::width_mask(static_cast<int64_t>(w)).to_wide();
                 emit_field(m.name, make_hdl(raw & mask), m.type);
             }
         }

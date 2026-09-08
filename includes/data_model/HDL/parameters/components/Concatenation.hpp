@@ -27,15 +27,22 @@ public:
     void add_component(const std::shared_ptr<Expression_base> &expr) {components.push_back(expr);}
     std::vector<std::shared_ptr<Expression_base>> get_components() const { return components; }
 
+    void add_component_key(const std::string &key) {component_keys.push_back(key);}
+    std::vector<std::string> get_component_keys() const { return component_keys; }
+    void clear_component_keys() {component_keys.clear();}
+
     Concatenation(const Concatenation &other);
     Concatenation(Concatenation &&other) noexcept;
 
     void set_default_init() {default_initialization = true;}
 
+    bool reorder_by_member_names(const std::vector<std::string> &member_names);
+
     Concatenation &operator=(const Concatenation &other) {
         if (this != &other) {
             default_initialization = other.default_initialization;
             components = other.components;
+            component_keys = other.component_keys;
         }
         return *this;
     }
@@ -44,6 +51,7 @@ public:
         if (this != &other) {
             default_initialization = other.default_initialization;
             components = std::move(other.components);
+            component_keys = std::move(other.component_keys);
         }
         return *this;
     }
@@ -58,6 +66,7 @@ public:
         auto ret = true;
         if(lhs.components.size() != rhs.components.size()) return false;
         ret &= lhs.default_initialization == rhs.default_initialization;
+        ret &= lhs.component_keys == rhs.component_keys;
         for(int i = 0; i < lhs.components.size(); i++) {
             ret &= *lhs.components[i] == *rhs.components[i];
         }
@@ -69,7 +78,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(components, default_initialization);
+        ar(components, default_initialization, component_keys);
     }
 
 private:
@@ -77,6 +86,7 @@ private:
     bool default_initialization = false;
 
     std::vector<std::shared_ptr<Expression_base>> components;
+    std::vector<std::string> component_keys;
 
     bool isEqual(const Expression_base& other) const override {
 
@@ -94,6 +104,7 @@ private:
 
         if(components.size() != rhs.components.size()) return false;
         ret &= default_initialization == rhs.default_initialization;
+        ret &= component_keys == rhs.component_keys;
 
         return ret;
     }

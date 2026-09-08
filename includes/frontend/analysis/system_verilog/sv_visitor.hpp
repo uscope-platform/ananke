@@ -106,6 +106,7 @@ public:
 
     void enterAssignment_pattern(sv2017::Assignment_patternContext *ctx) override;
     void exitAssignment_pattern(sv2017::Assignment_patternContext *ctx) override;
+    void enterStructure_pattern_key(sv2017::Structure_pattern_keyContext *ctx) override;
 
     void exitPrimaryBitSelect(sv2017::PrimaryBitSelectContext *ctx) override;
 

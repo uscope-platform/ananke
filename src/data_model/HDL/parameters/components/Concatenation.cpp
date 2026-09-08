@@ -15,6 +15,7 @@
 
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include <spdlog/spdlog.h>
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
@@ -88,11 +89,51 @@ Concatenation::Concatenation(const Concatenation &other) {
 
     components = other.components;
     default_initialization = other.default_initialization;
+    component_keys = other.component_keys;
+}
+
+bool Concatenation::reorder_by_member_names(const std::vector<std::string> &member_names) {
+    if (component_keys.empty() || default_initialization) return true;
+    if (component_keys.size() != components.size()) {
+        spdlog::warn("Struct literal mixes keyed and positional members; packing positionally");
+        return false;
+    }
+    if (component_keys.size() > member_names.size()) {
+        spdlog::warn("Struct literal has {} keyed members for {} struct members; packing positionally",
+                     component_keys.size(), member_names.size());
+        return false;
+    }
+    // Missing members default to zero (normal for partial keyed literals).
+    auto zero = std::make_shared<Numeric_token>("0");
+    std::vector<std::shared_ptr<Expression_base>> ordered(member_names.size(), zero);
+    std::vector<bool> placed(member_names.size(), false);
+    for (size_t i = 0; i < component_keys.size(); ++i) {
+        size_t pos = 0;
+        bool found = false;
+        for (; pos < member_names.size(); ++pos) {
+            if (member_names[pos] == component_keys[i]) { found = true; break; }
+        }
+        if (!found) {
+            spdlog::warn("Struct literal key '{}' is not a struct member; packing positionally",
+                         component_keys[i]);
+            return false;
+        }
+        if (placed[pos]) {
+            spdlog::warn("Struct literal key '{}' appears twice; packing positionally", component_keys[i]);
+            return false;
+        }
+        placed[pos] = true;
+        ordered[pos] = components[i];
+    }
+    components = std::move(ordered);
+    component_keys.clear();
+    return true;
 }
 
 Concatenation::Concatenation(Concatenation &&other) noexcept {
     components = other.components;
     default_initialization = other.default_initialization;
+    component_keys = std::move(other.component_keys);
 }
 
 parameter_deps_t Concatenation::get_dependencies() const{
@@ -237,6 +278,8 @@ std::string Concatenation::print()  const{
     std::ostringstream oss;
     oss << "{";
     for (int i = 0; i< components.size(); i++) {
+        if (!component_keys.empty() && i < (int)component_keys.size() && !component_keys[i].empty())
+            oss << component_keys[i] << ": ";
         oss << components[i]->print();
         if (components.size() == 1) break;
         if (i<components.size()-1) oss <<", ";

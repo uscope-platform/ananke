@@ -1355,6 +1355,13 @@ void sv_visitor::enterAssignment_pattern(sv2017::Assignment_patternContext *ctx)
     if (!ctx->replication_assignment()) params_factory.start_initialization_list();
 }
 
+void sv_visitor::enterStructure_pattern_key(sv2017::Structure_pattern_keyContext *ctx) {
+
+    if (ctx->identifier() && !ctx->assignment_pattern_key()) {
+        params_factory.record_literal_key(ctx->getText());
+    }
+}
+
 void sv_visitor::exitAssignment_pattern(sv2017::Assignment_patternContext *ctx) {
     bool default_assignment = false;
     if(!ctx->structure_pattern_key().empty()){

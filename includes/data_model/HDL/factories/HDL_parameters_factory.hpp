@@ -40,6 +40,7 @@ public:
 
     void start_initialization_list();
     void stop_initialization_list(bool default_assignment);
+    void record_literal_key(const std::string &key);
 
     void start_bit_selection();
     void stop_bit_selection();

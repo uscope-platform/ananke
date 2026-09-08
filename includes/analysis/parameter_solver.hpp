@@ -68,7 +68,8 @@ public:
         const std::map<std::string, hdl_function_statement> &imported_functions,
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types);
     static std::map<qualified_identifier, resolved_parameter> retrieve_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store);
-
+    static void remap_keyed_literals(const std::shared_ptr<Expression_base> &expr,
+                              const std::shared_ptr<hdl_type> &type);
     static std::map<qualified_identifier, resolved_parameter> solve_complex_overrides(
             work_order &work,
             const std::shared_ptr<data_store> &d_store,
