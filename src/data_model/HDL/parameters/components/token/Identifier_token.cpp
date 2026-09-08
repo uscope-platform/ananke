@@ -79,7 +79,7 @@ std::expected<resolved_parameter, solver_errors> Identifier_token::evaluate(
             return resolved_parameter("");
         } else if (resolved.is_integer() && !indices.empty()) {
             int64_t bit = indices[0];
-            if (bit < 0 || bit >= 1024) return static_cast<hdl_integer>(0);
+            if (bit < 0 || bit >= hdl_integer::MAX_BIT_WIDTH) return static_cast<hdl_integer>(0);
             auto shifted = resolved.get_integer() >> hdl_integer(bit);
             auto b = shifted & hdl_integer(1);
             return b;

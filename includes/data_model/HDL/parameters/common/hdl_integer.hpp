@@ -53,6 +53,13 @@ namespace cereal {
 class hdl_integer {
 
 public:
+    // Upper bound for shift amounts, masks, selects, and scans: wide enough
+    // for multi-tens-of-kb packed structs (CVA6 shapes), small enough that
+    // garbage amounts cannot hang the process allocating (2^24 bits = 2 MiB
+    // per value worst case). Old 1024 caps silently zeroed everything past
+    // bit 1023.
+    static constexpr int64_t MAX_BIT_WIDTH = int64_t{1} << 24;
+
     hdl_integer() = default;
 
     hdl_integer(const hdl_integer &other) = default;
@@ -78,20 +85,17 @@ public:
     void set_value(const wide_integer v);
     void set_signed(const bool s) {signedness = s;}
 
-    // Produce an all-ones mask of `width` bits
+    // Produce an all-ones mask of `width` bits. Exact for any width the
+    // shift operators support; beyond that, clamp rather than silently
+    // dropping high bits (a 1024 cap here zeroed the tops of wide structs).
     static hdl_integer width_mask(int64_t width) {
         if (width <= 0) return hdl_integer(0);
-        if (width >= 1024) {
-            hdl_integer m;
-            wide_integer all_ones = (wide_integer(1) << (1024 - 1)) | ((wide_integer(1) << (1024 - 1)) - 1);
-            m.set_value(all_ones);
-            return m;
-        }
+        if (width >= MAX_BIT_WIDTH) width = MAX_BIT_WIDTH;
         return (hdl_integer(1) << hdl_integer(width)) - 1;
     }
 
     // Truncate the value to `width` bits, preserving signedness. Width <= 0
-    // yields 0; width >= 1024 leaves the value unchanged.
+    // yields 0; widths up to MAX_BIT_WIDTH mask exactly.
     [[nodiscard]] hdl_integer truncate_to(int64_t width) const {
         hdl_integer result;
         wide_integer masked = to_wide() & width_mask(width).to_wide();
@@ -103,7 +107,7 @@ public:
     // Truncate to `width` bits and sign-extend from bit (width - 1).
     [[nodiscard]] hdl_integer sign_extend(int64_t width) const {
         if (width <= 0) return hdl_integer(0);
-        if (width >= 1024) return *this;
+        if (width >= MAX_BIT_WIDTH) return *this;
         wide_integer mask = width_mask(width).to_wide();
         wide_integer wide = to_wide() & mask;
         if ((wide & (wide_integer(1) << (width - 1))) != 0)
@@ -192,9 +196,9 @@ public:
 
     // Extend to a common comparison width: sign-extend when signed, zero-extend otherwise.
     static wide_integer extend_to_width(const hdl_integer &v, int64_t width) {
-        wide_integer mask = (width >= 1024) ? wide_integer(-1) : (wide_integer(1) << width) - 1;
+        wide_integer mask = (width >= MAX_BIT_WIDTH) ? wide_integer(-1) : width_mask(width).to_wide();
         wide_integer m = v.to_wide() & mask;
-        if (v.get_signed() && width > 0 && width < 1024) {
+        if (v.get_signed() && width > 0 && width < MAX_BIT_WIDTH) {
             wide_integer sign_bit = wide_integer(1) << (width - 1);
             if ((m & sign_bit) != 0) m |= ~mask;
         }
@@ -203,8 +207,8 @@ public:
 
     // Interpret a possibly sign-extended pattern as an unsigned width-bit value.
     static wide_integer as_unsigned_bits(const wide_integer &v, int64_t width) {
-        if (width >= 1024 || v >= 0) return v;
-        return v + (wide_integer(1) << width);
+        if (width >= MAX_BIT_WIDTH || v >= 0) return v;
+        return v + (width_mask(width).to_wide() + 1);
     }
 
     // Minimum bit width that can hold a signed value (magnitude bits + sign bit).

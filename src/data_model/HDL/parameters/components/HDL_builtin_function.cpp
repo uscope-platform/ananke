@@ -593,7 +593,7 @@ std::expected<resolved_parameter, solver_errors> HDL_builtin_function::evaluate(
         if (expr_type) expr_width = static_cast<int>(packed_width(*expr_type));
         else expr_width = std::max(1, static_cast<int>(resolved_arguments[0].get_integer().get_size()));
         int64_t count = 0;
-        for (int i = 0; i < expr_width && i < 1024; i++) {
+        for (int64_t i = 0; i < expr_width && i < hdl_integer::MAX_BIT_WIDTH; i++) {
             bool bit = ((value >> i) & 1) != 0;
             if (bit && count_ones) count++;
             if (!bit && count_zeros) count++;
