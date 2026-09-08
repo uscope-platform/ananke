@@ -1086,11 +1086,8 @@ void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
     std::shared_ptr<Expression_base> ec;
 
     auto scoped_ctx = ctx->package_or_class_scoped_path();
-    if (scoped_ctx && !scoped_ctx->DOUBLE_COLON().empty()) {
-        auto qi = sv_parsing_helpers::parse_qualified_identifier(scoped_ctx);
-        ec = std::make_shared<Identifier_token>(qi);
-    } else {
-        std::vector<std::string> dot_chain;
+    std::vector<std::string> dot_chain;
+    {
         auto node = ctx->parent;
         while (node) {
             if (auto dot = dynamic_cast<sv2017::PrimaryDotContext *>(node)) {
@@ -1100,6 +1097,25 @@ void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
                 break;
             }
         }
+    }
+    if (scoped_ctx && !scoped_ctx->DOUBLE_COLON().empty()) {
+        auto base = sv_parsing_helpers::parse_qualified_identifier(scoped_ctx);
+        if (dot_chain.empty()) {
+            ec = std::make_shared<Identifier_token>(base);
+        } else {
+            // Package-qualified dotted selection (pkg::S.F): keep the package
+            // prefix and hang the fields off the instance, mirroring the
+            // non-:: branch below. The :: branch previously dropped the
+            // fields, so pkg::S.F read as pkg::S.
+            std::vector<std::string> instance = {base.get_name()};
+            for (size_t i = 0; i + 1 < dot_chain.size(); ++i)
+                instance.push_back(dot_chain[i]);
+            qualified_identifier qi(dot_chain.back());
+            qi.set_package_prefix(base.get_package_prefix());
+            qi.set_instance_prefix(instance);
+            ec = std::make_shared<Identifier_token>(qi);
+        }
+    } else {
         if (dot_chain.empty()) {
             ec = sv_parsing_helpers::make_value(ctx->getText());
         } else if (scoped_ctx) {
