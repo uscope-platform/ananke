@@ -29,6 +29,7 @@
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 
 #include <set>
+#include <sstream>
 
 
 
@@ -325,9 +326,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
 
     for (auto &[p_name, param] : node_parameters) {
         for (const auto& dep : param->get_dependencies().data) {
+            std::string dbg_p = p_name;
             if (!dep.get_package_prefix().empty()) {
                 auto pkg_name = dep.get_package_prefix().back();
-                auto package = d_store->get_HDL_resource(pkg_name);
+                auto package = d_store->get_package_param_owner(pkg_name, dep);
                 if (!package.has_value()) continue;
 
                 // 1. FIRST: Scan sub-package dependencies recursively
@@ -405,7 +407,7 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
             auto &ext = param->get_type()->as<HDL_external_type>();
             auto pkg_name = ext.get_value().get_package_prefix()[0];
             auto type_name = ext.get_value().get_name();
-            auto res = d_store->get_HDL_resource(pkg_name);
+            auto res = d_store->get_package_typedef_owner(pkg_name, type_name);
             if (res.has_value()) {
                 auto type_def = res.value()->get_typedefs()[type_name];
                 if (type_def) {
@@ -417,7 +419,7 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
         auto deps = param->get_dependencies();
         for (const auto& type:deps.types) {
             if (!type.get_package_prefix().empty()) {
-                auto res = d_store->get_HDL_resource(type.get_package_prefix().back());
+                auto res = d_store->get_package_typedef_owner(type.get_package_prefix().back(), type.get_name());
                 if (!res.has_value()) {
                     spdlog::critical("Definition of package {} not found while propagating types",type.get_package_prefix().back());
                     return;
@@ -444,7 +446,8 @@ void resolve_function_return_type(const std::shared_ptr<hdl_function_statement> 
     if (!rt || !rt->is<HDL_external_type>()) return;
     auto &ext = rt->as<HDL_external_type>();
     if (ext.get_value().get_package_prefix().empty()) return;
-    auto res = d_store->get_HDL_resource(ext.get_value().get_package_prefix()[0]);
+    auto res = d_store->get_package_typedef_owner(ext.get_value().get_package_prefix()[0],
+                                                    ext.get_value().get_name());
     if (!res.has_value()) return;
     auto type_def = res.value()->get_typedefs()[ext.get_value().get_name()];
     if (type_def) def->set_return_type(type_def);
@@ -482,14 +485,19 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
                 attempted[name].insert(fcn);
                 if (!fcn.get_package_prefix().empty()) {
                     if (!d_store) continue;
-                    auto res = d_store->get_HDL_resource(fcn.get_package_prefix().back());
+                    const auto pkg = fcn.get_package_prefix().back();
+                    auto res = d_store->get_package_function_owner(pkg, fcn.get_name());
                     if (!res.has_value()) {
-                        spdlog::critical("Definition of package {} not found while propagating functions",fcn.get_package_prefix().back());
-                        return;
+                        if (!d_store->get_HDL_resource(pkg).has_value()) {
+                            spdlog::critical("Definition of package {} not found while propagating functions", pkg);
+                            return;
+                        }
+                        spdlog::critical("Function {}::{}, not found in the specified package", pkg, fcn.get_name());
+                        continue;
                     }
                     auto fcn_def = res.value()->get_function_shared(fcn.get_name());
                     if (!fcn_def) {
-                        spdlog::critical("Function {}::{}, not found in the specified package",fcn.get_package_prefix().back(), fcn.get_name());
+                        spdlog::critical("Function {}::{}, not found in the specified package", pkg, fcn.get_name());
                         continue;
                     }
                     resolve_function_return_type(find_function_def(res.value(), fcn.get_name()), d_store);

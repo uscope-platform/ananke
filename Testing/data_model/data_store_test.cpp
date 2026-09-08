@@ -22,6 +22,11 @@
 #include "data_model/HDL/types/HDL_union_type.hpp"
 #include "data_model/HDL/types/HDL_enum_type.hpp"
 #include "data_model/HDL/parameters/components/token/Type_ref.hpp"
+#include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/parameters/common/qualified_identifier.hpp"
+#include "data_model/HDL/statement/hdl_function_statement.hpp"
+#include <spdlog/sinks/ostream_sink.h>
+#include <sstream>
 
 
 TEST( data_store_test , evict_constr) {
@@ -422,6 +427,147 @@ TEST( data_store_test , duplicate_resource_deconfliction) {
     store->set_deconfliction({});
     picked = store->get_HDL_resource("dup");
     ASSERT_TRUE(picked.has_value());
+
+    delete store;
+}
+
+namespace {
+std::shared_ptr<hdl_resource_statement> make_package(const std::string &name) {
+    auto pkg = std::make_shared<hdl_resource_statement>();
+    pkg->set_name(name);
+    return pkg;
+}
+
+// Captures spdlog output for the duration of the guard's lifetime.
+struct log_capture {
+    std::ostringstream stream;
+    std::shared_ptr<spdlog::sinks::ostream_sink_mt> sink =
+        std::make_shared<spdlog::sinks::ostream_sink_mt>(stream);
+    log_capture() { spdlog::default_logger()->sinks().push_back(sink); }
+    ~log_capture() {
+        auto &sinks = spdlog::default_logger()->sinks();
+        sinks.erase(std::remove(sinks.begin(), sinks.end(), sink), sinks.end());
+    }
+    size_t count(const std::string &needle) const {
+        size_t n = 0, pos = 0;
+        const auto &s = stream.str();
+        while ((pos = s.find(needle, pos)) != std::string::npos) { ++n; pos += needle.size(); }
+        return n;
+    }
+};
+
+void store_package(data_store *store, const std::string &path,
+                   const std::shared_ptr<hdl_resource_statement> &pkg) {
+    hdl_file f;
+    f.set_content({pkg});
+    store->store_file({path, "hash", f});
+}
+}
+
+TEST( data_store_test , package_owner_unique_match) {
+    // Two same-named packages where only one declares each member kind: the
+    // owner lookups must return the declaring package by identity.
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto decoy = make_package("test_pkg");
+    auto real = make_package("test_pkg");
+
+    auto wanted_param = std::make_shared<HDL_parameter>("WANTED");
+    decoy->add_parameter(wanted_param);
+    auto other_param = std::make_shared<HDL_parameter>("OTHER");
+    real->add_parameter(other_param);
+
+    hdl_function_statement func;
+    func.set_name("buildit");
+    real->add_function(func);
+    real->add_typedef("wanted_t", std::make_shared<HDL_simple_type>());
+
+    store_package(store, "/path/decoy", decoy);
+    store_package(store, "/path/real", real);
+
+    auto param_owner = store->get_package_param_owner("test_pkg", qualified_identifier("WANTED"));
+    ASSERT_TRUE(param_owner.has_value());
+    EXPECT_EQ(param_owner.value(), decoy);
+
+    auto func_owner = store->get_package_function_owner("test_pkg", "buildit");
+    ASSERT_TRUE(func_owner.has_value());
+    EXPECT_EQ(func_owner.value(), real);
+
+    auto typedef_owner = store->get_package_typedef_owner("test_pkg", "wanted_t");
+    ASSERT_TRUE(typedef_owner.has_value());
+    EXPECT_EQ(typedef_owner.value(), real);
+
+    // Declared nowhere: falls back to the legacy pick so downstream
+    // missing-handling is unchanged.
+    auto no_owner = store->get_package_param_owner("test_pkg", qualified_identifier("MISSING"));
+    ASSERT_TRUE(no_owner.has_value());
+    EXPECT_EQ(no_owner.value()->getName(), "test_pkg");
+
+    delete store;
+}
+
+TEST( data_store_test , explicit_deconfliction_stays_silent) {
+    // A configured pick is asked for, so it must not warn — even across
+    // repeated lookups — while still resolving to the mapped file.
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto dup_a = std::make_shared<hdl_resource_statement>();
+    dup_a->set_name("dup");
+    dup_a->set_type(module);
+    auto dup_b = std::make_shared<hdl_resource_statement>();
+    dup_b->set_name("dup");
+    dup_b->set_type(module);
+    hdl_file fa;
+    fa.set_content({dup_a});
+    hdl_file fb;
+    fb.set_content({dup_b});
+    store->store_file({"/path/one", "hash_one", fa});
+    store->store_file({"/path/two", "hash_two", fb});
+    store->set_deconfliction({{"dup", "/path/two"}});
+
+    log_capture logs;
+    for (int i = 0; i < 3; ++i) {
+        auto picked = store->get_HDL_resource("dup");
+        ASSERT_TRUE(picked.has_value());
+        EXPECT_EQ(picked.value(), dup_b);
+    }
+    EXPECT_EQ(logs.count("Multiple resources"), 0);
+
+    delete store;
+}
+
+TEST( data_store_test , conflict_reported_despite_resolution) {
+    // A successfully disambiguated conflict must still surface once — and
+    // exactly once no matter how many lookups run.
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto decoy = make_package("test_pkg");
+    auto real = make_package("test_pkg");
+    real->add_parameter(std::make_shared<HDL_parameter>("WANTED"));
+    store_package(store, "/path/decoy", decoy);
+    store_package(store, "/path/real", real);
+
+    log_capture logs;
+    for (int i = 0; i < 3; ++i) {
+        auto owner = store->get_package_param_owner("test_pkg", qualified_identifier("WANTED"));
+        ASSERT_TRUE(owner.has_value());
+        EXPECT_EQ(owner.value(), real);
+    }
+    EXPECT_EQ(logs.count("Multiple resources named 'test_pkg'"), 1);
+
+    delete store;
+}
+
+TEST( data_store_test , package_owner_ambiguous_falls_back) {
+    // Declared in both: no unique owner, legacy pick (still resolves).
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto first = make_package("test_pkg");
+    auto second = make_package("test_pkg");
+    first->add_parameter(std::make_shared<HDL_parameter>("X"));
+    second->add_parameter(std::make_shared<HDL_parameter>("X"));
+    store_package(store, "/path/first", first);
+    store_package(store, "/path/second", second);
+
+    auto owner = store->get_package_param_owner("test_pkg", qualified_identifier("X"));
+    ASSERT_TRUE(owner.has_value());
+    EXPECT_EQ(owner.value()->getName(), "test_pkg");
 
     delete store;
 }

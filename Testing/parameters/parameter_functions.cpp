@@ -1410,12 +1410,54 @@ TEST(parameter_extraction, repro_struct_field_downstream_uses) {
     parameter_solver::propagate_functions(mod, d_store);
     auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
 
-    printf("XL=%s W=%s K=%s\n",
-        solved.contains(qualified_identifier("XL")) ?
-            std::to_string(solved.at(qualified_identifier("XL")).get_integer()).c_str() : "MISSING",
-        solved.contains(qualified_identifier("W")) ?
-            std::to_string(solved.at(qualified_identifier("W")).get_integer()).c_str() : "MISSING",
-        solved.contains(qualified_identifier("K")) ? "present" : "MISSING");
     EXPECT_EQ(solved.at(qualified_identifier("XL")).get_integer(), 32);
     EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer(), 1);
+}
+
+TEST(parameter_extraction, package_function_owner_disambiguates) {
+    // Two same-named packages where only one defines the called function:
+    // the call must link to the defining package regardless of store order.
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter integer RESULT = test_pkg::buildit()
+        )();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    auto decoy = std::make_shared<hdl_resource_statement>();
+    decoy->set_name("test_pkg");
+    auto other = std::make_shared<HDL_parameter>("OTHER");
+    other->set_type(Type_engine::create_primitive_type("integer"));
+    decoy->add_parameter(other);
+
+    auto real = std::make_shared<hdl_resource_statement>();
+    real->set_name("test_pkg");
+    hdl_function_statement func;
+    func.set_name("buildit");
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("buildit");
+    stmt->set_value(std::make_shared<Numeric_token>("42"));
+    func.add_statement(stmt);
+    real->add_function(func);
+
+    hdl_file fdecoy;
+    fdecoy.set_content({decoy});
+    hdl_file freal;
+    freal.set_content({real});
+    d_store->store_file({"/dev/decoy", "hash_decoy", fdecoy});
+    d_store->store_file({"/dev/real", "hash_real", freal});
+
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
+    parameter_solver::propagate_functions(mod, d_store);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), {});
+
+    qualified_identifier sid = qualified_identifier("RESULT");
+    ASSERT_TRUE(solved.contains(sid));
+    EXPECT_EQ(solved.at(sid).get_integer(), 42);
 }

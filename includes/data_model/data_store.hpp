@@ -16,6 +16,7 @@
 #ifndef ANANKE_DATA_STORE_HPP
 #define ANANKE_DATA_STORE_HPP
 
+#include <functional>
 #include <unordered_map>
 #include <filesystem>
 #include <utility>
@@ -68,6 +69,18 @@ public:
 
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name);
     std::vector<std::shared_ptr<hdl_resource_statement>> get_all_HDL_resources(const std::string& name);
+    // Owner lookups: among same-named packages, resolve to the one declaring
+    // the wanted member. Explicit deconfliction entries win; a unique owner
+    // wins over first-match; otherwise (nobody or several declare it) falls
+    // back to the legacy pick with its warnings, so downstream
+    // missing-handling is unchanged. Nullopt only when the package itself
+    // has no candidates at all.
+    std::optional<std::shared_ptr<hdl_resource_statement>> get_package_param_owner(
+        const std::string& pkg, const qualified_identifier& dep);
+    std::optional<std::shared_ptr<hdl_resource_statement>> get_package_typedef_owner(
+        const std::string& pkg, const std::string& type_name);
+    std::optional<std::shared_ptr<hdl_resource_statement>> get_package_function_owner(
+        const std::string& pkg, const std::string& func_name);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, const std::string &arch);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, std::string &path);
     std::optional<Script> get_script(std::string& name);
@@ -87,16 +100,22 @@ public:
     ~data_store();
 private:
     using resource_hit = std::pair<std::shared_ptr<hdl_resource_statement>, std::string>;
+    using resource_predicate = std::function<bool(const std::shared_ptr<hdl_resource_statement>&)>;
+    std::optional<std::shared_ptr<hdl_resource_statement>> pick_owned_resource(
+        const std::string &name, const std::string &member, const resource_predicate &declares);
     void clean_up_caches();
     void load_cache();
     void store_cache();
     std::vector<resource_hit> find_resources_by_name(const std::string &name, const std::string &arch,
                                                      bool match_arch);
     std::optional<resource_hit> pick_resource(const std::vector<resource_hit> &hits, const std::string &name);
+    void report_duplicates(const std::string &name, const std::vector<resource_hit> &hits,
+                           const std::string &picked_path);
 
 
     std::unordered_map<std::string, cached_item> cache;
     std::unordered_map<std::string, std::string> deconfliction;
+    std::set<std::string> reported_duplicates;
     bool ephemeral;
 
     std::string store_path;
