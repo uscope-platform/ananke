@@ -39,6 +39,7 @@ HDL_ast_builder_v2::HDL_ast_builder_v2(const std::shared_ptr<settings_store> &s,
     s_store = s;
     d_store = d;
     dep_file = d_f;
+    if (d_store) d_store->set_deconfliction(d_f.deconfliction);
 }
 
 std::vector<std::shared_ptr<hdl_ast_node>> HDL_ast_builder_v2::build_ast(const std::vector<std::string> &modules) {

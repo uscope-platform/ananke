@@ -58,12 +58,16 @@ public:
     data_store(bool e, std::string cache_dir_path);
     // NEW IF
     void store_file(const cached_item &file);
+    // Preferred source path per resource name, from the Depfile
+    // "deconfliction" section. Used to pick among duplicate resources.
+    void set_deconfliction(const std::unordered_map<std::string, std::string> &d) { deconfliction = d; }
     void evict_file(const std::string &file);
     template<typename T> std::optional<T> get_file(const std::string &name) const;
     [[nodiscard]] std::string get_hash(const std::string &name) const;
     bool contains(const std::string &name)const;
 
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name);
+    std::vector<std::shared_ptr<hdl_resource_statement>> get_all_HDL_resources(const std::string& name);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, const std::string &arch);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, std::string &path);
     std::optional<Script> get_script(std::string& name);
@@ -82,12 +86,17 @@ public:
     static std::string get_cache_schema_hash() { return ANANKE_CACHE_SCHEMA_HASH; }
     ~data_store();
 private:
+    using resource_hit = std::pair<std::shared_ptr<hdl_resource_statement>, std::string>;
     void clean_up_caches();
     void load_cache();
     void store_cache();
+    std::vector<resource_hit> find_resources_by_name(const std::string &name, const std::string &arch,
+                                                     bool match_arch);
+    std::optional<resource_hit> pick_resource(const std::vector<resource_hit> &hits, const std::string &name);
 
 
     std::unordered_map<std::string, cached_item> cache;
+    std::unordered_map<std::string, std::string> deconfliction;
     bool ephemeral;
 
     std::string store_path;

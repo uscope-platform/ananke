@@ -355,6 +355,77 @@ TEST( data_store_test , persistent_cache_schema_mismatch_discarded ) {
     std::filesystem::remove_all(dir);
 }
 
+TEST( data_store_test , duplicate_resource_name_lists_all) {
+    // Two files contributing a same-named resource: the enumerating lookup
+    // must surface both, while the single-pick lookup still resolves.
+    // (The single pick warns; log output is not asserted here.)
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto dup_a = std::make_shared<hdl_resource_statement>();
+    dup_a->set_name("dup");
+    dup_a->set_type(module);
+    auto dup_b = std::make_shared<hdl_resource_statement>();
+    dup_b->set_name("dup");
+    dup_b->set_type(module);
+    hdl_file fa;
+    fa.set_content({dup_a});
+    hdl_file fb;
+    fb.set_content({dup_b});
+    store->store_file({"/path/one", "hash_one", fa});
+    store->store_file({"/path/two", "hash_two", fb});
+
+    auto all = store->get_all_HDL_resources("dup");
+    ASSERT_EQ(all.size(), 2);
+
+    auto single = store->get_HDL_resource("dup");
+    ASSERT_TRUE(single.has_value());
+    EXPECT_EQ(single.value()->getName(), "dup");
+
+    auto missing = store->get_all_HDL_resources("nope");
+    EXPECT_TRUE(missing.empty());
+    EXPECT_FALSE(store->get_HDL_resource("nope").has_value());
+
+    delete store;
+}
+
+TEST( data_store_test , duplicate_resource_deconfliction) {
+    // With two same-named resources, the deconfliction map selects by
+    // source path; a stale entry falls back to first-match; no entry keeps
+    // the old first-match behavior.
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto dup_a = std::make_shared<hdl_resource_statement>();
+    dup_a->set_name("dup");
+    dup_a->set_type(module);
+    auto dup_b = std::make_shared<hdl_resource_statement>();
+    dup_b->set_name("dup");
+    dup_b->set_type(module);
+    hdl_file fa;
+    fa.set_content({dup_a});
+    hdl_file fb;
+    fb.set_content({dup_b});
+    store->store_file({"/path/one", "hash_one", fa});
+    store->store_file({"/path/two", "hash_two", fb});
+
+    store->set_deconfliction({{"dup", "/path/two"}});
+    auto picked = store->get_HDL_resource("dup");
+    ASSERT_TRUE(picked.has_value());
+    EXPECT_EQ(picked.value(), dup_b);
+
+    store->set_deconfliction({{"dup", "two"}});
+    picked = store->get_HDL_resource("dup");
+    ASSERT_TRUE(picked.has_value());
+    EXPECT_EQ(picked.value(), dup_b);
+
+    store->set_deconfliction({{"dup", "/nowhere/nothing.sv"}});
+    picked = store->get_HDL_resource("dup");
+    ASSERT_TRUE(picked.has_value());
+
+    store->set_deconfliction({});
+    picked = store->get_HDL_resource("dup");
+    ASSERT_TRUE(picked.has_value());
+
+    delete store;
+}
+
 TEST( data_store_test , store_cache_never_throws ) {
     // Point store_path at an existing regular file so directory creation fails;
     // the constructor and the destructor's store_cache must not throw.

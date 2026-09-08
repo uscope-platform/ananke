@@ -24,6 +24,55 @@
 CEREAL_FORCE_DYNAMIC_INIT(HDL_union_type)
 CEREAL_FORCE_DYNAMIC_INIT(Type_ref)
 
+// The store keys files by path, so several files can contribute same-named
+// resources; hits pair each candidate with its source path.
+std::vector<data_store::resource_hit> data_store::find_resources_by_name(
+    const std::string &name, const std::string &arch, bool match_arch) {
+    std::vector<resource_hit> hits;
+    for (auto &file: cache | std::views::values) {
+        if (!std::holds_alternative<hdl_file>(file.content)) continue;
+        for (auto &res: std::get<hdl_file>(file.content).get_content()) {
+            if (!res->is<hdl_resource_statement>()) continue;
+            auto &r = res->as<hdl_resource_statement>();
+            if (r.getName() != name) continue;
+            if (match_arch && r.get_architecture() != arch) continue;
+            if (!match_arch && !r.get_architecture().empty()) continue;
+            hits.emplace_back(std::static_pointer_cast<hdl_resource_statement>(res), file.path);
+        }
+    }
+    return hits;
+}
+
+// Single-pick policy shared by the get_HDL_resource overloads: unique hits
+// pass through silently, duplicates defer to the deconfliction map (stored
+// paths may be absolute while entries are relative, so match on equality or
+// suffix) and warn when nothing (or nothing matching) is configured.
+std::optional<data_store::resource_hit> data_store::pick_resource(
+    const std::vector<resource_hit> &hits, const std::string &name) {
+    if (hits.empty()) return std::nullopt;
+    if (hits.size() == 1) return hits.front();
+    if (auto it = deconfliction.find(name); it != deconfliction.end()) {
+        for (const auto &hit : hits) {
+            const auto &stored = hit.second, &wanted = it->second;
+            if (!stored.empty() && !wanted.empty() &&
+                (stored == wanted || stored.ends_with(wanted) || wanted.ends_with(stored))) {
+                spdlog::info("Deconflicted resource '{}' → {}", name, hit.second);
+                return hit;
+            }
+        }
+        spdlog::warn("Deconfliction entry for '{}' ('{}') matches no candidate; using {}",
+                     name, it->second, hits.front().second);
+        return hits.front();
+    }
+    std::string paths;
+    for (const auto &hit : hits) {
+        paths += "\n\t";
+        paths += hit.second.empty() ? "<unknown path>" : hit.second;
+    }
+    spdlog::warn("Multiple resources named '{}' found:{}\n\tusing {}", name, paths, hits.front().second);
+    return hits.front();
+}
+
 
 
 data_store::data_store(bool e, std::string cache_dir_path) {
@@ -43,43 +92,32 @@ data_store::data_store(bool e, std::string cache_dir_path) {
     clean_up_caches();
 }
 
+std::vector<std::shared_ptr<hdl_resource_statement>> data_store::get_all_HDL_resources(const std::string& name) {
+    auto hits = find_resources_by_name(name, "", false);
+    std::vector<std::shared_ptr<hdl_resource_statement>> out;
+    out.reserve(hits.size());
+    for (auto &[res, path] : hits) out.push_back(std::move(res));
+    return out;
+}
+
 std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_HDL_resource(const std::string& name) {
-    for (auto &file: cache | std::views::values) {
-        if (!std::holds_alternative<hdl_file>(file.content)) continue;
-        for (auto &res:std::get<hdl_file>(file.content).get_content()) {
-            if (!res->is<hdl_resource_statement>()) continue;
-            auto &r = res->as<hdl_resource_statement>();
-            if (r.getName() == name && r.get_architecture().empty()) return std::static_pointer_cast<hdl_resource_statement>(res);
-        }
-    }
+    if (auto picked = pick_resource(find_resources_by_name(name, "", false), name))
+        return picked->first;
     return std::nullopt;
 }
 
 std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_HDL_resource(const std::string &name,
     const std::string &arch) {
-    for (auto &file: cache | std::views::values) {
-        if (!std::holds_alternative<hdl_file>(file.content)) continue;
-        for (auto &res:std::get<hdl_file>(file.content).get_content()) {
-            if (!res->is<hdl_resource_statement>()) continue;
-            auto &r = res->as<hdl_resource_statement>();
-            if (r.getName() == name && r.get_architecture() == arch) return std::static_pointer_cast<hdl_resource_statement>(res);
-        }
-    }
+    if (auto picked = pick_resource(find_resources_by_name(name, arch, true), name))
+        return picked->first;
     return std::nullopt;
 }
 
 std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_HDL_resource(const std::string &name,
     std::string &path) {
-    for (auto &file: cache | std::views::values) {
-        if (!std::holds_alternative<hdl_file>(file.content)) continue;
-        for (auto &res:std::get<hdl_file>(file.content).get_content()) {
-            if (!res->is<hdl_resource_statement>()) continue;
-            auto &r = res->as<hdl_resource_statement>();
-            if (r.getName() == name && r.get_architecture().empty()) {
-                path = file.path;
-                return std::static_pointer_cast<hdl_resource_statement>(res);
-            }
-        }
+    if (auto picked = pick_resource(find_resources_by_name(name, "", false), name)) {
+        path = picked->second;
+        return picked->first;
     }
     return std::nullopt;
 }
