@@ -117,6 +117,14 @@ std::expected<resolved_parameter, solver_errors> Concatenation::evaluate(const s
     concat_expected_sizing cur;
     cur.child_sizing.resize(components.size());
     if (expected_type) cur = derive_concat_sizing(*expected_type, components.size());
+    // A struct literal with more or fewer components than the type has
+    // members silently scrambles (positional assembly) or drops data.
+    // `default:` fills the rest by design and is exempt.
+    if (!cur.fields_sizes.empty() && !default_initialization &&
+        cur.fields_sizes.size() != concat_size) {
+        spdlog::warn("Struct literal has {} components for {} members; packing positionally",
+                     concat_size, cur.fields_sizes.size());
+    }
     if (cur.packing) {
         std::vector<int64_t> sizes(concat_size);
         std::vector<hdl_integer> values(concat_size);
