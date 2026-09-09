@@ -29,32 +29,29 @@
 class parameter_deps_t;
 struct resolved_type;
 
-// Alias package-qualified values (`pkg::NAME`) under their bare names when
-// unambiguous: exactly one package provides the name and no bare entry
-// exists (ambient bare names — the current scope — always win). Lets
-// dimensions written in a typedef's own package scope (e.g.
-// `[NrMaxRules-1:0]`) resolve when the type is evaluated in a foreign
-// context. Ambiguous or absent names stay missing (clean failure, never a
-// guess). Instance-keyed (field-split) entries are never aliased. Pure.
-inline std::map<qualified_identifier, resolved_parameter> with_unambiguous_scope(
+
+inline std::optional<std::map<qualified_identifier, resolved_parameter>> overlay_unambiguous_scope(
     const std::map<qualified_identifier, resolved_parameter> &context) {
-    std::map<std::string, int> providers;
-    for (const auto &[key, val] : context) {
-        if (!key.get_package_prefix().empty() && key.get_instance().empty())
-            providers[key.get_name()]++;
-    }
-    bool need_overlay = false;
-    for (const auto &[name, count] : providers) {
-        if (count != 1 || context.contains(qualified_identifier(name))) continue;
-        need_overlay = true;
-        break;
-    }
-    if (!need_overlay) return context;
-    auto scoped = context;
-    for (const auto &[key, val] : context) {
+    std::map<std::string, unsigned> providers;
+    for (const auto &entry : context) {
+        const auto &key = entry.first;
         if (key.get_package_prefix().empty() || !key.get_instance().empty()) continue;
-        if (providers[key.get_name()] == 1) scoped[qualified_identifier(key.get_name())] = val;
+        auto &count = providers[key.get_name()];
+        if (count < 2) ++count;
     }
+    std::map<qualified_identifier, resolved_parameter> additions;
+    for (const auto &entry : context) {
+        const auto &key = entry.first;
+        if (key.get_package_prefix().empty() || !key.get_instance().empty()) continue;
+        auto prov = providers.find(key.get_name());
+        if (prov == providers.end() || prov->second != 1) continue;
+        qualified_identifier bare(key.get_name());
+        if (context.contains(bare)) continue;
+        additions.emplace(bare, entry.second);
+    }
+    if (additions.empty()) return std::nullopt;
+    auto scoped = context;
+    scoped.merge(additions);
     return scoped;
 }
 

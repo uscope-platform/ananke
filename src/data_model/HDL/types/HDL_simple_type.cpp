@@ -55,9 +55,27 @@ parameter_deps_t HDL_simple_type::get_dependencies() {
 }
 
 std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) {
+    // Skip the scope overlay entirely when no dimension bound references a
+    // bare identifier: any added bare keys would go unread, so the overlay
+    // is provably the identity here (see hdl_type).
+    auto dim_needs_scope = [](const auto &dims) {
+        for (const auto &dim : dims) {
+            for (const auto *bound : {dim.first_bound.get(), dim.second_bound.get()}) {
+                if (!bound) continue;
+                for (const auto &dep : bound->get_dependencies().data) {
+                    if (dep.get_package_prefix().empty() && dep.get_instance().empty()) return true;
+                }
+            }
+        }
+        return false;
+    };
     // Dimensions live in the typedef's own package scope: unambiguous
     // package-qualified values resolve as bare here (see hdl_type).
-    const auto eval_ctx = with_unambiguous_scope(context);
+    const bool needs_scope =
+        dim_needs_scope(unpacked_dimensions) || dim_needs_scope(packed_dimensions);
+    const auto overlaid =
+        needs_scope ? overlay_unambiguous_scope(context) : std::nullopt;
+    const auto &eval_ctx = overlaid ? *overlaid : context;
     resolved_type result;
     result.is_real = is_real;
     auto span_size = [](const hdl_integer &f_b, const hdl_integer &s_b) -> hdl_integer {
