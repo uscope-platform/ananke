@@ -1772,6 +1772,9 @@ TEST(parameter_extraction, cast_scalar_target_widths) {
             localparam integer G = int'(-1);
             localparam integer H = integer'(70000);
             localparam integer I = integer'(1099511627776);
+            localparam integer J = bit'(0);
+            localparam integer K = bit'(1);
+            localparam integer L = bit'(5);
         endpackage
     )";
     sv_analyzer analyzer;
@@ -1790,6 +1793,50 @@ TEST(parameter_extraction, cast_scalar_target_widths) {
     EXPECT_EQ(solved.at(qualified_identifier("G")).get_integer().get_value(), -1);
     EXPECT_EQ(solved.at(qualified_identifier("H")).get_integer().get_value(), 70000);
     EXPECT_EQ(solved.at(qualified_identifier("I")).get_integer().get_value(), 0);
+    EXPECT_EQ(solved.at(qualified_identifier("J")).get_integer().get_value(), 0);
+    EXPECT_EQ(solved.at(qualified_identifier("K")).get_integer().get_value(), 1);
+    EXPECT_EQ(solved.at(qualified_identifier("L")).get_integer().get_value(), 1);
+}
+
+TEST(parameter_extraction, function_struct_bit_cast_width) {
+    // A bit' cast in a function body sizes to 1 bit, not to the call's
+    // container: previously it inherited the whole struct width and blew up
+    // the return pack (R.XLEN-style top members read back as 0).
+    auto test_pattern = R"(
+        package p;
+            typedef struct packed {
+                logic [31:0] X;
+                bit F;
+            } s_t;
+            function s_t mk(bit b);
+                s_t r;
+                r.X = 32'd64;
+                r.F = bit'(b);
+                return r;
+            endfunction
+        endpackage
+        module test_mod #(
+            parameter p::s_t R = p::mk(1'b1)
+        )();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    auto resources = file.get_content();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    parameter_solver::propagate_types(mod, d_store);
+    parameter_solver::propagate_functions(mod, d_store);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), {});
+    auto field = [&](const std::string &name) {
+        qualified_identifier qid(name);
+        qid.set_instance_prefix({"R"});
+        return solved.at(qid).get_integer().get_value();
+    };
+    EXPECT_EQ(field("X"), 64);
+    EXPECT_EQ(field("F"), 1);
+    EXPECT_EQ(solved.at(qualified_identifier("R")).get_integer().to_wide().str(), "129");
 }
 
 TEST(parameter_extraction, package_function_owner_disambiguates) {

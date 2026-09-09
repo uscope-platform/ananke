@@ -101,6 +101,28 @@ std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<q
             spdlog::warn("Casting of non scalar numeric values is not supported");
             return std::unexpected{wrong_type};
         }
+        // Fixed-width scalar targets size from the target, never from the
+        // incoming container: bit is 1 bit; byte/shortint/longint are 8/16/64
+        // bit signed (LRM 6.24). Without this they fell into the struct/enum
+        // branch below and inherited the container width (e.g. a whole
+        // struct's packed width inside function bodies).
+        if (target_type == "bit" || target_type == "byte" ||
+            target_type == "shortint" || target_type == "longint") {
+            if (!content_val.value().is_integer()) {
+                spdlog::warn("Casting of non scalar integer values is not supported");
+                return std::unexpected{wrong_type};
+            }
+            if (target_type == "bit") {
+                return type_cast_engine::to_unsigned(content_val.value().get_integer(), 1);
+            }
+            if (target_type == "byte") {
+                return type_cast_engine::to_signed(content_val.value().get_integer(), 8);
+            }
+            if (target_type == "shortint") {
+                return type_cast_engine::to_signed(content_val.value().get_integer(), 16);
+            }
+            return type_cast_engine::to_signed(content_val.value().get_integer(), 64);
+        }
 
         // --- NEW: User-Defined / Complex Packed Types (Structs, Enums, Unions) ---
         if (content_val.value().is_integer()) {
