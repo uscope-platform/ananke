@@ -1759,6 +1759,39 @@ TEST(parameter_extraction, ternary_unsized_cast_branches) {
     EXPECT_EQ(solved.at(qualified_identifier("W1")).get_integer(), 1);
 }
 
+TEST(parameter_extraction, cast_scalar_target_widths) {
+
+    auto test_pattern = R"(
+        package p;
+            localparam integer A = shortint'(-5);
+            localparam integer B = shortint'(70000);
+            localparam longint C = longint'(1099511627776);
+            localparam integer D = longint'(-1);
+            localparam integer E = byte'(200);
+            localparam integer F = byte'(-1);
+            localparam integer G = int'(-1);
+            localparam integer H = integer'(70000);
+            localparam integer I = integer'(1099511627776);
+        endpackage
+    )";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    auto resources = file.get_content();
+    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto solved = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    // NOTE: compared in the int64 domain (get_value): hdl_integer operator==
+    // is width-relative and would alias e.g. 200 and -56 at 8 bits.
+    EXPECT_EQ(solved.at(qualified_identifier("A")).get_integer().get_value(), -5);
+    EXPECT_EQ(solved.at(qualified_identifier("B")).get_integer().get_value(), 4464);
+    EXPECT_EQ(solved.at(qualified_identifier("C")).get_integer().get_value(), 1099511627776LL);
+    EXPECT_EQ(solved.at(qualified_identifier("D")).get_integer().get_value(), -1);
+    EXPECT_EQ(solved.at(qualified_identifier("E")).get_integer().get_value(), -56);
+    EXPECT_EQ(solved.at(qualified_identifier("F")).get_integer().get_value(), -1);
+    EXPECT_EQ(solved.at(qualified_identifier("G")).get_integer().get_value(), -1);
+    EXPECT_EQ(solved.at(qualified_identifier("H")).get_integer().get_value(), 70000);
+    EXPECT_EQ(solved.at(qualified_identifier("I")).get_integer().get_value(), 0);
+}
+
 TEST(parameter_extraction, package_function_owner_disambiguates) {
     // Two same-named packages where only one defines the called function:
     // the call must link to the defining package regardless of store order.
