@@ -55,6 +55,9 @@ parameter_deps_t HDL_simple_type::get_dependencies() {
 }
 
 std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) {
+    // Dimensions live in the typedef's own package scope: unambiguous
+    // package-qualified values resolve as bare here (see hdl_type).
+    const auto eval_ctx = with_unambiguous_scope(context);
     resolved_type result;
     result.is_real = is_real;
     auto span_size = [](const hdl_integer &f_b, const hdl_integer &s_b) -> hdl_integer {
@@ -68,8 +71,8 @@ std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<quali
         return diff;
     };
     for (auto &dim: unpacked_dimensions) {
-        auto f_b = dim.first_bound->evaluate(context);
-        auto s_b = dim.second_bound->evaluate(context);
+        auto f_b = dim.first_bound->evaluate(eval_ctx);
+        auto s_b = dim.second_bound->evaluate(eval_ctx);
         if (!(f_b.has_value() && s_b.has_value()) || !f_b.value().is_integer() || !s_b.value().is_integer()) return std::nullopt;
         auto diff = span_size(f_b.value().get_integer(), s_b.value().get_integer());
         result.unpacked_sizes.push_back(diff.get_value());
@@ -78,8 +81,8 @@ std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<quali
         result.unpacked_right.push_back(s_b.value().get_integer().get_value());
     }
     for (auto &dim: packed_dimensions) {
-        auto f_b = dim.first_bound->evaluate(context);
-        auto s_b = dim.second_bound->evaluate(context);
+        auto f_b = dim.first_bound->evaluate(eval_ctx);
+        auto s_b = dim.second_bound->evaluate(eval_ctx);
         if (!(f_b.has_value() && s_b.has_value()) || !f_b.value().is_integer() || !s_b.value().is_integer()) return std::nullopt;
         auto diff = span_size(f_b.value().get_integer(), s_b.value().get_integer());
         result.packed_sizes.push_back(diff.get_value());

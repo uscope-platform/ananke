@@ -500,10 +500,6 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
                 auto type_def = res.value()->get_typedefs()[type_name];
                 if (type_def) {
                     param->set_type(type_def);
-                    // Dimensions inside the typedef live in the defining
-                    // package's scope; stamp it so foreign-context type
-                    // evaluation can overlay that scope (idempotent).
-                    type_def->set_defining_package(pkg_name);
                 }
             }
         }
@@ -518,7 +514,6 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
                 }
                 auto type_def = res.value()->get_typedefs()[type.get_name()];
                 param->set_type(type_def);
-                if (type_def) type_def->set_defining_package(type.get_package_prefix().back());
             }
         }
     }
@@ -547,10 +542,7 @@ void resolve_function_return_type(const std::shared_ptr<hdl_function_statement> 
                                                     ext.get_value().get_name());
     if (!res.has_value()) return;
     auto type_def = res.value()->get_typedefs()[ext.get_value().get_name()];
-    if (type_def) {
-        def->set_return_type(type_def);
-        type_def->set_defining_package(ext.get_value().get_package_prefix()[0]);
-    }
+    if (type_def) def->set_return_type(type_def);
 }
 
 

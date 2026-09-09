@@ -17,15 +17,46 @@
 #ifndef ANANKE_HDL_TYPE_BASE_HPP
 #define ANANKE_HDL_TYPE_BASE_HPP
 
+#include <map>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "data_model/HDL/types/resolved_type.hpp"
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"
+#include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 
-class qualified_identifier;
 class parameter_deps_t;
 struct resolved_type;
+
+// Alias package-qualified values (`pkg::NAME`) under their bare names when
+// unambiguous: exactly one package provides the name and no bare entry
+// exists (ambient bare names — the current scope — always win). Lets
+// dimensions written in a typedef's own package scope (e.g.
+// `[NrMaxRules-1:0]`) resolve when the type is evaluated in a foreign
+// context. Ambiguous or absent names stay missing (clean failure, never a
+// guess). Instance-keyed (field-split) entries are never aliased. Pure.
+inline std::map<qualified_identifier, resolved_parameter> with_unambiguous_scope(
+    const std::map<qualified_identifier, resolved_parameter> &context) {
+    std::map<std::string, int> providers;
+    for (const auto &[key, val] : context) {
+        if (!key.get_package_prefix().empty() && key.get_instance().empty())
+            providers[key.get_name()]++;
+    }
+    bool need_overlay = false;
+    for (const auto &[name, count] : providers) {
+        if (count != 1 || context.contains(qualified_identifier(name))) continue;
+        need_overlay = true;
+        break;
+    }
+    if (!need_overlay) return context;
+    auto scoped = context;
+    for (const auto &[key, val] : context) {
+        if (key.get_package_prefix().empty() || !key.get_instance().empty()) continue;
+        if (providers[key.get_name()] == 1) scoped[qualified_identifier(key.get_name())] = val;
+    }
+    return scoped;
+}
 
 class hdl_type {
 public:
