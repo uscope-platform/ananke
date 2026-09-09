@@ -1672,6 +1672,54 @@ TEST(parameter_extraction, cast_in_binary_inside_literal) {
     EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer(), (4LL << 32) | 5);
 }
 
+TEST(parameter_extraction, keyed_struct_literal_member_order) {
+    // Keyed struct literals assemble by member name, not source position:
+    // scrambled key order packs into member order, and unmentioned members
+    // default to zero (partial literals).
+    auto test_pattern = R"(
+        package config_pkg;
+            typedef struct packed {
+                logic [31:0] A;
+                logic [31:0] B;
+                logic [31:0] C;
+            } trio_t;
+        endpackage
+        package user_pkg;
+            localparam config_pkg::trio_t T = '{
+                C: 32'd3,
+                A: 32'd1,
+                B: 32'd2
+            };
+            localparam config_pkg::trio_t P = '{
+                B: 32'd20
+            };
+        endpackage
+        module test_mod #(
+        )();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    auto resources = file.get_content();
+    auto pkg = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    parameter_solver::propagate_types(pkg, d_store);
+    auto solved = parameter_solver::process_parameters(pkg->get_parameters(), {});
+    auto field = [&](const std::string &root, const std::string &name) {
+        qualified_identifier qid(name);
+        qid.set_instance_prefix({root});
+        return solved.at(qid).get_integer().get_value();
+    };
+    EXPECT_EQ(field("T", "A"), 1);
+    EXPECT_EQ(field("T", "B"), 2);
+    EXPECT_EQ(field("T", "C"), 3);
+    EXPECT_EQ(solved.at(qualified_identifier("T")).get_integer().to_wide().str(), "18446744082299486211");
+    EXPECT_EQ(field("P", "A"), 0);
+    EXPECT_EQ(field("P", "B"), 20);
+    EXPECT_EQ(field("P", "C"), 0);
+}
+
 TEST(parameter_extraction, package_function_owner_disambiguates) {
     // Two same-named packages where only one defines the called function:
     // the call must link to the defining package regardless of store order.
