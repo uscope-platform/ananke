@@ -53,7 +53,11 @@ std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<q
     if (type_cast) {
         // The container width comes from the incoming expected type (an
         // empty-but-present type still proceeds, defaulting to 64 below).
-        if (!expected_type) return std::unexpected{missing_value};
+        if (!expected_type) {
+            spdlog::warn("Unsized '{}' cast has no container type to size against (content '{}'); treating as missing",
+                         target_type, content ? content->print() : "<null>");
+            return std::unexpected{missing_value};
+        }
         auto content_val = content->evaluate(context, expected_type);
         if (!content_val.has_value()) return std::unexpected{missing_value};
         uint64_t container = 64;

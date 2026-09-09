@@ -1720,6 +1720,45 @@ TEST(parameter_extraction, keyed_struct_literal_member_order) {
     EXPECT_EQ(field("P", "C"), 0);
 }
 
+TEST(parameter_extraction, ternary_unsized_cast_branches) {
+    // Ternary branches inherit the container type so nested unsized casts
+    // (unsigned'/bit') size as at top level instead of going missing.
+    auto test_pattern = R"(
+        package p;
+            function integer pick(bit sel);
+                integer r;
+                r = sel ? unsigned'(2) : unsigned'(1);
+                return r;
+            endfunction
+            function bit pickb(bit sel);
+                bit r;
+                r = sel ? bit'(1) : bit'(0);
+                return r;
+            endfunction
+        endpackage
+        module test_mod #(
+            parameter integer V0 = p::pick(1'b0),
+            parameter integer V1 = p::pick(1'b1),
+            parameter bit W0 = p::pickb(1'b0),
+            parameter bit W1 = p::pickb(1'b1)
+        )();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    auto resources = file.get_content();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    parameter_solver::propagate_types(mod, d_store);
+    parameter_solver::propagate_functions(mod, d_store);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), {});
+    EXPECT_EQ(solved.at(qualified_identifier("V0")).get_integer(), 1);
+    EXPECT_EQ(solved.at(qualified_identifier("V1")).get_integer(), 2);
+    EXPECT_EQ(solved.at(qualified_identifier("W0")).get_integer(), 0);
+    EXPECT_EQ(solved.at(qualified_identifier("W1")).get_integer(), 1);
+}
+
 TEST(parameter_extraction, package_function_owner_disambiguates) {
     // Two same-named packages where only one defines the called function:
     // the call must link to the defining package regardless of store order.

@@ -38,7 +38,7 @@ parameter_deps_t Ternary::get_dependencies() const {
     return ret_val;
 }
 
-std::expected<resolved_parameter, solver_errors> Ternary::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) {
+std::expected<resolved_parameter, solver_errors> Ternary::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
     auto condition_value = condition->evaluate(context);
     if (!condition_value.has_value()) return std::unexpected{missing_value};
     bool cond_true;
@@ -51,9 +51,9 @@ std::expected<resolved_parameter, solver_errors> Ternary::evaluate(const std::ma
         return std::unexpected{unsupported};
     }
     if (!cond_true) {
-        return false_value->evaluate(context);
+        return false_value->evaluate(context, expected_type);
     } else {
-        return true_value->evaluate(context);
+        return true_value->evaluate(context, expected_type);
     }
 }
 
