@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 #include <filesystem>
+#include <sstream>
 #include <thread>
 
 #include "data_model/mm_file.hpp"
@@ -26,7 +27,29 @@
 #include "analysis/passes/pass_manager.hpp"
 #include "Backend/Dependency_resolver.hpp"
 
+#include <spdlog/sinks/ostream_sink.h>
+
 #include "test_paths.hpp"
+
+namespace {
+// Captures spdlog output for the duration of the guard's lifetime.
+struct log_capture {
+    std::ostringstream stream;
+    std::shared_ptr<spdlog::sinks::ostream_sink_mt> sink =
+        std::make_shared<spdlog::sinks::ostream_sink_mt>(stream);
+    log_capture() { spdlog::default_logger()->sinks().push_back(sink); }
+    ~log_capture() {
+        auto &sinks = spdlog::default_logger()->sinks();
+        sinks.erase(std::remove(sinks.begin(), sinks.end(), sink), sinks.end());
+    }
+    size_t count(const std::string &needle) const {
+        size_t n = 0, pos = 0;
+        const auto &s = stream.str();
+        while ((pos = s.find(needle, pos)) != std::string::npos) { ++n; pos += needle.size(); }
+        return n;
+    }
+};
+}
 
 TEST( hdl_ast_builder, pid_ast_build) {
 
@@ -951,4 +974,49 @@ endmodule
     // popcount(4) -> {popcount(2), popcount(2)}; the non-selected recursive
     // branches of the width-2 leaves add 4 inactive terminal popcounts.
     ASSERT_EQ(popcounts, 7);
+}
+
+TEST(hdl_ast_builder, package_localparam_in_struct_type) {
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    auto source = R"(
+package config_pkg;
+    localparam test_param = 16;
+    typedef struct packed {
+        logic [test_param-1:0] field;
+    } cfg_t;
+endpackage
+
+module child #(parameter config_pkg::cfg_t Cfg) ();
+endmodule
+
+module top #(parameter config_pkg::cfg_t Cfg = 1000) ();
+    child #(.Cfg(Cfg)) i_child();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", source);
+    ASSERT_TRUE(resources.has_value());
+    d_store->store_file({"/tmp/repro.sv", "h", resources.value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    log_capture logs;
+    auto ast = b.build_ast(std::vector<std::string>{"top"})[0];
+    EXPECT_EQ(logs.count("is not defined in the design"), 0u);
+    EXPECT_EQ(logs.count("test_param is undefined"), 0u);
+    ASSERT_EQ(ast->get_dependencies().size(), 1u);
+    auto child = ast->get_dependencies()[0];
+    ASSERT_EQ(child->get_name(), "i_child");
+
+
+    auto top_cfg = ast->get_parameters().get("Cfg")->get_numeric_value();
+    ASSERT_TRUE(top_cfg.has_value());
+    EXPECT_EQ(top_cfg->get_value(), 1000);
+
+    auto child_cfg = child->get_parameters().get("Cfg")->get_numeric_value();
+    ASSERT_TRUE(child_cfg.has_value());
+    EXPECT_EQ(child_cfg->get_value(), 1000);
 }
