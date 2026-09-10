@@ -74,6 +74,7 @@ public:
     void enterParameter_declaration(sv2017::Parameter_declarationContext *ctx) override;
     void exitParameter_declaration(sv2017::Parameter_declarationContext *ctx) override;
     void enterParameter_port_declaration(sv2017::Parameter_port_declarationContext *ctx) override;
+    void exitParameter_port_declaration(sv2017::Parameter_port_declarationContext *ctx) override;
     void enterParameter_override(sv2017::Parameter_overrideContext *ctx) override;
     void exitParameter_override(sv2017::Parameter_overrideContext *ctx) override;
     void enterParam_assignment(sv2017::Param_assignmentContext *ctx) override;
@@ -278,6 +279,14 @@ private:
 
     bool in_anonymous_struct = false;
     bool top_level_struct_started = false;
+    // Inline composite default of a type assignment, e.g.
+    // `localparam type T = struct packed {...};`. The struct members arrive
+    // as later visitor events, so the composite is opened on entry and the
+    // finished type is patched onto the stashed parameter on exit.
+    std::shared_ptr<HDL_parameter> pending_composite_type_param;
+    void finalize_pending_composite_type_param();
+    void maybe_open_composite_type_default(sv2017::Data_typeContext *dt, bool single,
+                                           const std::shared_ptr<HDL_parameter> &p);
     bool in_streaming_slice = false;
     bool in_type_argument = false;
     std::shared_ptr<hdl_type> pending_anon_struct_type;

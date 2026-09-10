@@ -244,6 +244,37 @@ std::shared_ptr<hdl_type> sv_visitor::resolve_data_type(sv2017::Data_typeContext
     return std::make_shared<HDL_simple_type>();
 }
 
+void sv_visitor::maybe_open_composite_type_default(sv2017::Data_typeContext *dt, bool single,
+                                                   const std::shared_ptr<HDL_parameter> &p) {
+    // Inline composite defaults (`parameter/localparam type T = struct packed
+    // {...}`) bypass resolve_data_type, which only handles primitives and
+    // named references. Open the composite here so the member events that
+    // follow populate it; the finished type is patched onto p at the matching
+    // declaration exit. Multi-assignment declarations keep the old behavior.
+    if (!single || pending_composite_type_param || !dt || !p) return;
+    if (dt->struct_union()) {
+        if (dt->struct_union()->KW_STRUCT())
+            type_engine.start_composite_type_declaration(Type_engine::struct_type);
+        else
+            type_engine.start_composite_type_declaration(Type_engine::union_type);
+    } else if (dt->KW_ENUM()) {
+        type_engine.start_composite_type_declaration(Type_engine::enum_type);
+    } else {
+        return;
+    }
+    top_level_struct_started = true;
+    pending_composite_type_param = p;
+}
+
+void sv_visitor::finalize_pending_composite_type_param() {
+    if (!pending_composite_type_param) return;
+    if (type_engine.active()) {
+        if (auto t = type_engine.stop_composite_type_declaration("", true))
+            pending_composite_type_param->set_type(t);
+    }
+    pending_composite_type_param.reset();
+}
+
 std::shared_ptr<Expression_base> sv_visitor::build_data_type_expression(sv2017::Data_typeContext *dt) {
     auto base = resolve_data_type(dt);
     if (!base) {
@@ -765,11 +796,22 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
 void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
     if (ctx->list_of_type_assignments()) {
         in_param_declaration = true;
-        for (auto *ta : ctx->list_of_type_assignments()->type_assignment()) {
+        auto tas = ctx->list_of_type_assignments()->type_assignment();
+        for (auto *ta : tas) {
             std::string name = ta->identifier()->getText();
             auto p = std::make_shared<HDL_parameter>(name);
             p->is_type_param = true;
             if (auto *dt = ta->data_type()) {
+                if (dt->struct_union() || dt->KW_ENUM()) {
+                    maybe_open_composite_type_default(dt, tas.size() == 1, p);
+                    if (pending_composite_type_param == p) {
+                        if (modules_factory.is_current_valid())
+                            modules_factory.add_parameter(p);
+                        else if (interfaces_factory.is_current_valid())
+                            interfaces_factory.add_parameter(p);
+                        continue;
+                    }
+                }
                 auto resolved = resolve_data_type(dt);
                 if (resolved)
                     p->set_type(resolved);
@@ -806,17 +848,30 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
 }
 
 void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
+    (void)ctx;
+    finalize_pending_composite_type_param();
     params_factory.set_type(std::make_shared<HDL_simple_type>() );
     in_param_declaration = false;
 }
 
 void sv_visitor::enterParameter_port_declaration(sv2017::Parameter_port_declarationContext *ctx) {
     if (ctx->KW_TYPE()) {
-        for (auto *ta : ctx->list_of_type_assignments()->type_assignment()) {
+        auto tas = ctx->list_of_type_assignments()->type_assignment();
+        for (auto *ta : tas) {
             std::string name = ta->identifier()->getText();
             auto p = std::make_shared<HDL_parameter>(name);
             p->is_type_param = true;
             if (auto *dt = ta->data_type()) {
+                if (dt->struct_union() || dt->KW_ENUM()) {
+                    maybe_open_composite_type_default(dt, tas.size() == 1, p);
+                    if (pending_composite_type_param == p) {
+                        if (modules_factory.is_current_valid())
+                            modules_factory.add_parameter(p);
+                        else if (interfaces_factory.is_current_valid())
+                            interfaces_factory.add_parameter(p);
+                        continue;
+                    }
+                }
                 auto resolved = resolve_data_type(dt);
                 if (resolved)
                     p->set_type(resolved);
@@ -840,6 +895,11 @@ void sv_visitor::enterParameter_port_declaration(sv2017::Parameter_port_declarat
                 type_engine.add_type_param(name, p->get_type());
         }
     }
+}
+
+void sv_visitor::exitParameter_port_declaration(sv2017::Parameter_port_declarationContext *ctx) {
+    (void)ctx;
+    finalize_pending_composite_type_param();
 }
 
 void sv_visitor::enterParameter_override(sv2017::Parameter_overrideContext *ctx) {
@@ -1643,11 +1703,22 @@ void sv_visitor::exitData_type_or_implicit(sv2017::Data_type_or_implicitContext 
 void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
     if (ctx->list_of_type_assignments()) {
         in_param_declaration = true;
-        for (auto *ta : ctx->list_of_type_assignments()->type_assignment()) {
+        auto tas = ctx->list_of_type_assignments()->type_assignment();
+        for (auto *ta : tas) {
             std::string name = ta->identifier()->getText();
             auto p = std::make_shared<HDL_parameter>(name);
             p->is_type_param = true;
             if (auto *dt = ta->data_type()) {
+                if (dt->struct_union() || dt->KW_ENUM()) {
+                    maybe_open_composite_type_default(dt, tas.size() == 1, p);
+                    if (pending_composite_type_param == p) {
+                        if (modules_factory.is_current_valid())
+                            modules_factory.add_parameter(p);
+                        else if (interfaces_factory.is_current_valid())
+                            interfaces_factory.add_parameter(p);
+                        continue;
+                    }
+                }
                 auto resolved = resolve_data_type(dt);
                 if (resolved)
                     p->set_type(resolved);
@@ -1679,6 +1750,8 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
 }
 
 void sv_visitor::exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
+    (void)ctx;
+    finalize_pending_composite_type_param();
     params_factory.set_type(std::make_shared<HDL_simple_type>() );
     in_param_declaration = false;
 }

@@ -1020,3 +1020,44 @@ endmodule
     ASSERT_TRUE(child_cfg.has_value());
     EXPECT_EQ(child_cfg->get_value(), 1000);
 }
+
+TEST(hdl_ast_builder, bits_of_overridden_local_struct_type) {
+    // Mirrors frontend/btb.sv: child computes $bits(T) where T is a type
+    // parameter overridden with the parent's *local* struct type.
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    auto source = R"(
+module btb #(
+    parameter type btb_prediction_t = logic,
+    parameter int unsigned BRAM_WORD_BITS = $bits(btb_prediction_t)
+) ();
+endmodule
+
+module frontend ();
+    localparam type btb_prediction_t = struct packed {
+        logic valid;
+        logic [7:0] target;
+    };
+    btb #(.btb_prediction_t(btb_prediction_t)) i_btb();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", source);
+    ASSERT_TRUE(resources.has_value());
+    d_store->store_file({"/tmp/btb_repro.sv", "h", resources.value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    log_capture logs;
+    auto ast = b.build_ast(std::vector<std::string>{"frontend"})[0];
+    EXPECT_EQ(logs.count("$bits argument is of unsupported type"), 0u);
+    ASSERT_EQ(ast->get_dependencies().size(), 1u);
+    auto btb = ast->get_dependencies()[0];
+    ASSERT_EQ(btb->get_name(), "i_btb");
+
+    // struct { valid + 8-bit target } = 9 bits
+    auto w = btb->get_parameters().get("BRAM_WORD_BITS")->get_numeric_value();
+    ASSERT_TRUE(w.has_value());
+    EXPECT_EQ(w->get_value(), 9);
+}
