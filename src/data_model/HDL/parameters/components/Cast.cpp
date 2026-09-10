@@ -169,7 +169,10 @@ std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<q
         auto raw_value = content_val.value().get_integer();
         auto cast_size = raw_cast_size.value().get_integer().get_value();
         if (cast_size <= 0) {
-            spdlog::warn("Cast size must be a positive integer");
+            spdlog::warn("Cast size must be a positive integer (size={} size_expr={} content={})",
+                         cast_size,
+                         size ? size->print() : "<null>",
+                         content ? content->print() : "<null>");
             return content_val.value();
         }
         bool is_signed = raw_value.get_signed();
