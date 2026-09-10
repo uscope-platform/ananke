@@ -303,6 +303,12 @@ void HDL_parameters_factory::start_cast(bool expression_size) {
         cast_started_expression.push_back(open_expression);
         auto cast = std::make_unique<cast_factory>();
         cast->start(expression_size);
+        auto pending = expr_factory.get_expression_v2();
+        if (pending.has_value() && pending->get_operation() != Expression_v2::none &&
+            !pending->get_rhs() && expr_factory.active()) {
+            expr_factory.start_expression(true);
+            cast->set_outer_suspended(true);
+        }
         consumer_stack.push(std::move(cast));
     }
 }
@@ -329,6 +335,7 @@ void HDL_parameters_factory::stop_cast() {
         }
 
         auto cast_value = consumer_stack.top()->result();
+        const bool resume_outer = top_as<cast_factory>()->is_outer_suspended();
         consumer_stack.pop();
 
         if (!cast_started_expression.empty()) {
@@ -342,6 +349,11 @@ void HDL_parameters_factory::stop_cast() {
         }
 
         expr_factory.consume(cast_value);
+        if (resume_outer) {
+            // Resume an outer `A op` suspended in advance_cast: the completed
+            // cast becomes its rhs, and parsing continues normally.
+            expr_factory.stop_expression(true);
+        }
     }
 }
 

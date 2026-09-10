@@ -27,6 +27,9 @@ public:
     void start(bool is_expr_size);
     void set_type(const std::string &t);
     void advance_cast() {state = build_phase::content;}
+
+    void set_outer_suspended(bool v) { outer_suspended = v; }
+    [[nodiscard]] bool is_outer_suspended() const { return outer_suspended; }
     bool in_size() const {return state == build_phase::size;}
     bool is_expression_size() const {return expression_size;}
     void consume(const std::shared_ptr<Expression_base>& v) override;
@@ -42,6 +45,7 @@ private:
 
     Cast new_cast;
     bool expression_size = false;
+    bool outer_suspended = false;
 
     build_phase state = build_phase::inactive;
 

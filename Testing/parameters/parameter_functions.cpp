@@ -1839,6 +1839,60 @@ TEST(parameter_extraction, function_struct_bit_cast_width) {
     EXPECT_EQ(solved.at(qualified_identifier("R")).get_integer().to_wide().str(), "129");
 }
 
+TEST(parameter_extraction, cast_size_single_operand) {
+    // A cast size following a binary operator takes only the immediately
+    // preceding operand (`A op X'(C)` sizes by X, not by `A op X`).
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter integer V = (8'(1) << 7) | 8'(3),
+            parameter integer W = 1 + 8'(3)
+        )();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    auto resources = file.get_content();
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[0]);
+
+    auto c1 = std::make_shared<Cast>();
+    c1->set_size(std::make_shared<Numeric_token>("8"));
+    c1->set_content(std::make_shared<Numeric_token>("1"));
+    auto sh = std::make_shared<Expression_v2>();
+    sh->set_lhs(c1);
+    sh->set_operation(Expression_v2::expression_operator::logic_shift_left);
+    sh->set_rhs(std::make_shared<Numeric_token>("7"));
+    auto c2 = std::make_shared<Cast>();
+    c2->set_size(std::make_shared<Numeric_token>("8"));
+    c2->set_content(std::make_shared<Numeric_token>("3"));
+    auto top_v = std::make_shared<Expression_v2>();
+    top_v->set_lhs(sh);
+    top_v->set_operation(Expression_v2::expression_operator::bitwise_or);
+    top_v->set_rhs(c2);
+
+    HDL_parameter check_v("V");
+    check_v.set_type(Type_engine::create_primitive_type("integer"));
+    check_v.set_raw_value(top_v);
+
+    auto c3 = std::make_shared<Cast>();
+    c3->set_size(std::make_shared<Numeric_token>("8"));
+    c3->set_content(std::make_shared<Numeric_token>("3"));
+    auto top_w = std::make_shared<Expression_v2>();
+    top_w->set_lhs(std::make_shared<Numeric_token>("1"));
+    top_w->set_operation(Expression_v2::expression_operator::add);
+    top_w->set_rhs(c3);
+
+    HDL_parameter check_w("W");
+    check_w.set_type(Type_engine::create_primitive_type("integer"));
+    check_w.set_raw_value(top_w);
+
+    EXPECT_EQ(check_v, *mod->get_parameters().get("V"));
+    EXPECT_EQ(check_w, *mod->get_parameters().get("W"));
+
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), {});
+    EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer().get_value(), 131);
+    EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer().get_value(), 4);
+}
+
 TEST(parameter_extraction, package_function_owner_disambiguates) {
     // Two same-named packages where only one defines the called function:
     // the call must link to the defining package regardless of store order.

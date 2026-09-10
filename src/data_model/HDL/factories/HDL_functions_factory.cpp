@@ -143,6 +143,12 @@ void HDL_functions_factory::stop_concat() {
 void HDL_functions_factory::start_cast(bool expression_size) {
     auto cast = std::make_unique<cast_factory>();
     cast->start();
+    auto pending = expr_factory_.get_expression_v2();
+    if (pending.has_value() && pending->get_operation() != Expression_v2::none &&
+        !pending->get_rhs() && expr_factory_.active()) {
+        expr_factory_.start_expression(true);
+        cast->set_outer_suspended(true);
+        }
     consumer_stack.push(std::move(cast));
     if (expression_size) {
         start_expression();
@@ -165,8 +171,16 @@ void HDL_functions_factory::stop_cast() {
         expr_factory_.increase_level();
 
         auto cast_value = consumer_stack.top()->result();
+        const bool resume_outer = top_as<cast_factory>()->is_outer_suspended();
         consumer_stack.pop();
-        if (!consumer_stack.empty()) {
+
+        if (resume_outer) {
+            // Resume an outer `A op` suspended in advance_cast: it continues
+            // as the pending expression (completing at statement end like
+            // any other) instead of assigning the bare cast.
+            expr_factory_.consume(cast_value);
+            expr_factory_.stop_expression(true);
+        } else if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(cast_value);
         } else {
             assignment_value = cast_value;
