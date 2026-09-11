@@ -16,6 +16,7 @@
 
 
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <filesystem>
 #include <sstream>
 #include <thread>
@@ -1058,6 +1059,84 @@ endmodule
 
     // struct { valid + 8-bit target } = 9 bits
     auto w = btb->get_parameters().get("BRAM_WORD_BITS")->get_numeric_value();
+    ASSERT_TRUE(w.has_value());
+    EXPECT_EQ(w->get_value(), 9);
+}
+
+TEST(hdl_ast_builder, signing_cast_in_generate_loop_condition) {
+    // Mirrors common-cells lzc.sv: a generate loop guarded by a signing cast.
+    // The condition must evaluate (no container type exists there) and the
+    // loop must unroll instead of running away to the iteration cap.
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    auto source = R"(
+    module gen_item #(parameter int unsigned IDX = 0) ();
+    endmodule
+
+    module loop_top #(parameter int unsigned COUNT = 4) ();
+        for (genvar j = 0; unsigned'(j) < COUNT; j++) begin : g
+            gen_item #(.IDX(unsigned'(j))) i_item();
+        end
+    endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", source);
+    ASSERT_TRUE(resources.has_value());
+    d_store->store_file({"/tmp/cast_loop_repro.sv", "h", resources.value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    log_capture logs;
+    auto ast = b.build_ast(std::vector<std::string>{"loop_top"})[0];
+    EXPECT_EQ(logs.count("has no container type"), 0u);
+
+    // COUNT=4 -> 4 items with IDX=0..3. Pre-fix the unsigned' condition never
+    // resolves and the loop runs away instead of unrolling 4 times.
+    std::vector<int64_t> seen_idx;
+    for (auto &d : ast->get_dependencies()) {
+        if (d->get_type() != "gen_item") continue;
+        auto idx = d->get_parameters().get("IDX")->get_numeric_value();
+        ASSERT_TRUE(idx.has_value());
+        seen_idx.push_back(idx->get_value());
+    }
+    std::sort(seen_idx.begin(), seen_idx.end());
+    EXPECT_EQ(seen_idx, (std::vector<int64_t>{0, 1, 2, 3}));
+}
+
+TEST(hdl_ast_builder, bits_of_package_qualified_typedef) {
+    // Mirrors frontend/bht.sv: localparam BRAM_WORD_BITS = $bits(ariane_pkg::bht_t).
+    // The package-qualified type argument must survive parsing (kept as a call
+    // argument, not dropped) and resolve to the typedef for the width.
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    auto source = R"(
+package ariane_pkg;
+    typedef struct packed {
+        logic valid;
+        logic [7:0] tag;
+    } bht_t;
+endpackage
+
+module bht ();
+    localparam BRAM_WORD_BITS = $bits(ariane_pkg::bht_t);
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", source);
+    ASSERT_TRUE(resources.has_value());
+    d_store->store_file({"/tmp/bht_repro.sv", "h", resources.value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    log_capture logs;
+    auto ast = b.build_ast(std::vector<std::string>{"bht"})[0];
+    EXPECT_EQ(logs.count("requires at least one argument"), 0u);
+    EXPECT_EQ(logs.count("could not be resolved"), 0u);
+
+    // struct { valid + 8-bit tag } = 9 bits
+    auto w = ast->get_parameters().get("BRAM_WORD_BITS")->get_numeric_value();
     ASSERT_TRUE(w.has_value());
     EXPECT_EQ(w->get_value(), 9);
 }

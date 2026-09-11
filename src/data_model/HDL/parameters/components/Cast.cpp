@@ -51,17 +51,20 @@ parameter_deps_t Cast::get_dependencies() const {
 
 std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
     if (type_cast) {
-        // The container width comes from the incoming expected type (an
-        // empty-but-present type still proceeds, defaulting to 64 below).
-        if (!expected_type) {
-            spdlog::warn("Unsized '{}' cast has no container type to size against (content '{}'); treating as missing",
-                         target_type, content ? content->print() : "<null>");
-            return std::unexpected{missing_value};
-        }
-        auto content_val = content->evaluate(context, expected_type);
+        auto content_val = content->evaluate(context, expected_type ? expected_type : std::optional<resolved_type>{});
         if (!content_val.has_value()) return std::unexpected{missing_value};
         uint64_t container = 64;
-        if (!expected_type->packed_sizes.empty()) container = packed_width(*expected_type);
+        if (expected_type && !expected_type->packed_sizes.empty()) {
+            container = packed_width(*expected_type);
+        } else if (!expected_type) {
+            if (target_type == "int" || target_type == "integer" ||
+                target_type == "natural" || target_type == "positive") {
+                container = 32;
+            } else if (content_val.value().is_integer()) {
+                auto content_width = content_val.value().get_integer().get_size();
+                if (content_width > 0) container = static_cast<uint64_t>(content_width);
+            }
+        }
         if (target_type == "signed" || target_type == "unsigned") {
             if (!content_val.value().is_integer()) {
                 spdlog::warn("Casting of non scalar integer values is not supported");
@@ -125,6 +128,11 @@ std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<q
         }
 
         // --- NEW: User-Defined / Complex Packed Types (Structs, Enums, Unions) ---
+        if (!expected_type) {
+            spdlog::warn("Unsized '{}' cast has no container type to size against (content '{}'); treating as missing",
+                         target_type, content ? content->print() : "<null>");
+            return std::unexpected{missing_value};
+        }
         if (content_val.value().is_integer()) {
             auto raw_val = content_val.value().get_integer();
 
