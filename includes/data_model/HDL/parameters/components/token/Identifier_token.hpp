@@ -62,7 +62,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(id, array_index, type_placeholder);
+        ar(id, array_index, type_placeholder, expression_type);
     }
 
 private:

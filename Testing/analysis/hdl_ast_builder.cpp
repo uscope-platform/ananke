@@ -1107,38 +1107,69 @@ TEST(hdl_ast_builder, signing_cast_in_generate_loop_condition) {
 TEST(hdl_ast_builder, bits_of_package_qualified_typedef) {
     // Mirrors frontend/bht.sv: localparam BRAM_WORD_BITS = $bits(ariane_pkg::bht_t).
     // The package-qualified type argument must survive parsing (kept as a call
-    // argument, not dropped) and resolve to the typedef for the width.
-    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    // argument, not dropped) and resolve to the typedef for the width — with
+    // package and module in separate files, and across a data_store cache
+    // round-trip like the real flow (ephemeral single-file stores mask both).
+    const std::string cache_dir = "/tmp/bht_pkg_cache_test";
+    const std::string pkg_path = cache_dir + "/ariane_pkg.sv";
+    const std::string mod_path = cache_dir + "/bht.sv";
+    std::filesystem::remove_all(cache_dir);
+    std::filesystem::create_directories(cache_dir);
 
-    auto source = R"(
+    {
+        std::ofstream f(pkg_path);
+        f << R"(
 package ariane_pkg;
     typedef struct packed {
         logic valid;
         logic [7:0] tag;
     } bht_t;
 endpackage
-
+)";
+    }
+    {
+        std::ofstream f(mod_path);
+        f << R"(
 module bht ();
     localparam BRAM_WORD_BITS = $bits(ariane_pkg::bht_t);
 endmodule
 )";
+    }
 
-    sv_analyzer analyzer;
-    auto resources = analyzer.analyze("", source);
-    ASSERT_TRUE(resources.has_value());
-    d_store->store_file({"/tmp/bht_repro.sv", "h", resources.value()});
+    auto check_width = [&](const std::string &phase, bool reparse) {
+        // struct { valid + 8-bit tag } = 9 bits
+        std::shared_ptr<data_store> d_store = std::make_shared<data_store>(false, cache_dir);
+        std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(false, cache_dir, "test_profile");
 
-    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
-    log_capture logs;
-    auto ast = b.build_ast(std::vector<std::string>{"bht"})[0];
-    EXPECT_EQ(logs.count("requires at least one argument"), 0u);
-    EXPECT_EQ(logs.count("could not be resolved"), 0u);
+        if (reparse) {
+            sv_analyzer pkg_analyzer, mod_analyzer;
+            mm_file pkg_file(pkg_path), mod_file(mod_path);
+            auto pkg = pkg_analyzer.analyze(pkg_path, pkg_file.view());
+            auto mod = mod_analyzer.analyze(mod_path, mod_file.view());
+            ASSERT_TRUE(pkg.has_value()) << phase;
+            ASSERT_TRUE(mod.has_value()) << phase;
+            d_store->store_file({pkg_path, "h", pkg.value()});
+            d_store->store_file({mod_path, "h", mod.value()});
+        }
 
-    // struct { valid + 8-bit tag } = 9 bits
-    auto w = ast->get_parameters().get("BRAM_WORD_BITS")->get_numeric_value();
-    ASSERT_TRUE(w.has_value());
-    EXPECT_EQ(w->get_value(), 9);
+        HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+        log_capture logs;
+        auto ast = b.build_ast(std::vector<std::string>{"bht"})[0];
+        EXPECT_EQ(logs.count("requires at least one argument"), 0u) << phase;
+        EXPECT_EQ(logs.count("could not be resolved"), 0u) << phase;
+
+        auto w = ast->get_parameters().get("BRAM_WORD_BITS")->get_numeric_value();
+        ASSERT_TRUE(w.has_value()) << phase;
+        EXPECT_EQ(w->get_value(), 9) << phase;
+    };
+
+    // Phase 1 populates the on-disk cache on scope exit (~data_store stores).
+    check_width("fresh parse", true);
+    // Phase 2 loads everything back from the cache: the $bits placeholder's
+    // typedef must survive the round-trip (pre-fix: expression_type dropped).
+    check_width("cache reload", false);
+
+    std::filesystem::remove_all(cache_dir);
 }
 
 TEST(hdl_ast_builder, dtype_override_with_parent_local_typedef) {
