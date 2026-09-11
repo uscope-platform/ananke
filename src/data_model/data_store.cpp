@@ -75,7 +75,7 @@ std::optional<data_store::resource_hit> data_store::pick_resource(
                 (stored == wanted || stored.ends_with(wanted) || wanted.ends_with(stored))) {
                 // Explicit pick: configured by the user, so no conflict
                 // warning — just trace the decision.
-                spdlog::info("Deconflicted resource '{}' → {}", name, hit.second);
+                spdlog::trace("Deconflicted resource '{}' → {}", name, hit.second);
                 return hit;
             }
         }
