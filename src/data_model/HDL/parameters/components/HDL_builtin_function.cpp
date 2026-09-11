@@ -793,7 +793,7 @@ std::expected<resolved_parameter, solver_errors> HDL_builtin_function::evaluate_
     const std::map<qualified_identifier, resolved_parameter> &context) {
     std::string task_name = std::string(sv_name(function_kind));
     if (arguments.empty()) {
-        spdlog::warn("${} requires at least one argument", task_name);
+        spdlog::warn("{} requires at least one argument", task_name);
         return std::unexpected{missing_arguments};
     }
 
@@ -824,7 +824,7 @@ std::expected<resolved_parameter, solver_errors> HDL_builtin_function::evaluate_
 
     if (function_kind == function::dimensions || function_kind == function::unpacked_dimensions) {
         if (!type) {
-            spdlog::warn("${} argument type could not be resolved, defaulting to 0", task_name);
+            spdlog::warn("{} argument type could not be resolved, defaulting to 0", task_name);
             return 0;
         }
         if (type->is_real) return static_cast<hdl_integer>(0);
@@ -834,16 +834,16 @@ std::expected<resolved_parameter, solver_errors> HDL_builtin_function::evaluate_
     }
 
     if (!type) {
-        spdlog::warn("${} argument type could not be resolved, defaulting to 0", task_name);
+        spdlog::warn("{} argument type could not be resolved, defaulting to 0", task_name);
         return 0;
     }
     if (type->is_real) {
-        spdlog::warn("${} is not defined for real arguments, defaulting to 0", task_name);
+        spdlog::warn("{} is not defined for real arguments, defaulting to 0", task_name);
         return 0;
     }
     auto dims = collect_dimensions(*type);
     if (dim < 1 || static_cast<size_t>(dim) > dims.size()) {
-        spdlog::warn("${} dimension {} is out of range, defaulting to 0", task_name, dim);
+        spdlog::warn("{} dimension {} is out of range, defaulting to 0", task_name, dim);
         return 0;
 
     }
@@ -892,13 +892,13 @@ std::expected<resolved_parameter, solver_errors> HDL_builtin_function::evaluate_
     const std::map<qualified_identifier, resolved_parameter> &context) {
     std::string task_name = std::string(sv_name(function_kind));
     if (arguments.empty()) {
-        spdlog::warn("${} requires at least one argument", task_name);
+        spdlog::warn("{} requires at least one argument", task_name);
         return 0;
     }
     auto &arg = arguments[0];
     auto val = arg->evaluate(context);
     if (!val || !val->is_integer()) {
-        spdlog::warn("Encountered an invalid argument for a ${} call", task_name);
+        spdlog::warn("Encountered an invalid argument for a {} call", task_name);
         return 0;
     }
 
