@@ -36,7 +36,11 @@ Identifier_token::Identifier_token(const qualified_identifier &q_i) {
 
 parameter_deps_t Identifier_token::get_dependencies() const {
     parameter_deps_t result;
-    if (!type_placeholder) result.data.insert(id);
+    if (!type_placeholder) {
+        result.data.insert(id);
+    } else if (expression_type) {
+        result.merge(expression_type->get_dependencies());
+    }
     for (const auto &idx : array_index) {
         result.merge(idx->get_dependencies());
     }

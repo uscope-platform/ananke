@@ -618,10 +618,12 @@ void sv_visitor::enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
             if (scoped_ctx && !scoped_ctx->DOUBLE_COLON().empty()) {
                 auto qi = sv_parsing_helpers::parse_qualified_identifier(scoped_ctx);
                 auto ec = std::make_shared<Identifier_token>(qi);
+                ec->set_type_placeholder(true);
+                ec->set_expression_type(std::make_shared<HDL_external_type>(qi));
                 if (f_factory.is_active()) {
-                    f_factory.add_component(ec);
+                    f_factory.add_call_argument(ec);
                 } else {
-                    params_factory.add_component(ec);
+                    params_factory.add_component(ec, true);
                 }
             } else{
                 in_type_argument = true;

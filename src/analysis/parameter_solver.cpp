@@ -27,6 +27,7 @@
 #include "data_model/HDL/parameters/components/Streaming.hpp"
 #include "data_model/HDL/parameters/components/token/Type_ref.hpp"
 #include "data_model/HDL/types/hdl_type.hpp"
+#include "data_model/HDL/types/HDL_external_type.hpp"
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 
 #include <set>
@@ -538,6 +539,9 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
         auto deps = param->get_dependencies();
         for (const auto& type:deps.types) {
             if (!type.get_package_prefix().empty()) {
+                auto cur = param->get_type();
+                if (!cur || !cur->is<HDL_external_type>()) continue;
+                if (!(type == cur->as<HDL_external_type>().get_value())) continue;
                 auto res = d_store->get_package_typedef_owner(type.get_package_prefix().back(), type.get_name());
                 if (!res.has_value()) {
                     spdlog::critical("Definition of package {} not found while propagating types",type.get_package_prefix().back());
@@ -545,6 +549,64 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
                 }
                 auto type_def = res.value()->get_typedefs()[type.get_name()];
                 param->set_type(type_def);
+            }
+        }
+        if (d_store) {
+            auto root = param->get_expression();
+            if (!root) continue;
+            std::vector<std::shared_ptr<Expression_base>> stack{root};
+            while (!stack.empty()) {
+            auto node = stack.back();
+            stack.pop_back();
+            if (!node) continue;
+            if (node->is<Identifier_token>()) {
+                auto &id_token = node->as<Identifier_token>();
+                if (!id_token.is_type_placeholder()) continue;
+                auto t = id_token.get_expression_type();
+                if (!t || !t->is<HDL_external_type>()) continue;
+                auto &ext = t->as<HDL_external_type>();
+                if (ext.get_value().get_package_prefix().empty()) continue;
+                auto res = d_store->get_package_typedef_owner(
+                    ext.get_value().get_package_prefix()[0], ext.get_value().get_name());
+                if (!res.has_value()) continue;
+                auto type_def = res.value()->get_typedefs()[ext.get_value().get_name()];
+                if (type_def) id_token.set_expression_type(type_def);
+            } else if (node->is<Expression_v2>()) {
+                auto &e = node->as<Expression_v2>();
+                if (e.get_rhs()) stack.push_back(e.get_rhs());
+                if (e.get_lhs()) stack.push_back(e.get_lhs());
+            } else if (node->is<Concatenation>()) {
+                for (auto &comp : node->as<Concatenation>().get_components()) {
+                    if (comp) stack.push_back(comp);
+                }
+            } else if (node->is<Replication>()) {
+                auto &r = node->as<Replication>();
+                if (r.get_size()) stack.push_back(r.get_size());
+                if (r.get_item()) stack.push_back(r.get_item());
+            } else if (node->is<Ternary>()) {
+                auto &t = node->as<Ternary>();
+                if (t.get_false_value()) stack.push_back(t.get_false_value());
+                if (t.get_true_value()) stack.push_back(t.get_true_value());
+                if (t.get_condition()) stack.push_back(t.get_condition());
+            } else if (node->is<Cast>()) {
+                auto &c = node->as<Cast>();
+                if (c.get_size_expr()) stack.push_back(c.get_size_expr());
+                if (c.get_content()) stack.push_back(c.get_content());
+            } else if (node->is<HDL_function_call>()) {
+                for (auto &arg : node->as<HDL_function_call>().get_arguments()) {
+                    if (arg) stack.push_back(arg);
+                }
+            } else if (node->is<HDL_builtin_function>()) {
+                for (auto &arg : node->as<HDL_builtin_function>().get_arguments()) {
+                    if (arg) stack.push_back(arg);
+                }
+            } else if (node->is<Streaming>()) {
+                auto &st = node->as<Streaming>();
+                if (st.get_slice_size()) stack.push_back(st.get_slice_size());
+                for (auto &comp : st.get_components()) {
+                    if (comp) stack.push_back(comp);
+                }
+            }
             }
         }
     }
