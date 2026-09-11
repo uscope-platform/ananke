@@ -90,6 +90,12 @@ private:
         work_order &work,
         const std::shared_ptr<data_store> &d_store
     );
+    static std::shared_ptr<hdl_type> resolve_dtype_reference(
+        const qualified_identifier &ref,
+        const std::map<qualified_identifier, std::shared_ptr<hdl_type>> &parent_type_ctx,
+        const std::shared_ptr<hdl_resource_statement> &parent_resource,
+        const std::shared_ptr<data_store> &d_store
+    );
     static std::map<qualified_identifier, resolved_parameter> extract_struct_fields(
         const std::shared_ptr<HDL_parameter> &param,
         const resolved_parameter &res,

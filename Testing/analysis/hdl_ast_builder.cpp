@@ -1140,3 +1140,47 @@ endmodule
     ASSERT_TRUE(w.has_value());
     EXPECT_EQ(w->get_value(), 9);
 }
+
+TEST(hdl_ast_builder, dtype_override_with_parent_local_typedef) {
+    // Mirrors instr_queue.sv -> cva6_fifo_v3: a dtype override referencing a
+    // module-local typedef of the instantiating module. Pre-fix this warns
+    // "Parameter ::instr_data_t is not defined in the design" and the child
+    // keeps its default type (wrong $bits width).
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    auto source = R"(
+module fifo_mini #(
+    parameter type dtype = logic
+) ();
+    localparam DTYPE_WIDTH = $bits(dtype);
+endmodule
+
+module queue_parent ();
+    typedef struct packed {
+        logic [31:0] instr;
+        logic cf_valid;
+    } instr_data_t;
+    fifo_mini #(.dtype(instr_data_t)) i_fifo();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", source);
+    ASSERT_TRUE(resources.has_value());
+    d_store->store_file({"/tmp/dtype_repro.sv", "h", resources.value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    log_capture logs;
+    auto ast = b.build_ast(std::vector<std::string>{"queue_parent"})[0];
+    EXPECT_EQ(logs.count("is not defined in the design"), 0u);
+    EXPECT_EQ(logs.count("unsupported type"), 0u);
+    ASSERT_EQ(ast->get_dependencies().size(), 1u);
+    auto fifo = ast->get_dependencies()[0];
+    ASSERT_EQ(fifo->get_name(), "i_fifo");
+
+    // struct { 32-bit instr + 1-bit cf_valid } = 33 bits (pre-fix: 0)
+    auto w = fifo->get_parameters().get("DTYPE_WIDTH")->get_numeric_value();
+    ASSERT_TRUE(w.has_value());
+    EXPECT_EQ(w->get_value(), 33);
+}

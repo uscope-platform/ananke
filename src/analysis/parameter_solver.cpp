@@ -718,6 +718,32 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
 }
 
 
+std::shared_ptr<hdl_type> parameter_solver::resolve_dtype_reference(
+    const qualified_identifier &ref,
+    const std::map<qualified_identifier, std::shared_ptr<hdl_type>> &parent_type_ctx,
+    const std::shared_ptr<hdl_resource_statement> &parent_resource,
+    const std::shared_ptr<data_store> &d_store
+) {
+    if (!ref.get_package_prefix().empty()) {
+        auto res = d_store->get_package_typedef_owner(
+            ref.get_package_prefix().back(), ref.get_name());
+        if (res.has_value()) {
+            auto tds = res.value()->get_typedefs();
+            auto tit = tds.find(ref.get_name());
+            if (tit != tds.end() && tit->second) return tit->second;
+        }
+        return nullptr;
+    }
+    auto it = parent_type_ctx.find(ref);
+    if (it != parent_type_ctx.end()) return it->second;
+    if (parent_resource) {
+        auto tds = parent_resource->get_typedefs();
+        auto tit = tds.find(ref.get_name());
+        if (tit != tds.end() && tit->second) return tit->second;
+    }
+    return nullptr;
+}
+
 std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_complex_overrides(
     work_order &work,
     const std::shared_ptr<data_store> &d_store,
@@ -743,11 +769,13 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     }
 
     std::map<qualified_identifier, std::shared_ptr<hdl_type>> parent_type_ctx;
+    std::shared_ptr<hdl_resource_statement> parent_resource;
     auto parent_node = work.node->get_parent();
     if (parent_node) {
         auto parent_spec = d_store->get_HDL_resource(parent_node->get_type());
         if (parent_spec.has_value()) {
-            for (const auto &[name, pp] : parent_spec.value()->get_parameters()) {
+            parent_resource = parent_spec.value();
+            for (const auto &[name, pp] : parent_resource->get_parameters()) {
                 if (pp->is_type_param && pp->get_type()) {
                     parent_type_ctx[qualified_identifier(name)] = pp->get_type();
                 }
@@ -760,14 +788,22 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             auto spec_param = node_parameters.get(override_name);
             if (spec_param->is_type_param) {
                 param->is_type_param = true;
+                bool type_resolved = false;
                 if (param->get_expression() && param->get_expression()->is<Identifier_token>()) {
                     auto ref_name = param->get_expression()->as<Identifier_token>().get_value();
-                    auto it = parent_type_ctx.find(ref_name);
-                    if (it != parent_type_ctx.end()) {
-                        param->set_type(it->second);
-                        continue;
+                    if (auto t = resolve_dtype_reference(ref_name, parent_type_ctx, parent_resource, d_store)) {
+                        param->set_type(t);
+                        type_resolved = true;
+                    }
+                } else if (param->get_expression() && param->get_expression()->is<Type_ref>()) {
+                    auto ref_name = param->get_expression()->as<Type_ref>().get_target();
+                    if (auto t = resolve_dtype_reference(ref_name, parent_type_ctx, parent_resource, d_store)) {
+                        param->set_type(t);
+                        type_resolved = true;
                     }
                 }
+                if (type_resolved) continue;
+                spdlog::trace("dtype override {} keeps default type", override_name);
                 param->set_type(spec_param->get_type());
             } else {
                 param->set_type(spec_param->get_type());
@@ -778,20 +814,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     std::map<qualified_identifier, resolved_parameter> ctx;
     ctx.insert(work.parent_parameters.begin(), work.parent_parameters.end());
     ctx.insert(node_defaults.begin(), node_defaults.end());
-    // Bare dimension refs inside typedefs (e.g. NrMaxRules in
-    // config_pkg::cfg_t) resolve in their defining package context.
-    // node_defaults only carries qualified pkg::name, so synthesize the
-    // unambiguous bare aliases up front — mirroring
-    // HDL_simple_type::evaluate_type — so the seeding loop below does not
-    // warn spuriously. ctx only holds packages pulled via this node's
-    // data/types deps, which is exactly the disambiguating context.
     if (auto overlaid = overlay_unambiguous_scope(ctx)) {
         ctx.insert(overlaid->begin(), overlaid->end());
     }
 
-    // Bare names coming from parameter *types* (struct dimensions) as
-    // opposed to value expressions. Only these may fall back to package
-    // scope; genuine missing value deps must keep warning.
     std::set<std::string> type_derived_bare;
     for (auto &[ts_name, ts_param] : to_solve) {
         auto t = ts_param->get_type();
@@ -804,8 +830,16 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
 
     for(auto &[override_name, param]:node_overrides) {
         auto p = param;
+        std::optional<qualified_identifier> dtype_ref;
+        if (param->is_type_param && param->get_expression()) {
+            if (param->get_expression()->is<Identifier_token>())
+                dtype_ref = param->get_expression()->as<Identifier_token>().get_value();
+            else if (param->get_expression()->is<Type_ref>())
+                dtype_ref = param->get_expression()->as<Type_ref>().get_target();
+        }
         for(auto &dep: param->get_dependencies().data) {
             if (ctx.contains(dep)) continue;
+            if (dtype_ref.has_value() && dep == dtype_ref.value()) continue;
             if (!dep.get_instance().empty()) {
                 auto first_inst = dep.get_instance()[0];
                 if (to_solve.contains(first_inst) || node_parameters.contains(first_inst)) {
