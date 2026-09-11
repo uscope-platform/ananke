@@ -24,6 +24,14 @@ void topological_sorter::analyze(const Parameters_map &p, const std::map<qualifi
     for (auto &[name, parameter]:p) {
         auto deps_list = parameter->get_dependencies();
         if (!topo_map.contains(qualified_identifier(name))) topo_map[qualified_identifier(name)] = {};
+        if (parameter->is_type_param) {
+            // Dtype parameters solve unconditionally (ctx=0, their value
+            // expression is never evaluated): a same-name override (.T(T))
+            // is a type-position reference, not a value dependency on
+            // itself. Recording it self-loops the sort into a false
+            // "circular dependency". Dependents' edges onto dtypes are kept.
+            continue;
+        }
         for (auto &dep:deps_list.data) {
 
             if (!context.contains(dep)) {

@@ -1184,3 +1184,43 @@ endmodule
     ASSERT_TRUE(w.has_value());
     EXPECT_EQ(w->get_value(), 33);
 }
+
+TEST(hdl_ast_builder, dtype_override_same_name_no_false_cycle) {
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    auto source = R"(
+module child_mini #(
+    parameter type payload_t = logic
+) ();
+    localparam W = $bits(payload_t);
+endmodule
+
+module top_mini ();
+    typedef struct packed {
+        logic vld;
+        logic [15:0] data;
+    } payload_t;
+    child_mini #(.payload_t(payload_t)) i_child();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", source);
+    ASSERT_TRUE(resources.has_value());
+    d_store->store_file({"/tmp/dtype_cycle_repro.sv", "h", resources.value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    log_capture logs;
+    auto ast = b.build_ast(std::vector<std::string>{"top_mini"})[0];
+    EXPECT_EQ(logs.count("circular dependency"), 0u);
+    EXPECT_EQ(logs.count("is not defined in the design"), 0u);
+    ASSERT_EQ(ast->get_dependencies().size(), 1u);
+    auto child = ast->get_dependencies()[0];
+    ASSERT_EQ(child->get_name(), "i_child");
+
+    // struct { 1-bit vld + 16-bit data } = 17 bits (pre-fix: 0)
+    auto w = child->get_parameters().get("W")->get_numeric_value();
+    ASSERT_TRUE(w.has_value());
+    EXPECT_EQ(w->get_value(), 17);
+}
