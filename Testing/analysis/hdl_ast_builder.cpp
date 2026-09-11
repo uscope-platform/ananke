@@ -1255,3 +1255,29 @@ endmodule
     ASSERT_TRUE(w.has_value());
     EXPECT_EQ(w->get_value(), 17);
 }
+
+TEST(hdl_ast_builder, anonymous_struct_variable_no_missing_warning) {
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    auto source = R"(
+module buf_mini ();
+    struct packed {
+        logic [11:0] addr;
+        logic valid;
+    } reg_n, reg_q;
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", source);
+    ASSERT_TRUE(resources.has_value());
+    d_store->store_file({"/tmp/anon_struct_repro.sv", "h", resources.value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    log_capture logs;
+    auto ast = b.build_ast(std::vector<std::string>{"buf_mini"})[0];
+    EXPECT_EQ(logs.count("can't be solved"), 0u);
+    EXPECT_FALSE(ast->get_parameters().contains("reg_n"));
+    EXPECT_FALSE(ast->get_parameters().contains("reg_q"));
+}

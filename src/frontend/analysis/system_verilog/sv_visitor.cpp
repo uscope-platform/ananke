@@ -487,12 +487,18 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
                     return;
                 }
                 auto name = decl->identifier()->getText();
-                params_factory.set_type(pending_anon_struct_type);
-                params_factory.new_parameter(name);
                 params_factory.stop_param_assignment();
+                // A variable declaration is not a parameter declaration: pull
+                // any captured initializer off the factory without ever giving
+                // it parameter identity via new_parameter()/set_type(), then
+                // name and type it directly. Only initialized variables (real
+                // elaboration constants) are filed; valueless ones are runtime
+                // constructs the solver must never see.
                 auto param = params_factory.get_parameter();
+                param->set_name(name);
                 param->set_type(pending_anon_struct_type);
-                modules_factory.add_parameter(param);
+                if (param->get_expression())
+                    modules_factory.add_parameter(param);
             } else if (dt->KW_ENUM()) {
                 in_anonymous_struct = false;
                 type_engine.stop_composite_type_declaration("", true);
