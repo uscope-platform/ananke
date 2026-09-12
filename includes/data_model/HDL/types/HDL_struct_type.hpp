@@ -19,6 +19,7 @@
 #include <string>
 #include <sstream>
 #include "data_model/HDL/types/HDL_simple_type.hpp"
+#include "data_model/HDL/parameters/common/dimension.hpp"
 
 struct struct_member {
     std::string name;
@@ -62,10 +63,13 @@ public:
     bool packed = false;
     std::vector<struct_member> member;
 
+    void set_unpacked_dimensions(const std::vector<dimension_t> &d) { unpacked_dimensions = d; }
+    [[nodiscard]] std::vector<dimension_t> get_unpacked_dimensions() const { return unpacked_dimensions; };
+
+    [[nodiscard]] bool is_scalar() const override { return packed && unpacked_dimensions.empty(); }
 
     std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) override;
 
-    [[nodiscard]] bool is_scalar()const override {return packed;}
     parameter_deps_t get_dependencies() override;
 
     [[nodiscard]] std::string to_print() const override;
@@ -81,6 +85,10 @@ public:
         bool ret = true;
         ret &= lhs.packed == rhs.packed;
         ret &= lhs.member == rhs.member;
+        if (lhs.unpacked_dimensions.size() != rhs.unpacked_dimensions.size()) return false;
+        for (size_t i = 0; i < lhs.unpacked_dimensions.size(); ++i) {
+            ret &= lhs.unpacked_dimensions[i] == rhs.unpacked_dimensions[i];
+        }
         return ret;
     }
 
@@ -96,8 +104,11 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(member, packed);
+        ar(member, packed, unpacked_dimensions);
     }
+
+private:
+    std::vector<dimension_t> unpacked_dimensions;
 };
 
 

@@ -55,7 +55,7 @@ concat_expected_sizing derive_concat_sizing(const resolved_type &s, size_t n_com
                 d.container_size = static_cast<int64_t>(s.unpacked_sizes.back());
                 d.packing = false;
             } else {
-                d.container_size = static_cast<int64_t>(s.packed_sizes.back());
+                d.container_size = static_cast<int64_t>(packed_width(s));
                 d.packing = true;
                 content_sizes.packed_sizes.insert(content_sizes.packed_sizes.end(), s.packed_sizes.begin(), s.packed_sizes.end());
                 content_sizes.packed_ascending.insert(content_sizes.packed_ascending.end(), s.packed_ascending.begin(), s.packed_ascending.end());
@@ -69,6 +69,19 @@ concat_expected_sizing derive_concat_sizing(const resolved_type &s, size_t n_com
         d.packing = s.packed_struct;
         d.container_size = static_cast<int64_t>(packed_width(s));
         d.fields_sizes = s.struct_sizes;
+        if (!s.unpacked_sizes.empty()) {
+            d.packing = false;
+            resolved_type element;
+            element.packed_sizes.push_back(packed_width(s));
+            element.packed_ascending.push_back(false);
+            element.packed_struct = true;
+            element.struct_sizes = s.struct_sizes;
+            d.unpacked_dimension = s.unpacked_sizes;
+            d.unpacked_ascending = s.unpacked_ascending;
+            for (auto &cs : d.child_sizing) cs = element;
+            d.fields_sizes.clear();
+            return d;
+        }
         size_t n = std::min(s.struct_sizes.size(), n_components);
         for (size_t i = 0; i < n; i++) {
             resolved_type rt;

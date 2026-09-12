@@ -47,6 +47,27 @@ std::optional<resolved_type> HDL_struct_type::evaluate_type(
         result.struct_sizes.push_back(smrt);
         global_size += member_width;
     }
+    auto span_size = [](const hdl_integer &f_b, const hdl_integer &s_b) -> hdl_integer {
+        auto a = f_b.to_wide();
+        auto b = s_b.to_wide();
+        auto span = a > b ? (a - b) : (b - a);
+        hdl_integer diff;
+        diff.set_value(span + 1);
+        return diff;
+    };
+    // Array dimensions applied to the struct reference (e.g. pkg::T [0:N-1]):
+    // the element stays packed (struct_sizes/packed_sizes above), these ride
+    // along as unpacked/packed container dimensions for array literals.
+    for (auto &dim : unpacked_dimensions) {
+        auto f_b = dim.first_bound->evaluate(context);
+        auto s_b = dim.second_bound->evaluate(context);
+        if (!(f_b.has_value() && s_b.has_value()) || !f_b.value().is_integer() || !s_b.value().is_integer()) return std::nullopt;
+        auto diff = span_size(f_b.value().get_integer(), s_b.value().get_integer());
+        result.unpacked_sizes.push_back(diff.get_value());
+        result.unpacked_ascending.push_back(f_b.value().get_integer() < s_b.value().get_integer());
+        result.unpacked_left.push_back(f_b.value().get_integer().get_value());
+        result.unpacked_right.push_back(f_b.value().get_integer().get_value());
+    }
     result.packed_sizes.push_back(global_size);
     result.packed_ascending.push_back(true);
     result.packed_struct = packed;
@@ -59,6 +80,10 @@ parameter_deps_t HDL_struct_type::get_dependencies() {
         if (m.type) {
             result.merge(m.type->get_dependencies());
         }
+    }
+    for (auto &dim : unpacked_dimensions) {
+        if (dim.first_bound) result.merge(dim.first_bound->get_dependencies());
+        if (dim.second_bound) result.merge(dim.second_bound->get_dependencies());
     }
     return result;
 }

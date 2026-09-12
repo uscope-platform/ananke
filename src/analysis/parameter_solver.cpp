@@ -531,7 +531,26 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
             if (res.has_value()) {
                 auto type_def = res.value()->get_typedefs()[type_name];
                 if (type_def) {
-                    param->set_type(type_def);
+                    auto ext_unpacked = ext.get_unpacked_dimensions();
+                    if (!ext_unpacked.empty()) {
+                        if (type_def->is<HDL_simple_type>()) {
+                            auto fused = type_def->as<HDL_simple_type>();
+                            auto unpacked = fused.get_unpacked_dimensions();
+                            unpacked.insert(unpacked.end(), ext_unpacked.begin(), ext_unpacked.end());
+                            fused.set_unpacked_dimensions(unpacked);
+                            param->set_type(std::make_shared<HDL_simple_type>(fused));
+                        } else if (type_def->is<HDL_struct_type>()) {
+                            auto fused = type_def->as<HDL_struct_type>();
+                            auto unpacked = fused.get_unpacked_dimensions();
+                            unpacked.insert(unpacked.end(), ext_unpacked.begin(), ext_unpacked.end());
+                            fused.set_unpacked_dimensions(unpacked);
+                            param->set_type(std::make_shared<HDL_struct_type>(fused));
+                        } else {
+                            param->set_type(type_def);
+                        }
+                    } else {
+                        param->set_type(type_def);
+                    }
                 }
             }
         }
@@ -916,6 +935,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_str
     std::map<qualified_identifier, resolved_parameter> fields;
     auto type = param->get_type();
     if (!type || (!type->is<HDL_struct_type>() && !type->is<HDL_union_type>())) return fields;
+    // Array-of-struct (unpacked dims on the struct reference): the value is an
+    // element array, not one packed struct — member-wise splitting would shred
+    // it into bogus entries.
+    if (type->is<HDL_struct_type>() && !type->as<HDL_struct_type>().get_unpacked_dimensions().empty()) return fields;
 
     auto emit_field = [&](const std::string &member_name, hdl_integer member_value,
                           const std::shared_ptr<hdl_type> &member_type) {

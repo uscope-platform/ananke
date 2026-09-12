@@ -19,6 +19,7 @@
 
 #include "data_model/HDL/types/hdl_type.hpp"
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
+#include "data_model/HDL/parameters/common/dimension.hpp"
 
 class HDL_external_type : public hdl_type{
 public:
@@ -35,15 +36,19 @@ public:
     qualified_identifier get_value() {return value;}
     bool operator==(const HDL_external_type & hdl_external) const;
 
+    void set_unpacked_dimensions(const std::vector<dimension_t> &d) { unpacked_dimensions = d; }
+    [[nodiscard]] std::vector<dimension_t> get_unpacked_dimensions() const { return unpacked_dimensions; }
+
     [[nodiscard]] bool is_equal(const hdl_type &other) const override;
 
     template<class Archive>
     void serialize(Archive & ar) {
-        ar(value);
+        ar(value, unpacked_dimensions);
     }
 
 private:
     qualified_identifier value;
+    std::vector<dimension_t> unpacked_dimensions;
 
 };
 

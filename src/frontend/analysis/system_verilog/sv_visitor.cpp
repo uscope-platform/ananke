@@ -1595,6 +1595,20 @@ void sv_visitor::enterUnpacked_dimension(sv2017::Unpacked_dimensionContext *ctx)
     type_engine.start_unpacked_dimension_declaration();
 }
 
+void sv_visitor::enterVariable_dimension(sv2017::Variable_dimensionContext *ctx) {
+
+    if (type_engine.active() && type_engine.is_ranging()) {
+        if (type_engine.innermost_composite_packed()) return;
+    }
+    bool packed_ctx = false;
+    if (auto *dt = dynamic_cast<sv2017::Data_typeContext *>(ctx->parent)) {
+        if (dt->data_type_primitive()) packed_ctx = true;
+    } else if (dynamic_cast<sv2017::Enum_base_typeContext *>(ctx->parent)) {
+        packed_ctx = true;
+    }
+    if (!packed_ctx) type_engine.close_packed_dimensions();
+}
+
 
 void sv_visitor::exitConcatenation_item(sv2017::Concatenation_itemContext *ctx) {
     if(deps_factory.is_valid_dependency()) {

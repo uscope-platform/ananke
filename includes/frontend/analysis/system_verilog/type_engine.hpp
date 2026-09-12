@@ -62,6 +62,14 @@ public:
 
     [[nodiscard]] bool active() const { return !composite_type_stack.empty(); }
     [[nodiscard]] bool is_ranging() const { return r_factory.active(); }
+    [[nodiscard]] bool innermost_composite_packed() const {
+        if (composite_type_stack.empty()) return true;
+        if (composite_type_stack.back() == struct_type && !struct_stack.empty())
+            return struct_stack.back().packed;
+        if (composite_type_stack.back() == union_type && !union_stack.empty())
+            return union_stack.back().packed;
+        return true;
+    }
     [[nodiscard]] bool has_type(const std::string &name) const;
     [[nodiscard]] std::shared_ptr<hdl_type> get_type(const std::string &name) const;
     [[nodiscard]] bool is_simple_type()const{ return composite_type_stack.empty(); }

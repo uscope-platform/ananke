@@ -25,6 +25,10 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_type, HDL_external_type)
 parameter_deps_t HDL_external_type::get_dependencies() {
     parameter_deps_t deps;
     deps.types.insert(value);
+    for (auto &dim : unpacked_dimensions) {
+        if (dim.first_bound) deps.merge(dim.first_bound->get_dependencies());
+        if (dim.second_bound) deps.merge(dim.second_bound->get_dependencies());
+    }
     return deps;
 }
 
@@ -42,7 +46,12 @@ std::string HDL_external_type::to_print() const {
 }
 
 bool HDL_external_type::operator==(const HDL_external_type &hdl_external) const {
-    return value == hdl_external.value;
+    if (!(value == hdl_external.value)) return false;
+    if (unpacked_dimensions.size() != hdl_external.unpacked_dimensions.size()) return false;
+    for (size_t i = 0; i < unpacked_dimensions.size(); i++) {
+        if (!(unpacked_dimensions[i] == hdl_external.unpacked_dimensions[i])) return false;
+    }
+    return true;
 }
 
 bool HDL_external_type::is_equal(const hdl_type &other) const {

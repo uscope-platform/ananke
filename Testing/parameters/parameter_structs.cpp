@@ -699,3 +699,125 @@ TEST(parameter_extraction, cross_package_enum_init) {
     ASSERT_EQ(1, solved.at(qualified_identifier("CVA6ConfigDcacheType")).get_integer().get_value());
 }
 
+
+
+TEST(parameter_extraction, array_of_struct_nested_literals) {
+    // Unpacked array of structs with nested literals: the outer '{...} is an
+    // array literal (one entry per element), not a struct literal for the
+    // element type. Pre-fix the [0:N-1] dims on the typedef reference were
+    // dropped, sizing the outer literal as the 2-member struct ("5 components
+    // for 2 members") and defaulting the parameter to 0 (wrong type).
+    auto test_pattern = R"(
+package fp_pkg;
+    typedef struct packed {
+        int unsigned exp_bits;
+        int unsigned man_bits;
+    } fp_encoding_t;
+    localparam int unsigned NUM = 5;
+endpackage
+
+module test_mod #()();
+    localparam fp_pkg::fp_encoding_t [0:fp_pkg::NUM-1] TAB = '{
+        '{8, 23}, '{11, 52}, '{5, 10}, '{5, 2}, '{8, 7}
+    };
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    auto resources = file.get_content();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    std::shared_ptr<hdl_resource_statement> mod;
+    for (auto &r : resources) {
+        auto res = std::static_pointer_cast<hdl_resource_statement>(r);
+        if (res->getName() == "test_mod") mod = res;
+    }
+    ASSERT_TRUE(mod);
+
+    parameter_solver::propagate_types(mod, d_store);
+    auto mod_context = parameter_solver::retrieve_package_parameters(mod->get_parameters(), d_store);
+    auto solved = parameter_solver::process_parameters(mod->get_parameters(), mod_context);
+
+    mdarray<hdl_integer> expected;
+    expected.set_1d_slice({0, 0}, {
+        static_cast<hdl_integer>((8LL << 32) | 23),
+        static_cast<hdl_integer>((11LL << 32) | 52),
+        static_cast<hdl_integer>((5LL << 32) | 10),
+        static_cast<hdl_integer>((5LL << 32) | 2),
+        static_cast<hdl_integer>((8LL << 32) | 7)
+    });
+    EXPECT_EQ(solved.at(qualified_identifier("TAB")), expected);
+}
+
+TEST(parameter_extraction, packed_struct_two_dimensional_member_arrays) {
+    // PMA shape (cva6_cfg_t): packed members whose two dimensions both extend
+    // the primitive base type. Both must stay packed so the member widths
+    // multiply; routing the second to unpacked collapses every member to
+    // width 1 and the whole struct solves to garbage.
+    auto test_pattern = R"(
+package pma_pkg;
+    localparam int unsigned NR = 2;
+    typedef struct packed {
+        logic [NR-1:0][7:0] base;
+        logic [NR-1:0][7:0] len;
+    } pma_t;
+    localparam pma_t CFG = '{
+        '{8'h11, 8'h22},
+        '{8'h33, 8'h44}
+    };
+endpackage
+)";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    auto resources = file.get_content();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    std::shared_ptr<hdl_resource_statement> pkg;
+    for (auto &r : resources) {
+        auto res = std::static_pointer_cast<hdl_resource_statement>(r);
+        if (res->getName() == "pma_pkg") pkg = res;
+    }
+    ASSERT_TRUE(pkg);
+
+    parameter_solver::propagate_types(pkg, d_store);
+    auto pkg_context = parameter_solver::retrieve_package_parameters(pkg->get_parameters(), d_store);
+    auto solved = parameter_solver::process_parameters(pkg->get_parameters(), pkg_context);
+
+    EXPECT_EQ(solved.at(qualified_identifier("CFG")).get_integer().get_value(), 0x11223344);
+    qualified_identifier base_id("base");
+    base_id.set_instance_prefix({"CFG"});
+    qualified_identifier len_id("len");
+    len_id.set_instance_prefix({"CFG"});
+    EXPECT_EQ(solved.at(base_id).get_integer().get_value(), 0x1122);
+    EXPECT_EQ(solved.at(len_id).get_integer().get_value(), 0x3344);
+}
+
+
+TEST(parameter_extraction, array_of_struct_same_file_typedef) {
+    // Same as array_of_struct_nested_literals but with a bare same-file
+    // typedef reference: exercises the registry-clone path in finalize_type
+    // (shared typedef object must not be polluted with dimensions).
+    auto test_pattern = R"(
+module test_mod #()();
+    typedef struct packed {
+        int unsigned a;
+        int unsigned b;
+    } my_t;
+    localparam my_t [0:1] ARR = '{'{1, 2}, '{3, 4}};
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+
+    mdarray<hdl_integer> expected;
+    expected.set_1d_slice({0, 0}, {
+        static_cast<hdl_integer>((1LL << 32) | 2),
+        static_cast<hdl_integer>((3LL << 32) | 4)
+    });
+    EXPECT_EQ(solved.at(qualified_identifier("ARR")), expected);
+}

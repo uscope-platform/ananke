@@ -246,9 +246,28 @@ std::shared_ptr<hdl_type> Type_engine::finalize_type() {
     }
     if (current_type->is<HDL_external_type>()) {
         auto &result = current_type->as<HDL_external_type>();
+        auto [packed, unpacked] = r_factory.get_dimensions();
+        result.set_unpacked_dimensions(unpacked);
         r_factory.stop();
         r_factory.clear();
         return std::make_shared<HDL_external_type>(result);
+    }
+    if (current_type->is<HDL_struct_type>() || current_type->is<HDL_union_type>()) {
+        auto [packed, unpacked] = r_factory.get_dimensions();
+        if (!unpacked.empty()) {
+            if (current_type->is<HDL_struct_type>()) {
+                auto result = current_type->as<HDL_struct_type>();
+                auto existing = result.get_unpacked_dimensions();
+                existing.insert(existing.end(), unpacked.begin(), unpacked.end());
+                result.set_unpacked_dimensions(existing);
+                r_factory.stop();
+                r_factory.clear();
+                return std::make_shared<HDL_struct_type>(result);
+            }
+        }
+        r_factory.stop();
+        r_factory.clear();
+        return current_type;
     }
     r_factory.stop();
     r_factory.clear();

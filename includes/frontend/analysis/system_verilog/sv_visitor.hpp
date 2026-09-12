@@ -135,6 +135,7 @@ public:
     void exitArray_range_expression(sv2017::Array_range_expressionContext *ctx) override;
 
     void enterUnpacked_dimension(sv2017::Unpacked_dimensionContext *ctx) override;
+    void enterVariable_dimension(sv2017::Variable_dimensionContext *ctx) override;
 
     void exitConcatenation_item(sv2017::Concatenation_itemContext *ctx) override;
 
