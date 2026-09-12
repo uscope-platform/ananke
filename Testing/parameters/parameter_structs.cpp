@@ -821,3 +821,123 @@ endmodule
     });
     EXPECT_EQ(solved.at(qualified_identifier("ARR")), expected);
 }
+
+TEST(parameter_extraction, struct_enum_member_packed_width) {
+    // A struct member typed by an enum must size from the enum, not from a
+    // blind simple-type reinterpretation of the enum object.
+    auto test_pattern = R"(
+package p;
+    typedef enum logic [1:0] {A, B, C} e_t;
+    typedef struct packed {
+        e_t f;
+        logic g;
+    } s_t;
+    localparam W = $bits(s_t);
+endpackage
+)";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+    EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer().get_value(), 3);
+}
+
+TEST(parameter_extraction, bits_of_struct_with_array_member) {
+    // Container width must include unpacked member dims (16 + 1, not 8 + 1).
+    // NOTE: the unpacked member hides behind a typedef name, as in CVA6 —
+    // dims written directly on a packed-struct member are illegal SV
+    // (xrun SVBPSE) and must not be used in tests.
+    auto test_pattern = R"(
+package p;
+    typedef logic [7:0] byte_t;
+    typedef byte_t [0:1] bytes_t;
+    typedef struct packed {
+        bytes_t m;
+        logic g;
+    } s_t;
+    localparam W = $bits(s_t);
+endpackage
+)";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+    EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer().get_value(), 17);
+}
+
+TEST(parameter_extraction, packed_struct_literal_with_array_member) {
+    // An array-valued member inside a struct literal must flatten into the
+    // pack (whole value), and per-element splits must read back in order.
+    // Same typedef-hidden legal shape as above.
+    auto test_pattern = R"(
+package p;
+    typedef logic [7:0] byte_t;
+    typedef byte_t [0:1] bytes_t;
+    typedef struct packed {
+        bytes_t m;
+        logic g;
+    } s_t;
+    localparam s_t V = '{'{8'h11, 8'h22}, 1'b1};
+endpackage
+)";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+    // m = 0x1122 (16 bits) at the high end, g = 1: (0x1122 << 1) | 1 = 0x2245.
+    // Ground truth cross-checked with QuestaSim 2025.2 ($display %h -> 02245).
+    EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer().get_value(), 0x2245);
+
+    qualified_identifier m_id("m");
+    m_id.set_instance_prefix({"V"});
+    ASSERT_TRUE(solved.contains(m_id));
+    auto arr = solved.at(m_id).get_int_array();
+    EXPECT_EQ(arr.get_value({0}).value().get_value(), 0x11);
+    EXPECT_EQ(arr.get_value({1}).value().get_value(), 0x22);
+}
+
+TEST(parameter_extraction, package_literal_bare_enum_member) {
+    // A bare enum member inside a same-package struct literal must resolve
+    // without staying missing.
+    auto test_pattern = R"(
+package p;
+    typedef enum logic [1:0] {A, B, C} e_t;
+    typedef struct packed {
+        e_t f;
+        logic g;
+    } s_t;
+    localparam s_t V = '{B, 1'b1};
+endpackage
+)";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+    EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer().get_value(), 3);
+}
+
+TEST(parameter_extraction, single_bound_dimension_completed) {
+    // Single-bound dimensions (`[4]` with no colon) must not leave
+    // second_bound null: the first dependency walk over such a type
+    // segfaults (proven: SIGSEGV at HDL_simple_type.cpp:47). Parse-level
+    // check so the repro itself can't take down the suite.
+    auto test_pattern = R"(
+package p;
+    typedef logic [7:0] arr_t [4];
+endpackage
+)";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto typedefs = resource.get_typedefs();
+    ASSERT_TRUE(typedefs.contains("arr_t"));
+    auto dims = typedefs["arr_t"]->as<HDL_simple_type>().get_unpacked_dimensions();
+    ASSERT_EQ(dims.size(), 1);
+    EXPECT_TRUE(dims[0].first_bound != nullptr);
+    EXPECT_TRUE(dims[0].second_bound != nullptr);
+}
