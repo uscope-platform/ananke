@@ -394,3 +394,74 @@ TEST(typedef_parsing, package_import_stmt) {
     expected_item.set_item("CONST");
     ASSERT_EQ(*imports[1], expected_item);
 }
+
+TEST(typedef_parsing, typedef_of_typedef_keeps_base_dims) {
+    // `typedef fmt_t [0:1] arr_t` must keep the base dimensions: the fresh
+    // object from stop_type_declaration holds only trailing dims.
+    auto test_pattern = R"(
+        package test_package;
+            typedef logic [0:1][7:0] fmt_t;
+            typedef fmt_t [0:1] arr_t;
+        endpackage
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto typedefs = resource.get_typedefs();
+    ASSERT_TRUE(typedefs.contains("arr_t"));
+
+    auto &arr = typedefs["arr_t"]->as<HDL_simple_type>();
+    ASSERT_EQ(arr.get_packed_dimensions().size(), 2);
+    ASSERT_EQ(arr.get_unpacked_dimensions().size(), 1);
+
+    dimension_t check_d;
+    check_d.first_bound = std::make_shared<Numeric_token>("0");
+    check_d.second_bound = std::make_shared<Numeric_token>("1");
+    check_d.packed = true;
+    EXPECT_EQ(arr.get_packed_dimensions()[0], check_d);
+
+    check_d.first_bound = std::make_shared<Numeric_token>("7");
+    check_d.second_bound = std::make_shared<Numeric_token>("0");
+    check_d.packed = true;
+    EXPECT_EQ(arr.get_packed_dimensions()[1], check_d);
+
+    check_d.first_bound = std::make_shared<Numeric_token>("0");
+    check_d.second_bound = std::make_shared<Numeric_token>("1");
+    check_d.packed = false;
+    EXPECT_EQ(arr.get_unpacked_dimensions()[0], check_d);
+
+    // The shared base object must be unpolluted by the merge.
+    ASSERT_TRUE(typedefs.contains("fmt_t"));
+    auto &fmt = typedefs["fmt_t"]->as<HDL_simple_type>();
+    EXPECT_EQ(fmt.get_packed_dimensions().size(), 2);
+    EXPECT_EQ(fmt.get_unpacked_dimensions().size(), 0);
+}
+
+TEST(typedef_parsing, enum_base_type_preserved) {
+    // `typedef enum logic [1:0] {...}` must record its base type; without it
+    // every such enum evaluates to the default 32-bit width.
+    auto test_pattern = R"(
+        package test_package;
+            typedef enum logic [1:0] {A, B, C} e_t;
+        endpackage
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto typedefs = resource.get_typedefs();
+    ASSERT_TRUE(typedefs.contains("e_t"));
+
+    auto &et = typedefs["e_t"]->as<HDL_enum_type>();
+    ASSERT_TRUE(et.base_type != nullptr);
+    ASSERT_TRUE(et.base_type->is<HDL_simple_type>());
+    auto packed = et.base_type->as<HDL_simple_type>().get_packed_dimensions();
+    ASSERT_EQ(packed.size(), 1);
+
+    dimension_t check_d;
+    check_d.first_bound = std::make_shared<Numeric_token>("1");
+    check_d.second_bound = std::make_shared<Numeric_token>("0");
+    check_d.packed = true;
+    EXPECT_EQ(packed[0], check_d);
+}
