@@ -24,6 +24,7 @@ std::vector<hdl_integer> loop_solver::solve_loop(const hdl_loop_statement &loop,
     std::vector<hdl_integer> ret;
     auto init = loop.get_init();
     if (!init || init->get_name().empty()) return ret;
+    if (!loop.get_end_condition() || !loop.get_iteration()) return ret;
     auto loop_var = init->get_identifier();
 
     auto init_copy = std::make_shared<HDL_parameter>(*init);

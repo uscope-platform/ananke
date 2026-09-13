@@ -26,11 +26,11 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_loop_statement)
 
 parameter_deps_t hdl_loop_statement::get_dependencies() const {
     parameter_deps_t deps;
-    deps.merge(init->get_dependencies());
-    deps.merge(end_condition->get_dependencies());
-    deps.merge(iteration->get_dependencies());
+    if (init) deps.merge(init->get_dependencies());
+    if (end_condition) deps.merge(end_condition->get_dependencies());
+    if (iteration) deps.merge(iteration->get_dependencies());
     for (const auto& stmt : loop_body)
-        deps.merge(stmt->get_dependencies());
+        if (stmt) deps.merge(stmt->get_dependencies());
     return deps;
 }
 
@@ -45,19 +45,24 @@ void hdl_loop_statement::propagate_function(const hdl_function_def_ptr &def) {
 bool hdl_loop_statement::equals(const hdl_statement_base &other) const {
     const auto& rhs = static_cast<const hdl_loop_statement&>(other);
 
-    bool res = *init == *rhs.init;
-    res &= *end_condition == *rhs.end_condition;
-    res &= *iteration == *rhs.iteration;
+    bool res = static_cast<bool>(init) == static_cast<bool>(rhs.init)
+               && static_cast<bool>(end_condition) == static_cast<bool>(rhs.end_condition)
+               && static_cast<bool>(iteration) == static_cast<bool>(rhs.iteration);
+    if (init && rhs.init) res &= *init == *rhs.init;
+    if (end_condition && rhs.end_condition) res &= *end_condition == *rhs.end_condition;
+    if (iteration && rhs.iteration) res &= *iteration == *rhs.iteration;
     res &= std::ranges::equal(loop_body, rhs.loop_body,
-        [](const auto& a, const auto& b) { return *a == *b; });
+        [](const auto& a, const auto& b) { if (!a || !b) return a == b; return *a == *b; });
     return res;
 }
 
 std::string hdl_loop_statement::print() const {
     std::ostringstream oss;
-    oss << "for( "<< init->to_string() << " ; " << end_condition->print()  << " ; " << iteration->print()<< " ) begin\n";
+    oss << "for( " << (init ? init->to_string() : "") << " ; "
+        << (end_condition ? end_condition->print() : "") << " ; "
+        << (iteration ? iteration->print() : "") << " ) begin\n";
     for (auto &stmt:loop_body) {
-        oss << stmt->print() << "\n";
+        if (stmt) oss << stmt->print() << "\n";
     }
     oss << "end";
     return oss.str();

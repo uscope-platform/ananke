@@ -238,6 +238,7 @@ void HDL_function_call::walk_body(
             }
         } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
             auto indices = loop_solver::solve_loop(*loop, ctx);
+            if (!loop->get_init()) continue;
             auto loop_var = loop->get_init()->get_identifier();
             for (auto &idx : indices) {
                 auto loop_ctx = ctx;
