@@ -22,6 +22,7 @@
 #include <algorithm>
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "data_model/HDL/types/HDL_struct_type.hpp"
+#include "data_model/HDL/types/HDL_enum_type.hpp"
 
 class HDL_union_type : public hdl_type {
 public:
@@ -42,21 +43,35 @@ public:
                 if (!s) return std::nullopt;
                 smrt.packed_sizes = s->packed_sizes;
                 smrt.unpacked_sizes = s->unpacked_sizes;
+                smrt.unpacked_ascending = s->unpacked_ascending;
                 smrt.members = s->struct_sizes;
                 for (auto &ps : s->packed_sizes) member_width *= ps;
+                for (auto &us : s->unpacked_sizes) member_width *= us;
             } else if (m.type->is<HDL_union_type>()) {
                 auto s = m.type->as<HDL_union_type>().evaluate_type(context);
                 if (!s) return std::nullopt;
                 smrt.packed_sizes = s->packed_sizes;
                 smrt.unpacked_sizes = s->unpacked_sizes;
+                smrt.unpacked_ascending = s->unpacked_ascending;
                 smrt.members = s->struct_sizes;
                 for (auto &ps : s->packed_sizes) member_width *= ps;
+                for (auto &us : s->unpacked_sizes) member_width *= us;
+            } else if (m.type->is<HDL_enum_type>()) {
+                auto s = m.type->as<HDL_enum_type>().evaluate_type(context);
+                if (!s) return std::nullopt;
+                smrt.packed_sizes = s->packed_sizes;
+                smrt.unpacked_sizes = s->unpacked_sizes;
+                smrt.unpacked_ascending = s->unpacked_ascending;
+                for (auto &ps : s->packed_sizes) member_width *= ps;
+                for (auto &us : s->unpacked_sizes) member_width *= us;
             } else {
                 auto s = m.type->as<HDL_simple_type>().evaluate_type(context);
                 if (!s) return std::nullopt;
                 smrt.packed_sizes = s->packed_sizes;
                 smrt.unpacked_sizes = s->unpacked_sizes;
+                smrt.unpacked_ascending = s->unpacked_ascending;
                 for (auto &ps : s->packed_sizes) member_width *= ps;
+                for (auto &us : s->unpacked_sizes) member_width *= us;
             }
             result.struct_sizes.push_back(smrt);
             max_width = std::max(max_width, member_width);

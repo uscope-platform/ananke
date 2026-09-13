@@ -23,6 +23,7 @@
 
 struct struct_member_resolved_type {
     std::vector<uint64_t> unpacked_sizes;
+    std::vector<bool> unpacked_ascending;
     std::vector<uint64_t> packed_sizes;
     std::vector<struct_member_resolved_type> members;
 };

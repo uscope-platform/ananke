@@ -862,9 +862,6 @@ endpackage
 }
 
 TEST(parameter_extraction, packed_struct_literal_with_array_member) {
-    // An array-valued member inside a struct literal must flatten into the
-    // pack (whole value), and per-element splits must read back in order.
-    // Same typedef-hidden legal shape as above.
     auto test_pattern = R"(
 package p;
     typedef logic [7:0] byte_t;
@@ -881,8 +878,6 @@ endpackage
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
     auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
-    // m = 0x1122 (16 bits) at the high end, g = 1: (0x1122 << 1) | 1 = 0x2245.
-    // Ground truth cross-checked with QuestaSim 2025.2 ($display %h -> 02245).
     EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer().get_value(), 0x2245);
 
     qualified_identifier m_id("m");
@@ -894,8 +889,7 @@ endpackage
 }
 
 TEST(parameter_extraction, package_literal_bare_enum_member) {
-    // A bare enum member inside a same-package struct literal must resolve
-    // without staying missing.
+
     auto test_pattern = R"(
 package p;
     typedef enum logic [1:0] {A, B, C} e_t;
@@ -915,10 +909,6 @@ endpackage
 }
 
 TEST(parameter_extraction, single_bound_dimension_completed) {
-    // Single-bound dimensions (`[4]` with no colon) must not leave
-    // second_bound null: the first dependency walk over such a type
-    // segfaults (proven: SIGSEGV at HDL_simple_type.cpp:47). Parse-level
-    // check so the repro itself can't take down the suite.
     auto test_pattern = R"(
 package p;
     typedef logic [7:0] arr_t [4];

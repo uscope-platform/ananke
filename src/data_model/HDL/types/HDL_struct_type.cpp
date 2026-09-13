@@ -14,6 +14,8 @@
 //  limitations under the License.
 
 #include "data_model/HDL/types/HDL_struct_type.hpp"
+#include "data_model/HDL/types/HDL_union_type.hpp"
+#include "data_model/HDL/types/HDL_enum_type.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
@@ -28,22 +30,25 @@ std::optional<resolved_type> HDL_struct_type::evaluate_type(
     for (auto &m:member) {
         struct_member_resolved_type smrt;
         uint64_t member_width = 1;
+        std::optional<resolved_type> s;
         if (m.type->is<HDL_struct_type>()) {
-            auto s = m.type->as<HDL_struct_type>().evaluate_type(context);
-            if (!s) return std::nullopt;
-            smrt.packed_sizes = s->packed_sizes;
-            smrt.unpacked_sizes = s->unpacked_sizes;
-            smrt.members = s->struct_sizes;
-            for (auto &ps : s->packed_sizes)
-                member_width *= ps;
+            s = m.type->as<HDL_struct_type>().evaluate_type(context);
+        } else if (m.type->is<HDL_union_type>()) {
+            s = m.type->as<HDL_union_type>().evaluate_type(context);
+        } else if (m.type->is<HDL_enum_type>()) {
+            s = m.type->as<HDL_enum_type>().evaluate_type(context);
         } else {
-            auto s = m.type->as<HDL_simple_type>().evaluate_type(context);
-            if (!s) return std::nullopt;
-            smrt.packed_sizes = s->packed_sizes;
-            smrt.unpacked_sizes = s->unpacked_sizes;
-            for (auto &ps : s->packed_sizes)
-                member_width *= ps;
+            s = m.type->as<HDL_simple_type>().evaluate_type(context);
         }
+        if (!s) return std::nullopt;
+        smrt.packed_sizes = s->packed_sizes;
+        smrt.unpacked_sizes = s->unpacked_sizes;
+        smrt.unpacked_ascending = s->unpacked_ascending;
+        smrt.members = s->struct_sizes;
+        for (auto &ps : s->packed_sizes)
+            member_width *= ps;
+        for (auto &us : s->unpacked_sizes)
+            member_width *= us;
         result.struct_sizes.push_back(smrt);
         global_size += member_width;
     }

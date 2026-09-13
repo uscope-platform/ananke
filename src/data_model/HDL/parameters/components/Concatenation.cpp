@@ -48,7 +48,9 @@ concat_expected_sizing derive_concat_sizing(const resolved_type &s, size_t n_com
             if (!s.unpacked_sizes.empty()) {
                 if (s.unpacked_sizes.size() > 1) {
                     content_sizes.unpacked_sizes.insert(content_sizes.unpacked_sizes.end(), s.unpacked_sizes.begin(), s.unpacked_sizes.end() - 1);
-                    content_sizes.unpacked_ascending.insert(content_sizes.unpacked_ascending.end(), s.unpacked_ascending.begin(), s.unpacked_ascending.end() - 1);
+                    if (s.unpacked_ascending.size() == s.unpacked_sizes.size()) {
+                        content_sizes.unpacked_ascending.insert(content_sizes.unpacked_ascending.end(), s.unpacked_ascending.begin(), s.unpacked_ascending.end() - 1);
+                    }
                 }
                 content_sizes.packed_sizes = s.packed_sizes;
                 content_sizes.packed_ascending = s.packed_ascending;
@@ -87,6 +89,7 @@ concat_expected_sizing derive_concat_sizing(const resolved_type &s, size_t n_com
             resolved_type rt;
             rt.packed_sizes = s.struct_sizes[i].packed_sizes;
             rt.unpacked_sizes = s.struct_sizes[i].unpacked_sizes;
+            rt.unpacked_ascending = s.struct_sizes[i].unpacked_ascending;
             rt.struct_sizes = s.struct_sizes[i].members;
             if (!s.struct_sizes[i].members.empty()) {
                 rt.packed_struct = true;
@@ -180,23 +183,43 @@ std::expected<resolved_parameter, solver_errors> Concatenation::evaluate(const s
                      concat_size, cur.fields_sizes.size());
     }
     if (cur.packing) {
-        std::vector<int64_t> sizes(concat_size);
-        std::vector<hdl_integer> values(concat_size);
+        std::vector<int64_t> sizes;
+        std::vector<hdl_integer> values;
         for (int i = 0;i<concat_size; i++) {
-
-            auto value_opt = components[concat_size-i-1]->evaluate(context, cur.child_sizing[concat_size-i-1]);
+            int src = concat_size-i-1;
+            auto value_opt = components[src]->evaluate(context, cur.child_sizing[src]);
             if (!value_opt.has_value()) return std::unexpected{missing_value};
             auto raw_value = value_opt.value();
-            if (!raw_value.is_integer()) return std::unexpected{wrong_type};
-            values[i] = raw_value.get_integer();
+            const bool member_array = !cur.fields_sizes.empty() && (size_t)src < cur.fields_sizes.size()
+                && !cur.fields_sizes[src].unpacked_sizes.empty();
+            if (!raw_value.is_integer()) {
+                if (!raw_value.is_int_array() || !member_array) return std::unexpected{wrong_type};
+                int64_t piece = 1;
+                for (auto &ps : cur.fields_sizes[src].packed_sizes) piece *= ps;
+                if (piece <= 0) return std::unexpected{wrong_type};
+                const auto flat_data = raw_value.get_int_array().get_data();
+                std::vector<hdl_integer> flat;
+                for (auto &l2 : flat_data)
+                    for (auto &l1 : l2)
+                        for (auto &v : l1) flat.push_back(v);
+                if (flat.empty()) return std::unexpected{missing_value};
+                for (auto it = flat.rbegin(); it != flat.rend(); ++it) {
+                    values.push_back(*it);
+                    sizes.push_back(piece);
+                }
+                continue;
+            }
+            values.push_back(raw_value.get_integer());
 
-            if (!cur.fields_sizes.empty() && concat_size - i - 1 < cur.fields_sizes.size()) {
-                sizes[i] = 1;
-                for (auto &ps : cur.fields_sizes[concat_size-i-1].packed_sizes) sizes[i] *= ps;
+            if (!cur.fields_sizes.empty() && (size_t)src < cur.fields_sizes.size()) {
+                int64_t w = 1;
+                for (auto &ps : cur.fields_sizes[src].packed_sizes) w *= ps;
+                sizes.push_back(w);
             } else {
-                auto comp_t = components[concat_size-i-1]->resolve_expression_type(context, cur.child_sizing[concat_size-i-1]);
-                sizes[i] = comp_t ? static_cast<int64_t>(packed_width(*comp_t)) : 0;
-                if (sizes[i] <= 0) sizes[i] = raw_value.get_integer().get_size();
+                auto comp_t = components[src]->resolve_expression_type(context, cur.child_sizing[src]);
+                int64_t w = comp_t ? static_cast<int64_t>(packed_width(*comp_t)) : 0;
+                if (w <= 0) w = raw_value.get_integer().get_size();
+                sizes.push_back(w);
             }
         }
         result = pack_values(values, sizes);

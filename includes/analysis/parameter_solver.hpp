@@ -105,6 +105,13 @@ private:
     static std::map<qualified_identifier, resolved_parameter> extract_enum_values(
         const std::shared_ptr<HDL_parameter> &param
     );
+    // Bare enum members reachable through a type tree (struct/union members
+    // typed by an enum): package literals reference them unqualified, so
+    // they must seed the solving context alongside the type's own members.
+    static void collect_type_enum_values(
+        const std::shared_ptr<hdl_type> &type,
+        std::map<qualified_identifier, resolved_parameter> &fields
+    );
 };
 
 

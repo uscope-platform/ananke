@@ -28,6 +28,8 @@
 #include "data_model/HDL/parameters/components/token/Type_ref.hpp"
 #include "data_model/HDL/types/hdl_type.hpp"
 #include "data_model/HDL/types/HDL_external_type.hpp"
+#include "data_model/HDL/types/HDL_enum_type.hpp"
+#include "data_model/mdarray.hpp"
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 
 #include <set>
@@ -976,14 +978,48 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_str
                 uint64_t offset = 0;
                 for (int i = st.member.size() - 1; i >= 0; i--) {
                     uint64_t w = packed_width(type_info->struct_sizes[i].packed_sizes);
+                    uint64_t reps = 1;
+                    for (auto &us : type_info->struct_sizes[i].unpacked_sizes) reps *= us;
                     // Exact mask at any width: the old >=1024 fallback (-1,
                     // i.e. no mask) leaked all higher members into wide
                     // fields such as the 1024-bit PMA regions.
                     wide_integer mask = hdl_integer::width_mask(static_cast<int64_t>(w)).to_wide();
-                    emit_field(st.member[i].name,
-                               make_hdl((raw >> static_cast<size_t>(offset)) & mask),
-                               st.member[i].type);
-                    offset += w;
+                    if (reps == 1) {
+                        emit_field(st.member[i].name,
+                                   make_hdl((raw >> static_cast<size_t>(offset)) & mask),
+                                   st.member[i].type);
+                        offset += w;
+                        continue;
+                    }
+                    // Array member: one entry per element. Element 0 sits at
+                    // the member's high bits (mirror of packing consumption).
+                    // Storage left-padded so indexed reads hit data[0][0][i].
+                    const auto &usizes = type_info->struct_sizes[i].unpacked_sizes;
+                    const size_t rank = usizes.size();
+                    if (rank == 0 || rank > 3) {
+                        offset += reps * w;
+                        continue;
+                    }
+                    std::vector<uint64_t> shape(3 - rank, 1);
+                    shape.insert(shape.end(), usizes.begin(), usizes.end());
+                    mdarray<hdl_integer> arr(shape, make_hdl(0));
+                    for (uint64_t n = 0; n < reps; n++) {
+                        wide_integer piece =
+                            (raw >> static_cast<size_t>(offset + (reps - 1 - n) * w)) & mask;
+                        size_t tmp = static_cast<size_t>(n);
+                        std::vector<int64_t> at(3, 0);
+                        for (size_t d = rank; d-- > 0;) {
+                            at[3 - rank + d] = static_cast<int64_t>(tmp % usizes[d]);
+                            tmp /= usizes[d];
+                        }
+                        arr.set_value(at, make_hdl(piece));
+                    }
+                    auto prefix = id.get_instance();
+                    prefix.push_back(id.get_name());
+                    qualified_identifier kid(st.member[i].name);
+                    kid.set_instance_prefix(prefix);
+                    fields[kid] = resolved_parameter(arr);
+                    offset += reps * w;
                 }
             }
         } else {
@@ -1023,11 +1059,33 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_enu
 ) {
     std::map<qualified_identifier, resolved_parameter> fields;
     auto type = param->get_type();
-    if (!type || !type->is<HDL_enum_type>()) return fields;
-    auto &et = type->as<HDL_enum_type>();
-    for (const auto &m : et.members) {
-        if (m.value.has_value())
-            fields[qualified_identifier(m.name)] = static_cast<hdl_integer>(m.value.value());
-    }
+    if (!type) return fields;
+    collect_type_enum_values(type, fields);
     return fields;
+}
+
+void parameter_solver::collect_type_enum_values(
+    const std::shared_ptr<hdl_type> &type,
+    std::map<qualified_identifier, resolved_parameter> &fields
+) {
+    if (!type) return;
+    if (type->is<HDL_enum_type>()) {
+        auto &et = type->as<HDL_enum_type>();
+        for (const auto &m : et.members) {
+            if (m.value.has_value())
+                fields[qualified_identifier(m.name)] = static_cast<hdl_integer>(m.value.value());
+        }
+        return;
+    }
+    // Recurse into member types so aliases typed by enums (possibly through
+    // more structs) seed bare members too. Simple/external leaves terminate.
+    const std::vector<struct_member> *members = nullptr;
+    if (type->is<HDL_struct_type>())
+        members = &type->as<HDL_struct_type>().member;
+    else if (type->is<HDL_union_type>())
+        members = &type->as<HDL_union_type>().members;
+    if (!members) return;
+    for (const auto &m : *members) {
+        if (m.type) collect_type_enum_values(m.type, fields);
+    }
 }
