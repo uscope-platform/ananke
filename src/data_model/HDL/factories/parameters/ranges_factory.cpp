@@ -16,6 +16,7 @@
 #include "data_model/HDL/factories/parameters/ranges_factory.hpp"
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 
 void ranges_factory::start() {
     is_active = true;
@@ -49,6 +50,11 @@ void ranges_factory::consume(const std::shared_ptr<Expression_base> &v) {
 
 void ranges_factory::close_range() {
     if (!is_active) return;
+
+    if (current_dim.second_bound == nullptr) {
+        // we are parsing a non-ranged dimension, add a second 0 bound
+        current_dim.second_bound = std::make_shared<Numeric_token>("0");
+    }
     if (stage == packed) {
         current_dim.packed = true;
         packed_dimensions.push_back(current_dim);
