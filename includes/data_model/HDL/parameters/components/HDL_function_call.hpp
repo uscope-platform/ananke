@@ -78,7 +78,7 @@ private:
     static void walk_body(
         const std::string &fcn_name,
         const std::vector<std::shared_ptr<hdl_statement_base>> &stmts,
-        std::map<qualified_identifier, resolved_parameter> ctx,
+        std::map<qualified_identifier, resolved_parameter> &ctx,
         std::map<int64_t, hdl_integer> &value_map,
         std::map<int64_t, int64_t> &size_map,
         const std::shared_ptr<hdl_type> &rt,

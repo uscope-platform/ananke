@@ -26,6 +26,9 @@
 #include "analysis/type_cast_engine.hpp"
 
 #include "analysis/loop_solver.hpp"
+#include "data_model/HDL/statement/hdl_while_statement.hpp"
+#include "data_model/HDL/statement/hdl_repeat_statement.hpp"
+#include "data_model/HDL/statement/hdl_do_while_statement.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
@@ -35,6 +38,8 @@
 #include <limits>
 #include <set>
 #include <sstream>
+
+static constexpr int64_t MAX_SEQUENTIAL_ITERATIONS = 100'000;
 
 int64_t HDL_function_call::declared_member_width(
     const std::shared_ptr<hdl_type> &member_type,
@@ -133,7 +138,7 @@ void HDL_function_call::propagate_function(const hdl_function_def_ptr &def) {
 void HDL_function_call::walk_body(
     const std::string &fcn_name,
     const std::vector<std::shared_ptr<hdl_statement_base>> &stmts,
-    std::map<qualified_identifier, resolved_parameter> ctx,
+    std::map<qualified_identifier, resolved_parameter> &ctx,
     std::map<int64_t, hdl_integer> &value_map,
     std::map<int64_t, int64_t> &size_map,
     const std::shared_ptr<hdl_type> &rt,
@@ -237,13 +242,62 @@ void HDL_function_call::walk_body(
                 ctx[target] = val.value();
             }
         } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
-            auto indices = loop_solver::solve_loop(*loop, ctx);
-            if (!loop->get_init()) continue;
+            if (!loop->get_init()) {
+                spdlog::warn("loop construct cannot be evaluated in constant function, it will be skipped");
+                continue;
+            }
             auto loop_var = loop->get_init()->get_identifier();
+            auto indices = loop_solver::solve_loop(*loop, ctx);
             for (auto &idx : indices) {
                 auto loop_ctx = ctx;
                 loop_ctx[loop_var] = resolved_parameter(idx);
                 walk_body(fcn_name, loop->get_body(), loop_ctx, value_map, size_map, rt, expected_type);
+            }
+        } else if (auto while_loop = std::dynamic_pointer_cast<hdl_while_statement>(stmt)) {
+            if (!while_loop->get_end_condition()) continue;
+            int64_t iteration_count = 0;
+            while (true) {
+                auto cond = while_loop->get_end_condition()->evaluate(ctx, expected_type);
+                if (!cond.has_value() || !cond.value().is_integer() ||
+                    cond.value().get_integer() == 0) break;
+                if (iteration_count >= MAX_SEQUENTIAL_ITERATIONS) {
+                    spdlog::warn("while loop exceeded the maximum number of iterations ({})",
+                                 MAX_SEQUENTIAL_ITERATIONS);
+                    break;
+                }
+                walk_body(fcn_name, while_loop->get_body(), ctx, value_map, size_map, rt, expected_type);
+                iteration_count++;
+            }
+        } else if (auto repeat_loop = std::dynamic_pointer_cast<hdl_repeat_statement>(stmt)) {
+            if (!repeat_loop->get_count()) continue;
+            auto reps_val = repeat_loop->get_count()->evaluate(ctx, expected_type);
+            if (!reps_val.has_value() || !reps_val.value().is_integer()) continue;
+            int64_t reps = reps_val.value().get_integer().get_value();
+            if (reps > MAX_SEQUENTIAL_ITERATIONS) {
+                spdlog::warn("repeat count {} exceeds the maximum number of iterations ({})",
+                             reps, MAX_SEQUENTIAL_ITERATIONS);
+                reps = MAX_SEQUENTIAL_ITERATIONS;
+            }
+            for (int64_t i = 0; i < reps; i++) {
+                walk_body(fcn_name, repeat_loop->get_body(), ctx, value_map, size_map, rt, expected_type);
+            }
+        } else if (auto do_loop = std::dynamic_pointer_cast<hdl_do_while_statement>(stmt)) {\
+            int64_t iteration_count = 0;
+            while (true) {
+                if (iteration_count >= MAX_SEQUENTIAL_ITERATIONS) {
+                    spdlog::warn("do-while loop exceeded the maximum number of iterations ({})",
+                                 MAX_SEQUENTIAL_ITERATIONS);
+                    break;
+                }
+                walk_body(fcn_name, do_loop->get_body(), ctx, value_map, size_map, rt, expected_type);
+                iteration_count++;
+                if (do_loop->get_end_condition()) {
+                    auto cond = do_loop->get_end_condition()->evaluate(ctx, expected_type);
+                    if (!cond.has_value() || !cond.value().is_integer() ||
+                        cond.value().get_integer() == 0) break;
+                } else {
+                    break;
+                }
             }
         } else if (auto cond = std::dynamic_pointer_cast<hdl_conditional_statement>(stmt)) {
             bool matched = false;

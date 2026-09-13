@@ -35,7 +35,7 @@ bool hdl_function_statement::is_scalar() const {
 parameter_deps_t hdl_function_statement::get_dependencies() const {
     parameter_deps_t deps;
     for (const auto& stmt : body) {
-        deps.merge(stmt->get_dependencies());
+        if (stmt) deps.merge(stmt->get_dependencies());
     }
     for (const auto& v : local_variables) {
         if (v) deps.merge(v->get_dependencies());

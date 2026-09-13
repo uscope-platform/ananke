@@ -1940,3 +1940,119 @@ TEST(parameter_extraction, package_function_owner_disambiguates) {
     ASSERT_TRUE(solved.contains(sid));
     EXPECT_EQ(solved.at(sid).get_integer(), 42);
 }
+
+TEST(parameter_extraction, while_loop_solvable) {
+    // While loops in constant functions are first-class: condition-driven,
+    // body assignments carry state into the next predicate evaluation.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function int unsigned flz_count(input int unsigned v);
+                int unsigned bits;
+                bits = 0;
+                while (v > 1) begin
+                    v = v >> 1;
+                    bits = bits + 1;
+                end
+                return bits;
+            endfunction
+
+            parameter int unsigned TEST_FLZ = flz_count(8);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(
+        analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    // 8 -> 4 -> 2 -> 1 : three iterations until the predicate fails.
+    std::map<qualified_identifier, resolved_parameter> check_defaults = {
+        {qualified_identifier("TEST_FLZ"), 3}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, repeat_loop_solvable) {
+    // Repeat loops: the count is evaluated once at entry and the body runs
+    // that many times. Oracle cross-checked with xrun 25.03 ($display -> 9).
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function int unsigned bump(input int unsigned v);
+                int unsigned r;
+                r = v;
+                repeat (4) begin
+                    r = r + 1;
+                end
+                return r;
+            endfunction
+
+            parameter int unsigned TEST_R = bump(5);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(
+        analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults = {
+        {qualified_identifier("TEST_R"), 9}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, do_while_loop_solvable) {
+    // do…while: the body runs at least once, the post-checked predicate
+    // sees the body state each pass (input 0 still produces one iteration).
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function int unsigned cnt_down(input int unsigned v);
+                int unsigned iters;
+                iters = 0;
+                do begin
+                    v = v >> 1;
+                    iters = iters + 1;
+                end while (v > 0);
+                return iters;
+            endfunction
+
+            parameter int unsigned CNT4 = cnt_down(4);
+            parameter int unsigned CNT0 = cnt_down(0);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(
+        analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    // 4 -> 2 -> 1 -> 0: three iterations. Input 0: one iteration by the
+    // at-least-once semantics.
+    std::map<qualified_identifier, resolved_parameter> check_defaults = {
+        {qualified_identifier("CNT4"), 3},
+        {qualified_identifier("CNT0"), 1}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+

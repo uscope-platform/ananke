@@ -1113,10 +1113,10 @@ void sv_visitor::enterCase_item(sv2017::Case_itemContext *ctx) {
     if (!frame.selector) frame.selector = f_factory.get_last_value();
 }
 
-void sv_visitor::enterStatement_or_null(sv2017::Statement_or_nullContext *) {
-    // A case-item body starts: freeze the collected values into a branch.
-    // A default with no prior branches is modeled as an always-true branch,
-    // which is equivalent to an else for evaluation purposes.
+void sv_visitor::enterStatement_or_null(sv2017::Statement_or_nullContext *ctx) {
+    if (loops_factory.in_while_capture() || loops_factory.in_repeat_capture())
+        loops_factory.begin_loop_body();
+    if (loops_factory.in_do_capture()) do_capture_depth++;
     if (!case_stack.empty() && case_stack.back().in_values) {
         auto &frame = case_stack.back();
         frame.in_values = false;
@@ -1158,6 +1158,12 @@ void sv_visitor::enterStatement_or_null(sv2017::Statement_or_nullContext *) {
 void sv_visitor::exitStatement_or_null(sv2017::Statement_or_nullContext *) {
     if (conditionals_factory.is_active())
         conditionals_factory.exit_body_item();
+    if (loops_factory.in_do_capture()) {
+        if (do_capture_depth > 0) {
+            do_capture_depth--;
+            if (do_capture_depth == 0) loops_factory.begin_do_condition();
+        }
+    }
 }
 
 void sv_visitor::exitPrimaryLit(sv2017::PrimaryLitContext *ctx) {
@@ -1928,14 +1934,31 @@ void sv_visitor::exitFunction_declaration(sv2017::Function_declarationContext *c
 void sv_visitor::enterLoop_statement(sv2017::Loop_statementContext *ctx) {
     if(f_factory.is_active()) {
         f_factory.pause();
-        loops_factory.new_loop();
+        HDL_loops_factory::capture_form_t form = HDL_loops_factory::for_form;
+        if (ctx->KW_DO()) form = HDL_loops_factory::do_while_form;
+        else if (ctx->KW_WHILE()) form = HDL_loops_factory::while_form;
+        else if (ctx->KW_REPEAT()) form = HDL_loops_factory::repeat_form;
+        loops_factory.new_loop(form);
     }
 }
 
 
 void sv_visitor::exitLoop_statement(sv2017::Loop_statementContext *ctx) {
     if(f_factory.is_active()) {
-        f_factory.add_loop(loops_factory.get_loop_statement());
+        bool captured = false;
+        if (loops_factory.in_while_capture()) {
+            auto while_stmt = loops_factory.get_while_statement();
+            if (while_stmt) { f_factory.add_statement(while_stmt); captured = true; }
+        } else if (loops_factory.in_repeat_capture()) {
+            auto repeat_stmt = loops_factory.get_repeat_statement();
+            if (repeat_stmt) { f_factory.add_statement(repeat_stmt); captured = true; }
+        } else if (loops_factory.in_do_capture()) {
+            // Post-checked predicate captured in the end-phase slot.
+            loops_factory.finish_do_condition();
+            auto do_stmt = loops_factory.get_do_while_statement();
+            if (do_stmt) { f_factory.add_statement(do_stmt); captured = true; }
+        }
+        if (!captured) f_factory.add_loop(loops_factory.get_loop_statement());
         loops_factory.clear();
         f_factory.resume();
         if (conditionals_factory.is_active()) {

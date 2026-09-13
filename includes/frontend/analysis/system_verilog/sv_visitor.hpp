@@ -284,10 +284,8 @@ private:
 
     bool in_anonymous_struct = false;
     bool top_level_struct_started = false;
-    // Inline composite default of a type assignment, e.g.
-    // `localparam type T = struct packed {...};`. The struct members arrive
-    // as later visitor events, so the composite is opened on entry and the
-    // finished type is patched onto the stashed parameter on exit.
+    int do_capture_depth = 0;
+
     std::shared_ptr<HDL_parameter> pending_composite_type_param;
     void finalize_pending_composite_type_param();
     void maybe_open_composite_type_default(sv2017::Data_typeContext *dt, bool single,

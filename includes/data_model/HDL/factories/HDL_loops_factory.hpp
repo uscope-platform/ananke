@@ -24,7 +24,8 @@
 
 class HDL_loops_factory {
 public:
-    void new_loop();
+    enum capture_form_t {for_form, while_form, repeat_form, do_while_form};
+    void new_loop(capture_form_t form = for_form);
 
     void clear();
 
@@ -33,6 +34,9 @@ public:
     void set_loop_init(const HDL_parameter &id) { _statement.set_init(std::make_shared<HDL_parameter>(id)); }
     void start_assignment(const std::string &name);
     std::shared_ptr<hdl_loop_statement> get_loop_statement() {active = false; return std::make_shared<hdl_loop_statement>(_statement);};
+    std::shared_ptr<hdl_while_statement> get_while_statement() {active = false; auto ret = while_stmt; while_stmt.reset(); return ret;};
+    std::shared_ptr<hdl_repeat_statement> get_repeat_statement() {active = false; auto ret = repeat_stmt; repeat_stmt.reset(); return ret;};
+    std::shared_ptr<hdl_do_while_statement> get_do_while_statement() {active = false; auto ret = do_stmt; do_stmt.reset(); return ret;};
     bool in_loop(){return active;}
 
     enum loop_phase_t {init, end, step, body};
@@ -41,6 +45,12 @@ public:
     bool in_end_condition() const {return active && loop_phase == end;}
     bool in_step_expression() const {return active && loop_phase == step;}
     bool in_definition() const {return active && (in_step_expression()|| in_initialization()||in_end_condition());}
+    bool in_while_capture() const {return active && capture == while_form;}
+    bool in_repeat_capture() const {return active && capture == repeat_form;}
+    bool in_do_capture() const {return active && capture == do_while_form;}
+    void begin_loop_body();
+    void begin_do_condition();
+    void finish_do_condition();
     void add_component(const std::shared_ptr<Expression_base> &c);
     void add_loop_variable(const std::string &p);
     void set_phase(loop_phase_t p);
@@ -55,6 +65,7 @@ public:
     void stop_bit_selection();
     bool in_body() const {return active && loop_phase == body;}
 private:
+    void add_body_stmt(const std::shared_ptr<hdl_statement_base> &stmt);
 
     hdl_loop_statement _statement;
 
@@ -65,6 +76,10 @@ private:
 
     bool end_cond_valid = false;
     bool active = false;
+    capture_form_t capture = for_form;
+    std::shared_ptr<hdl_while_statement> while_stmt;
+    std::shared_ptr<hdl_repeat_statement> repeat_stmt;
+    std::shared_ptr<hdl_do_while_statement> do_stmt;
     expressions_factory body_expr_factory;
     bool in_body_bit_selection = false;
     std::string body_target;
