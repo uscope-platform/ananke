@@ -324,6 +324,23 @@ std::shared_ptr<Expression_base> sv_visitor::build_data_type_expression(sv2017::
     return id_token;
 }
 
+void sv_visitor::capture_enum_base(sv2017::Data_typeContext *dt) {
+    type_engine.clear_pending_enum_base();
+    if (!dt) return;
+    auto *eb = dt->enum_base_type();
+    if (!eb) return;
+    std::string base;
+    if (eb->integer_vector_type()) base = eb->integer_vector_type()->getText();
+    else if (eb->integer_atom_type()) base = eb->integer_atom_type()->getText();
+    else return;
+    if (base.empty()) return;
+    auto base_type = Type_engine::create_primitive_type(base);
+    if (eb->signing() && base_type->is<HDL_simple_type>())
+        base_type->as<HDL_simple_type>().set_signed(true);
+    type_engine.set_pending_enum_base(base_type);
+    type_engine.start_range();
+}
+
 void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
     if (f_factory.is_active() && !ctx->type_declaration()) {
         auto dtoi = ctx->data_type_or_implicit();
@@ -370,6 +387,7 @@ void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
         } else if (ctx->type_declaration()->data_type() &&
                    ctx->type_declaration()->data_type()->KW_ENUM()) {
             type_engine.start_composite_type_declaration(Type_engine::enum_type);
+            capture_enum_base(ctx->type_declaration()->data_type());
             top_level_struct_started = true;
         } else {
             type_engine.start_simple_type_declaration();
@@ -468,7 +486,19 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
     if (ctx->type_declaration()) {
         auto name = ctx->type_declaration()->identifier(0)->getText();
         if (type_engine.is_simple_type()) {
-            modules_factory.add_typedef(name, type_engine.stop_type_declaration(name));
+            // typedef-of-typedef (e.g. `typedef fmt_t [0:3] opgrp`): hand the
+            // visible base to stop_type_declaration so trailing dims fuse
+            // onto a copy of it instead of orphaning the base shape.
+            // Unresolvable or qualified bases pass null (today's behavior).
+            std::shared_ptr<hdl_type> base;
+            if (auto *dt = ctx->type_declaration()->data_type();
+                dt && dt->package_or_class_scoped_path() &&
+                dt->package_or_class_scoped_path()->DOUBLE_COLON().empty()) {
+                const std::string base_name = dt->package_or_class_scoped_path()->getText();
+                if (!base_name.empty() && type_engine.has_type(base_name))
+                    base = type_engine.get_type(base_name);
+            }
+            modules_factory.add_typedef(name, type_engine.stop_type_declaration(name, base));
         } else {
             modules_factory.add_struct_def(name, type_engine.stop_composite_type_declaration(name, false));
         }
@@ -959,7 +989,8 @@ void sv_visitor::exitParameter_override(sv2017::Parameter_overrideContext *ctx) 
 
 bool sv_visitor::expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
     for (auto *p = node ? node->parent : nullptr; p; p = p->parent) {
-        if (dynamic_cast<sv2017::Variable_dimensionContext *>(p)) return true;
+        if (dynamic_cast<sv2017::Variable_dimensionContext *>(p))
+            return true;
     }
     return false;
 }

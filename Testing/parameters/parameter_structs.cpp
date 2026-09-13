@@ -823,8 +823,6 @@ endmodule
 }
 
 TEST(parameter_extraction, struct_enum_member_packed_width) {
-    // A struct member typed by an enum must size from the enum, not from a
-    // blind simple-type reinterpretation of the enum object.
     auto test_pattern = R"(
 package p;
     typedef enum logic [1:0] {A, B, C} e_t;
@@ -844,10 +842,6 @@ endpackage
 }
 
 TEST(parameter_extraction, bits_of_struct_with_array_member) {
-    // Container width must include unpacked member dims (16 + 1, not 8 + 1).
-    // NOTE: the unpacked member hides behind a typedef name, as in CVA6 —
-    // dims written directly on a packed-struct member are illegal SV
-    // (xrun SVBPSE) and must not be used in tests.
     auto test_pattern = R"(
 package p;
     typedef logic [7:0] byte_t;

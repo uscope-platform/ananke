@@ -45,7 +45,8 @@ public:
     std::shared_ptr<hdl_type> stop_composite_type_declaration(const std::string &name, bool anonymous);
 
     void start_simple_type_declaration();
-    std::shared_ptr<hdl_type> stop_type_declaration(const std::string &name);
+    std::shared_ptr<hdl_type> stop_type_declaration(
+        const std::string &name, const std::shared_ptr<hdl_type> &base = nullptr);
 
     void close_packed_dimensions();
     void start_unpacked_dimension_declaration();
@@ -77,6 +78,8 @@ public:
 
     void add_type_param(const std::string &name, const std::shared_ptr<hdl_type> &t);
     void clear_type_params();
+    void set_pending_enum_base(const std::shared_ptr<hdl_type> &t) { pending_enum_base = t; }
+    void clear_pending_enum_base() { pending_enum_base.reset(); }
 
     void set_base_type(const std::shared_ptr<hdl_type>  &t);
     std::shared_ptr<hdl_type> finalize_type();
@@ -110,6 +113,7 @@ private:
     std::vector<HDL_enum_type> enum_stack;
     std::vector<HDL_union_type> union_stack;
     std::shared_ptr<hdl_type> current_type;
+    std::shared_ptr<hdl_type> pending_enum_base;
 
 };
 

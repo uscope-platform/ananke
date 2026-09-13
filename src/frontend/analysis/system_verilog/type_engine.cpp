@@ -18,6 +18,7 @@
 #include "data_model/HDL/types/HDL_external_type.hpp"
 
 void Type_engine::start_composite_type_declaration(type_kind k) {
+    pending_enum_base.reset();
     composite_type_stack.push_back(k);
     if (k == struct_type) {
         struct_stack.emplace_back();
@@ -30,6 +31,19 @@ void Type_engine::start_composite_type_declaration(type_kind k) {
 
 void Type_engine::open_composite_member() {
     if (composite_type_stack.empty()) return;
+    if (composite_type_stack.back() == enum_type && current_enum().members.empty() &&
+        pending_enum_base) {
+        auto [packed, unpacked] = r_factory.get_dimensions();
+        if (pending_enum_base->is<HDL_simple_type>()) {
+            auto &base = pending_enum_base->as<HDL_simple_type>();
+            base.set_packed_dimensions(packed);
+            base.set_unpacked_dimensions(unpacked);
+            current_enum().base_type = pending_enum_base;
+        }
+        pending_enum_base.reset();
+        r_factory.stop();
+        r_factory.clear();
+    }
     r_factory.start();
     if (composite_type_stack.back() == struct_type) {
         current_struct().member.emplace_back();
@@ -164,14 +178,34 @@ void Type_engine::start_simple_type_declaration() {
     r_factory.start();
 }
 
-std::shared_ptr<hdl_type> Type_engine::stop_type_declaration(const std::string &name) {
+std::shared_ptr<hdl_type> Type_engine::stop_type_declaration(
+    const std::string &name, const std::shared_ptr<hdl_type> &base) {
     r_factory.stop();
-    HDL_simple_type t;
-    auto  [packed, unpacked] = r_factory.get_dimensions();
-    t.set_packed_dimensions(packed);
-    t.set_unpacked_dimensions(unpacked);
+    auto [packed, unpacked] = r_factory.get_dimensions();
     r_factory.clear();
-    type_registry[name] = std::make_shared<HDL_simple_type>(t);
+    // typedef-of-typedef (e.g. `typedef fmt_t [0:3] opgrp`): trailing dims
+    // fuse onto a copy of the visible base instead of orphaning its shape.
+    // A null base (unresolvable or qualified name) keeps today's behavior.
+    std::shared_ptr<hdl_type> result;
+    if (base && base->is<HDL_simple_type>()) {
+        // NB: simple setters append; the copy already carries the base dims.
+        auto fused = base->as<HDL_simple_type>();
+        fused.set_packed_dimensions(packed);
+        fused.set_unpacked_dimensions(unpacked);
+        result = std::make_shared<HDL_simple_type>(fused);
+    } else if (base && base->is<HDL_struct_type>()) {
+        auto fused = base->as<HDL_struct_type>();
+        auto trailing = fused.get_unpacked_dimensions();
+        trailing.insert(trailing.end(), unpacked.begin(), unpacked.end());
+        fused.set_unpacked_dimensions(trailing);
+        result = std::make_shared<HDL_struct_type>(fused);
+    } else {
+        HDL_simple_type t;
+        t.set_packed_dimensions(packed);
+        t.set_unpacked_dimensions(unpacked);
+        result = std::make_shared<HDL_simple_type>(t);
+    }
+    type_registry[name] = result;
     return type_registry.at(name);
 }
 
