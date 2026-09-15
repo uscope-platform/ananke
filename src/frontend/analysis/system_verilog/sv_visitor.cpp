@@ -1014,7 +1014,7 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
             params_factory.start_ternary_operator();
         }
     } else if (f_factory.is_active() && !in_streaming_slice) {
-            f_factory.start_expression();
+            f_factory.start_expression(ctx->primary() == nullptr);
             if(ctx->QUESTIONMARK()){
                 f_factory.start_ternary();
             }
@@ -1044,7 +1044,7 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
         if(ctx->QUESTIONMARK()){
             f_factory.stop_ternary();
         }
-        f_factory.stop_expression();
+        f_factory.stop_expression(ctx->primary() == nullptr);
         // Nested sub-expressions exit here too, while assignment_value still
         // holds the previous statement's value: only take the condition once
         // the outermost expression just completed (level back to 0).

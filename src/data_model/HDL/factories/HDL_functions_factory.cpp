@@ -211,8 +211,8 @@ void HDL_functions_factory::advance_cast() {
     }
 }
 
-void HDL_functions_factory::start_expression() {
-    expr_factory_.start_expression(false);
+void HDL_functions_factory::start_expression(bool new_expr) {
+    expr_factory_.start_expression(new_expr);
 }
 
 void HDL_functions_factory::start_function_call(const std::string &name) {
@@ -308,8 +308,8 @@ void HDL_functions_factory::stop_ternary() {
     }
 }
 
-void HDL_functions_factory::stop_expression() {
-    expr_factory_.stop_expression(false);
+void HDL_functions_factory::stop_expression(bool new_expr) {
+    expr_factory_.stop_expression(new_expr);
     if (expr_factory_.get_level() == 0) {
         auto expr = expr_factory_.get_expression_v2();
         if (expr.has_value()) {

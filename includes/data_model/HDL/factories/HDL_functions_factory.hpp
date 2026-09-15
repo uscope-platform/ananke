@@ -73,8 +73,8 @@ public:
     void set_cast_type(const std::string &t);
     void advance_cast();
 
-    void start_expression();
-    void stop_expression();
+    void start_expression(bool new_expr = false);
+    void stop_expression(bool new_expr = false);
     void start_function_call(const std::string &name);
     void stop_function_call();
     void set_function_package_prefix(const std::string &p);
