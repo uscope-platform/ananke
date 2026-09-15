@@ -62,7 +62,11 @@ bool sv_visitor::is_known_system_function(const std::string &name) const {
 }
 
 void sv_visitor::route_expression_text(const std::string& text) {
-    if(loops_factory.in_loop()) {
+    // Loop-body expressions inside functions are owned by f_factory; the
+    // loop only owns its header and body list (body statements are handed
+    // to it fully built via add_body_stmt).
+    const bool f_owns_loop_body = f_factory.is_active() && loops_factory.in_body();
+    if(loops_factory.in_loop() && !f_owns_loop_body) {
         loops_factory.add_component(sv_parsing_helpers::make_value(text));
     }
     if(type_engine.active() || type_engine.is_ranging()){
@@ -94,7 +98,8 @@ void sv_visitor::route_expression_component(const std::shared_ptr<Expression_bas
     };
 
     bool routed = false;
-    if(loops_factory.in_loop()) {
+    const bool f_owns_loop_body = f_factory.is_active() && loops_factory.in_body();
+    if(loops_factory.in_loop() && !f_owns_loop_body) {
         loops_factory.add_component(routed ? clone(ec) : ec);
         routed = true;
     }
@@ -886,7 +891,6 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
 }
 
 void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext *ctx) {
-    (void)ctx;
     finalize_pending_composite_type_param();
     params_factory.set_type(std::make_shared<HDL_simple_type>() );
     in_param_declaration = false;
@@ -936,7 +940,6 @@ void sv_visitor::enterParameter_port_declaration(sv2017::Parameter_port_declarat
 }
 
 void sv_visitor::exitParameter_port_declaration(sv2017::Parameter_port_declarationContext *ctx) {
-    (void)ctx;
     finalize_pending_composite_type_param();
 }
 
@@ -996,9 +999,6 @@ bool sv_visitor::expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
 }
 
 void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
-    if (loops_factory.in_loop() && loops_factory.in_body()) {
-        loops_factory.start_expression(ctx->primary() == nullptr);
-    }
     // Initializers of function-local variables belong to the function, even
     // though ranging is still active for the declaration: only [...] dimension
     // bounds stay on the type-engine path.
@@ -1025,9 +1025,6 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
 }
 
 void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
-    if (loops_factory.in_loop() && loops_factory.in_body()) {
-        loops_factory.stop_expression(ctx->primary() == nullptr);
-    }
     bool function_local_init = (in_function_var_decl || in_function_composite_decl) && !expression_in_decl_dimensions(ctx);
     if ((type_engine.active() || type_engine.is_ranging()) && !function_local_init) {
         type_engine.stop_expression();
@@ -1047,14 +1044,15 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
         f_factory.stop_expression(ctx->primary() == nullptr);
         // Nested sub-expressions exit here too, while assignment_value still
         // holds the previous statement's value: only take the condition once
-        // the outermost expression just completed (level back to 0).
+        // the outermost expression just completed (level back to 0 outside
+        // any [...] selection, whose own level-0 closings are index parts).
         if (conditionals_factory.is_active() && !conditionals_factory.has_condition()
-            && f_factory.get_expression_level() == 0)
+            && f_factory.get_expression_level() == 0 && !f_factory.in_selection())
             conditionals_factory.set_condition(f_factory.get_last_value());
         // Case-item values complete here one by one; collect them for the
         // branch condition built when the item body starts.
         if (!case_stack.empty() && case_stack.back().in_values
-            && f_factory.get_expression_level() == 0) {
+            && f_factory.get_expression_level() == 0 && !f_factory.in_selection()) {
             if (auto v = f_factory.get_last_value())
                 case_stack.back().item_values.push_back(v);
         }
@@ -1250,7 +1248,8 @@ void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
 void sv_visitor::process_operation(Expression_v2::expression_operator op) {
     params_factory.set_operation(op);
     type_engine.set_operation(op);
-    if (loops_factory.in_loop()) loops_factory.set_operation(op);
+    const bool f_owns_loop_body = f_factory.is_active() && loops_factory.in_body();
+    if (loops_factory.in_loop() && !f_owns_loop_body) loops_factory.set_operation(op);
     if (f_factory.is_active() && !in_streaming_slice) f_factory.set_operation(op);
     if (deps_factory.is_valid_dependency()) deps_factory.set_operation(op);
 }
@@ -1568,9 +1567,6 @@ void sv_visitor::enterConstant_param_expression(sv2017::Constant_param_expressio
 }
 
 void sv_visitor::enterBit_select(sv2017::Bit_selectContext *ctx) {
-    if (loops_factory.in_loop() && loops_factory.in_body()) {
-        loops_factory.start_bit_selection();
-    }
     if (f_factory.is_active()) {
         f_factory.start_bit_selection();
     } else {
@@ -1581,9 +1577,6 @@ void sv_visitor::enterBit_select(sv2017::Bit_selectContext *ctx) {
 }
 
 void sv_visitor::exitBit_select(sv2017::Bit_selectContext *ctx) {
-    if (loops_factory.in_loop() && loops_factory.in_body()) {
-        loops_factory.stop_bit_selection();
-    }
     if (f_factory.is_active()) {
         f_factory.stop_bit_selection();
     } else {
@@ -1815,7 +1808,6 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
 }
 
 void sv_visitor::exitLocal_parameter_declaration(sv2017::Local_parameter_declarationContext *ctx) {
-    (void)ctx;
     finalize_pending_composite_type_param();
     params_factory.set_type(std::make_shared<HDL_simple_type>() );
     in_param_declaration = false;
@@ -1939,7 +1931,6 @@ void sv_visitor::exitFunction_declaration(sv2017::Function_declarationContext *c
 
 void sv_visitor::enterLoop_statement(sv2017::Loop_statementContext *ctx) {
     if(f_factory.is_active()) {
-        f_factory.pause();
         HDL_loops_factory::capture_form_t form = HDL_loops_factory::for_form;
         if (ctx->KW_DO()) form = HDL_loops_factory::do_while_form;
         else if (ctx->KW_WHILE()) form = HDL_loops_factory::while_form;
@@ -1966,7 +1957,6 @@ void sv_visitor::exitLoop_statement(sv2017::Loop_statementContext *ctx) {
         }
         if (!captured) f_factory.add_loop(loops_factory.get_loop_statement());
         loops_factory.clear();
-        f_factory.resume();
         if (conditionals_factory.is_active()) {
             auto last = f_factory.pop_last();
             if (last) conditionals_factory.add_statement(last);
@@ -1974,30 +1964,9 @@ void sv_visitor::exitLoop_statement(sv2017::Loop_statementContext *ctx) {
     }
 }
 
-void sv_visitor::exitStatement_item(sv2017::Statement_itemContext *ctx) {
-    if(f_factory.is_active() && loops_factory.in_loop()) {
-        if (auto stmt = loops_factory.build_body_statement()) {
-            if (in_loop_conditional_branch(ctx))
-                conditionals_factory.add_statement(stmt);
-            else
-                loops_factory.add_body_stmt(stmt);
-        }
-    }
-}
+void sv_visitor::exitStatement_item(sv2017::Statement_itemContext *ctx) {}
 
-bool sv_visitor::in_loop_conditional_branch(antlr4::tree::ParseTree *node) {
-    for (auto *p = node ? node->parent : nullptr; p; p = p->parent) {
-        if (dynamic_cast<sv2017::Conditional_statementContext *>(p)) return true;
-        if (dynamic_cast<sv2017::Loop_statementContext *>(p)) return false;
-    }
-    return false;
-}
-
-void sv_visitor::exitAssignment_operator(sv2017::Assignment_operatorContext *ctx) {
-    if(f_factory.is_active() && loops_factory.in_loop()) {
-        loops_factory.advance_expression();
-    }
-}
+void sv_visitor::exitAssignment_operator(sv2017::Assignment_operatorContext *ctx) {}
 
 
 void sv_visitor::enterFor_initialization(sv2017::For_initializationContext *ctx) {
@@ -2075,11 +2044,14 @@ void sv_visitor::enterInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPos
 }
 
 void sv_visitor::exitBlocking_assignment(sv2017::Blocking_assignmentContext *ctx) {
-    if(!loops_factory.in_loop() && f_factory.is_active()) {
+    if(f_factory.is_active()) {
         f_factory.finish_assignment();
         if (conditionals_factory.is_active()) {
             auto last = f_factory.pop_last();
             if (last) conditionals_factory.add_statement(last);
+        } else if (loops_factory.in_loop() && loops_factory.in_body()) {
+            auto last = f_factory.pop_last();
+            if (last) loops_factory.add_body_stmt(last);
         }
     }
 
@@ -2089,22 +2061,18 @@ void sv_visitor::enterJump_statement(sv2017::Jump_statementContext *ctx) {
     // `return expr;` assigns to the function itself. Only `return` carries a
     // value; `break`/`continue` are not supported in constant evaluation.
     if (!f_factory.is_active() || !ctx->expression() || !ctx->KW_RETURN()) return;
-    if (loops_factory.in_loop()) {
-        if (loops_factory.in_body())
-            loops_factory.start_assignment(f_factory.get_function_name());
-    } else {
-        f_factory.start_return();
-    }
+    f_factory.start_return();
 }
 
 void sv_visitor::exitJump_statement(sv2017::Jump_statementContext *ctx) {
     if (!f_factory.is_active() || !ctx->expression() || !ctx->KW_RETURN()) return;
-    if (!loops_factory.in_loop()) {
-        f_factory.finish_assignment();
-        if (conditionals_factory.is_active()) {
-            auto last = f_factory.pop_last();
-            if (last) conditionals_factory.add_statement(last);
-        }
+    f_factory.finish_assignment();
+    if (conditionals_factory.is_active()) {
+        auto last = f_factory.pop_last();
+        if (last) conditionals_factory.add_statement(last);
+    } else if (loops_factory.in_loop() && loops_factory.in_body()) {
+        auto last = f_factory.pop_last();
+        if (last) loops_factory.add_body_stmt(last);
     }
 }
 
@@ -2123,14 +2091,16 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
             if (bit_sel && bit_sel->identifier())
                 dotted.push_back(bit_sel->identifier()->getText());
         }
-        if(loops_factory.in_loop()) {
-            auto var_name = leaf;
-            for (auto &d : dotted) var_name += "." + d;
-            loops_factory.start_assignment(var_name);
-            if (loops_factory.in_body()) {
-                auto var_token = sv_parsing_helpers::make_value(var_name);
-                loops_factory.add_component(var_token);
-            } else if (loops_factory.in_initialization()) {
+        // Loop headers (init/end/step) still belong to loops_factory
+        // (start_assignment is a body-phase-only no-op there; only the init
+        // component matters). Loop bodies inside functions are fully owned
+        // by f_factory and handed to the loop via add_body_stmt at
+        // exitBlocking_assignment time.
+        const bool loop_header = loops_factory.in_loop() && !loops_factory.in_body();
+        if(loop_header) {
+            if (loops_factory.in_initialization()) {
+                auto var_name = leaf;
+                for (auto &d : dotted) var_name += "." + d;
                 auto var_token = sv_parsing_helpers::make_value(var_name);
                 loops_factory.add_component(var_token);
             }
@@ -2152,7 +2122,10 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
 }
 
 void sv_visitor::exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
-    if(f_factory.is_active() && !loops_factory.in_loop()) {
+    // close_lvalue pairs with f_factory.start_assignment, which now runs for
+    // loop bodies too; loop headers never start an f_assignment.
+    const bool loop_header = loops_factory.in_loop() && !loops_factory.in_body();
+    if(f_factory.is_active() && !loop_header) {
         f_factory.close_lvalue();
     }
 }

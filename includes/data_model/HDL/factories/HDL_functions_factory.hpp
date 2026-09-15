@@ -36,7 +36,10 @@ public:
         active = true;
     }
     void start_assignment(const qualified_identifier &n);
-    void start_return() { start_assignment(qualified_identifier(f.get_name())); }
+    // `return expr` assigns to the function itself with no lvalue select, so
+    // unlike start_assignment it must not open lvalue_index capture: any
+    // [...] in the returned expression belongs to the RHS.
+    void start_return();
     std::string get_function_name() const { return f.get_name(); }
     void add_argument(const std::string &a);
     void add_local_variable(const std::shared_ptr<HDL_parameter> &p) { f.add_local_variable(p); }
@@ -81,14 +84,14 @@ public:
     void add_call_argument(const std::shared_ptr<Expression_base> &ec);
     void start_ternary();
     void stop_ternary();
-    void pause() { paused = true; }
-    void resume() { paused = false; }
-    bool is_paused() const { return paused; }
-    bool is_component_relevant() const;
 
     void start_bit_selection();
     std::shared_ptr<Expression_base> get_last_value() const { return assignment_value; }
     int get_expression_level() const { return expr_factory_.get_level(); }
+    // True while inside a [...] selection: the selection owns a pushed
+    // expression context until stop_bit_selection, so level-0 closings
+    // inside must not be mistaken for completed statement expressions.
+    bool in_selection() const { return selection_depth > 0; }
 
     void stop_bit_selection();
 
@@ -101,16 +104,26 @@ private:
         return dynamic_cast<T*>(consumer_stack.top().get());
     }
 
+    // Single sink for completed subexpressions (call/cast/concat/... results
+    // and finished outer expressions): into a wrapping consumer, into the
+    // open expression (statement RHS or pushed [...] selection alike), or
+    // parked as the pending assignment value.
+    void sink_value(const std::shared_ptr<Expression_base> &v);
     expressions_factory expr_factory_;
-    bool paused = false;
     bool active = false;
     Streaming::stream_direction pending_stream_direction = Streaming::left;
     std::shared_ptr<Expression_base> pending_stream_slice_size;
-    bool in_bit_selection = false;
+    // [...] selection state. A selection opens a pushed expression context
+    // (mirroring function calls) so composite indices nest exactly like RHS
+    // expressions. selection_depth guards nesting; lvalue_open distinguishes
+    // an LHS selection (stashed for close_lvalue) from an RHS one (attached
+    // to its identifier); pending_lhs_index carries the former.
+    int selection_depth = 0;
+    bool lvalue_open = false;
+    std::shared_ptr<Expression_base> pending_lhs_index;
     std::stack<std::unique_ptr<factory_base>> consumer_stack;
     hdl_function_statement f;
     std::string return_type_name;
-    std::shared_ptr<Expression_base> bit_index;
 
     enum{
         arguments,

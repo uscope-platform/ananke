@@ -23,7 +23,12 @@
 
 void HDL_functions_factory::start_assignment(const qualified_identifier &n) {
     current_assigned_variable = n;
-    bit_index = std::make_shared<Expression_v2>();
+    lvalue_open = true;
+}
+
+void HDL_functions_factory::start_return() {
+    current_assigned_variable = qualified_identifier(f.get_name());
+    lvalue_open = false;
 }
 
 void HDL_functions_factory::add_argument(const std::string &a) {
@@ -32,47 +37,41 @@ void HDL_functions_factory::add_argument(const std::string &a) {
 
 void HDL_functions_factory::set_operation(Expression_v2::expression_operator op) {
     if (phase == body) {
-        if (in_bit_selection) {
-            bit_index->as<Expression_v2>().set_operation(op);
-        } else {
-            expr_factory_.set_operation(op);
-        }
+        // Selections build in a pushed expression context (see
+        // start_bit_selection), so no special-casing here: index operators
+        // nest exactly like statement operators.
+        expr_factory_.set_operation(op);
     }
 }
 void HDL_functions_factory::add_component(const std::shared_ptr<Expression_base> &c) {
     if (phase == body) {
-        if (in_bit_selection) {
-            if (!bit_index->as<Expression_v2>().get_lhs()) {
-                bit_index->as<Expression_v2>().set_lhs(c);
-            } else {
-                bit_index->as<Expression_v2>().set_rhs(c);
-            }
-        } else {
-            expr_factory_.add_component(c);
-        }
+        expr_factory_.add_component(c);
     }
 }
 
-void HDL_functions_factory::add_value(const std::shared_ptr<Expression_base> &v) {
+void HDL_functions_factory::sink_value(const std::shared_ptr<Expression_base> &v) {
     if (!consumer_stack.empty()) {
         consumer_stack.top()->consume(v);
+    } else if (selection_depth > 0 || expr_factory_.active()) {
+        expr_factory_.consume(v);
     } else {
         assignment_value = v;
     }
 }
 
+void HDL_functions_factory::add_value(const std::shared_ptr<Expression_base> &v) {
+    sink_value(v);
+}
+
 void HDL_functions_factory::close_lvalue() {
-    auto unwrapped_bit_index = Expression_v2::unwrap(*std::dynamic_pointer_cast<Expression_v2>(bit_index));
-    if (bit_index->is<Expression_v2>() &&
-        bit_index->as<Expression_v2>().get_operation() == Expression_v2::none &&
-        !bit_index->as<Expression_v2>().get_lhs()
-        ) unwrapped_bit_index = nullptr;
-    current_lhs_index = unwrapped_bit_index;
-    bit_index = std::make_shared<Expression_v2>();
+    lvalue_open = false;
+    current_lhs_index = pending_lhs_index;
+    pending_lhs_index = nullptr;
 }
 
 void HDL_functions_factory::finish_assignment() {
     if (!assignment_value) return;
+    lvalue_open = false;
 
     auto val = assignment_value;
     if (val->is<Expression_v2>()) {
@@ -111,11 +110,7 @@ void HDL_functions_factory::stop_replication() {
     if (top_as<replication_factory>()) {
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
-        if (!consumer_stack.empty()) {
-            consumer_stack.top()->consume(result);
-        } else {
-            assignment_value = result;
-        }
+        sink_value(result);
         expr_factory_.pop_level();
     }
 }
@@ -131,11 +126,7 @@ void HDL_functions_factory::stop_concat() {
     if (top_as<concatenation_factory>()) {
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
-        if (!consumer_stack.empty()) {
-            consumer_stack.top()->consume(result);
-        } else {
-            assignment_value = result;
-        }
+        sink_value(result);
         expr_factory_.pop_level();
     }
 }
@@ -180,10 +171,8 @@ void HDL_functions_factory::stop_cast() {
             // any other) instead of assigning the bare cast.
             expr_factory_.consume(cast_value);
             expr_factory_.stop_expression(true);
-        } else if (!consumer_stack.empty()) {
-            consumer_stack.top()->consume(cast_value);
         } else {
-            assignment_value = cast_value;
+            sink_value(cast_value);
         }
     }
 }
@@ -228,13 +217,7 @@ void HDL_functions_factory::stop_function_call() {
         auto call = consumer_stack.top()->result();
         consumer_stack.pop();
         expr_factory_.pop_level();
-        if (!consumer_stack.empty()) {
-            consumer_stack.top()->consume(call);
-        } else if (expr_factory_.active()) {
-            expr_factory_.consume(call);
-        } else {
-            assignment_value = call;
-        }
+        sink_value(call);
     }
 }
 
@@ -275,13 +258,7 @@ void HDL_functions_factory::stop_streaming() {
         expr_factory_.pop_level();
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
-        if (!consumer_stack.empty()) {
-            consumer_stack.top()->consume(result);
-        } else if (expr_factory_.active()) {
-            expr_factory_.consume(result);
-        } else {
-            assignment_value = result;
-        }
+        sink_value(result);
     }
 }
 
@@ -298,18 +275,15 @@ void HDL_functions_factory::stop_ternary() {
     if (top_as<ternary_factory>()) {
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
-        if (!consumer_stack.empty()) {
-            consumer_stack.top()->consume(result);
-        } else if (expr_factory_.active()) {
-            expr_factory_.consume(result);
-        } else {
-            assignment_value = result;
-        }
+        sink_value(result);
     }
 }
 
 void HDL_functions_factory::stop_expression(bool new_expr) {
     expr_factory_.stop_expression(new_expr);
+    // A [...] selection owns a pushed context until stop_bit_selection: its
+    // level-0 closings are index fragments, not statement values.
+    if (selection_depth > 0) return;
     if (expr_factory_.get_level() == 0) {
         auto expr = expr_factory_.get_expression_v2();
         if (expr.has_value()) {
@@ -323,22 +297,31 @@ void HDL_functions_factory::stop_expression(bool new_expr) {
     }
 }
 
-bool HDL_functions_factory::is_component_relevant() const {
-    if (paused) return false;
-    return expr_factory_.active() || !consumer_stack.empty();
-}
-
 void HDL_functions_factory::start_bit_selection() {
     if (!top_as<replication_factory>()) {
-        in_bit_selection = true;
-        bit_index = std::make_shared<Expression_v2>();
+        // Open a pushed expression context for the selection, mirroring
+        // start_function_call: index operators nest exactly like statement
+        // operators, and composite index parts sink back into it.
+        expr_factory_.pause();
+        expr_factory_.push_level();
+        ++selection_depth;
     }
 }
 
 void HDL_functions_factory::stop_bit_selection() {
-    if (in_bit_selection) {
-        expr_factory_.add_index(bit_index);
-        in_bit_selection = false;
+    if (selection_depth == 0) return;
+    std::shared_ptr<Expression_base> idx;
+    if (auto cur = expr_factory_.get_expression_v2()) {
+        idx = Expression_v2::unwrap(std::move(*cur));
+    }
+    expr_factory_.pop_level();
+    --selection_depth;
+    if (idx) {
+        if (selection_depth == 0 && lvalue_open) {
+            pending_lhs_index = idx;
+        } else {
+            expr_factory_.add_index(idx);
+        }
     }
 }
 

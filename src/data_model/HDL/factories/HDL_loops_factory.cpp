@@ -39,43 +39,24 @@ void HDL_loops_factory::clear() {
     do_stmt.reset();
     capture = for_form;
     current_expression = Expression_v2();
-    body_expr_factory = expressions_factory();
-    in_body_bit_selection = false;
     loop_phase = init;
     end_cond_valid = false;
     active = false;
 }
 
 void HDL_loops_factory::set_operation(const Expression_v2::expression_operator &op) {
-    if (loop_phase == body) {
-        body_expr_factory.set_operation(op);
-    } else {
-        current_expression.set_operation(op);
-    }
-}
-
-void HDL_loops_factory::start_assignment(const std::string &name) {
-    if(loop_phase == body) {
-        expression_valid = true;
-        body_expr_factory.clear_expression();
-        body_target = name;
-        body_index = nullptr;
-    }
+    if (loop_phase == body) return; // bodies are owned by the caller (e.g.
+                                    // f_factory): the loop keeps header only.
+    current_expression.set_operation(op);
 }
 
 void HDL_loops_factory:: add_component(const std::shared_ptr<Expression_base> &c) {
-    if (loop_phase == body) {
-        if (in_body_bit_selection) {
-            body_expr_factory.add_component(c);
-        } else {
-            body_expr_factory.add_component(c);
-        }
+    if (loop_phase == body) return; // bodies are owned by the caller: the
+                                    // loop keeps header (init/end/step) only.
+    if (current_expression.get_lhs() == nullptr) {
+        current_expression.set_lhs(c);
     } else {
-        if (current_expression.get_lhs() == nullptr) {
-            current_expression.set_lhs(c);
-        } else {
-            current_expression.set_rhs(c);
-        }
+        current_expression.set_rhs(c);
     }
 }
 
@@ -123,8 +104,6 @@ void HDL_loops_factory::set_phase(loop_phase_t p) {
     } else if(p==body) {
         _statement.set_iteration(std::make_shared<Expression_v2>(current_expression));
         current_expression = Expression_v2();
-        body_expr_factory = expressions_factory();
-        in_body_bit_selection = false;
     }
 }
 
@@ -148,8 +127,6 @@ void HDL_loops_factory::begin_loop_body() {
     current_expression = Expression_v2();
     end_cond_valid = true;
     loop_phase = body;
-    body_expr_factory = expressions_factory();
-    in_body_bit_selection = false;
 }
 
 void HDL_loops_factory::begin_do_condition() {
@@ -165,83 +142,6 @@ void HDL_loops_factory::finish_do_condition() {
         do_stmt->set_end_condition(cond);
     }
     current_expression = Expression_v2();
-}
-
-void HDL_loops_factory::advance_expression() {
-    if(expression_valid) {
-        auto expr = body_expr_factory.get_expression_v2();
-        if (expr.has_value()) {
-            auto raw = Expression_v2::unwrap(std::move(*expr));
-            if (raw && raw->is<Identifier_token>()) {
-                auto &tok = raw->as<Identifier_token>();
-                if (tok.is_subscripted()) {
-                    auto indices = tok.get_array_index();
-                    if (indices.size() == 1) body_index = indices[0];
-                    else body_index = nullptr;
-                } else {
-                    body_index = nullptr;
-                }
-            } else if (raw && raw->is<Expression_v2>()) {
-                body_index = raw;
-            }
-        }
-        body_expr_factory.clear_expression();
-    }
-}
-
-std::shared_ptr<hdl_statement_base> HDL_loops_factory::build_body_statement() {
-    std::shared_ptr<hdl_statement_base> stmt;
-    if(expression_valid) {
-        auto expr = body_expr_factory.get_expression_v2();
-        std::shared_ptr<Expression_base> val;
-        if (expr.has_value()) {
-            if (expr->get_operation() != Expression_v2::none) {
-                val = Expression_v2::unwrap(std::move(*expr));
-            } else if (auto lhs = expr->get_lhs()) {
-                val = lhs;
-            }
-        }
-
-        auto asgn = std::make_shared<hdl_assignment_statement>();
-        asgn->set_target(body_target);
-        if (body_index) asgn->set_index(body_index);
-        if (val) asgn->set_value(val);
-        stmt = asgn;
-
-        expression_valid = false;
-        body_expr_factory.clear_expression();
-    }
-    return stmt;
-}
-
-void HDL_loops_factory::close_expression() {
-    if (auto stmt = build_body_statement()) add_body_stmt(stmt);
-}
-
-void HDL_loops_factory::start_expression(bool new_expr) {
-    if (loop_phase == body && !in_body_bit_selection) {
-        body_expr_factory.start_expression(new_expr);
-    }
-}
-
-void HDL_loops_factory::stop_expression(bool new_expr) {
-    if (loop_phase == body && !in_body_bit_selection) {
-        body_expr_factory.stop_expression(new_expr);
-    }
-}
-
-void HDL_loops_factory::start_bit_selection() {
-    if (loop_phase == body) {
-        in_body_bit_selection = true;
-        body_expr_factory.start_bit_selection();
-    }
-}
-
-void HDL_loops_factory::stop_bit_selection() {
-    if (loop_phase == body) {
-        in_body_bit_selection = false;
-        body_expr_factory.stop_bit_selection();
-    }
 }
 
 void HDL_loops_factory::add_expression(const Expression_v2 &e) {

@@ -19,9 +19,13 @@
 #include <vector>
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
-#include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/statement/hdl_statements.hpp"
 
+// The loop factory owns the loop itself: header (init/end/iteration) and the
+// body statement list. Body statements are built by whoever owns their
+// context (e.g. HDL_functions_factory for function bodies, dep/conditional
+// factories for generate constructs) and handed in fully built via
+// add_body_stmt/add_statement.
 class HDL_loops_factory {
 public:
     enum capture_form_t {for_form, while_form, repeat_form, do_while_form};
@@ -32,7 +36,6 @@ public:
     void add_statement(const std::shared_ptr<hdl_statement_base> &stmt);
     void add_expression(const Expression_v2 &e);
     void set_loop_init(const HDL_parameter &id) { _statement.set_init(std::make_shared<HDL_parameter>(id)); }
-    void start_assignment(const std::string &name);
     std::shared_ptr<hdl_loop_statement> get_loop_statement() {active = false; return std::make_shared<hdl_loop_statement>(_statement);};
     std::shared_ptr<hdl_while_statement> get_while_statement() {active = false; auto ret = while_stmt; while_stmt.reset(); return ret;};
     std::shared_ptr<hdl_repeat_statement> get_repeat_statement() {active = false; auto ret = repeat_stmt; repeat_stmt.reset(); return ret;};
@@ -55,19 +58,9 @@ public:
     void add_loop_variable(const std::string &p);
     void set_phase(loop_phase_t p);
     void advance_phase();
-    void advance_expression();
-    void close_expression();
-    // Build the pending body assignment without filing it: lets callers
-    // route it elsewhere (e.g. into an enclosing conditional branch).
-    // Returns nullptr when no assignment is pending. Clears pending state.
-    std::shared_ptr<hdl_statement_base> build_body_statement();
     void add_body_stmt(const std::shared_ptr<hdl_statement_base> &stmt);
     void set_operation(const Expression_v2::expression_operator &op);
 
-    void start_expression(bool new_expr);
-    void stop_expression(bool new_expr);
-    void start_bit_selection();
-    void stop_bit_selection();
     bool in_body() const {return active && loop_phase == body;}
 private:
     hdl_loop_statement _statement;
@@ -75,18 +68,12 @@ private:
     Expression_v2 current_expression;
 
     loop_phase_t loop_phase = init;
-    bool expression_valid = false;
-
     bool end_cond_valid = false;
     bool active = false;
     capture_form_t capture = for_form;
     std::shared_ptr<hdl_while_statement> while_stmt;
     std::shared_ptr<hdl_repeat_statement> repeat_stmt;
     std::shared_ptr<hdl_do_while_statement> do_stmt;
-    expressions_factory body_expr_factory;
-    bool in_body_bit_selection = false;
-    std::string body_target;
-    std::shared_ptr<Expression_base> body_index;
 };
 
 

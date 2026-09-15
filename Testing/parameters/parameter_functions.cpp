@@ -2120,3 +2120,108 @@ TEST(parameter_extraction, function_for_loop_if_body) {
         ASSERT_EQ(value, defaults.at(name));
     }
 }
+
+TEST(parameter_extraction, function_call_in_loop_body) {
+    // A call inside a loop-body expression must reach the loop assembly:
+    // `res = mymax(res, i)` must accumulate instead of degrading to
+    // `res = res`.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function automatic int mymax(int a, int b);
+                return (a > b) ? a : b;
+            endfunction
+
+            function automatic int facc();
+                automatic int res = 0;
+                for (int i = 0; i < 5; i++)
+                    res = mymax(res, i);
+                return res;
+            endfunction
+
+            parameter R = facc();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("R"), 4}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, function_ternary_in_loop_body) {
+    // A ternary inside a loop-body expression exercises the same composite
+    // path as calls (consumer_stack in f_factory): it must survive the
+    // handoff into the loop body instead of degrading.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function automatic int facc();
+                automatic int res = 0;
+                for (int i = 0; i < 5; i++)
+                    res = (i > res) ? i : res;
+                return res;
+            endfunction
+
+            parameter R = facc();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("R"), 4}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, function_cast_in_loop_body) {
+    // A cast inside a loop-body expression exercises the cast_factory path
+    // through f_factory into the loop body.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function automatic int facc();
+                automatic int res = 0;
+                for (int i = 0; i < 5; i++)
+                    res = res + int'(i);
+                return res;
+            endfunction
+
+            parameter R = facc();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("R"), 10}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
