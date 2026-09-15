@@ -199,6 +199,16 @@ std::shared_ptr<hdl_type> Type_engine::stop_type_declaration(
         trailing.insert(trailing.end(), unpacked.begin(), unpacked.end());
         fused.set_unpacked_dimensions(trailing);
         result = std::make_shared<HDL_struct_type>(fused);
+    } else if (base && base->is<HDL_enum_type>()) {
+        // Enum-base typedef chain (e.g. unit_type_t [0:4] fmt_unit_types):
+        // clone the enum and keep its kind, appending the trailing unpacked
+        // dims — otherwise the chain silently degrades to a plain simple
+        // type and element types (and their members) are lost downstream.
+        auto fused = base->as<HDL_enum_type>();
+        auto trailing = fused.get_unpacked_dimensions();
+        trailing.insert(trailing.end(), unpacked.begin(), unpacked.end());
+        fused.set_unpacked_dimensions(trailing);
+        result = std::make_shared<HDL_enum_type>(fused);
     } else {
         HDL_simple_type t;
         t.set_packed_dimensions(packed);

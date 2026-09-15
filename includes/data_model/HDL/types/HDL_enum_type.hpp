@@ -21,6 +21,7 @@
 #include <sstream>
 #include <cereal/types/optional.hpp>
 #include "data_model/HDL/types/HDL_simple_type.hpp"
+#include "data_model/HDL/parameters/common/dimension.hpp"
 
 struct enum_member {
     std::string name;
@@ -44,15 +45,12 @@ public:
     std::vector<enum_member> members;
 
     [[nodiscard]] std::optional<resolved_type> evaluate_type(
-        const std::map<qualified_identifier, resolved_parameter> &context) override {
-        if (base_type) return base_type->evaluate_type(context);
-        resolved_type rt;
-        rt.packed_sizes.push_back(32);
-        rt.packed_ascending.push_back(true);
-        return rt;
-    }
+        const std::map<qualified_identifier, resolved_parameter> &context) override;
 
-    [[nodiscard]] bool is_scalar() const override { return true; }
+    [[nodiscard]] bool is_scalar() const override { return unpacked_dimensions.empty(); }
+
+    void set_unpacked_dimensions(const std::vector<dimension_t> &d) { unpacked_dimensions = d; }
+    [[nodiscard]] std::vector<dimension_t> get_unpacked_dimensions() const { return unpacked_dimensions; }
 
     parameter_deps_t get_dependencies() override;
 
@@ -60,19 +58,27 @@ public:
 
     [[nodiscard]] bool is_equal(const hdl_type &other) const override {
         if (auto *o = dynamic_cast<const HDL_enum_type *>(&other)) {
-            return members == o->members;
+            return *this == *o;
         }
         return false;
     }
 
     friend bool operator==(const HDL_enum_type &lhs, const HDL_enum_type &rhs) {
-        return lhs.members == rhs.members;
+        if (lhs.members != rhs.members) return false;
+        if (lhs.unpacked_dimensions.size() != rhs.unpacked_dimensions.size()) return false;
+        for (size_t i = 0; i < lhs.unpacked_dimensions.size(); ++i) {
+            if (!(lhs.unpacked_dimensions[i] == rhs.unpacked_dimensions[i])) return false;
+        }
+        return true;
     }
 
     template<class Archive>
     void serialize(Archive & ar) {
-        ar(members, base_type);
+        ar(members, base_type, unpacked_dimensions);
     }
+
+private:
+    std::vector<dimension_t> unpacked_dimensions;
 };
 
 #endif //ANANKE_HDL_ENUM_TYPE_HPP
