@@ -2506,3 +2506,42 @@ TEST(parameter_processing, shift_of_clog2_roundtrip) {
     ASSERT_EQ(3, solved.at(qualified_identifier("B")).get_integer());
     ASSERT_EQ(8, solved.at(qualified_identifier("C")).get_integer());
 }
+
+TEST(parameter_processing, generate_localparam_genvar_index) {
+    auto test_pattern = R"(
+        module leaf #(
+            parameter ELEM = 0
+        )();
+        endmodule
+
+        module test_mod #()();
+            parameter logic [31:0] TAB [0:1] = '{10, 20};
+            for (genvar i = 0; i < 2; i++) begin : g
+                localparam ELEM = TAB[i];
+                leaf #(
+                    .ELEM(ELEM)
+                ) inst();
+            end
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+
+    auto resources = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    d_store->store_file({"/dev/zero", "file_hash", resources});
+
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+    auto deps = ast_v2->get_dependencies();
+
+    ASSERT_EQ(deps.size(), 2);
+    ASSERT_EQ(deps[0]->get_parameters().get("ELEM")->get_numeric_value(), 10);
+    ASSERT_EQ(deps[1]->get_parameters().get("ELEM")->get_numeric_value(), 20);
+
+}

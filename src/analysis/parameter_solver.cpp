@@ -30,10 +30,33 @@
 #include "data_model/HDL/types/HDL_external_type.hpp"
 #include "data_model/HDL/types/HDL_enum_type.hpp"
 #include "data_model/mdarray.hpp"
+#include "data_model/HDL/statement/hdl_statements.hpp"
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 
 #include <set>
 #include <sstream>
+
+void parameter_solver::collect_loop_vars_stmts(
+    const std::vector<std::shared_ptr<hdl_statement_base>> &stmts,
+    std::set<std::string> &out) {
+    for (const auto &s : stmts) {
+        if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(s)) {
+            if (loop->get_init() && !loop->get_init()->get_name().empty())
+                out.insert(loop->get_init()->get_name());
+            collect_loop_vars_stmts(loop->get_body(), out);
+        } else if (auto cond = std::dynamic_pointer_cast<hdl_conditional_statement>(s)) {
+            for (const auto &br : cond->get_branches()) collect_loop_vars_stmts(br.body, out);
+            collect_loop_vars_stmts(cond->get_else_body(), out);
+        }
+    }
+}
+
+std::set<std::string> parameter_solver::collect_loop_vars(
+    const std::shared_ptr<hdl_resource_statement> &resource) {
+    std::set<std::string> out;
+    if (resource) collect_loop_vars_stmts(resource->get_statements(), out);
+    return out;
+}
 
 
 
@@ -789,6 +812,23 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
+    Parameters_map loop_locals;
+    if (auto loop_vars = collect_loop_vars(node_spec.value()); !loop_vars.empty()) {
+        for (const auto &[p_name, param] : to_solve) {
+            if (node_overrides.contains(p_name)) continue;
+            bool loop_local = false;
+            for (const auto &dep : param->get_dependencies().data) {
+                if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
+                    loop_vars.contains(dep.get_name())) {
+                    loop_local = true;
+                    break;
+                }
+            }
+            if (loop_local) loop_locals.insert(param);
+        }
+        for (const auto &[p_name, param] : loop_locals) to_solve.erase(p_name);
+    }
+
     std::map<qualified_identifier, std::shared_ptr<hdl_type>> parent_type_ctx;
     std::shared_ptr<hdl_resource_statement> parent_resource;
     auto parent_node = work.node->get_parent();
@@ -911,7 +951,14 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
-    return process_parameters(to_solve, ctx);
+    auto solution = process_parameters(to_solve, ctx);
+    // Silent placeholders for the deferred loop locals: no single
+    // module-scope value exists, and solving them here would warn
+    // "missing value" and default to 0. Per-iteration values are injected
+    // during loop unrolling instead.
+    for (const auto &[p_name, param] : loop_locals)
+        solution[param->get_identifier()] = resolved_parameter(0);
+    return solution;
 }
 
 std::string parameter_solver::get_full_path(const std::shared_ptr<hdl_ast_node> &node) {

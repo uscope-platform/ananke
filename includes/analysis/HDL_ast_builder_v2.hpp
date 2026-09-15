@@ -30,6 +30,7 @@
 class hdl_loop_statement;
 class hdl_conditional_statement;
 class hdl_instance_statement;
+class hdl_resource_statement;
 
 
 class HDL_ast_builder_v2 {
@@ -56,6 +57,11 @@ private:
     std::expected<std::vector<work_order>, solver_errors> process_loop(
         const hdl_loop_statement &loop,
         work_order &wo
+    );
+    void elaborate_loop_locals(
+        const std::shared_ptr<hdl_resource_statement> &resource,
+        const std::string &loop_var,
+        work_order &iter_wo
     );
     std::expected<std::vector<work_order>, solver_errors> process_conditional(
         const hdl_conditional_statement &cond,

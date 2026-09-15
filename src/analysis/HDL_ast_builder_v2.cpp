@@ -17,6 +17,7 @@
 #include "crash_context.hpp"
 
 #include <algorithm>
+#include <set>
 
 #include "analysis/loop_solver.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
@@ -219,25 +220,49 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     child_param_chain.push_back({});
     wo.node->add_child(child);
     bool recurses = std::count(module_chain.begin(), module_chain.end(), type) > 0;
-    // A recursive instantiation whose resolved parameters repeat an ancestor of
-    // the same type makes no progress and would never terminate (e.g. a module
-    // recursing on an unresolved parameter that stays 0). Keep it as a terminal.
-    // Parameterless recursion is left to the depth guard: an empty parameter set
-    // cannot show whether the recursion is progressing.
+
     if (recurses && !params.empty()) {
         for (size_t i = 0; i + 1 < module_chain.size(); ++i) {
             if (module_chain[i] == type && i < param_chain.size() && param_chain[i] == params)
                 return orders;
         }
     }
-    // Instances from non-selected generate branches are normally elaborated too
-    // (so their internals are available for analysis). The one exception is a
-    // recursive instantiation through such an inactive branch: that would never
-    // terminate (the generate chain only terminates on the selected leaf), so
-    // it is kept as a terminal node instead.
+
     if (!active && recurses) return orders;
     orders.push_back({child, params, wo.path + "." + wo.node->get_name(), wo.interfaces_map, {}, child_chain, child_param_chain});
     return orders;
+}
+
+void HDL_ast_builder_v2::elaborate_loop_locals(
+    const std::shared_ptr<hdl_resource_statement> &resource,
+    const std::string &loop_var,
+    work_order &iter_wo
+) {
+    auto &ctx = iter_wo.param_chain.back();
+
+    std::set<std::string> elaborated;
+    const auto params = resource->get_parameters();
+    for (size_t pass = 0; pass <= params.size(); ++pass) {
+        bool progress = false;
+        for (const auto &[p_name, param] : params) {
+            if (elaborated.contains(p_name)) continue;
+            bool candidate = false;
+            for (const auto &dep : param->get_dependencies().data) {
+                if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
+                    (dep.get_name() == loop_var || elaborated.contains(dep.get_name()))) {
+                    candidate = true;
+                    break;
+                }
+            }
+            if (!candidate) continue;
+            auto v = param->evaluate(ctx);
+            if (!v.has_value() || v->is_undefined()) continue;
+            ctx[param->get_identifier()] = v.value();
+            elaborated.insert(p_name);
+            progress = true;
+        }
+        if (!progress) break;
+    }
 }
 
 std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::process_loop(
@@ -250,12 +275,14 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     std::vector<work_order> orders;
     auto indices = loop_solver::solve_loop(loop, wo.param_chain.back());
     auto loop_var_name = loop.get_init()->get_name();
+    auto res_opt = d_store->get_HDL_resource(wo.node->get_type());
     for (auto &body_stmt : loop.get_body()) {
         for (auto &idx : indices) {
             // Per-iteration elaboration context: same frame as wo, with the
             // loop variable bound to the current index.
             work_order iter_wo = wo;
             iter_wo.param_chain.back()[qualified_identifier(loop_var_name)] = resolved_parameter(idx);
+            if (res_opt.has_value()) elaborate_loop_locals(res_opt.value(), loop_var_name, iter_wo);
 
             if (auto body_inst = std::dynamic_pointer_cast<hdl_instance_statement>(body_stmt)) {
                 auto child = std::make_shared<hdl_ast_node>(*body_inst);
