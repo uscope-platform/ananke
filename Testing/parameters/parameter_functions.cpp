@@ -2225,3 +2225,86 @@ TEST(parameter_extraction, function_cast_in_loop_body) {
         ASSERT_EQ(value, defaults.at(name));
     }
 }
+
+TEST(parameter_extraction, function_indexed_local_accumulation) {
+    // Indexed writes to a function-local array must accumulate per element:
+    // `res[i] = cfg[i]` over 5 iterations must rebuild the mask.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function automatic logic [4:0] fmask(logic [4:0] cfg);
+                automatic logic [4:0] res;
+                for (int i = 0; i < 5; i++)
+                    res[i] = cfg[i];
+                return res;
+            endfunction
+
+            parameter R = fmask(5'b10101);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("R"), 21}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, function_enum_cast_loop_var_argument) {
+    // Enum cast of a loop variable passed as a call argument in a loop:
+    // `p::fget(p::fmt_e'(i))` must resolve per iteration like the
+    // literal-argument form already does.
+    auto test_pattern = R"(
+        package p;
+            typedef struct packed {
+                int unsigned exp_bits;
+                int unsigned man_bits;
+            } e_t;
+            localparam e_t [0:4] TAB = '{'{8, 23}, '{11, 52}, '{5, 10}, '{5, 2}, '{8, 7}};
+            typedef enum logic [2:0] {A0, A1, A2, A3, A4} fmt_e;
+
+            function automatic int unsigned fget(fmt_e f);
+                return TAB[f].exp_bits;
+            endfunction
+        endpackage
+
+        module test_mod #(
+        )();
+            function automatic int fsum();
+                automatic int res = 0;
+                for (int i = 0; i < 5; i++)
+                    res = res + p::fget(p::fmt_e'(i));
+                return res;
+            endfunction
+
+            parameter R = fsum();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto file = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
+
+    parameter_solver::propagate_functions(resource, d_store);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("R"), 37}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
