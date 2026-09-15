@@ -189,7 +189,8 @@ void HDL_loops_factory::advance_expression() {
     }
 }
 
-void HDL_loops_factory::close_expression() {
+std::shared_ptr<hdl_statement_base> HDL_loops_factory::build_body_statement() {
+    std::shared_ptr<hdl_statement_base> stmt;
     if(expression_valid) {
         auto expr = body_expr_factory.get_expression_v2();
         std::shared_ptr<Expression_base> val;
@@ -201,15 +202,20 @@ void HDL_loops_factory::close_expression() {
             }
         }
 
-        auto stmt = std::make_shared<hdl_assignment_statement>();
-        stmt->set_target(body_target);
-        if (body_index) stmt->set_index(body_index);
-        if (val) stmt->set_value(val);
-        add_body_stmt(stmt);
+        auto asgn = std::make_shared<hdl_assignment_statement>();
+        asgn->set_target(body_target);
+        if (body_index) asgn->set_index(body_index);
+        if (val) asgn->set_value(val);
+        stmt = asgn;
 
         expression_valid = false;
         body_expr_factory.clear_expression();
     }
+    return stmt;
+}
+
+void HDL_loops_factory::close_expression() {
+    if (auto stmt = build_body_statement()) add_body_stmt(stmt);
 }
 
 void HDL_loops_factory::start_expression(bool new_expr) {

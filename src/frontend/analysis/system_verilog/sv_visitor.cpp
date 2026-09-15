@@ -1976,8 +1976,21 @@ void sv_visitor::exitLoop_statement(sv2017::Loop_statementContext *ctx) {
 
 void sv_visitor::exitStatement_item(sv2017::Statement_itemContext *ctx) {
     if(f_factory.is_active() && loops_factory.in_loop()) {
-        loops_factory.close_expression();
+        if (auto stmt = loops_factory.build_body_statement()) {
+            if (in_loop_conditional_branch(ctx))
+                conditionals_factory.add_statement(stmt);
+            else
+                loops_factory.add_body_stmt(stmt);
+        }
     }
+}
+
+bool sv_visitor::in_loop_conditional_branch(antlr4::tree::ParseTree *node) {
+    for (auto *p = node ? node->parent : nullptr; p; p = p->parent) {
+        if (dynamic_cast<sv2017::Conditional_statementContext *>(p)) return true;
+        if (dynamic_cast<sv2017::Loop_statementContext *>(p)) return false;
+    }
+    return false;
 }
 
 void sv_visitor::exitAssignment_operator(sv2017::Assignment_operatorContext *ctx) {

@@ -57,6 +57,11 @@ public:
     void advance_phase();
     void advance_expression();
     void close_expression();
+    // Build the pending body assignment without filing it: lets callers
+    // route it elsewhere (e.g. into an enclosing conditional branch).
+    // Returns nullptr when no assignment is pending. Clears pending state.
+    std::shared_ptr<hdl_statement_base> build_body_statement();
+    void add_body_stmt(const std::shared_ptr<hdl_statement_base> &stmt);
     void set_operation(const Expression_v2::expression_operator &op);
 
     void start_expression(bool new_expr);
@@ -65,8 +70,6 @@ public:
     void stop_bit_selection();
     bool in_body() const {return active && loop_phase == body;}
 private:
-    void add_body_stmt(const std::shared_ptr<hdl_statement_base> &stmt);
-
     hdl_loop_statement _statement;
 
     Expression_v2 current_expression;
