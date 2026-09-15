@@ -199,8 +199,19 @@ void HDL_function_call::walk_body(
                         spdlog::warn("Empty array value in function body assignment, defaulting to 0");
                         continue;
                     }
-                    value_map[idx] = slice[0];
-                    size_map[idx] = 0;
+                    if (rt && rt->is<HDL_struct_type>()) {
+                        value_map[idx] = slice[0];
+                        size_map[idx] = 0;
+                    } else {
+                        hdl_integer packed = 0;
+                        int64_t shift = 0;
+                        for (const auto &e : slice) {
+                            packed = packed | (e.truncate_to(e.get_size()) << hdl_integer(shift));
+                            shift += e.get_size();
+                        }
+                        value_map[idx] = packed;
+                        size_map[idx] = packed.get_size();
+                    }
                 }
             } else if (rt && rt->is<HDL_struct_type>() && target.get_instance().size() == 1 && target.get_instance().front() == fcn_name) {
                 if (!val.has_value()) continue;
@@ -239,7 +250,21 @@ void HDL_function_call::walk_body(
                 }
             } else {
                 if (!val.has_value()) continue;
-                ctx[target] = val.value();
+                if (asgn->get_index()) {
+                    auto idx_res = asgn->get_index()->evaluate(ctx, expected_type);
+                    if (!idx_res.has_value() || !idx_res.value().is_integer()) continue;
+                    if (!val.value().is_integer()) continue;
+                    std::vector<int64_t> idxv = {idx_res.value().get_integer().get_value()};
+                    while (idxv.size() < 3) idxv.insert(idxv.begin(), 0);
+                    mdarray<hdl_integer> arr;
+                    auto it = ctx.find(target);
+                    if (it != ctx.end() && it->second.is_int_array())
+                        arr = it->second.get_int_array();
+                    arr.set_value(idxv, val.value().get_integer());
+                    ctx[target] = resolved_parameter(arr);
+                } else {
+                    ctx[target] = val.value();
+                }
             }
         } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
             if (!loop->get_init()) {
