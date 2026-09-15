@@ -981,3 +981,123 @@ endmodule
     });
     EXPECT_EQ(solved.at(qualified_identifier("ARR")), expected);
 }
+
+TEST(parameter_extraction, function_loop_body_capture) {
+    // Statements in function for-loop bodies (scalar accumulation): the body
+    // comes out empty so the function returns the initializer.
+    auto test_pattern = R"(
+package p;
+    function automatic int pidx(logic [4:0] cfg);
+        automatic int res = 0;
+        for (int i = 0; i < 5; i++)
+            res = res + cfg[i];
+        return res;
+    endfunction
+endpackage
+
+module test_mod #()();
+    function automatic int midx(logic [4:0] cfg);
+        automatic int res = 0;
+        for (int i = 0; i < 5; i++)
+            res = res + cfg[i];
+        return res;
+    endfunction
+    localparam int M_IDX = midx(5'b10101);
+    localparam int P_IDX = p::pidx(5'b10101);
+endmodule
+)";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+    auto params = ast_v2->get_parameters();
+
+    ASSERT_TRUE(params.contains("M_IDX"));
+    EXPECT_EQ(params.get("M_IDX")->get_numeric_value(), 3);
+    ASSERT_TRUE(params.contains("P_IDX"));
+    EXPECT_EQ(params.get("P_IDX")->get_numeric_value(), 3);
+}
+
+TEST(parameter_extraction, function_nested_call_arithmetic) {
+    // Nested calls combined with arithmetic in a function return.
+    auto test_pattern = R"(
+package p;
+    typedef struct packed {
+        int unsigned exp_bits;
+        int unsigned man_bits;
+    } e_t;
+    localparam e_t [0:1] TAB = '{'{8, 23}, '{11, 52}};
+    typedef enum logic [0:0] {A0, A1} fmt_e;
+
+    function automatic int unsigned fget(fmt_e fmt);
+        return TAB[fmt].exp_bits;
+    endfunction
+
+    function automatic int unsigned fcall_mul();
+        return fget(fmt_e'(1)) * 10;
+    endfunction
+
+    function automatic int unsigned fcall_add();
+        return fget(fmt_e'(0)) + fget(fmt_e'(1));
+    endfunction
+endpackage
+
+module test_mod #()();
+    localparam int unsigned B_MUL = p::fcall_mul();
+    localparam int unsigned B_ADD = p::fcall_add();
+endmodule
+)";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+    auto params = ast_v2->get_parameters();
+
+    ASSERT_TRUE(params.contains("B_MUL"));
+    EXPECT_EQ(params.get("B_MUL")->get_numeric_value(), 110);
+    ASSERT_TRUE(params.contains("B_ADD"));
+    EXPECT_EQ(params.get("B_ADD")->get_numeric_value(), 19);
+}
+
+TEST(parameter_extraction, struct_array_element_field_read) {
+    // Field read on one element of a struct array: TAB[1].exp_bits.
+    auto test_pattern = R"(
+package p;
+    typedef struct packed {
+        int unsigned exp_bits;
+        int unsigned man_bits;
+    } fp_encoding_t;
+    localparam int unsigned NUM = 2;
+    localparam fp_encoding_t [0:NUM-1] TAB = '{'{8, 23}, '{11, 52}};
+endpackage
+
+module test_mod #()();
+    localparam int unsigned W = p::TAB[1].exp_bits;
+    localparam int unsigned M = p::TAB[0].man_bits;
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+    auto params = ast_v2->get_parameters();
+
+    ASSERT_TRUE(params.contains("W"));
+    ASSERT_TRUE(params.get("W")->get_numeric_value().has_value());
+    EXPECT_EQ(params.get("W")->get_numeric_value().value().get_value(), 11);
+    ASSERT_TRUE(params.contains("M"));
+    ASSERT_TRUE(params.get("M")->get_numeric_value().has_value());
+    EXPECT_EQ(params.get("M")->get_numeric_value().value().get_value(), 23);
+}

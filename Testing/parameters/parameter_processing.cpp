@@ -2510,7 +2510,9 @@ TEST(parameter_processing, shift_of_clog2_roundtrip) {
 TEST(parameter_processing, generate_localparam_genvar_index) {
     auto test_pattern = R"(
         module leaf #(
-            parameter ELEM = 0
+            parameter ELEM = 0,
+            parameter UI = 0,
+            parameter UIP1 = 0
         )();
         endmodule
 
@@ -2518,8 +2520,12 @@ TEST(parameter_processing, generate_localparam_genvar_index) {
             parameter logic [31:0] TAB [0:1] = '{10, 20};
             for (genvar i = 0; i < 2; i++) begin : g
                 localparam ELEM = TAB[i];
+                localparam int unsigned UI = unsigned'(i);
+                localparam int unsigned UIP1 = UI + 10;
                 leaf #(
-                    .ELEM(ELEM)
+                    .ELEM(ELEM),
+                    .UI(UI),
+                    .UIP1(UIP1)
                 ) inst();
             end
         endmodule
@@ -2543,5 +2549,9 @@ TEST(parameter_processing, generate_localparam_genvar_index) {
     ASSERT_EQ(deps.size(), 2);
     ASSERT_EQ(deps[0]->get_parameters().get("ELEM")->get_numeric_value(), 10);
     ASSERT_EQ(deps[1]->get_parameters().get("ELEM")->get_numeric_value(), 20);
+    ASSERT_EQ(deps[0]->get_parameters().get("UI")->get_numeric_value(), 0);
+    ASSERT_EQ(deps[1]->get_parameters().get("UI")->get_numeric_value(), 1);
+    ASSERT_EQ(deps[0]->get_parameters().get("UIP1")->get_numeric_value(), 10);
+    ASSERT_EQ(deps[1]->get_parameters().get("UIP1")->get_numeric_value(), 11);
 
 }
