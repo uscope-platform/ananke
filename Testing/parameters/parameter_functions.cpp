@@ -2056,3 +2056,67 @@ TEST(parameter_extraction, do_while_loop_solvable) {
     }
 }
 
+
+TEST(parameter_extraction, function_chained_addition_operands) {
+    // Chained binary ops in a function return: `a + b + 1` must not lose
+    // the middle operand.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function automatic int fadd3(int a, int b);
+                return a + b + 1;
+            endfunction
+
+            parameter R = fadd3(10, 20);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("R"), 31}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, function_for_loop_if_body) {
+    // Conditional inside a function for-loop body: the if must materialize
+    // instead of leaving an empty loop.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function automatic int fcount(logic [4:0] cfg);
+                automatic int res = 0;
+                for (int i = 0; i < 5; i++) begin
+                    if (cfg[i]) res = res + 1;
+                end
+                return res;
+            endfunction
+
+            parameter R = fcount(5'b10101);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("R"), 3}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
