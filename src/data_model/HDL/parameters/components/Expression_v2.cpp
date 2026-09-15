@@ -289,7 +289,18 @@ std::expected<resolved_parameter, solver_errors> Expression_v2::evaluate(
                 if (w > 0) return w;
             }
             auto v = e->evaluate(context, operand_sizing);
-            if (v && v->is_integer()) return v->get_integer().get_size();
+            if (v && v->is_integer()) {
+                const auto &iv = v->get_integer();
+                if (iv.has_explicit_size()) return iv.get_size();
+                // Unknown width (unsized values, loop indices, unsized
+                // locals): size to the container when sizing, else the
+                // 32-bit self-determined minimum — never the minimal bit
+                // count, which truncates results that outgrow operands
+                // (e.g. accumulators re-evaluated across loop iterations).
+                if (operand_sizing && !operand_sizing->packed_sizes.empty())
+                    return packed_width(*operand_sizing);
+                return 32;
+            }
             return 64;
         };
         uint64_t w_a = operand_width(lhs);

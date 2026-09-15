@@ -142,6 +142,10 @@ public:
     }
 
     uint64_t get_size() const;
+    // Whether a declared/container width was ever stored. Without one,
+    // get_size() reports the minimal bit count, which must not be mistaken
+    // for a sizing bound (it would truncate growing results).
+    [[nodiscard]] bool has_explicit_size() const {return size > 0;}
     bool get_signed() const {return signedness;}
 
     hdl_integer operator+(const hdl_integer &o) const;

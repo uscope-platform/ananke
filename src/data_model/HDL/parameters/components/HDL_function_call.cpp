@@ -252,6 +252,14 @@ void HDL_function_call::walk_body(
                 auto loop_ctx = ctx;
                 loop_ctx[loop_var] = resolved_parameter(idx);
                 walk_body(fcn_name, loop->get_body(), loop_ctx, value_map, size_map, rt, expected_type);
+                // Scalar updates (locals, accumulators) must survive into
+                // later iterations: loop_ctx is per-iteration scratch, while
+                // return-target writes already persist via value_map. Only
+                // the loop variable itself is iteration-scoped.
+                for (const auto &[key, val] : loop_ctx) {
+                    if (key == loop_var) continue;
+                    ctx[key] = val;
+                }
             }
         } else if (auto while_loop = std::dynamic_pointer_cast<hdl_while_statement>(stmt)) {
             if (!while_loop->get_end_condition()) continue;

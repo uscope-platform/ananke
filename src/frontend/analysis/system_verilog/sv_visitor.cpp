@@ -1198,6 +1198,12 @@ void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
             if (auto dot = dynamic_cast<sv2017::PrimaryDotContext *>(node)) {
                 dot_chain.push_back(dot->identifier()->getText());
                 node = dot->parent;
+            } else if (dynamic_cast<sv2017::PrimaryBitSelectContext *>(node) ||
+                       dynamic_cast<sv2017::PrimaryIndexContext *>(node)) {
+                // Indexed struct-array field read (TAB[i].field): the index
+                // sits between the base and the dot, so skip it while
+                // collecting the enclosing field chain.
+                node = node->parent;
             } else {
                 break;
             }

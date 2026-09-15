@@ -32,20 +32,30 @@ struct resolved_type;
 
 inline std::optional<std::map<qualified_identifier, resolved_parameter>> overlay_unambiguous_scope(
     const std::map<qualified_identifier, resolved_parameter> &context) {
+    auto scope_key = [](const qualified_identifier &key) {
+        std::string k;
+        for (auto &inst : key.get_instance()) {
+            k += inst;
+            k += ".";
+        }
+        k += key.get_name();
+        return k;
+    };
     std::map<std::string, unsigned> providers;
     for (const auto &entry : context) {
         const auto &key = entry.first;
-        if (key.get_package_prefix().empty() || !key.get_instance().empty()) continue;
-        auto &count = providers[key.get_name()];
+        if (key.get_package_prefix().empty()) continue;
+        auto &count = providers[scope_key(key)];
         if (count < 2) ++count;
     }
     std::map<qualified_identifier, resolved_parameter> additions;
     for (const auto &entry : context) {
         const auto &key = entry.first;
-        if (key.get_package_prefix().empty() || !key.get_instance().empty()) continue;
-        auto prov = providers.find(key.get_name());
+        if (key.get_package_prefix().empty()) continue;
+        auto prov = providers.find(scope_key(key));
         if (prov == providers.end() || prov->second != 1) continue;
         qualified_identifier bare(key.get_name());
+        bare.set_instance_prefix(key.get_instance());
         if (context.contains(bare)) continue;
         additions.emplace(bare, entry.second);
     }

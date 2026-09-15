@@ -425,6 +425,20 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
                 fetch_package(pkg_name, package.value());
             }
         }
+        // Package functions (p::f()) need their owner package's constants
+        // (e.g. TAB for TAB[i].field reads inside the body) seeded, or the
+        // nested evaluation misses and defaults to 0.
+        for (const auto& fdep : deps.functions) {
+            if (fdep.get_package_prefix().empty()) continue;
+            auto pkg_name = fdep.get_package_prefix().back();
+            auto package = d_store->get_package_function_owner(pkg_name, fdep.get_name());
+            if (!package.has_value()) {
+                auto res = d_store->get_HDL_resource(pkg_name);
+                if (!res.has_value()) continue;
+                package = res.value();
+            }
+            fetch_package(pkg_name, package.value());
+        }
         // Typedef packages (e.g. config_pkg::cfg_t): the struct's bare
         // dimension deps (NrMaxRules) live in the typedef owner package.
         // Solving it here seeds pkg::NrMaxRules so the overlay in
@@ -731,6 +745,21 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
                     }
                     resolve_function_return_type(find_function_def(res.value(), fcn.get_name()), d_store);
                     param->propagate_function(fcn_def);
+                    // Package-internal nesting: bare calls inside fcn_def's
+                    // body (e.g. fget inside p::fcall_mul) resolve against
+                    // the same package, which the module-scope fixpoint
+                    // below would never find. Link every package function
+                    // into every other package body (idempotent shared
+                    // links, safe by construction) so any depth resolves.
+                    for (auto &[other_name, _] : res.value()->get_functions()) {
+                        auto other_def = res.value()->get_function_shared(other_name);
+                        if (!other_def) continue;
+                        resolve_function_return_type(
+                            find_function_def(res.value(), other_name), d_store);
+                        for (auto &stmt : fcn_def->get_body()) {
+                            if (stmt) stmt->propagate_function(other_def);
+                        }
+                    }
                     progress = true;
                 } else {
                     if (auto local_fcn = resource->get_function_shared(fcn.get_name())) {
@@ -985,9 +1014,58 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::extract_str
     auto type = param->get_type();
     if (!type || (!type->is<HDL_struct_type>() && !type->is<HDL_union_type>())) return fields;
     // Array-of-struct (unpacked dims on the struct reference): the value is an
-    // element array, not one packed struct — member-wise splitting would shred
-    // it into bogus entries.
-    if (type->is<HDL_struct_type>() && !type->as<HDL_struct_type>().get_unpacked_dimensions().empty()) return fields;
+    // element array, not one packed struct. Emit one field array per member
+    // (TAB.exp_bits[i]) by slicing every element, so indexed field reads
+    // (TAB[i].field) resolve via direct lookup + array indexing.
+    if (type->is<HDL_struct_type>() && !type->as<HDL_struct_type>().get_unpacked_dimensions().empty()) {
+        if (!res.is_int_array()) return fields;
+        auto &st = type->as<HDL_struct_type>();
+        auto type_info = st.evaluate_type(ctx);
+        if (!type_info) return fields;
+        auto elems = res.get_int_array().get_1d_slice({0, 0});
+        if (elems.empty()) return fields;
+        auto make_hdl = [](const wide_integer &v) {
+            hdl_integer h;
+            h.set_value(v);
+            return h;
+        };
+        // Member offsets from LSB (first member is MSB, mirroring the
+        // single-struct packing above).
+        std::vector<uint64_t> widths(st.member.size(), 0);
+        for (size_t i = 0; i < st.member.size(); ++i) {
+            widths[i] = packed_width(type_info->struct_sizes[i].packed_sizes);
+        }
+        for (size_t i = 0; i < st.member.size(); ++i) {
+            if (st.member[i].type && (st.member[i].type->is<HDL_struct_type>() ||
+                                      st.member[i].type->is<HDL_union_type>())) {
+                continue;
+            }
+            uint64_t offset = 0;
+            for (size_t j = st.member.size(); j-- > i + 1;) {
+                uint64_t reps = 1;
+                for (auto &us : type_info->struct_sizes[j].unpacked_sizes) reps *= us;
+                offset += widths[j] * reps;
+            }
+            wide_integer mask = hdl_integer::width_mask(static_cast<int64_t>(widths[i])).to_wide();
+            std::vector<hdl_integer> field_elems;
+            field_elems.reserve(elems.size());
+            for (auto &e : elems) {
+                wide_integer raw = e.to_wide();
+                field_elems.push_back(make_hdl((raw >> static_cast<size_t>(offset)) & mask));
+            }
+            auto prefix = id.get_instance();
+            prefix.push_back(id.get_name());
+            qualified_identifier kid(st.member[i].name);
+            kid.set_instance_prefix(prefix);
+            if (!id.get_package_prefix().empty()) {
+                kid.set_package_prefix(id.get_package_prefix());
+            }
+            mdarray<hdl_integer> field_arr;
+            field_arr.set_1d_slice({0, 0}, field_elems);
+            fields[kid] = resolved_parameter(field_arr);
+        }
+        return fields;
+    }
 
     auto emit_field = [&](const std::string &member_name, hdl_integer member_value,
                           const std::shared_ptr<hdl_type> &member_type) {
