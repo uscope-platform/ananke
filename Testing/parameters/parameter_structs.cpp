@@ -925,3 +925,59 @@ endpackage
     EXPECT_TRUE(dims[0].first_bound != nullptr);
     EXPECT_TRUE(dims[0].second_bound != nullptr);
 }
+
+TEST(parameter_extraction, enum_unpacked_array_parameter) {
+    // Enum-base typedef chain (e.g. unit_type_t [0:NUM-1]): trailing unpacked
+    // dims must fuse onto a cloned HDL_enum_type, preserving members and base
+    // type. Pre-fix the chain degraded to HDL_simple_type and element enum
+    // values were lost downstream.
+    auto test_pattern = R"(
+module test_mod #()();
+    localparam int unsigned NUM_FMT = 2;
+    typedef enum logic [1:0] {DISABLED, PARALLEL, MERGED} unit_type_t;
+    typedef unit_type_t [0:NUM_FMT-1] fmt_unit_types_t;
+    typedef fmt_unit_types_t [0:1] opgrp_fmt_unit_types_t;
+    localparam fmt_unit_types_t ARR = '{PARALLEL, MERGED};
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto typedefs = resource.get_typedefs();
+    ASSERT_TRUE(typedefs.contains("unit_type_t"));
+    ASSERT_TRUE(typedefs.contains("fmt_unit_types_t"));
+    ASSERT_TRUE(typedefs.contains("opgrp_fmt_unit_types_t"));
+
+    auto &base = typedefs["unit_type_t"]->as<HDL_enum_type>();
+    EXPECT_TRUE(base.get_unpacked_dimensions().empty());
+    EXPECT_TRUE(base.is_scalar());
+    ASSERT_EQ(base.members.size(), 3);
+    EXPECT_EQ(base.members[0].name, "DISABLED");
+    EXPECT_EQ(base.members[1].name, "PARALLEL");
+    EXPECT_EQ(base.members[2].name, "MERGED");
+
+    ASSERT_TRUE(typedefs["fmt_unit_types_t"]->is<HDL_enum_type>());
+    auto &fmt = typedefs["fmt_unit_types_t"]->as<HDL_enum_type>();
+    EXPECT_FALSE(fmt.is_scalar());
+    ASSERT_EQ(fmt.get_unpacked_dimensions().size(), 1);
+    EXPECT_EQ(fmt.members, base.members);
+    ASSERT_TRUE(fmt.base_type != nullptr);
+
+    ASSERT_TRUE(typedefs["opgrp_fmt_unit_types_t"]->is<HDL_enum_type>());
+    auto &opgrp = typedefs["opgrp_fmt_unit_types_t"]->as<HDL_enum_type>();
+    ASSERT_EQ(opgrp.get_unpacked_dimensions().size(), 2);
+    EXPECT_EQ(opgrp.members, base.members);
+
+    // The shared base object must be unpolluted by the merge.
+    EXPECT_TRUE(typedefs["unit_type_t"]->as<HDL_enum_type>().get_unpacked_dimensions().empty());
+
+    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+
+    mdarray<hdl_integer> expected;
+    expected.set_1d_slice({0, 0}, {
+        static_cast<hdl_integer>(1),
+        static_cast<hdl_integer>(2)
+    });
+    EXPECT_EQ(solved.at(qualified_identifier("ARR")), expected);
+}
