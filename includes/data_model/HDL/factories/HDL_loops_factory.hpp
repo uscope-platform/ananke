@@ -36,10 +36,10 @@ public:
     void add_statement(const std::shared_ptr<hdl_statement_base> &stmt);
     void add_expression(const Expression_v2 &e);
     void set_loop_init(const HDL_parameter &id) { _statement.set_init(std::make_shared<HDL_parameter>(id)); }
-    std::shared_ptr<hdl_loop_statement> get_loop_statement() {active = false; return std::make_shared<hdl_loop_statement>(_statement);};
-    std::shared_ptr<hdl_while_statement> get_while_statement() {active = false; auto ret = while_stmt; while_stmt.reset(); return ret;};
-    std::shared_ptr<hdl_repeat_statement> get_repeat_statement() {active = false; auto ret = repeat_stmt; repeat_stmt.reset(); return ret;};
-    std::shared_ptr<hdl_do_while_statement> get_do_while_statement() {active = false; auto ret = do_stmt; do_stmt.reset(); return ret;};
+    std::shared_ptr<hdl_loop_statement> get_loop_statement() {auto ret = std::make_shared<hdl_loop_statement>(_statement); pop_frame(); return ret;};
+    std::shared_ptr<hdl_while_statement> get_while_statement() {auto ret = while_stmt; while_stmt.reset(); pop_frame(); return ret;};
+    std::shared_ptr<hdl_repeat_statement> get_repeat_statement() {auto ret = repeat_stmt; repeat_stmt.reset(); pop_frame(); return ret;};
+    std::shared_ptr<hdl_do_while_statement> get_do_while_statement() {auto ret = do_stmt; do_stmt.reset(); pop_frame(); return ret;};
     bool in_loop(){return active;}
 
     enum loop_phase_t {init, end, step, body};
@@ -63,6 +63,23 @@ public:
 
     bool in_body() const {return active && loop_phase == body;}
 private:
+    // One frame per open loop: generate loops nest (a pack loop inside a
+    // lane loop, a for inside a for in a function body), so a single slot
+    // would let the inner header wipe the outer one. new_loop() pushes the
+    // in-progress state; the get_*() accessors pop it back.
+    struct loop_frame {
+        hdl_loop_statement statement;
+        Expression_v2 current_expression;
+        loop_phase_t loop_phase = init;
+        bool end_cond_valid = false;
+        capture_form_t capture = for_form;
+        std::shared_ptr<hdl_while_statement> while_stmt;
+        std::shared_ptr<hdl_repeat_statement> repeat_stmt;
+        std::shared_ptr<hdl_do_while_statement> do_stmt;
+    };
+    std::vector<loop_frame> frame_stack;
+    void push_frame();
+    void pop_frame();
     hdl_loop_statement _statement;
 
     Expression_v2 current_expression;

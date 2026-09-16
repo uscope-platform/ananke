@@ -1850,10 +1850,14 @@ void sv_visitor::enterLoop_generate_construct(sv2017::Loop_generate_constructCon
 }
 
 void sv_visitor::exitLoop_generate_construct(sv2017::Loop_generate_constructContext *) {
+    auto finished = loops_factory.get_loop_statement();
     if (conditionals_factory.is_active())
-        conditionals_factory.add_statement(loops_factory.get_loop_statement());
+        conditionals_factory.add_statement(finished);
+    else if (loops_factory.in_loop())
+        // Nested generate loop: back into the restored outer loop body.
+        loops_factory.add_body_stmt(finished);
     else
-        modules_factory.add_statement(loops_factory.get_loop_statement());
+        modules_factory.add_statement(finished);
 }
 
 void sv_visitor::enterGenvar_initialization(sv2017::Genvar_initializationContext *ctx) {
@@ -1988,7 +1992,7 @@ void sv_visitor::exitLoop_statement(sv2017::Loop_statementContext *ctx) {
             if (do_stmt) { f_factory.add_statement(do_stmt); captured = true; }
         }
         if (!captured) f_factory.add_loop(loops_factory.get_loop_statement());
-        loops_factory.clear();
+        if (!loops_factory.in_loop()) loops_factory.clear();
         if (conditionals_factory.is_active()) {
             auto last = f_factory.pop_last();
             if (last) conditionals_factory.add_statement(last);

@@ -20,6 +20,10 @@
 #include "data_model/HDL/statement/hdl_do_while_statement.hpp"
 
 void HDL_loops_factory::new_loop(capture_form_t form) {
+    // Push only when genuinely nesting: an unconditional push would leave a
+    // stale "parent" behind, making the final pop restore a phantom loop
+    // context that swallows the finished top-level loop.
+    if (active) push_frame();
     end_cond_valid = false;
     active = true;
     capture = form;
@@ -27,9 +31,43 @@ void HDL_loops_factory::new_loop(capture_form_t form) {
     repeat_stmt = form == repeat_form ? std::make_shared<hdl_repeat_statement>() : nullptr;
     do_stmt = form == do_while_form ? std::make_shared<hdl_do_while_statement>() : nullptr;
     _statement = hdl_loop_statement();
+    current_expression = Expression_v2();
     if (form == do_while_form) {
         loop_phase = body;
+    } else {
+        loop_phase = init;
     }
+}
+
+void HDL_loops_factory::push_frame() {
+    loop_frame frame;
+    frame.statement = _statement;
+    frame.current_expression = current_expression;
+    frame.loop_phase = loop_phase;
+    frame.end_cond_valid = end_cond_valid;
+    frame.capture = capture;
+    frame.while_stmt = while_stmt;
+    frame.repeat_stmt = repeat_stmt;
+    frame.do_stmt = do_stmt;
+    frame_stack.push_back(std::move(frame));
+}
+
+void HDL_loops_factory::pop_frame() {
+    if (frame_stack.empty()) {
+        active = false;
+        return;
+    }
+    const auto &frame = frame_stack.back();
+    _statement = frame.statement;
+    current_expression = frame.current_expression;
+    loop_phase = frame.loop_phase;
+    end_cond_valid = frame.end_cond_valid;
+    capture = frame.capture;
+    while_stmt = frame.while_stmt;
+    repeat_stmt = frame.repeat_stmt;
+    do_stmt = frame.do_stmt;
+    frame_stack.pop_back();
+    active = true;
 }
 
 void HDL_loops_factory::clear() {
@@ -42,6 +80,7 @@ void HDL_loops_factory::clear() {
     loop_phase = init;
     end_cond_valid = false;
     active = false;
+    frame_stack.clear();
 }
 
 void HDL_loops_factory::set_operation(const Expression_v2::expression_operator &op) {
