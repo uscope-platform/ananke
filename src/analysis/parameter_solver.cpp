@@ -843,17 +843,28 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
 
     Parameters_map loop_locals;
     if (auto loop_vars = collect_loop_vars(node_spec.value()); !loop_vars.empty()) {
-        for (const auto &[p_name, param] : to_solve) {
-            if (node_overrides.contains(p_name)) continue;
-            bool loop_local = false;
-            for (const auto &dep : param->get_dependencies().data) {
-                if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
-                    loop_vars.contains(dep.get_name())) {
-                    loop_local = true;
-                    break;
+
+        std::set<std::string> deferred;
+        bool progress = true;
+        while (progress) {
+            progress = false;
+            for (const auto &[p_name, param] : to_solve) {
+                if (node_overrides.contains(p_name)) continue;
+                if (deferred.contains(p_name)) continue;
+                bool loop_local = false;
+                for (const auto &dep : param->get_dependencies().data) {
+                    if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
+                        (loop_vars.contains(dep.get_name()) || deferred.contains(dep.get_name()))) {
+                        loop_local = true;
+                        break;
+                    }
+                }
+                if (loop_local) {
+                    loop_locals.insert(param);
+                    deferred.insert(p_name);
+                    progress = true;
                 }
             }
-            if (loop_local) loop_locals.insert(param);
         }
         for (const auto &[p_name, param] : loop_locals) to_solve.erase(p_name);
     }

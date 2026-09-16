@@ -1109,7 +1109,7 @@ module leaf #(parameter int V = 0)();
 endmodule
 module test_mod #()();
     for (genvar i = 0; i < 2; i++) begin : outer
-        localparam int V = i * 10;
+        localparam int V = (i + 1) * 10;
         for (genvar j = 0; j < 2; j++) begin : inner
             leaf #(.V(V + j)) inst();
         end
@@ -1128,50 +1128,52 @@ endmodule
 
     auto deps = ast_v2->get_dependencies();
     ASSERT_EQ(deps.size(), 4);
-    std::vector<int64_t> expected = {0, 1, 10, 11};
+    std::vector<int64_t> expected = {10, 11, 20, 21};
     for (size_t k = 0; k < expected.size(); ++k) {
         auto lp = deps[k]->get_parameters();
         EXPECT_EQ(lp.get("V")->get_numeric_value(), expected[k]) << "instance " << k;
     }
 }
 
-TEST(parameter_extraction, nested_loop_vars_collected) {
-    // White-box companion to nested_generate_loops: both loop variables
-    // must be detected on the resource, so loop-local deferral and
-    // per-iteration elaboration apply to each level.
+TEST(parameter_extraction, loop_variable_dependency_collision_in_function) {
     auto test_pattern = R"(
+package p;
+    function automatic int fsum(int n);
+        automatic int res = 0;
+        for (int k = 0; k < n; k++)
+            res = res + k;
+        return res;
+    endfunction
+endpackage
+module leaf #(parameter int V = 0)();
+endmodule
 module test_mod #()();
-    for (genvar i = 0; i < 2; i++) begin : outer
-        localparam int V = i * 10;
-        for (genvar j = 0; j < 2; j++) begin : inner
-            localparam int W = V + j;
-        end
+    localparam int P = p::fsum(4);
+    for (genvar k = 0; k < 2; k++) begin : g
+        localparam int Q = k * 100;
+        leaf #(.V(Q)) inst();
     end
 endmodule
     )";
 
     sv_analyzer analyzer;
-    auto resource = std::static_pointer_cast<hdl_resource_statement>(
-        analyzer.analyze("", test_pattern).value().get_content()[0]);
-    auto loop_vars = parameter_solver::collect_loop_vars(resource);
-    EXPECT_TRUE(loop_vars.contains("i"));
-    EXPECT_TRUE(loop_vars.contains("j"));
-    EXPECT_EQ(loop_vars.size(), 2u);
+    auto file = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", file});
 
-    // Nesting structure: exactly one top-level loop (outer), holding exactly
-    // one nested loop (inner) — no flattened duplicates, no nameless ghosts.
-    std::vector<std::shared_ptr<hdl_loop_statement>> top_loops;
-    for (auto &s : resource->get_statements()) {
-        if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(s)) top_loops.push_back(loop);
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+
+    auto params = ast_v2->get_parameters();
+    ASSERT_TRUE(params.contains("P"));
+    EXPECT_EQ(params.get("P")->get_numeric_value(), 6);
+
+    auto deps = ast_v2->get_dependencies();
+    ASSERT_EQ(deps.size(), 2);
+    std::vector<int64_t> expected_q = {0, 100};
+    for (size_t i = 0; i < expected_q.size(); ++i) {
+        auto lp = deps[i]->get_parameters();
+        EXPECT_EQ(lp.get("V")->get_numeric_value(), expected_q[i]) << "instance " << i;
     }
-    ASSERT_EQ(top_loops.size(), 1u);
-    ASSERT_TRUE(top_loops[0]->get_init());
-    EXPECT_EQ(top_loops[0]->get_init()->get_name(), "i");
-    std::vector<std::shared_ptr<hdl_loop_statement>> inner_loops;
-    for (auto &s : top_loops[0]->get_body()) {
-        if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(s)) inner_loops.push_back(loop);
-    }
-    ASSERT_EQ(inner_loops.size(), 1u);
-    ASSERT_TRUE(inner_loops[0]->get_init());
-    EXPECT_EQ(inner_loops[0]->get_init()->get_name(), "j");
 }

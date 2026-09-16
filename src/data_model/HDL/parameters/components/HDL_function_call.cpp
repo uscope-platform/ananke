@@ -41,6 +41,26 @@
 
 static constexpr int64_t MAX_SEQUENTIAL_ITERATIONS = 100'000;
 
+namespace {
+// Loop variables declared inside a function body (for-init names, including
+// loops nested in other loops or conditionals): bound per evaluation in the
+// call-local context, exactly like formals and locals.
+void collect_body_loop_vars(
+    const std::vector<std::shared_ptr<hdl_statement_base>> &stmts,
+    std::set<std::string> &out) {
+    for (const auto &s : stmts) {
+        if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(s)) {
+            if (loop->get_init() && !loop->get_init()->get_name().empty())
+                out.insert(loop->get_init()->get_name());
+            collect_body_loop_vars(loop->get_body(), out);
+        } else if (auto cond = std::dynamic_pointer_cast<hdl_conditional_statement>(s)) {
+            for (const auto &br : cond->get_branches()) collect_body_loop_vars(br.body, out);
+            collect_body_loop_vars(cond->get_else_body(), out);
+        }
+    }
+}
+}
+
 int64_t HDL_function_call::declared_member_width(
     const std::shared_ptr<hdl_type> &member_type,
     const std::map<qualified_identifier, resolved_parameter> &context,
@@ -67,24 +87,14 @@ parameter_deps_t HDL_function_call::get_dependencies() const {
         if (arg) retval.merge(arg->get_dependencies());
     }
     if (linked_) {
-        // True dependencies only: the shared definition body's deps minus
-        // intra-function roots. Formals are bound at evaluation; locals
-        // (e.g. the CVA6-style return struct built via cfg.FIELD assigns and
-        // read back as cfg.FIELD) resolve inside the per-site call context,
-        // never externally. This drops both the false CVA6Cfg-style cycle
-        // and return-struct leaf matches (cfg.FETCH_WIDTH) with no sorter
-        // hacks. Nested function references are kept so the solver fixpoint
-        // keeps discovering nested calls.
+
         const auto arg_names = linked_->get_arguments_names();
         std::set<std::string> intra_roots(arg_names.begin(), arg_names.end());
-        // All function-scope locals: like formals, body reads of these names
-        // resolve inside the per-site call context, never externally. (Names
-        // alone are used rather than struct-typed filtering because locals
-        // declared with package-qualified types surface as HDL_external_type
-        // until typedef propagation resolves them.)
+
         for (const auto &local : linked_->get_local_variables()) {
             if (local) intra_roots.insert(local->get_name());
         }
+        collect_body_loop_vars(linked_->get_body(), intra_roots);
         const auto body_deps = linked_->get_dependencies();
         for (const auto &d : body_deps.data) {
             if (!d.get_package_prefix().empty()) {
