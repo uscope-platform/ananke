@@ -52,6 +52,7 @@ TEST(function_processing, simple_function_scalar) {
     call.propagate_function(std::make_shared<const hdl_function_statement>(functions["CTRL_ADDR_CALC"]));
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("CTRL_ADDR_CALC");
 
     auto stmt = std::make_shared<hdl_assignment_statement>();
@@ -92,6 +93,7 @@ TEST(function_processing, simple_function_array) {
     EXPECT_TRUE(functions.contains("CTRL_ADDR_CALC"));
     auto result = functions["CTRL_ADDR_CALC"];
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("CTRL_ADDR_CALC");
 
     auto s0 = std::make_shared<hdl_assignment_statement>();
@@ -136,6 +138,7 @@ TEST(function_processing, simple_loop_function) {
     auto result = functions["CTRL_ADDR_CALC"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("CTRL_ADDR_CALC");
 
     auto loop_stmt = std::make_shared<hdl_loop_statement>();
@@ -190,6 +193,7 @@ TEST(function_processing, parametric_loop_function) {
     auto result = functions["CTRL_ADDR_CALC"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("CTRL_ADDR_CALC");
 
     auto ploop = std::make_shared<hdl_loop_statement>();
@@ -245,6 +249,7 @@ TEST(function_processing, loop_function_with_clog2_local) {
     auto result = functions["get_msb_index"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("get_msb_index");
     check_f.add_argument("value");
 
@@ -326,6 +331,7 @@ TEST(function_processing, complex_loop_function) {
     auto result = functions["CTRL_ADDR_CALC"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("CTRL_ADDR_CALC");
 
     auto cloop = std::make_shared<hdl_loop_statement>();
@@ -392,6 +398,7 @@ TEST(function_processing, parametrized_function) {
     auto result = functions["CTRL_ADDR_CALC"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("CTRL_ADDR_CALC");
 
     auto ps0 = std::make_shared<hdl_assignment_statement>();
@@ -430,6 +437,7 @@ TEST(function_processing, function_in_package) {
     auto result = functions["CTRL_ADDR_CALC"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("CTRL_ADDR_CALC");
 
     auto fs0 = std::make_shared<hdl_assignment_statement>();
@@ -466,6 +474,7 @@ TEST(function_processing, package_assignment) {
 
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("CTRL_ADDR_CALC");
 
     auto pas0 = std::make_shared<hdl_assignment_statement>();
@@ -501,6 +510,7 @@ TEST(function_processing, local_variable_scalar) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
 
     auto lv = std::make_shared<HDL_parameter>("tmp");
@@ -549,6 +559,7 @@ TEST(function_processing, conditional_in_function) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     hdl_conditional_statement check_cond;
 
@@ -596,6 +607,7 @@ TEST(function_processing, struct_returning_function) {
     auto result = functions["compute_addr"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute_addr");
     check_f.set_return_type(result.get_return_type());
 
@@ -636,6 +648,7 @@ TEST(function_processing, repro_system_task_in_function_body) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     check_f.add_argument("a");
 
@@ -678,6 +691,7 @@ TEST(function_processing, repro_relational_in_function_body) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     check_f.add_argument("a");
 
@@ -732,6 +746,7 @@ TEST(function_processing, repro_user_call_in_function_body) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     check_f.add_argument("a");
 
@@ -767,6 +782,7 @@ TEST(function_processing, repro_ternary_in_function_body) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     check_f.add_argument("a");
     check_f.add_argument("b");
@@ -810,6 +826,7 @@ TEST(function_processing, initialized_local_in_function) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     check_f.add_argument("a");
 
@@ -857,6 +874,7 @@ TEST(function_processing, case_statement_in_function) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     check_f.add_argument("a");
     hdl_conditional_statement check_cond;
@@ -920,6 +938,7 @@ TEST(function_processing, streaming_in_function) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     check_f.add_argument("a");
     check_f.add_argument("b");
@@ -958,6 +977,7 @@ TEST(function_processing, anonymous_struct_local_in_function) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     check_f.add_argument("a");
 
@@ -1007,6 +1027,7 @@ TEST(function_processing, anonymous_enum_local_in_function) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     check_f.add_argument("a");
 
@@ -1052,6 +1073,7 @@ TEST(function_processing, return_statement_in_function) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
     check_f.add_argument("a");
 

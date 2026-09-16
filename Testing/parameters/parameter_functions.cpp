@@ -244,6 +244,7 @@ TEST(parameter_extraction, function_with_parameters) {
 
 
     hdl_function_statement f;
+    f.set_language(hdl_language::system_verilog);
     f.set_name("CTRL_ADDR_CALC");
     f.add_argument("i");
     f.add_argument("b");
@@ -454,6 +455,7 @@ TEST(parameter_extraction, function_with_variables) {
     auto result = functions["compute"];
 
     hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
     check_f.set_name("compute");
 
     auto lv = std::make_shared<HDL_parameter>("tmp");

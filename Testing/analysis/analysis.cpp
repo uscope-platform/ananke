@@ -156,6 +156,7 @@ TEST( analysis_test , sv_module) {
     test_ports["data_out"] = {interface_port, {"axi_stream", "master"}};
 
     hdl_resource_statement check_res;
+    check_res.set_language(hdl_language::system_verilog);
     check_res.set_name("Decoder");
     check_res.set_type(module);
     check_res.set_line_n(3);
@@ -220,6 +221,7 @@ TEST( analysis_test , sv_module) {
 
     resource = res[1]->as<hdl_resource_statement>();
     check_res = hdl_resource_statement();
+    check_res.set_language(hdl_language::system_verilog);
     check_res.set_name("test_if");
     check_res.set_type(interface);
     check_res.set_line_n(30);
@@ -232,6 +234,7 @@ TEST( analysis_test , vhdl_module) {
     analyzer.cleanup_content("`(.*)");
     auto resource = analyzer.analyze().get_content()[0]->as<hdl_resource_statement>();
     hdl_resource_statement check_res;
+    check_res.set_language(hdl_language::vhdl);
     check_res.set_name("half_adder");
     check_res.set_type(module);
     check_res.set_line_n(4);

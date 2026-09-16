@@ -110,6 +110,7 @@ bool operator==(const hdl_resource_statement &lhs, const hdl_resource_statement 
     ret &= lhs.architecture == rhs.architecture;
     ret &= lhs.line_n == rhs.line_n;
     ret &= lhs.hdl_dependency_type == rhs.hdl_dependency_type;
+    ret &= lhs.language == rhs.language;
     ret &= lhs.processor_docs == rhs.processor_docs;
     ret &= lhs.port_specs == rhs.port_specs;
     ret &= lhs.parameters_spec == rhs.parameters_spec;

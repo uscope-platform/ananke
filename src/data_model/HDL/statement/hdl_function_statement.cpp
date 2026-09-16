@@ -46,6 +46,7 @@ parameter_deps_t hdl_function_statement::get_dependencies() const {
 bool hdl_function_statement::equals(const hdl_statement_base& other) const {
     const auto& rhs = static_cast<const hdl_function_statement&>(other);
     bool retval = name == rhs.name;
+    retval &= language == rhs.language;
     retval &= argument_names == rhs.argument_names;
     if (return_type && rhs.return_type) {
         retval &= return_type->is_equal(*rhs.return_type);

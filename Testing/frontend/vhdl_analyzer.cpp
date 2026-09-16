@@ -136,6 +136,7 @@ end test_mod;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("test_mod");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -167,6 +168,7 @@ end rtl;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -204,6 +206,7 @@ END RTL;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("half_adder");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -264,6 +267,7 @@ end rtl;
     ports["o_carry"] = {output_port};
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("half_adder");
     expected.set_type(module);
     expected.set_line_n(5);
@@ -292,6 +296,7 @@ end top;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -318,6 +323,7 @@ end top;
     auto expr = make_binary(Expression_v2::subtract, pow, std::make_shared<Numeric_token>("1"));
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -343,6 +349,7 @@ end top;
                               std::make_shared<Numeric_token>("8"));
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -364,6 +371,7 @@ end top;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -427,6 +435,7 @@ end top;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -488,6 +497,7 @@ end top;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -506,6 +516,7 @@ end top;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -601,6 +612,7 @@ end top;
     cast->set_content(std::make_shared<Numeric_token>("7"));
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -835,6 +847,7 @@ end top;
     ports["din"] = {inout_port};
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -860,6 +873,7 @@ end top;
     ports["c"] = {input_port};
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -888,6 +902,7 @@ end top;
     ports["b"] = {output_port};   // buffer is treated as output
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -912,6 +927,7 @@ end top;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement check_res;
+    check_res.set_language(hdl_language::vhdl);
     check_res.set_name("top");
     check_res.set_type(module);
     check_res.set_line_n(2);
@@ -951,6 +967,7 @@ end rtl;
     inst->add_parameter(make_override_param("mode", std::make_shared<Numeric_token>("2")));
 
     hdl_resource_statement check;
+    check.set_language(hdl_language::vhdl);
     check.set_name("top");
     check.set_type(module);
     check.set_line_n(2);
@@ -982,6 +999,7 @@ end rtl;
     inst->add_parameter(make_override_param("width", expr));
 
     hdl_resource_statement check;
+    check.set_language(hdl_language::vhdl);
     check.set_name("top");
     check.set_type(module);
     check.set_line_n(2);
@@ -1008,6 +1026,7 @@ end rtl;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -1065,6 +1084,7 @@ end rtl;
     inst->set_ports(inst_ports);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -1112,6 +1132,7 @@ end rtl;
     loop->add_body_stmt(inst);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -1154,6 +1175,7 @@ end rtl;
     conditional->add_to_else(u_c);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -1185,6 +1207,7 @@ end rtl;
     conditional->add_to_branch(u_a);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -1235,6 +1258,7 @@ end rtl;
     loop->add_body_stmt(conditional);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -1288,6 +1312,7 @@ end rtl;
     conditional->add_to_else(u_c);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -1339,6 +1364,7 @@ end rtl;
     conditional->add_to_else(u_b);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -1390,6 +1416,7 @@ end rtl;
     conditional->add_to_else(u_b);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
@@ -1426,6 +1453,7 @@ end rtl;
     u_sub->set_ports(inst_ports);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(10);
@@ -1467,6 +1495,7 @@ end rtl;
     u_sub->set_ports(inst_ports);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(13);
@@ -1512,6 +1541,7 @@ end params_pkg;
     auto res = parse_entity(test_pattern, "params_pkg");
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("params_pkg");
     expected.set_type(package);
     expected.set_line_n(2);
@@ -1534,6 +1564,7 @@ end top;
     auto res = parse_first_entity(test_pattern);
 
     hdl_resource_statement expected;
+    expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
