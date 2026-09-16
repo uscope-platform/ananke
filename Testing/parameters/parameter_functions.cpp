@@ -26,6 +26,11 @@
 #include "data_model/HDL/parameters/components/Cast.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "data_model/HDL/parameters/components/Ternary.hpp"
+#include "data_model/HDL/parameters/components/Expression_v2.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
+#include "data_model/HDL/statement/hdl_assignment_statement.hpp"
+#include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "data_model/HDL/HDL_definitions.hpp"
 #include "frontend/analysis/vhdl/vhdl_analyzer.hpp"
 
@@ -2400,11 +2405,6 @@ endmodule
 }
 
 TEST(parameter_extraction, declarations_record_source_language) {
-    // Every declaration kind is stamped with the language of the file that
-    // defined it: modules, packages, interfaces and functions, from both
-    // frontends. Builtin classification is keyed off the same language, so
-    // these asserts pin the discriminator input directly (rather than only
-    // its downstream effects).
     auto sv_pattern = R"(
 package lang_pkg;
     function automatic int foo(int x);
@@ -2428,23 +2428,45 @@ endinterface
         return nullptr;
     };
 
+    hdl_resource_statement pkg_check;
+    pkg_check.set_language(hdl_language::system_verilog);
+    pkg_check.set_name("lang_pkg");
+    pkg_check.set_type(package);
+    pkg_check.set_line_n(2);
+    hdl_function_statement foo;
+    foo.set_language(hdl_language::system_verilog);
+    foo.set_name("foo");
+    foo.add_argument("x");
+    auto ret = std::make_shared<hdl_assignment_statement>();
+    ret->set_target("foo");
+    Expression_v2 sum;
+    sum.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("x")));
+    sum.set_rhs(std::make_shared<Numeric_token>("1"));
+    sum.set_operation(Expression_v2::add);
+    ret->set_value(std::make_shared<Expression_v2>(sum));
+    foo.add_statement(ret);
+    pkg_check.add_function(foo);
     auto *pkg = find_sv("lang_pkg");
     ASSERT_NE(pkg, nullptr);
-    EXPECT_EQ(pkg->get_type(), package);
-    EXPECT_EQ(pkg->get_language(), hdl_language::system_verilog);
-    auto foo = pkg->get_function_shared("foo");
-    ASSERT_NE(foo, nullptr);
-    EXPECT_EQ(foo->get_language(), hdl_language::system_verilog);
+    ASSERT_EQ(*pkg, pkg_check);
 
+    hdl_resource_statement mod_check;
+    mod_check.set_language(hdl_language::system_verilog);
+    mod_check.set_name("lang_mod");
+    mod_check.set_type(module);
+    mod_check.set_line_n(7);
     auto *mod = find_sv("lang_mod");
     ASSERT_NE(mod, nullptr);
-    EXPECT_EQ(mod->get_type(), module);
-    EXPECT_EQ(mod->get_language(), hdl_language::system_verilog);
+    ASSERT_EQ(*mod, mod_check);
 
+    hdl_resource_statement if_check;
+    if_check.set_language(hdl_language::system_verilog);
+    if_check.set_name("lang_if");
+    if_check.set_type(interface);
+    if_check.set_line_n(9);
     auto *iface = find_sv("lang_if");
     ASSERT_NE(iface, nullptr);
-    EXPECT_TRUE(iface->is_interface());
-    EXPECT_EQ(iface->get_language(), hdl_language::system_verilog);
+    ASSERT_EQ(*iface, if_check);
 
     auto vhdl_pattern = R"(
 package lang_pkg is
@@ -2464,14 +2486,33 @@ end lang_ent;
         }
         return nullptr;
     };
+    auto make_int_param = [](const std::string &name, const std::string &value) {
+        auto p = std::make_shared<HDL_parameter>(name);
+        auto t = std::make_shared<HDL_simple_type>();
+        t->set_type_name("integer");
+        t->set_signed(true);
+        p->set_type(t);
+        p->set_raw_value(std::make_shared<Numeric_token>(value));
+        return p;
+    };
 
+    hdl_resource_statement vpkg_check;
+    vpkg_check.set_language(hdl_language::vhdl);
+    vpkg_check.set_name("lang_pkg");
+    vpkg_check.set_type(package);
+    vpkg_check.set_line_n(2);
+    vpkg_check.add_parameter(make_int_param("width", "8"));
     auto *vpkg = find_vhdl("lang_pkg");
     ASSERT_NE(vpkg, nullptr);
-    EXPECT_EQ(vpkg->get_type(), package);
-    EXPECT_EQ(vpkg->get_language(), hdl_language::vhdl);
+    ASSERT_EQ(*vpkg, vpkg_check);
 
+    hdl_resource_statement vent_check;
+    vent_check.set_language(hdl_language::vhdl);
+    vent_check.set_name("lang_ent");
+    vent_check.set_type(module);
+    vent_check.set_line_n(5);
+    vent_check.add_parameter(make_int_param("w", "8"));
     auto *vent = find_vhdl("lang_ent");
     ASSERT_NE(vent, nullptr);
-    EXPECT_EQ(vent->get_type(), module);
-    EXPECT_EQ(vent->get_language(), hdl_language::vhdl);
+    ASSERT_EQ(*vent, vent_check);
 }
