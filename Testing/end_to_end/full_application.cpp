@@ -403,7 +403,11 @@ TEST( end_to_end , lattice_project_generation) {
 
     std::filesystem::create_directory("/tmp/radiant");
 
-    auto components = wd / "check_files/test_data/Components";
+    // Resolve fixtures through the build-tree test-data root (as the vivado
+    // test does): depending on the launch working directory breaks standalone
+    // runs and throws a bare filesystem error instead of a readable failure.
+    auto components = td_path("check_files/test_data/Components");
+    ASSERT_TRUE(std::filesystem::exists(components)) << "missing test fixtures: " << components;
     std::filesystem::copy(components/"controls/PID", opts.cache_dir +"/PID", copyOptions);
     std::filesystem::remove_all(opts.cache_dir +"/PID/makefile.tcl");
     EXPECT_FALSE(std::filesystem::exists(opts.cache_dir +"/PID/makefile.tcl"));
