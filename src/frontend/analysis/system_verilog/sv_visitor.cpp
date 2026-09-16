@@ -22,6 +22,7 @@
 
 #include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 #include "data_model/HDL/statement/hdl_parameter_override_statement.hpp"
+#include "data_model/HDL/statement/hdl_resource_statement.hpp"
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include "data_model/HDL/parameters/components/token/Real_token.hpp"
@@ -700,6 +701,18 @@ void sv_visitor::enterPrimaryCast2(sv2017::PrimaryCast2Context *ctx) {
             params_factory.start_cast(false);
             params_factory.set_cast_type(primary_text);
         }
+    } else if (auto pos = primary_text.find("::"); pos != std::string::npos &&
+               is_package_typedef(primary_text.substr(0, pos), primary_text.substr(pos + 2))) {
+        // `pkg::Type'(x)`: package-qualified type cast. Takes the same type
+        // path as a bare typedef (keeping the prefix for later resolution);
+        // anything else with `::` stays a size cast (e.g. `pkg::PARAM'(x)`).
+        if (f_factory.is_active()) {
+            f_factory.start_cast(false);
+            f_factory.set_cast_type(primary_text);
+        } else {
+            params_factory.start_cast(false);
+            params_factory.set_cast_type(primary_text);
+        }
     } else {
         auto expression_size = primary_text.starts_with("(") || primary_text.contains("::");
         if (f_factory.is_active()) {
@@ -993,6 +1006,15 @@ void sv_visitor::exitParameter_override(sv2017::Parameter_overrideContext *ctx) 
 bool sv_visitor::expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
     for (auto *p = node ? node->parent : nullptr; p; p = p->parent) {
         if (dynamic_cast<sv2017::Variable_dimensionContext *>(p))
+            return true;
+    }
+    return false;
+}
+
+bool sv_visitor::is_package_typedef(const std::string &prefix, const std::string &name) {
+    for (const auto &e : entities) {
+        auto res = std::dynamic_pointer_cast<hdl_resource_statement>(e);
+        if (res && res->getName() == prefix && res->get_typedefs().contains(name))
             return true;
     }
     return false;

@@ -2298,7 +2298,9 @@ TEST(parameter_extraction, function_enum_cast_loop_var_argument) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameters(), d_store);
+    if (auto overlaid = overlay_unambiguous_scope(pkg_ctx)) pkg_ctx = *overlaid;
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), pkg_ctx);
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("R"), 37}

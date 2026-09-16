@@ -248,6 +248,10 @@ private:
     // True when an expression sits inside [...] dimension bounds as opposed
     // to a plain value expression (e.g. a variable initializer).
     static bool expression_in_decl_dimensions(antlr4::tree::ParseTree *node);
+    // True when `prefix` names an already-parsed package/resource defining a
+    // typedef `name` (e.g. `p::fmt_e`): disambiguates `pkg::Type'(x)`
+    // type-casts from `pkg::PARAM'(x)` size-casts, which share the `::` shape.
+    bool is_package_typedef(const std::string &prefix, const std::string &name);
     void process_operation(Expression_v2::expression_operator op);
     std::shared_ptr<hdl_type> setup_data_type(sv2017::Data_type_or_implicitContext *dtoi);
     std::shared_ptr<hdl_type> resolve_data_type(sv2017::Data_typeContext *dt);

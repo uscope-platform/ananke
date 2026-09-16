@@ -128,11 +128,10 @@ std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<q
         }
 
         // --- NEW: User-Defined / Complex Packed Types (Structs, Enums, Unions) ---
-        if (!expected_type) {
-            spdlog::warn("Unsized '{}' cast has no container type to size against (content '{}'); treating as missing",
-                         target_type, content ? content->print() : "<null>");
-            return std::unexpected{missing_value};
-        }
+        // With no incoming container (e.g. an enum cast of a loop variable
+        // accumulated into an untyped parameter) size from the precomputed
+        // fallback above (64-bit default, content width when known) instead
+        // of bailing: small scalar values pass through unchanged.
         if (content_val.value().is_integer()) {
             auto raw_val = content_val.value().get_integer();
 
