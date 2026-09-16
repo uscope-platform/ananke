@@ -67,9 +67,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
 
         std::stack< work_order> working_stack;
         working_stack.push({top, {}, "TL", {}, {}, {top_level_module}, {{}}});
-
-
-
+        if (top_level_module.empty()) return top;
         while (!working_stack.empty()) {
             auto wo = working_stack.top();
             auto working_instance = wo.node;
