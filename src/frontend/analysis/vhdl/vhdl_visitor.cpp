@@ -63,6 +63,11 @@ namespace {
 
 vhdl_visitor::vhdl_visitor(std::string p) {
     path = std::move(p);
+    // Stamp declarations as VHDL. Builtin classification intentionally keeps
+    // the legacy union table: VHDL relies on both tables (e.g. `clog2` only
+    // exists in the SV table, `minimum` only in the VHDL one).
+    modules_factory.set_language(hdl_language::vhdl);
+    params_factory.set_language(hdl_language::vhdl);
 }
 
 

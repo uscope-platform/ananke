@@ -35,6 +35,16 @@
 #include "data_model/HDL/types/HDL_external_type.hpp"
 
 
+sv_visitor::sv_visitor() {
+    // Everything this visitor builds is SystemVerilog: stamp declarations
+    // and restrict builtin classification to the SV table, so SV user
+    // functions (e.g. `maximum`) are never shadowed by VHDL builtins.
+    params_factory.set_language(hdl_language::system_verilog);
+    f_factory.set_language(hdl_language::system_verilog);
+    modules_factory.set_language(hdl_language::system_verilog);
+    interfaces_factory.set_language(hdl_language::system_verilog);
+}
+
 bool sv_visitor::is_known_system_function(const std::string &name) const {
     if (HDL_builtin_function::is_known(name)) return true;
 

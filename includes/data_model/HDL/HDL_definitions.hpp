@@ -36,4 +36,10 @@ enum port_direction_t {
     raw_port = 4
 };
 
+enum class hdl_language {
+    unknown = 0,
+    system_verilog = 1,
+    vhdl = 2
+};
+
 #endif //ANANKE_HDL_DEFINITIONS_HPP

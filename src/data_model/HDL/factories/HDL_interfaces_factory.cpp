@@ -20,6 +20,7 @@ void HDL_interfaces_factory::new_interface(const std::string &name,unsigned int 
     new_basic_resource(name);
     current_resource.set_line_n(line_n);
     current_resource.set_type(interface);
+    current_resource.set_language(language);
 }
 
 std::shared_ptr<hdl_resource_statement> HDL_interfaces_factory::get_interface() {

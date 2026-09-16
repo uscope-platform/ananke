@@ -372,6 +372,7 @@ void HDL_parameters_factory::advance_cast() {
 
 void HDL_parameters_factory::start_function_assignment(const std::string &f_name) {
     auto calls = std::make_unique<function_calls_factory>();
+    calls->set_language(language);
     calls->start_function(f_name);
     consumer_stack.push(std::move(calls));
     expr_factory.pause();
@@ -402,6 +403,7 @@ void HDL_parameters_factory::stop_function_assignment() {
 
 void HDL_parameters_factory::start_function_call(const std::string &f_name) {
     auto calls = std::make_unique<function_calls_factory>();
+    calls->set_language(language);
     calls->start_function(f_name);
     consumer_stack.push(std::move(calls));
     expr_factory.pause();

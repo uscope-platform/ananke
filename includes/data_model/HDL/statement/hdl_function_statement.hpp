@@ -23,6 +23,7 @@
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 #include "data_model/HDL/types/HDL_struct_type.hpp"
+#include "data_model/HDL/HDL_definitions.hpp"
 
 class HDL_parameter;
 
@@ -43,6 +44,8 @@ public:
 
     void set_name(const std::string &s) { name = s;}
     [[nodiscard]] std::string get_name()const{return name;}
+    void set_language(hdl_language l) { language = l; }
+    [[nodiscard]] hdl_language get_language() const { return language; }
     void add_argument(const std::string &s){argument_names.push_back(s);}
     bool is_scalar() const;
     std::vector<std::string> get_arguments_names()const{return  argument_names;}
@@ -65,13 +68,14 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(name, argument_names, return_type, body, local_variables);
+        ar(name, argument_names, return_type, body, local_variables, language);
     }
 
     friend void PrintTo(const hdl_function_statement& s, std::ostream* os);
 
 private:
     std::string name;
+    hdl_language language = hdl_language::unknown;
     std::vector<std::string> argument_names;
     std::shared_ptr<hdl_type> return_type;
     std::shared_ptr<Expression_base> return_unpacked_range_left;

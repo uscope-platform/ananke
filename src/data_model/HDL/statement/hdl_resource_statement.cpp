@@ -31,6 +31,7 @@ hdl_resource_statement::hdl_resource_statement(const hdl_resource_statement &c) 
     name = c.name;
     line_n = c.line_n;
     hdl_dependency_type = c.hdl_dependency_type;
+    language = c.language;
     parameters_spec = c.parameters_spec;
     doc = c.doc;
     processor_docs = c.processor_docs;

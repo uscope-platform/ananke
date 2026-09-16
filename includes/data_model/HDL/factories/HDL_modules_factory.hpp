@@ -28,6 +28,7 @@ class HDL_modules_factory : protected resources_factory_base<hdl_resource_statem
 public:
     void new_module(const std::string &name, const dependency_class &type, unsigned int line_n);
     std::shared_ptr<hdl_resource_statement> get_module();
+    void set_language(hdl_language l) { language = l; }
 
     void add_statement(std::shared_ptr<hdl_statement_base> s);
     void add_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type);
@@ -46,6 +47,7 @@ public:
     bool is_current_valid() {return valid_resource;}
 
 private:
+    hdl_language language = hdl_language::unknown;
     std::map<std::string, std::string> function_return_types;
 };
 

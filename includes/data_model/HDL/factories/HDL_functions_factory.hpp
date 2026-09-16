@@ -22,6 +22,7 @@
 #include <string>
 
 #include "data_model/HDL/statement/hdl_statements.hpp"
+#include "data_model/HDL/HDL_definitions.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
@@ -81,6 +82,7 @@ public:
     void start_function_call(const std::string &name);
     void stop_function_call();
     void set_function_package_prefix(const std::string &p);
+    void set_language(hdl_language l) { language = l; }
     void add_call_argument(const std::shared_ptr<Expression_base> &ec);
     void start_ternary();
     void stop_ternary();
@@ -124,6 +126,7 @@ private:
     std::stack<std::unique_ptr<factory_base>> consumer_stack;
     hdl_function_statement f;
     std::string return_type_name;
+    hdl_language language = hdl_language::unknown;
 
     enum{
         arguments,

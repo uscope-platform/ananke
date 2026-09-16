@@ -25,6 +25,7 @@ void HDL_modules_factory::new_module(const std::string &name, const dependency_c
     new_basic_resource(name);
     current_resource.set_type(type);
     current_resource.set_line_n(line_n);
+    current_resource.set_language(language);
     function_return_types.clear();
 }
 

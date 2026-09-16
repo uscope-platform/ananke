@@ -26,6 +26,8 @@
 #include "data_model/HDL/parameters/components/Cast.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "data_model/HDL/parameters/components/Ternary.hpp"
+#include "data_model/HDL/HDL_definitions.hpp"
+#include "frontend/analysis/vhdl/vhdl_analyzer.hpp"
 
 using namespace std::string_literals;
 
@@ -2309,4 +2311,165 @@ TEST(parameter_extraction, function_enum_cast_loop_var_argument) {
         ASSERT_TRUE(defaults.contains(name));
         ASSERT_EQ(value, defaults.at(name));
     }
+}
+
+TEST(parameter_extraction, nested_user_call_in_builtin_arg) {
+    auto test_pattern = R"(
+module test_mod #()();
+    function automatic int dbl(int x);
+        return x * 2;
+    endfunction
+    localparam int V = $clog2(dbl(16));
+endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    EXPECT_EQ(defaults.at(qualified_identifier("V")).get_integer(), 5);
+}
+
+TEST(parameter_extraction, user_minimum_maximum_shadow_builtins) {
+    auto test_pattern = R"(
+package p;
+    function automatic int minimum(int a, int b);
+        return a - b;
+    endfunction
+    function automatic int maximum(int a, int b);
+        return a + b;
+    endfunction
+endpackage
+module test_mod #()();
+    localparam int V_MIN = p::minimum(10, 4);
+    localparam int V_MAX = p::maximum(3, 4);
+endmodule
+    )";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
+    parameter_solver::propagate_functions(resource, d_store);
+    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameters(), d_store);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), pkg_ctx);
+    EXPECT_EQ(defaults.at(qualified_identifier("V_MIN")).get_integer(), 6);
+    EXPECT_EQ(defaults.at(qualified_identifier("V_MAX")).get_integer(), 7);
+}
+
+TEST(parameter_extraction, unqualified_minimum_maximum_use_user_definition) {
+    // Inside an SV package, unqualified `minimum`/`maximum` must resolve to
+    // the package's own functions, not the VHDL builtins. Divergent
+    // semantics prove the user body executes (builtins would give 7 / 42).
+    auto test_pattern = R"(
+package p;
+    function automatic int minimum(int a, int b);
+        return a - b;
+    endfunction
+    function automatic int maximum(int a, int b);
+        return a + b;
+    endfunction
+    function automatic int sub_wrap(int x);
+        return minimum(2*x, 7);
+    endfunction
+    function automatic int add_wrap(int x);
+        return maximum(3, 2*x);
+    endfunction
+endpackage
+module test_mod #()();
+    localparam int V_MIN = p::sub_wrap(21);
+    localparam int V_MAX = p::add_wrap(21);
+endmodule
+    )";
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
+    parameter_solver::propagate_functions(resource, d_store);
+    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameters(), d_store);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), pkg_ctx);
+    EXPECT_EQ(defaults.at(qualified_identifier("V_MIN")).get_integer(), 35);
+    EXPECT_EQ(defaults.at(qualified_identifier("V_MAX")).get_integer(), 45);
+
+    // Declarations record their source language.
+    EXPECT_EQ(std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0])->get_language(),
+              hdl_language::system_verilog);
+    EXPECT_EQ(resource->get_language(), hdl_language::system_verilog);
+}
+
+TEST(parameter_extraction, declarations_record_source_language) {
+    // Every declaration kind is stamped with the language of the file that
+    // defined it: modules, packages, interfaces and functions, from both
+    // frontends. Builtin classification is keyed off the same language, so
+    // these asserts pin the discriminator input directly (rather than only
+    // its downstream effects).
+    auto sv_pattern = R"(
+package lang_pkg;
+    function automatic int foo(int x);
+        return x + 1;
+    endfunction
+endpackage
+module lang_mod #()();
+endmodule
+interface lang_if;
+    logic s;
+endinterface
+    )";
+    sv_analyzer analyzer;
+    auto sv_content = analyzer.analyze("", sv_pattern).value().get_content();
+    auto find_sv = [&](const std::string &name) -> hdl_resource_statement* {
+        for (auto &c : sv_content) {
+            if (!c->is<hdl_resource_statement>()) continue;
+            auto &r = c->as<hdl_resource_statement>();
+            if (r.getName() == name) return &r;
+        }
+        return nullptr;
+    };
+
+    auto *pkg = find_sv("lang_pkg");
+    ASSERT_NE(pkg, nullptr);
+    EXPECT_EQ(pkg->get_type(), package);
+    EXPECT_EQ(pkg->get_language(), hdl_language::system_verilog);
+    auto foo = pkg->get_function_shared("foo");
+    ASSERT_NE(foo, nullptr);
+    EXPECT_EQ(foo->get_language(), hdl_language::system_verilog);
+
+    auto *mod = find_sv("lang_mod");
+    ASSERT_NE(mod, nullptr);
+    EXPECT_EQ(mod->get_type(), module);
+    EXPECT_EQ(mod->get_language(), hdl_language::system_verilog);
+
+    auto *iface = find_sv("lang_if");
+    ASSERT_NE(iface, nullptr);
+    EXPECT_TRUE(iface->is_interface());
+    EXPECT_EQ(iface->get_language(), hdl_language::system_verilog);
+
+    auto vhdl_pattern = R"(
+package lang_pkg is
+    constant WIDTH : integer := 8;
+end lang_pkg;
+entity lang_ent is
+    generic (W : integer := 8);
+end lang_ent;
+)";
+    vhdl_analyzer vanalyzer("test.vhd");
+    auto vhdl_content = vanalyzer.analyze_content(vhdl_pattern, "test.vhd").get_content();
+    auto find_vhdl = [&](const std::string &name) -> hdl_resource_statement* {
+        for (auto &c : vhdl_content) {
+            if (!c->is<hdl_resource_statement>()) continue;
+            auto &r = c->as<hdl_resource_statement>();
+            if (r.getName() == name) return &r;
+        }
+        return nullptr;
+    };
+
+    auto *vpkg = find_vhdl("lang_pkg");
+    ASSERT_NE(vpkg, nullptr);
+    EXPECT_EQ(vpkg->get_type(), package);
+    EXPECT_EQ(vpkg->get_language(), hdl_language::vhdl);
+
+    auto *vent = find_vhdl("lang_ent");
+    ASSERT_NE(vent, nullptr);
+    EXPECT_EQ(vent->get_type(), module);
+    EXPECT_EQ(vent->get_language(), hdl_language::vhdl);
 }

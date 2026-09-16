@@ -18,14 +18,26 @@
 void function_calls_factory::start_function(const std::string &name) {
     new_call = HDL_function_call();
     new_call.set_name(name);
-    is_builtin = HDL_builtin_function::parse(name).has_value();
+    auto kind = (language == hdl_language::system_verilog)
+        ? HDL_builtin_function::from_sv(name)
+        : HDL_builtin_function::parse(name);
+    is_builtin = kind.has_value();
     if (is_builtin) {
-        new_builtin = std::make_shared<HDL_builtin_function>(HDL_builtin_function::parse(name).value());
+        new_builtin = std::make_shared<HDL_builtin_function>(kind.value());
     }
     state = build_phase::arguments;
 }
 
 void function_calls_factory::set_package_prefix(const std::string &p) {
+    // An explicit package qualifier always denotes a user-defined function:
+    // builtins take no package prefix (the VHDL path strips qualification
+    // before classifying, and `$`-builtins are unqualified on the SV path).
+    // Without this, e.g. p::maximum(...) is parsed as $max with the package
+    // silently discarded, shadowing the user's definition.
+    if (!p.empty() && is_builtin) {
+        is_builtin = false;
+        new_builtin.reset();
+    }
     // Package prefixes only apply to user-defined function calls.
     if (!is_builtin) new_call.add_package_prefix(p);
 }

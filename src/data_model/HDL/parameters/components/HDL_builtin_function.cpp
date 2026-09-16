@@ -938,6 +938,16 @@ parameter_deps_t HDL_builtin_function::get_dependencies() const {
     return retval;
 }
 
+void HDL_builtin_function::propagate_function(const hdl_function_def_ptr &def) {
+    // User-defined calls may nest inside a builtin's argument list (e.g.
+    // $clog2(dbl(16)), or maximum(res, fp_width(...)) where `maximum`
+    // classified as $max). Forward like every other composite node, or the
+    // nested call stays unlinked and silently misses at evaluation.
+    for (auto &arg : arguments) {
+        if (arg) arg->propagate_function(def);
+    }
+}
+
 bool HDL_builtin_function::isEqual(const Expression_base &other) const {
     if (auto *o = dynamic_cast<const HDL_builtin_function*>(&other)) {
         if (function_kind != o->function_kind) return false;

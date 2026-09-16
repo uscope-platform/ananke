@@ -93,6 +93,7 @@ void HDL_functions_factory::finish_assignment() {
 
 hdl_function_statement HDL_functions_factory::get_function() {
     auto current_function = f;
+    current_function.set_language(language);
     f = hdl_function_statement();
     return_type_name.clear();
     active = false;
@@ -206,6 +207,7 @@ void HDL_functions_factory::start_expression(bool new_expr) {
 
 void HDL_functions_factory::start_function_call(const std::string &name) {
     auto calls = std::make_unique<function_calls_factory>();
+    calls->set_language(language);
     calls->start_function(name);
     consumer_stack.push(std::move(calls));
     expr_factory_.pause();

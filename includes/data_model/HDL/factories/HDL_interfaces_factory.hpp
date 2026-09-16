@@ -27,6 +27,10 @@ public:
     std::shared_ptr<hdl_resource_statement> get_interface();
     bool is_current_valid(){return valid_resource;}
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);
+    void set_language(hdl_language l) { language = l; }
+
+private:
+    hdl_language language = hdl_language::unknown;
 
 };
 

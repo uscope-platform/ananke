@@ -60,6 +60,9 @@ public:
     void set_type(dependency_class t) { hdl_dependency_type = t; }
     dependency_class get_type() { return hdl_dependency_type; }
 
+    void set_language(hdl_language l) { language = l; }
+    [[nodiscard]] hdl_language get_language() const { return language; }
+
     void set_line_n(unsigned int n) { line_n = n; }
     [[nodiscard]] unsigned int get_line_n() const { return line_n; }
 
@@ -99,7 +102,7 @@ public:
     template<class Archive>
     void serialize(Archive & ar) {
         ar(name, hdl_dependency_type, parameters_spec, port_specs, doc, processor_docs,
-            line_n, typedefs, statements, architecture);
+            line_n, typedefs, statements, architecture, language);
     }
 
 private:
@@ -107,6 +110,7 @@ private:
     std::string architecture;
     unsigned int line_n = 0;
     dependency_class hdl_dependency_type = module;
+    hdl_language language = hdl_language::unknown;
     std::unordered_map<std::string, HDL_port> port_specs;
     Parameters_map parameters_spec;
     std::vector<processor_instance> processor_docs;

@@ -25,6 +25,10 @@ class function_calls_factory : public factory_base{
 public:
     void start_function(const std::string& name);
     void set_package_prefix(const std::string &p);
+    // Source language of the file under parse. SystemVerilog consults only
+    // the SV builtin table, so SV user functions (e.g. `maximum`) are never
+    // shadowed by VHDL builtins; any other value keeps the legacy union.
+    void set_language(hdl_language l) { language = l; }
 
     void consume(const std::shared_ptr<Expression_base> &arg) override;
     bool active() const override;
@@ -34,6 +38,7 @@ private:
     HDL_function_call new_call;
     std::shared_ptr<HDL_builtin_function> new_builtin;
     bool is_builtin = false;
+    hdl_language language = hdl_language::unknown;
 
     enum class build_phase {
         inactive,

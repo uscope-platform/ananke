@@ -22,6 +22,7 @@
 #include "analysis/loop_solver.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include "data_model/HDL/statement/hdl_statements.hpp"
+#include "data_model/HDL/types/hdl_type.hpp"
 #include "data_model/hdl_file.hpp"
 
 namespace {
@@ -239,6 +240,14 @@ void HDL_ast_builder_v2::elaborate_loop_locals(
     work_order &iter_wo
 ) {
     auto &ctx = iter_wo.param_chain.back();
+
+    // Mirror solve_complex_overrides: seed bare package constants
+    // (e.g. FP_ENCODINGS, NUM_FP_FORMATS) so per-iteration re-evaluation
+    // of loop-dependent params sees the same scope as module-scope solve.
+    // Only adds keys missing from ctx; per-iteration values are untouched.
+    if (auto overlaid = overlay_unambiguous_scope(ctx)) {
+        ctx.insert(overlaid->begin(), overlaid->end());
+    }
 
     std::set<std::string> elaborated;
     const auto params = resource->get_parameters();

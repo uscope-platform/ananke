@@ -20,6 +20,7 @@
 #include <stack>
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/HDL_definitions.hpp"
 #include "resource_factory_base.hpp"
 #include "data_model/HDL/factories/parameters/expressions_factory.hpp"
 #include "data_model/HDL/factories/parameters/factory_base.hpp"
@@ -83,6 +84,7 @@ public:
 
     void start_function_call(const std::string &f_name);
     void stop_function_call();
+    void set_language(hdl_language l) { language = l; }
 
     bool in_packed_context() const {return ctx == param_context::packed_dim; }
     bool is_param_assignment() const {return ctx == param_context::declaration;}
@@ -128,6 +130,8 @@ private:
     std::vector<bool> cast_started_expression;
 
     std::shared_ptr<hdl_type> current_type = std::make_shared<HDL_simple_type>();
+
+    hdl_language language = hdl_language::unknown;
 
     Streaming::stream_direction pending_stream_direction = Streaming::left;
     std::shared_ptr<Expression_base> pending_stream_slice_size;

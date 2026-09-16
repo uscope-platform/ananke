@@ -43,7 +43,7 @@ using namespace mgp_sv;
 
 class sv_visitor : public sv2017BaseListener {
 public:
-    sv_visitor() = default;
+    sv_visitor();
     void enterModule_declaration(sv2017::Module_declarationContext *ctx) override;
     void exitModule_declaration(sv2017::Module_declarationContext *ctx) override;
     void enterInterface_declaration(sv2017::Interface_declarationContext *ctx) override;
