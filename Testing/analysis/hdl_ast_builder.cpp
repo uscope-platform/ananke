@@ -1172,6 +1172,90 @@ endmodule
     std::filesystem::remove_all(cache_dir);
 }
 
+TEST(hdl_ast_builder, use_of_imported_typedef_in_override) {
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    {
+        auto pkg_content = R"(package repro_pkg;
+    typedef struct packed {
+        logic uncacheable;
+        logic io;
+        logic [2:0] wr_policy_hint;
+    } pma_t;
+endpackage)";
+        sv_analyzer pkg_analyzer;
+        d_store->store_file({"test/repro_pkg.sv", "hash_pkg", pkg_analyzer.analyze("", pkg_content).value()});
+    }
+    {
+        auto mux_content = R"(module mux_mini #(
+    parameter int NINPUT = 2,
+    parameter int DATA_WIDTH = 1,
+    parameter bit ONE_HOT_SEL = 1'b1
+) (
+    input logic [NINPUT-1:0][DATA_WIDTH-1:0] data_i,
+    input logic [NINPUT-1:0] sel_i,
+    output logic [DATA_WIDTH-1:0] data_o
+);
+endmodule)";
+        sv_analyzer mux_analyzer;
+        d_store->store_file({"test/mux.sv", "hash_mux", mux_analyzer.analyze("", mux_content).value()});
+    }
+    {
+        auto arb_content = R"(module arbiter_mini
+import repro_pkg::*;
+#(
+    parameter int NREQ = 2
+) (
+    input pma_t req_pma_i [NREQ],
+    output pma_t arb_pma_o
+);
+    pma_t [NREQ-1:0] req_pma;
+    logic [NREQ-1:0] gnt;
+    mux_mini #(
+        .NINPUT     (NREQ),
+        .DATA_WIDTH ($bits(pma_t)),
+        .ONE_HOT_SEL(1'b1)
+    ) pma_mux_i (
+        .data_i (req_pma),
+        .sel_i  (gnt),
+        .data_o (arb_pma_o)
+    );
+endmodule)";
+        sv_analyzer arb_analyzer;
+        d_store->store_file({"test/arbiter.sv", "hash_arb", arb_analyzer.analyze("", arb_content).value()});
+    }
+    {
+        auto top_content = R"(module top_mini ();
+    import repro_pkg::*;
+    pma_t req [2];
+    pma_t arb;
+    arbiter_mini #(.NREQ(2)) i_arb (
+        .req_pma_i(req),
+        .arb_pma_o(arb)
+    );
+endmodule)";
+        sv_analyzer top_analyzer;
+        d_store->store_file({"test/top.sv", "hash_top", top_analyzer.analyze("", top_content).value()});
+    }
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    log_capture logs;
+    auto ast = b.build_ast(std::vector<std::string>{"top_mini"})[0];
+    EXPECT_EQ(logs.count("is not defined in the design"), 0u);
+    ASSERT_EQ(ast->get_dependencies().size(), 1u);
+    auto arb = ast->get_dependencies()[0];
+    ASSERT_EQ(arb->get_name(), "i_arb");
+    ASSERT_EQ(arb->get_dependencies().size(), 1u);
+    auto mux = arb->get_dependencies()[0];
+    ASSERT_EQ(mux->get_name(), "pma_mux_i");
+
+    // struct { uncacheable + io + 3-bit hint } = 5 bits
+    auto w = mux->get_parameters().get("DATA_WIDTH")->get_numeric_value();
+    ASSERT_TRUE(w.has_value());
+    EXPECT_EQ(w->get_value(), 5);
+}
+
 TEST(hdl_ast_builder, dtype_override_with_parent_local_typedef) {
     // Mirrors instr_queue.sv -> cva6_fifo_v3: a dtype override referencing a
     // module-local typedef of the instantiating module. Pre-fix this warns
