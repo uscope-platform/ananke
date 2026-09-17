@@ -36,6 +36,7 @@ public:
     void add_statement(const std::shared_ptr<hdl_statement_base> &stmt);
     void add_expression(const Expression_v2 &e);
     void set_loop_init(const HDL_parameter &id) { _statement.set_init(std::make_shared<HDL_parameter>(id)); }
+    void set_end_condition(const Expression_v2 &e) { _statement.set_end_condition(std::make_shared<Expression_v2>(e)); }
     std::shared_ptr<hdl_loop_statement> get_loop_statement() {auto ret = std::make_shared<hdl_loop_statement>(_statement); pop_frame(); return ret;};
     std::shared_ptr<hdl_while_statement> get_while_statement() {auto ret = while_stmt; while_stmt.reset(); pop_frame(); return ret;};
     std::shared_ptr<hdl_repeat_statement> get_repeat_statement() {auto ret = repeat_stmt; repeat_stmt.reset(); pop_frame(); return ret;};

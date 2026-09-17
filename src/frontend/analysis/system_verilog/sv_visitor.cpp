@@ -1880,11 +1880,18 @@ void sv_visitor::enterGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
 }
 
 void sv_visitor::exitGenvar_expression(sv2017::Genvar_expressionContext *ctx) {
-    loops_factory.advance_phase();
     auto param = params_factory.get_parameter();
-    auto ex = param->get_expression();
+    auto ex = param ? param->get_expression() : nullptr;
+    bool was_end = loops_factory.in_end_condition();
+    loops_factory.advance_phase();
     if (ex) {
-        if (ex->is<Expression_v2>()) {
+        if (was_end) {
+            Expression_v2 e;
+            if (ex->is<Expression_v2>()) e = ex->as<Expression_v2>();
+            else e.set_lhs(ex);
+            loops_factory.set_end_condition(e);
+
+        } else if (ex->is<Expression_v2>()) {
             loops_factory.add_expression(ex->as<Expression_v2>());
         } else {
             Expression_v2 e;

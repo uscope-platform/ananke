@@ -1955,6 +1955,72 @@ TEST(parameter_extraction, generate_for) {
 }
 
 
+TEST(parameter_extraction, generate_for_end_expression) {
+    auto test_pattern = R"(
+    module test_mod #(
+        N_REPETITION = 2
+    )();
+
+        parameter [31:0] ARRAY_PARAM [1:0] = '{10, 440};
+
+        genvar n;
+
+        generate
+            for(n = 0; n<N_REPETITIONS+5; n=n+1)begin
+                dependency #(
+                    .DEP_PARAM(ARRAY_PARAM[n])
+                ) dep();
+            end
+        endgenerate
+
+    endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto loop_stmt = std::dynamic_pointer_cast<hdl_loop_statement>(resource.get_statements()[0]);
+    ASSERT_NE(loop_stmt, nullptr);
+
+    hdl_loop_statement check_loop;
+
+    HDL_parameter p;
+    p.set_name("n");
+    p.set_raw_value(std::make_shared<Numeric_token>("0"));
+
+    check_loop.set_init(std::make_shared<HDL_parameter>(p));
+
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    Expression_v2 inner_e;
+    inner_e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N_REPETITIONS")));
+    inner_e.set_rhs(std::make_shared<Numeric_token>("5"));
+    inner_e.set_operation(Expression_v2::add);
+    e.set_rhs(std::make_shared<Expression_v2>(inner_e));
+    e.set_operation(Expression_v2::less);
+    check_loop.set_end_condition(std::make_shared<Expression_v2>(e));
+
+    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    e.set_rhs(std::make_shared<Numeric_token>("1"));
+    e.set_operation(Expression_v2::add);
+    check_loop.set_iteration(std::make_shared<Expression_v2>(e));
+
+    auto dep_inst = std::make_shared<hdl_instance_statement>();
+    dep_inst->set_name("dep");
+    dep_inst->set_type("dependency");
+    dep_inst->set_dependency_class(module);
+    auto dep_param = std::make_shared<HDL_parameter>();
+    dep_param->set_name("DEP_PARAM");
+    Identifier_token arr_idx(qualified_identifier("ARRAY_PARAM"));
+    arr_idx.add_array_index(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    dep_param->set_raw_value(std::make_shared<Identifier_token>(arr_idx));
+    dep_inst->add_parameter(dep_param);
+    check_loop.add_body_stmt(dep_inst);
+
+    ASSERT_EQ(*loop_stmt, check_loop);
+}
+
 
 
 
