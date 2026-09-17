@@ -68,6 +68,9 @@ public:
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types = {});
     static void propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store);
     static void propagate_types(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store);
+    static void propagate_port_types(std::shared_ptr<hdl_resource_statement> &resource,
+        const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types,
+        const std::shared_ptr<data_store> &d_store);
     static void propagate_imports(std::shared_ptr<hdl_resource_statement> &resource,
         const std::map<std::string, hdl_function_statement> &imported_functions,
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types);

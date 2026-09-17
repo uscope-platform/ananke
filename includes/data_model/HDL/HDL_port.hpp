@@ -20,6 +20,8 @@
 
 
 #include "data_model/HDL/HDL_definitions.hpp"
+#include "data_model/HDL/types/hdl_type.hpp"
+#include <memory>
 #include <string>
 
 struct if_port_specs {
@@ -37,13 +39,20 @@ struct if_port_specs {
 struct HDL_port {
     port_direction_t direction;
     if_port_specs if_info;
+    std::shared_ptr<hdl_type> type;
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(direction, if_info);
+        ar(direction, if_info, type);
     }
 
-    bool operator==(const HDL_port&) const = default;
+    friend bool operator==(const HDL_port &lhs, const HDL_port &rhs) {
+        if (lhs.direction != rhs.direction) return false;
+        if (!(lhs.if_info == rhs.if_info)) return false;
+        if (!lhs.type && !rhs.type) return true;
+        if (!lhs.type || !rhs.type) return false;
+        return lhs.type->is_equal(*rhs.type);
+    }
 };
 
 

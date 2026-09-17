@@ -1396,6 +1396,47 @@ void sv_visitor::exitAnsi_port_declaration(sv2017::Ansi_port_declarationContext 
             else if(dir_s=="inout")
                 port.direction = inout_port;
         }
+        // Capture the declared data type so type queries on ports and their
+        // fields (e.g. $bits(csr_param_i.stride)) can resolve statically.
+        // Interface and explicit `.port(expr)` forms carry no data type.
+        if (port.direction != interface_port && !ctx->DOT()) {
+            if (auto *novdt = ctx->net_or_var_data_type()) {
+                if (auto *dtoi = novdt->data_type_or_implicit()) {
+                    if (auto *dt = dtoi->data_type()) {
+                        auto resolved = resolve_data_type(dt);
+                        if (!resolved) {
+                            // Bare typedef name (e.g. an imported package
+                            // type): keep an external placeholder for the
+                            // solver to resolve, like parameter types.
+                            if (auto *pscp = dt->package_or_class_scoped_path()) {
+                                if (pscp->DOUBLE_COLON().empty())
+                                    resolved = std::make_shared<HDL_external_type>(
+                                        qualified_identifier(pscp->getText()));
+                            }
+                        }
+                        if (resolved && resolved->is<HDL_simple_type>()) {
+                            auto simple = resolved->as<HDL_simple_type>();
+                            std::vector<dimension_t> packed_dims;
+                            for (auto *vd : ctx->variable_dimension()) {
+                                if (!vd || !vd->array_range_expression()) continue;
+                                auto re = vd->array_range_expression();
+                                dimension_t d;
+                                d.packed = true;
+                                auto exprs = re->expression();
+                                d.first_bound = sv_parsing_helpers::make_value(exprs[0]->getText());
+                                d.second_bound = exprs.size() > 1
+                                    ? sv_parsing_helpers::make_value(exprs[1]->getText())
+                                    : d.first_bound;
+                                packed_dims.push_back(d);
+                            }
+                            if (!packed_dims.empty()) simple.set_packed_dimensions(packed_dims);
+                            resolved = std::make_shared<HDL_simple_type>(simple);
+                        }
+                        if (resolved) port.type = resolved;
+                    }
+                }
+            }
+        }
         modules_factory.add_port(port_name, port);
     }
 }

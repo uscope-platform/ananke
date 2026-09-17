@@ -24,6 +24,10 @@
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "data_model/HDL/parameters/components/HDL_builtin_function.hpp"
 #include "data_model/HDL/parameters/components/token/Real_token.hpp"
+#include "analysis/HDL_ast_builder_v2.hpp"
+#include "data_model/data_store.hpp"
+#include "data_model/settings_store.hpp"
+#include "data_model/Depfile/Depfile.hpp"
 
 using namespace std::string_literals;
 
@@ -1019,6 +1023,91 @@ TEST(system_task, unknown_function_defaults_to_zero) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
     EXPECT_EQ(defaults.at(qualified_identifier("X")).get_integer(), 0);
+}
+
+TEST(system_task, bits_struct_port_field_dependency) {
+    // Minimal shape of hwpf_stride.sv:80
+    // `localparam int STRIDE_WIDTH = $bits(csr_param_i.stride);`
+    // where csr_param_i is a struct-typed input port.
+    auto test_pattern = R"(
+        package hwpf_stride_pkg;
+            typedef struct packed {
+                logic [63:48] nblocks;
+                logic [47:32] nlines;
+                logic [31:0]  stride;
+            } hwpf_stride_param_t;
+        endpackage
+
+        import hwpf_stride_pkg::*;
+        module hwpf_stride (
+            input  hwpf_stride_param_t csr_param_i
+        );
+            localparam int STRIDE_WIDTH = $bits(csr_param_i.stride);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[1]->as<hdl_resource_statement>();
+    ASSERT_TRUE(resource.get_parameters().contains("STRIDE_WIDTH"));
+
+    auto param = resource.get_parameters().get("STRIDE_WIDTH");
+    auto deps = param->get_dependencies().data;
+    ASSERT_EQ(deps.size(), 1u);
+    auto dep = *deps.begin();
+    // csr_param_i.stride -> instance=[csr_param_i], name=stride
+    ASSERT_EQ(dep.get_instance().size(), 1u);
+    EXPECT_EQ(dep.get_instance()[0], "csr_param_i");
+    EXPECT_EQ(dep.get_name(), "stride");
+}
+
+TEST(system_task, bits_struct_port_field_elaboration) {
+    auto test_pattern = R"(
+        package hwpf_stride_pkg;
+            typedef struct packed {
+                logic [63:48] nblocks;
+                logic [47:32] nlines;
+                logic [31:0]  stride;
+            } hwpf_stride_param_t;
+        endpackage
+
+        import hwpf_stride_pkg::*;
+        module hwpf_stride (
+            input  hwpf_stride_param_t csr_param_i
+        );
+            localparam int STRIDE_WIDTH = $bits(csr_param_i.stride);
+            localparam int PARAM_WIDTH = $bits(csr_param_i);
+        endmodule
+
+        module top ();
+            logic clk;
+            hwpf_stride_pkg::hwpf_stride_param_t p;
+            hwpf_stride hwpf_stride_i (
+                .csr_param_i(p)
+            );
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto ast = b.build_ast(std::vector<std::string>({"top"}));
+    ASSERT_EQ(ast.size(), 1u);
+    ASSERT_EQ(ast[0]->get_dependencies().size(), 1u);
+    auto leaf = ast[0]->get_dependencies()[0];
+    ASSERT_TRUE(leaf->get_parameters().contains("STRIDE_WIDTH"));
+    auto val = leaf->get_parameters().get("STRIDE_WIDTH")->get_numeric_value();
+    ASSERT_TRUE(val.has_value());
+    // Correct value is $bits(logic [31:0]) = 32. Buggy behavior solves to 1.
+    EXPECT_EQ(val.value().get_value(), 32);
+    ASSERT_TRUE(leaf->get_parameters().contains("PARAM_WIDTH"));
+    auto whole = leaf->get_parameters().get("PARAM_WIDTH")->get_numeric_value();
+    ASSERT_TRUE(whole.has_value());
+    // 16 (nblocks) + 16 (nlines) + 32 (stride) = 64.
+    EXPECT_EQ(whole.value().get_value(), 64);
 }
 
 

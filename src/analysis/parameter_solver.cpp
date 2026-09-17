@@ -350,6 +350,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     propagate_functions(node_spec.value(), d_store);
     propagate_types(node_spec.value(), d_store);
     propagate_imports(node_spec.value(), imported_functions, imported_types);
+    propagate_port_types(node_spec.value(), imported_types, d_store);
 
     auto combined_solved = retrieve_package_parameters(combined_params, d_store);
     solved_parameters.insert(combined_solved.begin(), combined_solved.end());
@@ -675,6 +676,209 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
 }
 
 namespace {
+// Single-step resolution of a port (or member) type reference: package
+// qualified via the store, bare via local typedefs, type parameters and the
+// file's imports. Returns the input when unresolvable.
+std::shared_ptr<hdl_type> resolve_port_type_ref(
+    const std::shared_ptr<hdl_type> &t,
+    const std::shared_ptr<hdl_resource_statement> &resource,
+    const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types,
+    const std::shared_ptr<data_store> &d_store) {
+    if (!t || !t->is<HDL_external_type>()) return t;
+    auto q = t->as<HDL_external_type>().get_value();
+    if (!q.get_package_prefix().empty()) {
+        if (!d_store) return t;
+        auto res = d_store->get_package_typedef_owner(q.get_package_prefix().back(), q.get_name());
+        if (!res.has_value()) return t;
+        auto tds = res.value()->get_typedefs();
+        auto it = tds.find(q.get_name());
+        if (it != tds.end() && it->second) return it->second;
+        return t;
+    }
+    auto tds = resource->get_typedefs();
+    auto it = tds.find(q.get_name());
+    if (it != tds.end() && it->second) return it->second;
+    for (const auto &[_, pp] : resource->get_parameters()) {
+        if (pp->is_type_param && pp->get_name() == q.get_name() && pp->get_type())
+            return pp->get_type();
+    }
+    auto ii = imported_types.find(q.get_name());
+    if (ii != imported_types.end() && ii->second) return ii->second;
+    return t;
+}
+
+// Walks a struct/union member path (e.g. stride in csr_param_i.stride)
+// starting from a port's declared type.
+std::shared_ptr<hdl_type> walk_port_field(
+    const std::shared_ptr<hdl_type> &base, const std::vector<std::string> &fields,
+    const std::shared_ptr<hdl_resource_statement> &resource,
+    const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types,
+    const std::shared_ptr<data_store> &d_store) {
+    auto cur = resolve_port_type_ref(base, resource, imported_types, d_store);
+    for (const auto &f : fields) {
+        if (!cur) return nullptr;
+        cur = resolve_port_type_ref(cur, resource, imported_types, d_store);
+        if (cur->is<HDL_struct_type>()) {
+            std::shared_ptr<hdl_type> next;
+            for (const auto &m : cur->as<HDL_struct_type>().member) {
+                if (m.name == f) { next = m.type; break; }
+            }
+            if (!next) return nullptr;
+            cur = next;
+        } else if (cur->is<HDL_union_type>()) {
+            std::shared_ptr<hdl_type> next;
+            for (const auto &m : cur->as<HDL_union_type>().members) {
+                if (m.name == f) { next = m.type; break; }
+            }
+            if (!next) return nullptr;
+            cur = next;
+        } else {
+            return nullptr;
+        }
+    }
+    return resolve_port_type_ref(cur, resource, imported_types, d_store);
+}
+
+bool is_type_query_builtin(HDL_builtin_function::function f) {
+    using function = HDL_builtin_function::function;
+    switch (f) {
+        case function::bits: case function::size:
+        case function::left: case function::right:
+        case function::high: case function::low:
+        case function::dimensions: case function::unpacked_dimensions:
+        case function::typename_fn:
+            return true;
+        default:
+            return false;
+    }
+}
+
+void annotate_port_tokens_expr(
+    const std::shared_ptr<Expression_base> &expr,
+    const std::map<std::string, std::shared_ptr<hdl_type>> &ports,
+    const std::set<std::string> &param_names,
+    const std::shared_ptr<hdl_resource_statement> &resource,
+    const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types,
+    const std::shared_ptr<data_store> &d_store,
+    bool in_type_operand) {
+    if (!expr) return;
+    if (expr->is<HDL_builtin_function>()) {
+        auto &b = expr->as<HDL_builtin_function>();
+        bool tq = is_type_query_builtin(b.get_function());
+        const auto &args = b.get_arguments();
+        for (size_t i = 0; i < args.size(); ++i) {
+            // Only the first argument is the type operand; dimension
+            // arguments (e.g. $size(v, K)) stay value positions. A nested
+            // type query re-enters the type operand regardless of the
+            // outer context (e.g. $clog2($bits(port.field))).
+            annotate_port_tokens_expr(args[i], ports, param_names, resource,
+                imported_types, d_store, tq && i == 0);
+        }
+        return;
+    }
+    if (expr->is<HDL_function_call>()) {
+        for (auto &arg : expr->as<HDL_function_call>().get_arguments()) {
+            if (arg) annotate_port_tokens_expr(arg, ports, param_names, resource,
+                imported_types, d_store, false);
+        }
+        return;
+    }
+    if (expr->is<Identifier_token>()) {
+        auto &tok = expr->as<Identifier_token>();
+        // Array indices are value positions, never the type operand.
+        for (auto &idx : tok.get_array_index()) {
+            if (idx) annotate_port_tokens_expr(idx, ports, param_names, resource,
+                imported_types, d_store, false);
+        }
+        auto id = tok.get_value();
+        const auto &inst = id.get_instance();
+        std::string root;
+        std::vector<std::string> fields;
+        bool whole_port = false;
+        if (!inst.empty()) {
+            root = inst[0];
+            if (!ports.contains(root)) return;
+            fields.insert(fields.end(), inst.begin() + 1, inst.end());
+            fields.push_back(id.get_name());
+        } else {
+            // Bare port name: only when it does not shadow a parameter.
+            if (!ports.contains(id.get_name()) || param_names.contains(id.get_name())) return;
+            root = id.get_name();
+            whole_port = true;
+        }
+        auto base = ports.at(root);
+        auto mt = whole_port ? resolve_port_type_ref(base, resource, imported_types, d_store)
+                             : walk_port_field(base, fields, resource, imported_types, d_store);
+        if (!mt || mt->is<HDL_external_type>()) return;
+        // NOTE: dependencies are computed from the raw_value tree, so this
+        // only feeds type queries ($bits(port.field)); value resolution of
+        // port references still misses as before. The instance-dependency
+        // skip in solve_complex_overrides keeps those misses quiet.
+        if (in_type_operand) tok.set_expression_type(mt);
+        return;
+    }
+    if (expr->is<Expression_v2>()) {
+        auto &e = expr->as<Expression_v2>();
+        if (e.get_lhs()) annotate_port_tokens_expr(e.get_lhs(), ports, param_names,
+            resource, imported_types, d_store, in_type_operand);
+        if (e.get_rhs()) annotate_port_tokens_expr(e.get_rhs(), ports, param_names,
+            resource, imported_types, d_store, in_type_operand);
+    } else if (expr->is<Concatenation>()) {
+        for (auto &comp : expr->as<Concatenation>().get_components()) {
+            if (comp) annotate_port_tokens_expr(comp, ports, param_names, resource,
+                imported_types, d_store, in_type_operand);
+        }
+    } else if (expr->is<Replication>()) {
+        auto &r = expr->as<Replication>();
+        if (r.get_size()) annotate_port_tokens_expr(r.get_size(), ports, param_names,
+            resource, imported_types, d_store, in_type_operand);
+        if (r.get_item()) annotate_port_tokens_expr(r.get_item(), ports, param_names,
+            resource, imported_types, d_store, in_type_operand);
+    } else if (expr->is<Ternary>()) {
+        auto &t = expr->as<Ternary>();
+        if (t.get_condition()) annotate_port_tokens_expr(t.get_condition(), ports, param_names,
+            resource, imported_types, d_store, in_type_operand);
+        if (t.get_true_value()) annotate_port_tokens_expr(t.get_true_value(), ports, param_names,
+            resource, imported_types, d_store, in_type_operand);
+        if (t.get_false_value()) annotate_port_tokens_expr(t.get_false_value(), ports, param_names,
+            resource, imported_types, d_store, in_type_operand);
+    } else if (expr->is<Cast>()) {
+        auto &c = expr->as<Cast>();
+        if (c.get_size_expr()) annotate_port_tokens_expr(c.get_size_expr(), ports, param_names,
+            resource, imported_types, d_store, in_type_operand);
+        if (c.get_content()) annotate_port_tokens_expr(c.get_content(), ports, param_names,
+            resource, imported_types, d_store, in_type_operand);
+    } else if (expr->is<Streaming>()) {
+        auto &st = expr->as<Streaming>();
+        if (st.get_slice_size()) annotate_port_tokens_expr(st.get_slice_size(), ports, param_names,
+            resource, imported_types, d_store, in_type_operand);
+        for (auto &comp : st.get_components()) {
+            if (comp) annotate_port_tokens_expr(comp, ports, param_names, resource,
+                imported_types, d_store, in_type_operand);
+        }
+    }
+}
+} // namespace
+
+void parameter_solver::propagate_port_types(
+    std::shared_ptr<hdl_resource_statement> &resource,
+    const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types,
+    const std::shared_ptr<data_store> &d_store) {
+    std::map<std::string, std::shared_ptr<hdl_type>> ports;
+    for (const auto &[pname, pspec] : resource->get_port_specs()) {
+        if (pspec.direction == interface_port) continue;
+        if (pspec.type) ports[pname] = pspec.type;
+    }
+    if (ports.empty()) return;
+    std::set<std::string> param_names;
+    for (const auto &[pname, _] : resource->get_parameters()) param_names.insert(pname);
+    for (auto &[_, param] : resource->get_parameters()) {
+        annotate_port_tokens_expr(param->get_expression(), ports, param_names,
+            resource, imported_types, d_store, false);
+    }
+}
+
+namespace {
 // Resolves a function definition's external return type in place (no-op if
 // already resolved or unresolvable). Owner-side, pre-solve bookkeeping like
 // the param set_type writes in propagate_types: deterministic (same typedef
@@ -977,6 +1181,16 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
+    // Own (non-interface) ports are not instance parameters: their values
+    // are never constant, and type queries on them ($bits(port.field))
+    // resolve through the port's declared type (see propagate_port_types).
+    // Routing them through instance resolution only produces "not found"
+    // warnings, so they are left out of the solving context.
+    std::set<std::string> own_ports;
+    for (const auto &[pname, pspec] : node_spec.value()->get_port_specs()) {
+        if (pspec.direction != interface_port) own_ports.insert(pname);
+    }
+
     for (const auto &[p_name, param] : node_parameters) {
         auto p_id = param->get_identifier();
         if (ctx.contains(p_id)) continue;
@@ -984,6 +1198,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             if (!dep.get_instance().empty() && !ctx.contains(dep)) {
                 auto first_inst = dep.get_instance()[0];
                 if (to_solve.contains(first_inst) || node_parameters.contains(first_inst)) {
+                    continue;
+                }
+                if (own_ports.contains(first_inst)) {
                     continue;
                 }
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);

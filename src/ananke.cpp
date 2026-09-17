@@ -160,6 +160,7 @@ std::optional<int> ananke::build_flow() {
 
         LOG_TIMEPOINT("Build synth AST");
 
+        //TODO: DIFFERENTIATE THE SYNTH AND SIM TB BUILDING STRATEGY, NOT ALL PASSES ARE RELEVANT ON SIMS
         auto sim_ast = b.build_ast(std::vector({dep.general.sim_tl}))[0];
         auto additional_sim_modules = b.build_ast(dep.general.sim_modules);
         additional_sim_modules.insert(additional_sim_modules.end(), sim_ast);
