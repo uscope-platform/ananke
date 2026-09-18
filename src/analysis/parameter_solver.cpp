@@ -26,6 +26,8 @@
 #include "data_model/HDL/parameters/components/HDL_builtin_function.hpp"
 #include "data_model/HDL/parameters/components/Streaming.hpp"
 #include "data_model/HDL/parameters/components/token/Type_ref.hpp"
+#include "data_model/HDL/statement/hdl_import_stmt.hpp"
+#include "data_model/hdl_file.hpp"
 #include "data_model/HDL/types/hdl_type.hpp"
 #include "data_model/HDL/types/HDL_external_type.hpp"
 #include "data_model/HDL/types/HDL_enum_type.hpp"
@@ -753,6 +755,152 @@ bool is_type_query_builtin(HDL_builtin_function::function f) {
     }
 }
 
+// Typedefs visible at an instance-override site (i.e. in the instantiating
+// parent scope): the parent's local typedefs, the solved types of its type
+// parameters, then the typedefs pulled in by the parent file's imports.
+// Locals shadow imports, so imports only fill names not already present.
+std::map<std::string, std::shared_ptr<hdl_type>> collect_override_scope_types(
+    const std::shared_ptr<hdl_ast_node> &parent_node,
+    const std::shared_ptr<hdl_resource_statement> &parent_resource,
+    const std::shared_ptr<data_store> &d_store) {
+    std::map<std::string, std::shared_ptr<hdl_type>> scope;
+    if (parent_resource) {
+        for (const auto &[name, t] : parent_resource->get_typedefs()) {
+            if (t) scope[name] = t;
+        }
+    }
+    if (parent_node) {
+        for (const auto &[name, p] : parent_node->get_parameters()) {
+            if (p && p->is_type_param && p->get_type()) scope[name] = p->get_type();
+        }
+    }
+    if (parent_node && d_store && !parent_node->get_type().empty()) {
+        std::string parent_path;
+        if (!d_store->get_HDL_resource(parent_node->get_type(), parent_path).has_value()) return scope;
+        auto file = d_store->get_file<hdl_file>(parent_path);
+        if (!file.has_value()) return scope;
+        for (const auto &stmt : file.value().get_content()) {
+            auto imp = std::dynamic_pointer_cast<hdl_import_stmt>(stmt);
+            if (!imp) continue;
+            auto pkg = d_store->get_HDL_resource(imp->get_package());
+            if (!pkg.has_value()) continue;
+            for (const auto &[name, t] : pkg.value()->get_typedefs()) {
+                if (!t) continue;
+                if (!imp->is_wildcard() && imp->get_item() != name) continue;
+                if (!scope.contains(name)) scope[name] = t;
+            }
+        }
+    }
+    return scope;
+}
+
+// Annotates bare typedef names used as the direct type operand of a type
+// query ($bits(T), $size(T), ...) inside override expressions with the type
+// from the parent scope, and resolves package-qualified placeholders
+// ($bits(pkg::T)) to the real typedef. Bare type names otherwise parse as
+// plain value identifiers and end up as bogus data dependencies ("Parameter
+// ::T is not defined in the design"). Only the direct first argument is a
+// type position; everything else (including array indices) stays a value
+// position so real value dependencies are preserved.
+void annotate_override_type_queries(
+    const std::shared_ptr<Expression_base> &expr,
+    const std::map<std::string, std::shared_ptr<hdl_type>> &scope_types,
+    const std::shared_ptr<data_store> &d_store) {
+    if (!expr) return;
+    if (expr->is<HDL_builtin_function>()) {
+        auto &b = expr->as<HDL_builtin_function>();
+        const auto &args = b.get_arguments();
+        if (is_type_query_builtin(b.get_function()) && !args.empty()) {
+            if (auto first = args[0]; first && first->is<Identifier_token>()) {
+                auto &tok = first->as<Identifier_token>();
+                auto held = tok.get_expression_type();
+                if (held && held->is<HDL_external_type>()) {
+                    const auto q = held->as<HDL_external_type>().get_value();
+                    std::shared_ptr<hdl_type> real;
+                    if (!q.get_package_prefix().empty() && d_store) {
+                        auto res = d_store->get_package_typedef_owner(
+                            q.get_package_prefix().back(), q.get_name());
+                        if (res.has_value()) {
+                            auto tds = res.value()->get_typedefs();
+                            auto it = tds.find(q.get_name());
+                            if (it != tds.end()) real = it->second;
+                        }
+                    } else {
+                        auto it = scope_types.find(q.get_name());
+                        if (it != scope_types.end()) real = it->second;
+                    }
+                    if (real) {
+                        tok.set_expression_type(real);
+                        tok.set_type_placeholder(true);
+                    }
+                } else if (!tok.is_type_placeholder()) {
+                    const auto id = tok.get_value();
+                    if (id.get_package_prefix().empty() && id.get_instance().empty()) {
+                        auto it = scope_types.find(id.get_name());
+                        if (it != scope_types.end() && it->second) {
+                            tok.set_expression_type(it->second);
+                            tok.set_type_placeholder(true);
+                        }
+                    }
+                }
+                for (auto &idx : tok.get_array_index()) {
+                    if (idx) annotate_override_type_queries(idx, scope_types, d_store);
+                }
+            } else if (first) {
+                annotate_override_type_queries(first, scope_types, d_store);
+            }
+            for (size_t i = 1; i < args.size(); ++i) {
+                if (args[i]) annotate_override_type_queries(args[i], scope_types, d_store);
+            }
+            return;
+        }
+        for (auto &arg : args) {
+            if (arg) annotate_override_type_queries(arg, scope_types, d_store);
+        }
+        return;
+    }
+    if (expr->is<HDL_function_call>()) {
+        for (auto &arg : expr->as<HDL_function_call>().get_arguments()) {
+            if (arg) annotate_override_type_queries(arg, scope_types, d_store);
+        }
+        return;
+    }
+    if (expr->is<Identifier_token>()) {
+        for (auto &idx : expr->as<Identifier_token>().get_array_index()) {
+            if (idx) annotate_override_type_queries(idx, scope_types, d_store);
+        }
+        return;
+    }
+    if (expr->is<Expression_v2>()) {
+        auto &e = expr->as<Expression_v2>();
+        if (e.get_lhs()) annotate_override_type_queries(e.get_lhs(), scope_types, d_store);
+        if (e.get_rhs()) annotate_override_type_queries(e.get_rhs(), scope_types, d_store);
+    } else if (expr->is<Concatenation>()) {
+        for (auto &comp : expr->as<Concatenation>().get_components()) {
+            if (comp) annotate_override_type_queries(comp, scope_types, d_store);
+        }
+    } else if (expr->is<Replication>()) {
+        auto &r = expr->as<Replication>();
+        if (r.get_size()) annotate_override_type_queries(r.get_size(), scope_types, d_store);
+        if (r.get_item()) annotate_override_type_queries(r.get_item(), scope_types, d_store);
+    } else if (expr->is<Ternary>()) {
+        auto &t = expr->as<Ternary>();
+        if (t.get_condition()) annotate_override_type_queries(t.get_condition(), scope_types, d_store);
+        if (t.get_true_value()) annotate_override_type_queries(t.get_true_value(), scope_types, d_store);
+        if (t.get_false_value()) annotate_override_type_queries(t.get_false_value(), scope_types, d_store);
+    } else if (expr->is<Cast>()) {
+        auto &c = expr->as<Cast>();
+        if (c.get_size_expr()) annotate_override_type_queries(c.get_size_expr(), scope_types, d_store);
+        if (c.get_content()) annotate_override_type_queries(c.get_content(), scope_types, d_store);
+    } else if (expr->is<Streaming>()) {
+        auto &st = expr->as<Streaming>();
+        if (st.get_slice_size()) annotate_override_type_queries(st.get_slice_size(), scope_types, d_store);
+        for (auto &comp : st.get_components()) {
+            if (comp) annotate_override_type_queries(comp, scope_types, d_store);
+        }
+    }
+}
+
 void annotate_port_tokens_expr(
     const std::shared_ptr<Expression_base> &expr,
     const std::map<std::string, std::shared_ptr<hdl_type>> &ports,
@@ -1084,6 +1232,19 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                 if (pp->is_type_param && pp->get_type()) {
                     parent_type_ctx[qualified_identifier(name)] = pp->get_type();
                 }
+            }
+        }
+    }
+
+    // Bare typedef names in type queries ($bits(pma_t)) parse as plain value
+    // identifiers when the defining package is only visible through the
+    // parent's imports. Resolve them against the parent scope here so they
+    // evaluate through the typedef instead of warning as missing parameters.
+    if (parent_node) {
+        auto scope_types = collect_override_scope_types(parent_node, parent_resource, d_store);
+        if (!scope_types.empty()) {
+            for (auto &[override_name, param] : node_overrides) {
+                annotate_override_type_queries(param->get_expression(), scope_types, d_store);
             }
         }
     }
