@@ -23,10 +23,11 @@
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "data_model/HDL/types/HDL_external_type.hpp"
 #include "common/dimension.hpp"
+#include "data_model/HDL/statement/hdl_statement_base.hpp"
 
 class hdl_function_statement;
 
-class HDL_parameter {
+class HDL_parameter : public hdl_statement_base {
 public:
     HDL_parameter() = default;
     HDL_parameter( const HDL_parameter &c );
@@ -90,7 +91,9 @@ public:
 
     std::expected<resolved_parameter, solver_errors> evaluate(const std::map<qualified_identifier, resolved_parameter> &context);
     std::expected<resolved_parameter, solver_errors> cast_result(const  resolved_parameter &in, const std::optional<resolved_type> &sizes);
-    void propagate_function(const hdl_function_def_ptr &def);
+    void propagate_function(const hdl_function_def_ptr &def) override;
+    bool equals(const hdl_statement_base& other) const override;
+    std::string print() const override;
     explicit operator std::string();
 
     bool is_array() const{return type && !type->is_scalar();}
@@ -116,7 +119,7 @@ public:
 
     friend void PrintTo(const HDL_parameter& point, std::ostream* os);
 
-    parameter_deps_t get_dependencies();
+    parameter_deps_t get_dependencies() const override;
 
     template<class Archive>
     void serialize( Archive & ar ) {

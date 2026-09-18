@@ -17,6 +17,12 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+
+CEREAL_REGISTER_TYPE(HDL_parameter)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, HDL_parameter)
+
 
 HDL_parameter::HDL_parameter(const HDL_parameter &c) {
 
@@ -148,6 +154,14 @@ void PrintTo(const HDL_parameter &param, std::ostream *os) {
     *os << result;
 }
 
+bool HDL_parameter::equals(const hdl_statement_base& other) const {
+    return *this == static_cast<const HDL_parameter&>(other);
+}
+
+std::string HDL_parameter::print() const {
+    return to_string();
+}
+
 std::string HDL_parameter::to_string() const {
     std::string result = name;
 
@@ -170,7 +184,7 @@ std::string HDL_parameter::to_string() const {
     return result;
 }
 
-parameter_deps_t HDL_parameter::get_dependencies() {
+parameter_deps_t HDL_parameter::get_dependencies() const {
     parameter_deps_t result;
     if (type) result.merge(type->get_dependencies());
 
