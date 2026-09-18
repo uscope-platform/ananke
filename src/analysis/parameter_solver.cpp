@@ -38,30 +38,6 @@
 #include <set>
 #include <sstream>
 
-void parameter_solver::collect_loop_vars_stmts(
-    const std::vector<std::shared_ptr<hdl_statement_base>> &stmts,
-    std::set<std::string> &out) {
-    for (const auto &s : stmts) {
-        if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(s)) {
-            if (loop->get_init() && !loop->get_init()->get_name().empty())
-                out.insert(loop->get_init()->get_name());
-            collect_loop_vars_stmts(loop->get_body(), out);
-        } else if (auto cond = std::dynamic_pointer_cast<hdl_conditional_statement>(s)) {
-            for (const auto &br : cond->get_branches()) collect_loop_vars_stmts(br.body, out);
-            collect_loop_vars_stmts(cond->get_else_body(), out);
-        }
-    }
-}
-
-std::set<std::string> parameter_solver::collect_loop_vars(
-    const std::shared_ptr<hdl_resource_statement> &resource) {
-    std::set<std::string> out;
-    if (resource) collect_loop_vars_stmts(resource->get_statements(), out);
-    return out;
-}
-
-
-
 void parameter_solver::resolve_interface_chain(
     work_order &work,
     const std::shared_ptr<data_store> &d_store,
@@ -1194,8 +1170,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     }
 
     Parameters_map loop_locals;
-    if (auto loop_vars = collect_loop_vars(node_spec.value()); !loop_vars.empty()) {
-
         std::set<std::string> deferred;
         bool progress = true;
         while (progress) {
@@ -1203,12 +1177,15 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             for (const auto &[p_name, param] : to_solve) {
                 if (node_overrides.contains(p_name)) continue;
                 if (deferred.contains(p_name)) continue;
-                bool loop_local = false;
-                for (const auto &dep : param->get_dependencies().data) {
-                    if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
-                        (loop_vars.contains(dep.get_name()) || deferred.contains(dep.get_name()))) {
-                        loop_local = true;
-                        break;
+                const auto deps = param->get_dependencies();
+                bool loop_local = !deps.loop_vars.empty();
+                if (!loop_local) {
+                    for (const auto &dep : deps.data) {
+                        if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
+                            deferred.contains(dep.get_name())) {
+                            loop_local = true;
+                            break;
+                        }
                     }
                 }
                 if (loop_local) {
@@ -1219,7 +1196,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             }
         }
         for (const auto &[p_name, param] : loop_locals) to_solve.erase(p_name);
-    }
 
     std::map<qualified_identifier, std::shared_ptr<hdl_type>> parent_type_ctx;
     std::shared_ptr<hdl_resource_statement> parent_resource;

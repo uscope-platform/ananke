@@ -234,7 +234,6 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
 
 void HDL_ast_builder_v2::elaborate_loop_locals(
     const std::shared_ptr<hdl_resource_statement> &resource,
-    const std::string &loop_var,
     work_order &iter_wo
 ) {
     auto &ctx = iter_wo.param_chain.back();
@@ -253,12 +252,15 @@ void HDL_ast_builder_v2::elaborate_loop_locals(
         bool progress = false;
         for (const auto &[p_name, param] : params) {
             if (elaborated.contains(p_name)) continue;
-            bool candidate = false;
-            for (const auto &dep : param->get_dependencies().data) {
-                if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
-                    (dep.get_name() == loop_var || elaborated.contains(dep.get_name()))) {
-                    candidate = true;
-                    break;
+            const auto deps = param->get_dependencies();
+            bool candidate = !deps.loop_vars.empty();
+            if (!candidate) {
+                for (const auto &dep : deps.data) {
+                    if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
+                        elaborated.contains(dep.get_name())) {
+                        candidate = true;
+                        break;
+                    }
                 }
             }
             if (!candidate) continue;
@@ -289,7 +291,7 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
             // loop variable bound to the current index.
             work_order iter_wo = wo;
             iter_wo.param_chain.back()[qualified_identifier(loop_var_name)] = resolved_parameter(idx);
-            if (res_opt.has_value()) elaborate_loop_locals(res_opt.value(), loop_var_name, iter_wo);
+            if (res_opt.has_value()) elaborate_loop_locals(res_opt.value(), iter_wo);
 
             if (auto body_inst = std::dynamic_pointer_cast<hdl_instance_statement>(body_stmt)) {
                 auto child = std::make_shared<hdl_ast_node>(*body_inst);

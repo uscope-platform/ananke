@@ -20,6 +20,7 @@
 #include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "frontend/analysis/vhdl/vhdl_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/parameters/components/token/LoopVar_token.hpp"
 #include "data_model/HDL/statement/hdl_statements.hpp"
 
 #include "test_paths.hpp"
@@ -432,13 +433,13 @@ TEST(analysis_test, generate_for_loop) {
     expected.set_init(init);
 
     Expression_v2 end_cond;
-    end_cond.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    end_cond.set_lhs(std::make_shared<LoopVar_token>("n"));
     end_cond.set_rhs(std::make_shared<Numeric_token>("3"));
     end_cond.set_operation(Expression_v2::less);
     expected.set_end_condition(std::make_shared<Expression_v2>(end_cond));
 
     Expression_v2 iter;
-    iter.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    iter.set_lhs(std::make_shared<LoopVar_token>("n"));
     iter.set_rhs(std::make_shared<Numeric_token>("1"));
     iter.set_operation(Expression_v2::add);
     expected.set_iteration(std::make_shared<Expression_v2>(iter));

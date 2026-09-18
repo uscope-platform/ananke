@@ -23,6 +23,7 @@
 // linker. Force the registration to be pulled in from the cache serializer.
 CEREAL_FORCE_DYNAMIC_INIT(HDL_union_type)
 CEREAL_FORCE_DYNAMIC_INIT(Type_ref)
+CEREAL_FORCE_DYNAMIC_INIT(LoopVar_token)
 
 // The store keys files by path, so several files can contribute same-named
 // resources; hits pair each candidate with its source path.

@@ -270,6 +270,8 @@ private:
     bool in_class = false;
     bool had_error = false;
     std::vector<std::shared_ptr<hdl_statement_base>> entities;
+    std::vector<std::string> active_genvars;
+    std::shared_ptr<Expression_base> make_loop_aware_value(const std::string &text);
 
     std::string current_declaration_type;
     std::vector<std::string> pending_defparam_path;

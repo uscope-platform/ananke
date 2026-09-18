@@ -60,7 +60,6 @@ private:
     );
     void elaborate_loop_locals(
         const std::shared_ptr<hdl_resource_statement> &resource,
-        const std::string &loop_var,
         work_order &iter_wo
     );
     std::expected<std::vector<work_order>, solver_errors> process_conditional(

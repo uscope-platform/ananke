@@ -29,6 +29,7 @@
 #include "data_model/HDL/parameters/components/Ternary.hpp"
 #include "data_model/HDL/parameters/components/token/Real_token.hpp"
 #include "data_model/HDL/parameters/components/token/Time_token.hpp"
+#include "data_model/HDL/parameters/components/token/LoopVar_token.hpp"
 
 using namespace std::string_literals;
 
@@ -1929,12 +1930,12 @@ TEST(parameter_extraction, generate_for) {
     check_loop.set_init(std::make_shared<HDL_parameter>(p));
 
     Expression_v2 e;
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    e.set_lhs(std::make_shared<LoopVar_token>("n"));
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("N_REPETITIONS")));
     e.set_operation(Expression_v2::less);
     check_loop.set_end_condition(std::make_shared<Expression_v2>(e));
 
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    e.set_lhs(std::make_shared<LoopVar_token>("n"));
     e.set_rhs(std::make_shared<Numeric_token>("1"));
     e.set_operation(Expression_v2::add);
     check_loop.set_iteration(std::make_shared<Expression_v2>(e));
@@ -1946,7 +1947,7 @@ TEST(parameter_extraction, generate_for) {
     auto dep_param = std::make_shared<HDL_parameter>();
     dep_param->set_name("DEP_PARAM");
     Identifier_token arr_idx(qualified_identifier("ARRAY_PARAM"));
-    arr_idx.add_array_index(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    arr_idx.add_array_index(std::make_shared<LoopVar_token>("n"));
     dep_param->set_raw_value(std::make_shared<Identifier_token>(arr_idx));
     dep_inst->add_parameter(dep_param);
     check_loop.add_body_stmt(dep_inst);
@@ -1992,7 +1993,7 @@ TEST(parameter_extraction, generate_for_end_expression) {
     check_loop.set_init(std::make_shared<HDL_parameter>(p));
 
     Expression_v2 e;
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    e.set_lhs(std::make_shared<LoopVar_token>("n"));
     Expression_v2 inner_e;
     inner_e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("N_REPETITIONS")));
     inner_e.set_rhs(std::make_shared<Numeric_token>("5"));
@@ -2001,7 +2002,7 @@ TEST(parameter_extraction, generate_for_end_expression) {
     e.set_operation(Expression_v2::less);
     check_loop.set_end_condition(std::make_shared<Expression_v2>(e));
 
-    e.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    e.set_lhs(std::make_shared<LoopVar_token>("n"));
     e.set_rhs(std::make_shared<Numeric_token>("1"));
     e.set_operation(Expression_v2::add);
     check_loop.set_iteration(std::make_shared<Expression_v2>(e));
@@ -2013,7 +2014,7 @@ TEST(parameter_extraction, generate_for_end_expression) {
     auto dep_param = std::make_shared<HDL_parameter>();
     dep_param->set_name("DEP_PARAM");
     Identifier_token arr_idx(qualified_identifier("ARRAY_PARAM"));
-    arr_idx.add_array_index(std::make_shared<Identifier_token>(qualified_identifier("n")));
+    arr_idx.add_array_index(std::make_shared<LoopVar_token>("n"));
     dep_param->set_raw_value(std::make_shared<Identifier_token>(arr_idx));
     dep_inst->add_parameter(dep_param);
     check_loop.add_body_stmt(dep_inst);

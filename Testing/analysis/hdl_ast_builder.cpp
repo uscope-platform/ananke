@@ -1365,3 +1365,66 @@ endmodule
     EXPECT_FALSE(ast->get_parameters().contains("reg_n"));
     EXPECT_FALSE(ast->get_parameters().contains("reg_q"));
 }
+
+TEST(hdl_ast_builder, loop_var_token_in_generate_override) {
+    auto source = R"(
+module leaf #(parameter int P = 0) ();
+endmodule
+
+module gen_top ();
+    for (genvar g = 0; g < 4; g++) begin : b
+        leaf #(.P(g + 1)) i_leaf ();
+    end
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", source);
+    ASSERT_TRUE(resources.has_value());
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/tmp/loopvar_token.sv", "h", resources.value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto ast = b.build_ast(std::vector<std::string>{"gen_top"})[0];
+    std::vector<int64_t> seen;
+    for (auto &d : ast->get_dependencies()) {
+        if (d->get_type() != "leaf") continue;
+        seen.push_back(d->get_parameters().get("P")->get_numeric_value()->get_value());
+    }
+    std::sort(seen.begin(), seen.end());
+    EXPECT_EQ(seen, (std::vector<int64_t>{1, 2, 3, 4}));
+}
+
+TEST(hdl_ast_builder, loop_var_token_shadowing) {
+    // A module-scope value and a genvar sharing a name elaborate independently.
+    auto source = R"(
+module leaf2 #(parameter int P = 0) ();
+endmodule
+
+module shadow_top ();
+    localparam int X = 10;
+    leaf2 #(.P(X)) i_plain ();
+    for (genvar X = 0; X < 2; X++) begin : b
+        leaf2 #(.P(X + 1)) i_loop ();
+    end
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", source);
+    ASSERT_TRUE(resources.has_value());
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/tmp/loopvar_shadow.sv", "h", resources.value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto ast = b.build_ast(std::vector<std::string>{"shadow_top"})[0];
+    std::vector<int64_t> seen;
+    for (auto &d : ast->get_dependencies()) {
+        if (d->get_type() != "leaf2") continue;
+        seen.push_back(d->get_parameters().get("P")->get_numeric_value()->get_value());
+    }
+    std::sort(seen.begin(), seen.end());
+    EXPECT_EQ(seen, (std::vector<int64_t>{1, 2, 10}));
+}

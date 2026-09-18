@@ -18,6 +18,8 @@
 #include <gtest/gtest.h>
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include "data_model/HDL/parameters/components/token/LoopVar_token.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include "data_model/HDL/parameters/components/token/Real_token.hpp"
 #include "data_model/HDL/parameters/components/token/String_token.hpp"
@@ -460,4 +462,32 @@ TEST(Token, width_aware_signed_unsigned_equality) {
     Numeric_token all_ones("8'hFF");
     EXPECT_TRUE(neg.get_value().value().get_integer() == all_ones.get_value().value().get_integer());
     EXPECT_FALSE(neg.get_value().value().get_integer() != all_ones.get_value().value().get_integer());
+}
+
+TEST(Token, loop_var_token_reports_data_and_loop_deps) {
+    LoopVar_token tok("g");
+
+    auto deps = tok.get_dependencies();
+    EXPECT_TRUE(deps.data.empty());
+    EXPECT_TRUE(deps.loop_vars.contains(qualified_identifier("g")));
+    EXPECT_TRUE(deps.functions.empty());
+    EXPECT_TRUE(deps.types.empty());
+
+    Identifier_token plain(qualified_identifier("g"));
+    EXPECT_FALSE(plain.is<LoopVar_token>());
+    EXPECT_TRUE(plain.get_dependencies().loop_vars.empty());
+}
+
+TEST(Token, loop_var_token_evaluates_like_identifier) {
+    LoopVar_token tok("g");
+    std::map<qualified_identifier, resolved_parameter> ctx;
+    ctx[qualified_identifier("g")] = resolved_parameter(static_cast<hdl_integer>(3));
+    auto v = tok.evaluate(ctx);
+    ASSERT_TRUE(v.has_value());
+    ASSERT_TRUE(v->is_integer());
+    EXPECT_EQ(v->get_integer().get_value(), 3);
+
+    // Unbound: same missing_value behavior as a plain identifier.
+    std::map<qualified_identifier, resolved_parameter> empty_ctx;
+    EXPECT_FALSE(tok.evaluate(empty_ctx).has_value());
 }

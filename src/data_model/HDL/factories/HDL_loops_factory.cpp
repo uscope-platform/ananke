@@ -15,6 +15,7 @@
 
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include "data_model/HDL/parameters/components/token/LoopVar_token.hpp"
 #include "data_model/HDL/statement/hdl_while_statement.hpp"
 #include "data_model/HDL/statement/hdl_repeat_statement.hpp"
 #include "data_model/HDL/statement/hdl_do_while_statement.hpp"
@@ -107,14 +108,20 @@ void HDL_loops_factory::add_loop_variable(const std::string &p) {
 
 void HDL_loops_factory::set_phase(loop_phase_t p) {
     loop_phase = p;
+    auto loop_var_name = [](const std::shared_ptr<Expression_base> &node) -> std::optional<std::string> {
+        if (auto id = std::dynamic_pointer_cast<Identifier_token>(node))
+            return id->get_value().get_name();
+        if (auto lv = std::dynamic_pointer_cast<LoopVar_token>(node))
+            return lv->get_name();
+        return std::nullopt;
+    };
     if(p==init) {
         current_expression = Expression_v2();
     } else if(p==end) {
         if (!_statement.get_init()) {
-            auto lhs = current_expression.get_lhs();
-            if (auto id = std::dynamic_pointer_cast<Identifier_token>(lhs)) {
+            if (auto name = loop_var_name(current_expression.get_lhs())) {
                 HDL_parameter param;
-                param.set_name(id->get_value().get_name());
+                param.set_name(*name);
                 _statement.set_init(std::make_shared<HDL_parameter>(param));
             }
         }
@@ -123,8 +130,8 @@ void HDL_loops_factory::set_phase(loop_phase_t p) {
             auto copy = std::make_shared<HDL_parameter>(*init);
             auto lhs = current_expression.get_lhs();
             auto rhs = current_expression.get_rhs();
-            if (auto id = std::dynamic_pointer_cast<Identifier_token>(lhs)) {
-                if (rhs && id->get_value().get_name() == init->get_name()) {
+            if (auto name = loop_var_name(lhs)) {
+                if (rhs && *name == init->get_name()) {
                     copy->set_raw_value(rhs);
                 } else {
                     copy->set_raw_value(Expression_v2::unwrap(current_expression));

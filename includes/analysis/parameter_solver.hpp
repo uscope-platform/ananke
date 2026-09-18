@@ -82,15 +82,9 @@ public:
             const std::shared_ptr<data_store> &d_store,
             const std::map<qualified_identifier, resolved_parameter> &node_defaults
         );
-    static std::set<std::string> collect_loop_vars(
-        const std::shared_ptr<hdl_resource_statement> &resource);
-
     static std::string get_full_path(const std::shared_ptr<hdl_ast_node> &node);
 
 private:
-    static void collect_loop_vars_stmts(
-        const std::vector<std::shared_ptr<hdl_statement_base>> &stmts,
-        std::set<std::string> &out);
     static void resolve_interface_chain(
         work_order &work,
         const std::shared_ptr<data_store> &d_store,

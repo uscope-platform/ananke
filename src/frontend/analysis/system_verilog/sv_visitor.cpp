@@ -28,6 +28,7 @@
 #include "data_model/HDL/parameters/components/token/Real_token.hpp"
 #include "data_model/HDL/parameters/components/token/Time_token.hpp"
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include "data_model/HDL/parameters/components/token/LoopVar_token.hpp"
 #include "data_model/HDL/parameters/components/token/Type_ref.hpp"
 #include "data_model/HDL/parameters/components/Streaming.hpp"
 #include "data_model/HDL/parameters/components/token/String_token.hpp"
@@ -78,23 +79,32 @@ void sv_visitor::route_expression_text(const std::string& text) {
     // to it fully built via add_body_stmt).
     const bool f_owns_loop_body = f_factory.is_active() && loops_factory.in_body();
     if(loops_factory.in_loop() && !f_owns_loop_body) {
-        loops_factory.add_component(sv_parsing_helpers::make_value(text));
+        loops_factory.add_component(make_loop_aware_value(text));
     }
     if(type_engine.active() || type_engine.is_ranging()){
         type_engine.add_component(sv_parsing_helpers::make_value(text));
     } else if(!in_streaming_slice && !in_type_argument && params_factory.is_component_relevant()){
-        params_factory.add_component(sv_parsing_helpers::make_value(text));
+        params_factory.add_component(make_loop_aware_value(text));
     }
     if (f_factory.is_active() && !in_streaming_slice) {
-        f_factory.add_component(sv_parsing_helpers::make_value(text));
+        f_factory.add_component(make_loop_aware_value(text));
     }
     if(deps_factory.is_valid_dependency()){
         deps_factory.add_connection_element(text);
     }
 }
 
+std::shared_ptr<Expression_base> sv_visitor::make_loop_aware_value(const std::string &text) {
+    if (!active_genvars.empty() &&
+        std::find(active_genvars.begin(), active_genvars.end(), text) != active_genvars.end())
+        return std::make_shared<LoopVar_token>(text);
+    return sv_parsing_helpers::make_value(text);
+}
+
 void sv_visitor::route_expression_component(const std::shared_ptr<Expression_base> &ec) {
     auto clone = [](const std::shared_ptr<Expression_base> &src) -> std::shared_ptr<Expression_base> {
+        if (auto lv = std::dynamic_pointer_cast<const LoopVar_token>(src))
+            return std::make_shared<LoopVar_token>(*lv);
         if (auto id = std::dynamic_pointer_cast<const Identifier_token>(src))
             return std::make_shared<Identifier_token>(*id);
         if (auto num = std::dynamic_pointer_cast<const Numeric_token>(src))
@@ -1258,7 +1268,7 @@ void sv_visitor::exitPrimaryPath(sv2017::PrimaryPathContext *ctx) {
         }
     } else {
         if (dot_chain.empty()) {
-            ec = sv_parsing_helpers::make_value(ctx->getText());
+            ec = make_loop_aware_value(ctx->getText());
         } else if (scoped_ctx) {
             auto leaf = scoped_ctx->getText();
             qualified_identifier qi(dot_chain.back());
@@ -1892,6 +1902,9 @@ void sv_visitor::enterLoop_generate_construct(sv2017::Loop_generate_constructCon
 
 void sv_visitor::exitLoop_generate_construct(sv2017::Loop_generate_constructContext *) {
     auto finished = loops_factory.get_loop_statement();
+    // The matching genvar was pushed in enterGenvar_initialization; the
+    // grammar guarantees one initialization per loop construct.
+    if (!active_genvars.empty()) active_genvars.pop_back();
     if (conditionals_factory.is_active())
         conditionals_factory.add_statement(finished);
     else if (loops_factory.in_loop())
@@ -1903,6 +1916,7 @@ void sv_visitor::exitLoop_generate_construct(sv2017::Loop_generate_constructCont
 
 void sv_visitor::enterGenvar_initialization(sv2017::Genvar_initializationContext *ctx) {
     std::string id = ctx->identifier()->getText();
+    active_genvars.push_back(id);
     loops_factory.set_phase(HDL_loops_factory::init);
     params_factory.start_param_assignment();
     params_factory.new_parameter(id);

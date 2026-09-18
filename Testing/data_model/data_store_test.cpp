@@ -22,6 +22,7 @@
 #include "data_model/HDL/types/HDL_union_type.hpp"
 #include "data_model/HDL/types/HDL_enum_type.hpp"
 #include "data_model/HDL/parameters/components/token/Type_ref.hpp"
+#include "data_model/HDL/parameters/components/token/LoopVar_token.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 #include "data_model/HDL/statement/hdl_function_statement.hpp"
@@ -298,6 +299,24 @@ TEST( data_store_test , polymorphic_types_round_trip ) {
     }
     ASSERT_TRUE(tr_in != nullptr);
     EXPECT_TRUE(tr_in->is<Type_ref>());
+
+    // LoopVar_token is a polymorphic Expression_base subclass.
+    std::shared_ptr<Expression_base> lv_out = std::make_shared<LoopVar_token>("g");
+    std::stringstream lss;
+    {
+        cereal::BinaryOutputArchive archive_out(lss);
+        archive_out(lv_out);
+    }
+    std::stringstream lis(lss.str());
+    std::shared_ptr<Expression_base> lv_in;
+    {
+        cereal::BinaryInputArchive archive_in(lis);
+        archive_in(lv_in);
+    }
+    ASSERT_TRUE(lv_in != nullptr);
+    EXPECT_TRUE(lv_in->is<LoopVar_token>());
+    EXPECT_FALSE(lv_in->is<Identifier_token>());
+    EXPECT_TRUE(lv_in->as<LoopVar_token>().get_dependencies().loop_vars.contains(qualified_identifier("g")));
 }
 
 TEST( data_store_test , corrupted_cache_recovery ) {
