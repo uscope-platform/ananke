@@ -83,6 +83,10 @@ public:
             const std::map<qualified_identifier, resolved_parameter> &node_defaults
         );
     static std::string get_full_path(const std::shared_ptr<hdl_ast_node> &node);
+    // TEMPORARY migration bridge (see collect_parameter_declarations):
+    // materialize the legacy map on first use. The builder does this
+    // beforehand; this covers direct callers (e.g. tests).
+    static void ensure_parameters_materialized(std::shared_ptr<hdl_resource_statement> &resource);
 
 private:
     static void resolve_interface_chain(

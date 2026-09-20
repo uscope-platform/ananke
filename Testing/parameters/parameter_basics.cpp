@@ -1672,7 +1672,11 @@ TEST(parameter_extraction, interface_parameter_use) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resources[1]->as<hdl_resource_statement>().get_statements()[2]);
+    const auto &mod_statements = resources[1]->as<hdl_resource_statement>().get_statements();
+    ASSERT_TRUE(mod_statements[0]->is<hdl_instance_statement>());
+    ASSERT_TRUE(mod_statements[1]->is<HDL_parameter>());
+    ASSERT_EQ(mod_statements[1]->as<HDL_parameter>().get_name(), "package_param");
+    auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(mod_statements[3]);
     auto parameters = stmt->get_parameters();
 
     Parameters_map check_params;
@@ -1757,7 +1761,9 @@ TEST(parameter_extraction, instance_parameter) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto def_parameters = resource.get_parameters();
 
-    auto inst_parameters = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0])->get_parameters();
+    ASSERT_TRUE(resource.get_statements()[0]->is<HDL_parameter>());
+    ASSERT_EQ(resource.get_statements()[0]->as<HDL_parameter>().get_name(), "test_param");
+    auto inst_parameters = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[1])->get_parameters();
 
     std::vector<std::pair<std::string, std::vector<std::string>>> vect_params = {
             {"test_param", {"4"}}
@@ -1834,7 +1840,9 @@ TEST(parameter_extraction, unrelated_wire_dependency_conflict) {
 
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
+    ASSERT_TRUE(resource.get_statements()[0]->is<HDL_parameter>());
+    ASSERT_EQ(resource.get_statements()[0]->as<HDL_parameter>().get_name(), "DECIMATE");
+    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[1]);
     auto parameter = inst->get_parameters().const_get("DECIMATED");
 
     auto check_param = std::make_shared<HDL_parameter>();
@@ -1918,7 +1926,11 @@ TEST(parameter_extraction, generate_for) {
 
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto loop_stmt = std::dynamic_pointer_cast<hdl_loop_statement>(resource.get_statements()[0]);
+    ASSERT_TRUE(resource.get_statements()[0]->is<HDL_parameter>());
+    ASSERT_EQ(resource.get_statements()[0]->as<HDL_parameter>().get_name(), "N_REPETITION");
+    ASSERT_TRUE(resource.get_statements()[1]->is<HDL_parameter>());
+    ASSERT_EQ(resource.get_statements()[1]->as<HDL_parameter>().get_name(), "ARRAY_PARAM");
+    auto loop_stmt = std::dynamic_pointer_cast<hdl_loop_statement>(resource.get_statements()[2]);
     ASSERT_NE(loop_stmt, nullptr);
 
     hdl_loop_statement check_loop;
@@ -1981,7 +1993,11 @@ TEST(parameter_extraction, generate_for_end_expression) {
 
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto loop_stmt = std::dynamic_pointer_cast<hdl_loop_statement>(resource.get_statements()[0]);
+    ASSERT_TRUE(resource.get_statements()[0]->is<HDL_parameter>());
+    ASSERT_EQ(resource.get_statements()[0]->as<HDL_parameter>().get_name(), "N_REPETITION");
+    ASSERT_TRUE(resource.get_statements()[1]->is<HDL_parameter>());
+    ASSERT_EQ(resource.get_statements()[1]->as<HDL_parameter>().get_name(), "ARRAY_PARAM");
+    auto loop_stmt = std::dynamic_pointer_cast<hdl_loop_statement>(resource.get_statements()[2]);
     ASSERT_NE(loop_stmt, nullptr);
 
     hdl_loop_statement check_loop;

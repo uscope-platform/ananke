@@ -35,6 +35,10 @@
 #include "data_model/documentation/processor_instance.hpp"
 #include <cereal/types/unordered_map.hpp>
 
+class hdl_resource_statement;
+// TEMPORARY migration bridge, defined below (see comment there).
+inline Parameters_map collect_parameter_declarations(const hdl_resource_statement &res);
+
 class hdl_resource_statement : public hdl_statement_base {
 public:
     hdl_resource_statement();
@@ -76,9 +80,17 @@ public:
     std::vector<processor_instance> get_processor_doc() { return processor_docs; }
     bool has_processors() { return !processor_docs.empty(); }
 
-    void add_parameter(const std::shared_ptr<HDL_parameter> &p) { parameters_spec.insert(p); }
+    // Transitional: declarations are first-class statements now; the legacy
+    // parameters_spec map is materialized from them beforehand (see
+    // collect_parameter_declarations), so this only appends the statement.
+    void add_parameter(const std::shared_ptr<HDL_parameter> &p) { statements.push_back(p); }
     void set_parameters(Parameters_map p);
-    Parameters_map get_parameters() const { return parameters_spec; }
+    // Transitional: prefers the beforehand-materialized map, otherwise
+    // collects from the statements (see collect_parameter_declarations).
+    Parameters_map get_parameters() const {
+        if (!parameters_spec.empty()) return parameters_spec;
+        return collect_parameter_declarations(*this);
+    }
 
     void add_function(const hdl_function_statement &f) {
         statements.push_back(std::make_shared<hdl_function_statement>(f));
@@ -112,11 +124,26 @@ private:
     dependency_class hdl_dependency_type = module;
     hdl_language language = hdl_language::unknown;
     std::unordered_map<std::string, HDL_port> port_specs;
+    // Legacy map, materialized from the statements beforehand (see
+    // collect_parameter_declarations below). Do not write directly.
     Parameters_map parameters_spec;
     std::vector<processor_instance> processor_docs;
     std::map<std::string, std::shared_ptr<hdl_type>> typedefs;
     std::vector<std::shared_ptr<hdl_statement_base>> statements;
     module_documentation doc;
 };
+
+// TEMPORARY migration bridge: the parser stores parameter declarations as
+// first-class statements and no longer fills parameters_spec. The map-based
+// solver still needs a Parameters_map, so callers materialize it from the
+// statements beforehand (see the AST builder). Delete together with
+// Parameters_map once the solver reads statements directly.
+inline Parameters_map collect_parameter_declarations(const hdl_resource_statement &res) {
+    Parameters_map out;
+    for (const auto &s : res.get_statements()) {
+        if (auto p = std::dynamic_pointer_cast<HDL_parameter>(s)) out.insert(p);
+    }
+    return out;
+}
 
 #endif //ANANKE_HDL_RESOURCE_STATEMENT_HPP

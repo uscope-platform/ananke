@@ -80,7 +80,9 @@ std::shared_ptr<hdl_resource_statement> HDL_modules_factory::get_module() {
 
 
 void HDL_modules_factory::add_parameter(const std::shared_ptr<HDL_parameter> &p) {
-    current_resource.add_parameter(p);
+    // Declarations are first-class statements; the legacy map is materialized
+    // from them beforehand (see collect_parameter_declarations).
+    current_resource.add_statement(p);
 }
 
 void HDL_modules_factory::add_function(const hdl_function_statement &f) {

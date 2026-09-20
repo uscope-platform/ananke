@@ -132,8 +132,8 @@ void PrintTo(const hdl_resource_statement &res, std::ostream *os) {
     result += "\nHDL Resource:\n  NAME: " + res.name;
     result += "\n  LINE: "  + std::to_string(res.line_n) ;
     result += "\n  PARAMETERS: \n";
-    for (const auto& [item_name, item] : res.parameters_spec) {
-        result += item->to_string() + "\n";
+    for (const auto& item : res.statements) {
+        if (item->is<HDL_parameter>()) result += item->as<HDL_parameter>().to_string() + "\n";
     }
     result += "\n----------------------------------------------------";
 

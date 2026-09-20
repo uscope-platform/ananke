@@ -93,7 +93,11 @@ void vhdl_visitor::exitArchitecture_body(mgp_vh::vhdlParser::Architecture_bodyCo
         if (item->is<hdl_resource_statement>() && item->as<hdl_resource_statement>().getName() == entity_name) {
             auto &entity = item->as<hdl_resource_statement>();
             arch_res->set_ports(entity.get_port_specs());
-            arch_res->set_parameters(entity.get_parameters());
+            // Declarations live as statements now: carry them over
+            // (set_parameters stays map-only by design).
+            for (auto &stmt : entity.get_statements()) {
+                if (auto p = std::dynamic_pointer_cast<HDL_parameter>(stmt)) arch_res->add_parameter(p);
+            }
             break;
         }
     }
@@ -1399,7 +1403,12 @@ void vhdl_visitor::attach_default_architectures() {
             if (!a->is<hdl_resource_statement>()) continue;
             auto &arch = a->as<hdl_resource_statement>();
             if (arch.getName() != res.getName() || arch.get_architecture() != it->second) continue;
-            for (auto &stmt : arch.get_statements()) res.add_statement(stmt);
+            for (auto &stmt : arch.get_statements()) {
+                // Parameter declarations already live on the entity; copying
+                // them again would duplicate them.
+                if (stmt->is<HDL_parameter>()) continue;
+                res.add_statement(stmt);
+            }
             for (auto &[tname, ttype] : arch.get_typedefs()) res.add_typedef(tname, ttype);
             break;
         }

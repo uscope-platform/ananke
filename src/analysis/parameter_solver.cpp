@@ -142,6 +142,11 @@ static std::map<qualified_identifier, std::shared_ptr<hdl_type>> build_type_map(
     return types;
 }
 
+void parameter_solver::ensure_parameters_materialized(std::shared_ptr<hdl_resource_statement> &resource) {
+    if (resource && resource->get_parameters().empty())
+        resource->set_parameters(collect_parameter_declarations(*resource));
+}
+
 std::map<qualified_identifier, resolved_parameter> parameter_solver::process_parameters(
     const Parameters_map &map_in,
     const std::map<qualified_identifier, resolved_parameter> &context
@@ -354,6 +359,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
                              std::shared_ptr<hdl_resource_statement> package) -> bool {
         if (!resolved_packages.insert(pkg_name).second) return false;
 
+        // TEMPORARY (see collect_parameter_declarations): nested packages are
+        // never pre-collected by the builder, so materialize beforehand here.
+        package->set_parameters(collect_parameter_declarations(*package));
+
         // 1. FIRST: Scan sub-package dependencies recursively
         auto sub_pkg_deps = retrieve_package_parameters(package->get_parameters(), d_store);
         package_parameters.insert(sub_pkg_deps.begin(), sub_pkg_deps.end());
@@ -503,6 +512,7 @@ void parameter_solver::remap_keyed_literals(const std::shared_ptr<Expression_bas
 void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement> &resource,
                                          const std::map<std::string, hdl_function_statement> &imported_functions,
                                          const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
+    ensure_parameters_materialized(resource);
     std::map<std::string, hdl_function_def_ptr> linked_definitions;
     for (auto &[_, param] : resource->get_parameters()) {
         for (auto &fcn : param->get_dependencies().functions) {
@@ -539,6 +549,7 @@ void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement>
 }
 
 void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
+    ensure_parameters_materialized(resource);
     for (auto &[_, param] : resource->get_parameters()) {
         // If the parameter type itself is directly an external type
         if (param->get_type()->is<HDL_external_type>()) {
@@ -988,6 +999,7 @@ void parameter_solver::propagate_port_types(
     std::shared_ptr<hdl_resource_statement> &resource,
     const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types,
     const std::shared_ptr<data_store> &d_store) {
+    ensure_parameters_materialized(resource);
     std::map<std::string, std::shared_ptr<hdl_type>> ports;
     for (const auto &[pname, pspec] : resource->get_port_specs()) {
         if (pspec.direction == interface_port) continue;
@@ -1040,6 +1052,7 @@ std::shared_ptr<hdl_function_statement> find_function_def(
 }
 
 void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
+    ensure_parameters_materialized(resource);
 
     // Bodies populated below can reveal further (nested) calls, so repeat
     // until no new definition is propagated. Each (parameter, function) pair

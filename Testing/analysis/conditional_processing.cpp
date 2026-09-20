@@ -44,7 +44,9 @@ TEST(conditional_processing, simple_if_generate) {
 
     auto resources = analyzer.analyze("", test_pattern).value();
     auto content = resources.get_content()[0]->as<hdl_resource_statement>();
-    auto result = content.get_statements()[0]->as<hdl_conditional_statement>();
+    ASSERT_TRUE(content.get_statements()[0]->is<HDL_parameter>());
+    ASSERT_EQ(content.get_statements()[0]->as<HDL_parameter>().get_name(), "ENABLE");
+    auto result = content.get_statements()[1]->as<hdl_conditional_statement>();
 
     hdl_conditional_statement check_cond;
     Expression_v2 condition;
@@ -88,7 +90,9 @@ TEST(conditional_processing, else_if_chain) {
 
     auto resources = analyzer.analyze("", test_pattern).value();
     auto content = resources.get_content()[0]->as<hdl_resource_statement>();
-    auto result = content.get_statements()[0]->as<hdl_conditional_statement>();
+    ASSERT_TRUE(content.get_statements()[0]->is<HDL_parameter>());
+    ASSERT_EQ(content.get_statements()[0]->as<HDL_parameter>().get_name(), "MODE");
+    auto result = content.get_statements()[1]->as<hdl_conditional_statement>();
 
     hdl_conditional_statement check_cond;
     Expression_v2 condition;
@@ -139,7 +143,11 @@ TEST(conditional_processing, nested_if_in_then) {
 
     auto resources = analyzer.analyze("", test_pattern).value();
     auto content = resources.get_content()[0]->as<hdl_resource_statement>();
-    auto result = content.get_statements()[0]->as<hdl_conditional_statement>();
+    ASSERT_TRUE(content.get_statements()[0]->is<HDL_parameter>());
+    ASSERT_EQ(content.get_statements()[0]->as<HDL_parameter>().get_name(), "A");
+    ASSERT_TRUE(content.get_statements()[1]->is<HDL_parameter>());
+    ASSERT_EQ(content.get_statements()[1]->as<HDL_parameter>().get_name(), "B");
+    auto result = content.get_statements()[2]->as<hdl_conditional_statement>();
 
     hdl_conditional_statement check_cond;
 
