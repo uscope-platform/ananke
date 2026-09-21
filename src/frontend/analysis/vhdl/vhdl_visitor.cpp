@@ -1460,18 +1460,19 @@ void vhdl_visitor::resolve_positional_instance(const std::shared_ptr<hdl_instanc
 
     auto git = entity_generic_order.find(type);
     if (git != entity_generic_order.end()) {
-        Parameters_map new_params = inst->get_parameters();
-        std::vector<std::pair<std::string, int>> placeholders;
-        for (auto &[k, v] : new_params)
-            if (k.rfind("@gen", 0) == 0) placeholders.push_back({k, std::stoi(k.substr(4))});
+        std::vector<std::shared_ptr<HDL_parameter>> new_params;
         bool changed = false;
-        for (auto &[k, idx] : placeholders) {
-            auto param = new_params.const_get(k);
-            new_params.erase(k);
+        for (const auto &param : inst->get_parameters()) {
+            const auto &k = param->get_name();
+            if (k.rfind("@gen", 0) != 0) {
+                new_params.push_back(param);
+                continue;
+            }
+            int idx = std::stoi(k.substr(4));
             if (idx < static_cast<int>(git->second.size())) {
                 auto renamed = std::make_shared<HDL_parameter>(*param);
                 renamed->set_name(git->second[idx]);
-                new_params.insert(renamed);
+                new_params.push_back(renamed);
                 changed = true;
             } else {
                 spdlog::warn("VHDL positional generic map index {} out of range for '{}', dropped", idx, type);

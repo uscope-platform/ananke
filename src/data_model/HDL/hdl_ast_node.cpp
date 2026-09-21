@@ -27,7 +27,7 @@ hdl_ast_node::hdl_ast_node(const hdl_instance_statement &stmt) {
     groups = stmt.get_channel_groups();
     array_quantifier = stmt.get_array_quantifier();
 
-    for (const auto& [key, param] : stmt.get_parameters()) {
+    for (const auto &param : stmt.get_parameters()) {
         parameters.insert(param);
     }
     for (const auto& [port_name, nets] : stmt.get_ports()) {

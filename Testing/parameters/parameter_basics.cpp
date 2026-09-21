@@ -1815,9 +1815,9 @@ TEST(parameter_extraction, instance_parameter) {
 
     ASSERT_EQ(check_params.size(), inst_parameters.size());
 
-    for(const auto& [name, item]:check_params){
-        ASSERT_TRUE(inst_parameters.contains(item->get_name()));
-        ASSERT_EQ(*item, *inst_parameters.get(item->get_name()));
+    for (const auto &p : inst_parameters) {
+        ASSERT_TRUE(check_params.contains(p->get_name()));
+        ASSERT_EQ(*check_params.get(p->get_name()), *p);
     }
 
 }
@@ -1843,7 +1843,8 @@ TEST(parameter_extraction, unrelated_wire_dependency_conflict) {
     ASSERT_TRUE(resource.get_statements()[0]->is<HDL_parameter>());
     ASSERT_EQ(resource.get_statements()[0]->as<HDL_parameter>().get_name(), "DECIMATE");
     auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[1]);
-    auto parameter = inst->get_parameters().const_get("DECIMATED");
+    auto parameter = inst->find_parameter("DECIMATED");
+    ASSERT_NE(parameter, nullptr);
 
     auto check_param = std::make_shared<HDL_parameter>();
     check_param->set_name("DECIMATED");

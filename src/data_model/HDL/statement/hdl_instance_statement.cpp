@@ -27,7 +27,7 @@ void hdl_instance_statement::add_port_connection(const std::string& port_name, s
 
 parameter_deps_t hdl_instance_statement::get_dependencies() const {
     parameter_deps_t deps;
-    for (const auto& [key, param] : parameters) {
+    for (const auto& param : parameters) {
         if (param) deps.merge(param->get_dependencies());
     }
     return deps;
@@ -39,7 +39,12 @@ bool hdl_instance_statement::equals(const hdl_statement_base& other) const {
     ret &= type == rhs.type;
     ret &= architecture == rhs.architecture;
     ret &= dep_class == rhs.dep_class;
-    ret &= parameters == rhs.parameters;
+    if (parameters.size() != rhs.parameters.size()) return false;
+    for (size_t i = 0; i < parameters.size(); i++) {
+        const auto &l = parameters[i];
+        const auto &r = rhs.parameters[i];
+        ret &= (!l && !r) || (l && r && *l == *r);
+    }
     ret &= ports_map == rhs.ports_map;
     ret &= wildcard_assignment == rhs.wildcard_assignment;
     ret &= groups == rhs.groups;

@@ -23,7 +23,7 @@
 
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
 #include "data_model/HDL/HDL_definitions.hpp"
-#include "data_model/HDL/parameters/Parameters_map.hpp"
+#include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/HDL_net.hpp"
 #include "data_model/documentation/channel_group.hpp"
 
@@ -48,10 +48,21 @@ public:
     void set_dependency_class(dependency_class dc) { dep_class = dc; }
     dependency_class get_dependency_class() const { return dep_class; }
 
-    void add_parameter(const std::shared_ptr<HDL_parameter>& p) { parameters.insert(p); }
-    void set_parameters(const Parameters_map& p) { parameters = p; }
-    const Parameters_map& get_parameters() const { return parameters; }
-    bool has_parameter(const std::string& s) const { return parameters.contains(s); }
+    void add_parameter(const std::shared_ptr<HDL_parameter>& p) {
+        for (auto &e : parameters) {
+            if (e->get_name() == p->get_name()) { e = p; return; }
+        }
+        parameters.push_back(p);
+    }
+    void set_parameters(const std::vector<std::shared_ptr<HDL_parameter>>& p) { parameters = p; }
+    const std::vector<std::shared_ptr<HDL_parameter>>& get_parameters() const { return parameters; }
+    std::shared_ptr<HDL_parameter> find_parameter(const std::string& s) const {
+        for (const auto &e : parameters) {
+            if (e->get_name() == s) return e;
+        }
+        return nullptr;
+    }
+    bool has_parameter(const std::string& s) const { return find_parameter(s) != nullptr; }
 
     void add_port_connection(const std::string& port_name, std::vector<HDL_net> value);
     void set_ports(const std::unordered_map<std::string, std::vector<HDL_net>>& p) { ports_map = p; }
@@ -78,7 +89,7 @@ private:
     std::string type;
     std::string architecture;
     dependency_class dep_class = module;
-    Parameters_map parameters;
+    std::vector<std::shared_ptr<HDL_parameter>> parameters;
     std::unordered_map<std::string, std::vector<HDL_net>> ports_map;
     bool wildcard_assignment = false;
     std::vector<channel_group> groups;

@@ -345,12 +345,11 @@ TEST(analysis_test, parameter_array_assignment) {
 
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    Parameters_map parameters;
-    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
 
     auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
     ASSERT_NE(stmt, nullptr);
-    auto param = stmt->get_parameters().const_get("TEST_PARAM");
+    auto param = stmt->find_parameter("TEST_PARAM");
+    ASSERT_NE(param, nullptr);
 
     HDL_parameter reference_param;
     reference_param.set_name("TEST_PARAM");
