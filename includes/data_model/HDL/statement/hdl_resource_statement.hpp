@@ -26,7 +26,6 @@
 #include "data_model/HDL/HDL_definitions.hpp"
 #include "data_model/HDL/HDL_net.hpp"
 #include "data_model/HDL/HDL_port.hpp"
-#include "data_model/HDL/parameters/Parameters_map.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/types/hdl_type.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"

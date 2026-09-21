@@ -1173,28 +1173,33 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
            work.node->get_type(), work.node->get_name());
         return {};
     }
-    // TEMPORARY (future refactor of this function to vectors): the working
-    // maps below are still map-based; seed them from the declarations.
-    Parameters_map node_parameters;
-    for (const auto &p : node_spec.value()->get_parameter_statements()) node_parameters.insert(p);
+    // Spec declarations in order, with a name index for the membership and
+    // spec-object lookups below (to_solve covers exactly the spec names, so
+    // one index serves both).
+    auto spec_decls = node_spec.value()->get_parameter_statements();
+    std::unordered_map<std::string, std::shared_ptr<HDL_parameter>> spec_by_name;
+    for (const auto &p : spec_decls) {
+        if (p) spec_by_name[p->get_name()] = p;
+    }
     auto node_overrides = work.node->get_parameters();
 
-    Parameters_map to_solve;
-    for(const auto &[p_name, param]: node_parameters) {
-        auto i = p_name;
-        if (node_overrides.contains(p_name)) {
-            to_solve.insert(node_overrides.get(p_name));
+    std::vector<std::shared_ptr<HDL_parameter>> to_solve;
+    for (const auto &param : spec_decls) {
+        if (!param) continue;
+        if (node_overrides.contains(param->get_name())) {
+            to_solve.push_back(node_overrides.get(param->get_name()));
         } else {
-            to_solve.insert(param);
+            to_solve.push_back(param);
         }
     }
 
-    Parameters_map loop_locals;
+    std::vector<std::shared_ptr<HDL_parameter>> loop_locals;
         std::set<std::string> deferred;
         bool progress = true;
         while (progress) {
             progress = false;
-            for (const auto &[p_name, param] : to_solve) {
+            for (const auto &param : to_solve) {
+                const auto &p_name = param->get_name();
                 if (node_overrides.contains(p_name)) continue;
                 if (deferred.contains(p_name)) continue;
                 const auto deps = param->get_dependencies();
@@ -1209,13 +1214,14 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                     }
                 }
                 if (loop_local) {
-                    loop_locals.insert(param);
+                    loop_locals.push_back(param);
                     deferred.insert(p_name);
                     progress = true;
                 }
             }
         }
-        for (const auto &[p_name, param] : loop_locals) to_solve.erase(p_name);
+        to_solve.erase(std::remove_if(to_solve.begin(), to_solve.end(),
+            [&](const auto &p) { return deferred.contains(p->get_name()); }), to_solve.end());
 
     std::map<qualified_identifier, std::shared_ptr<hdl_type>> parent_type_ctx;
     std::shared_ptr<hdl_resource_statement> parent_resource;
@@ -1246,8 +1252,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     }
 
     for(auto &[override_name, param]:node_overrides) {
-        if (node_parameters.contains(override_name)) {
-            auto spec_param = node_parameters.get(override_name);
+        auto spec_it = spec_by_name.find(override_name);
+        if (spec_it != spec_by_name.end()) {
+            auto spec_param = spec_it->second;
             if (spec_param->is_type_param) {
                 param->is_type_param = true;
                 bool type_resolved = false;
@@ -1281,7 +1288,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     }
 
     std::set<std::string> type_derived_bare;
-    for (auto &[ts_name, ts_param] : to_solve) {
+    for (const auto &ts_param : to_solve) {
         auto t = ts_param->get_type();
         if (!t) continue;
         for (auto &td : t->get_dependencies().data) {
@@ -1304,11 +1311,11 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             if (dtype_ref.has_value() && dep == dtype_ref.value()) continue;
             if (!dep.get_instance().empty()) {
                 auto first_inst = dep.get_instance()[0];
-                if (to_solve.contains(first_inst) || node_parameters.contains(first_inst)) {
+                if (spec_by_name.contains(first_inst)) {
                     continue;
                 }
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);
-            } else if (dep.get_package_prefix().empty() && dep.get_instance().empty() && to_solve.contains(dep.get_name())) {
+            } else if (dep.get_package_prefix().empty() && dep.get_instance().empty() && spec_by_name.contains(dep.get_name())) {
                 continue;
             } else if(!node_overrides.contains(dep.get_name())) {
                 if (type_derived_bare.contains(dep.get_name())) {
@@ -1348,13 +1355,13 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         if (pspec.direction != interface_port) own_ports.insert(pname);
     }
 
-    for (const auto &[p_name, param] : node_parameters) {
+    for (const auto &param : spec_decls) {
         auto p_id = param->get_identifier();
         if (ctx.contains(p_id)) continue;
         for (auto &dep : param->get_dependencies().data) {
             if (!dep.get_instance().empty() && !ctx.contains(dep)) {
                 auto first_inst = dep.get_instance()[0];
-                if (to_solve.contains(first_inst) || node_parameters.contains(first_inst)) {
+                if (spec_by_name.contains(first_inst)) {
                     continue;
                 }
                 if (own_ports.contains(first_inst)) {
@@ -1365,17 +1372,12 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
-    // TEMPORARY (future refactor of this function to vectors): process takes
-    // the declarations in order now; to_solve iteration order was unordered
-    // anyway and the sorter re-imposes determinism.
-    std::vector<std::shared_ptr<HDL_parameter>> to_solve_vec;
-    for (const auto &[_, param] : to_solve) to_solve_vec.push_back(param);
-    auto solution = process_parameters(to_solve_vec, ctx);
+    auto solution = process_parameters(to_solve, ctx);
     // Silent placeholders for the deferred loop locals: no single
     // module-scope value exists, and solving them here would warn
     // "missing value" and default to 0. Per-iteration values are injected
     // during loop unrolling instead.
-    for (const auto &[p_name, param] : loop_locals)
+    for (const auto &param : loop_locals)
         solution[param->get_identifier()] = resolved_parameter(0);
     return solution;
 }
