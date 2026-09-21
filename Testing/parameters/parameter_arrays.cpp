@@ -45,20 +45,20 @@ TEST(parameter_extraction, array_assignment) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
     p->set_name("simple_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("32"));
-    check_params.insert(p);
+    check_params.push_back(p);
     p = std::make_shared<HDL_parameter>();
 
     p->set_name("sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("5'o10"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
 
@@ -77,14 +77,13 @@ TEST(parameter_extraction, array_assignment) {
 
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
    ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        EXPECT_TRUE(check_params.contains(p->get_name()));
-        EXPECT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        EXPECT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -118,7 +117,7 @@ TEST(parameter_extraction, default_assign) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
@@ -138,14 +137,13 @@ TEST(parameter_extraction, default_assign) {
 
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
    ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        EXPECT_TRUE(check_params.contains(p->get_name()));
-        EXPECT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        EXPECT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -178,20 +176,20 @@ TEST(parameter_extraction, array_concatenation) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
     p->set_name("simple_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("32"));
-    check_params.insert(p);
+    check_params.push_back(p);
     p = std::make_shared<HDL_parameter>();
 
     p->set_name("sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("5'o10"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
 
@@ -209,14 +207,13 @@ TEST(parameter_extraction, array_concatenation) {
 
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
    ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -249,7 +246,7 @@ TEST(parameter_extraction, array_parameter) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
@@ -274,13 +271,12 @@ TEST(parameter_extraction, array_parameter) {
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -310,7 +306,7 @@ TEST(parameter_extraction, array_parameter_ascending) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
@@ -335,13 +331,12 @@ TEST(parameter_extraction, array_parameter_ascending) {
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -369,7 +364,7 @@ TEST(parameter_extraction, integer_localparams) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
@@ -377,7 +372,7 @@ TEST(parameter_extraction, integer_localparams) {
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("0"));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -386,14 +381,13 @@ TEST(parameter_extraction, integer_localparams) {
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("1"));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -421,7 +415,7 @@ TEST(parameter_extraction, simple_array_propagation) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
@@ -446,7 +440,7 @@ TEST(parameter_extraction, simple_array_propagation) {
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -466,14 +460,13 @@ TEST(parameter_extraction, simple_array_propagation) {
     e.set_rhs(std::make_shared<Identifier_token>(t));
     e.set_operation(Expression_v2::add);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -504,7 +497,7 @@ TEST(parameter_extraction, simple_ascending_array_propagation) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
@@ -529,7 +522,7 @@ TEST(parameter_extraction, simple_ascending_array_propagation) {
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -549,14 +542,13 @@ TEST(parameter_extraction, simple_ascending_array_propagation) {
     e.set_rhs(std::make_shared<Identifier_token>(t));
     e.set_operation(Expression_v2::subtract);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -587,9 +579,16 @@ TEST(parameter_extraction, array_expression) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
+
+    p->set_name("sv_numeric_p");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->set_raw_value(std::make_shared<Numeric_token>("1"));
+    check_params.push_back(p);
+
+    p = std::make_shared<HDL_parameter>();
 
     p->set_name("array_parameter");
 
@@ -612,7 +611,7 @@ TEST(parameter_extraction, array_expression) {
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -636,19 +635,12 @@ TEST(parameter_extraction, array_expression) {
     e2.set_rhs(std::make_shared<Identifier_token>(t));
     e2.set_operation(Expression_v2::add);
     p->set_raw_value(std::make_shared<Expression_v2>(e2));
-    check_params.insert(p);
-    p = std::make_shared<HDL_parameter>();
-
-    p->set_name("sv_numeric_p");
-    p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->set_raw_value(std::make_shared<Numeric_token>("1"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        EXPECT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        EXPECT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -681,7 +673,7 @@ TEST(parameter_extraction, int_concat_initialization) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -696,13 +688,12 @@ TEST(parameter_extraction, int_concat_initialization) {
     p->set_type(param_type);
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        EXPECT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        EXPECT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -732,7 +723,7 @@ TEST(parameter_extraction, implicit_type_concatenation) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -747,13 +738,12 @@ TEST(parameter_extraction, implicit_type_concatenation) {
     p->set_type(param_type);
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        EXPECT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        EXPECT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -784,7 +774,7 @@ TEST(parameter_extraction, simple_repetition_initialization) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -792,7 +782,7 @@ TEST(parameter_extraction, simple_repetition_initialization) {
     p->set_name("repetition_size");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("2"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -811,13 +801,12 @@ TEST(parameter_extraction, simple_repetition_initialization) {
 
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        EXPECT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        EXPECT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -852,7 +841,7 @@ TEST(parameter_extraction, packed_repetition_initialization) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -860,7 +849,7 @@ TEST(parameter_extraction, packed_repetition_initialization) {
     p->set_name("repetition_size");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("2"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -878,7 +867,7 @@ TEST(parameter_extraction, packed_repetition_initialization) {
 
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
 
@@ -895,13 +884,12 @@ TEST(parameter_extraction, packed_repetition_initialization) {
 
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -936,7 +924,7 @@ TEST(parameter_extraction, repetition_initialization) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -944,7 +932,7 @@ TEST(parameter_extraction, repetition_initialization) {
     p->set_name("repetition_size");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("2"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -963,7 +951,7 @@ TEST(parameter_extraction, repetition_initialization) {
     p->set_raw_value(std::make_shared<Replication>(r));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -980,7 +968,7 @@ TEST(parameter_extraction, repetition_initialization) {
     p->set_raw_value(std::make_shared<Replication>(r));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -1001,7 +989,7 @@ TEST(parameter_extraction, repetition_initialization) {
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
 
@@ -1022,14 +1010,13 @@ TEST(parameter_extraction, repetition_initialization) {
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1067,7 +1054,7 @@ TEST(parameter_extraction, packed_array) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
@@ -1094,13 +1081,12 @@ TEST(parameter_extraction, packed_array) {
 
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1130,7 +1116,7 @@ TEST(parameter_extraction, multpidim_packed_array) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
@@ -1166,14 +1152,13 @@ TEST(parameter_extraction, multpidim_packed_array) {
     p->set_raw_value(std::make_shared<Concatenation>(c2));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1203,7 +1188,7 @@ TEST(parameter_extraction, packed_bit_access) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -1221,7 +1206,7 @@ TEST(parameter_extraction, packed_bit_access) {
     e.set_operation(Expression_v2::subtract);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -1238,13 +1223,12 @@ TEST(parameter_extraction, packed_bit_access) {
     p->set_type(std::make_shared<HDL_simple_type>(param_type_2));
     p->set_raw_value(std::make_shared<Identifier_token>(t));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> av;
@@ -1274,7 +1258,7 @@ TEST(parameter_extraction, negative_number_array_init) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -1291,13 +1275,12 @@ TEST(parameter_extraction, negative_number_array_init) {
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> av;
@@ -1331,7 +1314,7 @@ TEST(parameter_extraction, expression_array_init) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -1355,13 +1338,12 @@ TEST(parameter_extraction, expression_array_init) {
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> av;
@@ -1390,7 +1372,7 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -1427,7 +1409,7 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
     p->set_raw_value(std::make_shared<Concatenation>(c2));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -1457,14 +1439,13 @@ TEST(parameter_extraction, combined_packed_unpacked_init) {
 
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> av, av2;
@@ -1503,7 +1484,7 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     std::vector<std::pair<std::string, std::vector<std::string>>> vect_params = {
             {"", {}}
@@ -1516,7 +1497,7 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
     p->set_name("SS_POLARITY_DEFAULT");
     p->set_raw_value(std::make_shared<Numeric_token>("0"));
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -1549,13 +1530,12 @@ TEST(parameter_extraction, mixed_packed_unpacked_init) {
     outer_c.add_component(std::make_shared<Concatenation>(c));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(outer_c));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> av;
@@ -1594,7 +1574,7 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     check_params.clear();
@@ -1658,13 +1638,12 @@ TEST(parameter_extraction, multidimensional_packed_array) {
     p->set_raw_value(std::make_shared<Concatenation>(top_c));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> av;
@@ -1694,7 +1673,7 @@ TEST(parameter_extraction, packed_replication_init) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -1714,13 +1693,12 @@ TEST(parameter_extraction, packed_replication_init) {
 
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1749,7 +1727,7 @@ TEST(parameter_extraction, array_initialization_default) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("test_parameter");
@@ -1775,13 +1753,12 @@ TEST(parameter_extraction, array_initialization_default) {
 
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> av;

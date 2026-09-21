@@ -110,8 +110,7 @@ void vhdl_analyzer::attach_documentation(hdl_file &result) {
     auto comments = extract_vhdl_doc_comments(processed_content);
     documentation_analyzer doc(comments);
     doc.set_source_path(path);
-    Parameters_map parameters;
-    doc.process_documentation(parameters);
+    doc.process_documentation();
 
     // VHDL identifiers are case-insensitive: the resource name is canonicalized
     // lowercase, so match the documentation name case-insensitively.

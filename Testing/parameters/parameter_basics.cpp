@@ -55,26 +55,25 @@ TEST(parameter_extraction, init_list_after_reg) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("low_control_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("'b001111"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("low_control_n");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("'b110000"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -103,7 +102,7 @@ TEST(parameter_extraction, size_cast) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
@@ -112,14 +111,13 @@ TEST(parameter_extraction, size_cast) {
     c.set_content(std::make_shared<Numeric_token>("31'h100003"));
     p->set_raw_value(std::make_shared<Cast>(c));
     p->set_type(Type_engine::create_primitive_type("integer"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -141,20 +139,19 @@ TEST(parameter_extraction, unsized_zero) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     p->set_raw_value(std::make_shared<Numeric_token>("'0"));
     p->set_type(Type_engine::create_primitive_type("integer"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -178,7 +175,7 @@ TEST(parameter_extraction, unsized_one) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
@@ -190,14 +187,13 @@ TEST(parameter_extraction, unsized_one) {
     auto param_type = HDL_simple_type();
     param_type.add_dimension(d);
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -221,13 +217,13 @@ TEST(parameter_extraction, paretesized_cast) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("SIZE");
     p->set_raw_value(std::make_shared<Numeric_token>(4, 32));
     p->set_type(Type_engine::create_primitive_type("integer"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
@@ -237,14 +233,13 @@ TEST(parameter_extraction, paretesized_cast) {
     c.set_content(std::make_shared<Numeric_token>("31'h100003"));
     p->set_raw_value(std::make_shared<Cast>(c));
     p->set_type(Type_engine::create_primitive_type("integer"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -267,7 +262,7 @@ TEST(parameter_extraction, type_cast) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -289,14 +284,13 @@ TEST(parameter_extraction, type_cast) {
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Cast>(c));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
@@ -318,9 +312,13 @@ TEST(parameter_extraction, nested_type_cast) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
-
+    auto p = std::make_shared<HDL_parameter>();
+    p->set_name("NumLevels");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->set_raw_value(std::make_shared<Numeric_token>(4, 32));
+    check_params.push_back(p);
 
     Cast inner_c;
     inner_c.set_type_cast();
@@ -330,7 +328,7 @@ TEST(parameter_extraction, nested_type_cast) {
     e.set_operation(Expression_v2::subtract);
     inner_c.set_content(std::make_shared<Expression_v2>(e));
 
-    auto p = std::make_shared<HDL_parameter>();
+    p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
 
     Cast outer_c;
@@ -345,20 +343,12 @@ TEST(parameter_extraction, nested_type_cast) {
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Cast>(outer_c));
 
-    check_params.insert(p);
-
-
-    p = std::make_shared<HDL_parameter>();
-    p->set_name("NumLevels");
-    p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->set_raw_value(std::make_shared<Numeric_token>(4, 32));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
@@ -381,7 +371,7 @@ TEST(parameter_extraction, multiple_type_cast) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -402,7 +392,7 @@ TEST(parameter_extraction, multiple_type_cast) {
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Cast>(c));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -416,14 +406,13 @@ TEST(parameter_extraction, multiple_type_cast) {
     c.set_content(std::make_shared<Real_token>("2.5"));
     p->set_raw_value(std::make_shared<Cast>(c));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
@@ -446,7 +435,7 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("x");
@@ -455,12 +444,12 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     e.set_lhs(std::make_shared<Numeric_token>("2"));
     e.set_operation(Expression_v2::subtract);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
     p = std::make_shared<HDL_parameter>();
     p->set_name("y");
     p->set_type(Type_engine::create_primitive_type("integer"));
     p->set_raw_value(std::make_shared<Numeric_token>(4294967290, 32));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     auto cast_a = std::make_shared<Cast>();
@@ -475,7 +464,7 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     p->set_name("A");
     p->set_type(Type_engine::create_primitive_type("integer"));
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     auto cast_b = std::make_shared<Cast>();
     cast_b->set_type_cast();
@@ -489,12 +478,11 @@ TEST(parameter_extraction, cast_in_binary_expression) {
     p->set_name("B");
     p->set_type(Type_engine::create_primitive_type("integer"));
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -527,26 +515,25 @@ TEST(parameter_extraction,time_literal) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
     p->set_raw_value(std::make_shared<Time_token>("10ns"));
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM_2");
     p->set_raw_value(std::make_shared<Time_token>("1.5us"));
     p->set_type(Type_engine::create_primitive_type("implicit"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -573,7 +560,7 @@ TEST(parameter_extraction, cast_in_concat) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
@@ -592,14 +579,13 @@ TEST(parameter_extraction, cast_in_concat) {
 
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        EXPECT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        EXPECT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -624,13 +610,13 @@ TEST(parameter_extraction, strings_dafault_init) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("N_CORES");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("3"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("TRANSLATION_TABLE_INIT");
@@ -648,13 +634,12 @@ TEST(parameter_extraction, strings_dafault_init) {
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -683,13 +668,13 @@ TEST(parameter_extraction, string_array_selection) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("N_CORES");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("3"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("TRANSLATION_TABLE_INIT");
@@ -706,7 +691,7 @@ TEST(parameter_extraction, string_array_selection) {
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
 
@@ -716,13 +701,12 @@ TEST(parameter_extraction, string_array_selection) {
     ai.push_back(std::make_shared<Numeric_token>("2"));
     t.set_array_index(ai);
     p->set_raw_value(std::make_shared<Identifier_token>(t));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        EXPECT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        EXPECT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -753,12 +737,12 @@ TEST(parameter_extraction, strings_array) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("N_CORES");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("3"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("TRANSLATION_TABLE_INIT");
@@ -779,13 +763,12 @@ TEST(parameter_extraction, strings_array) {
     c.add_component(std::make_shared<String_token>("\"FILE\""));
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Concatenation>(c));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -813,13 +796,13 @@ TEST(parameter_extraction, float_parameter) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("LUT_DEPTH");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("9"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("STEP");
@@ -835,13 +818,12 @@ TEST(parameter_extraction, float_parameter) {
     e1.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("LUT_DEPTH")));
     e1.set_operation(Expression_v2::divide);
     p->set_raw_value(std::make_shared<Expression_v2>(e1));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -875,19 +857,19 @@ TEST(parameter_extraction, package_parameters) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("bus_base");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("32'h43c00000"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("timebase");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("bus_base")));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("gpio");
@@ -906,7 +888,7 @@ TEST(parameter_extraction, package_parameters) {
     e.set_rhs(std::make_shared<Numeric_token>("1"));
     e.set_operation(Expression_v2::add);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("modulo_parameter");
@@ -915,7 +897,7 @@ TEST(parameter_extraction, package_parameters) {
     e.set_rhs(std::make_shared<Numeric_token>("2"));
     e.set_operation(Expression_v2::expression_operator::modulo);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("subtraction_parameter");
@@ -925,14 +907,13 @@ TEST(parameter_extraction, package_parameters) {
     e.set_rhs(std::make_shared<Numeric_token>("'b10"));
     e.set_operation(Expression_v2::expression_operator::subtract);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
 
@@ -969,49 +950,48 @@ TEST(parameter_extraction, simple_parameters) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("simple_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("32"));
-    check_params.insert(p);
-
-    p = std::make_shared<HDL_parameter>();
-    p->set_name("local_p");
-    p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->set_raw_value(std::make_shared<Numeric_token>("74"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("5'o10"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("dimensionless_sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("'h3F"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("string_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<String_token>("\"423\""));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("nested_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("string_p")));
-    check_params.insert(p);
+    check_params.push_back(p);
+
+    p = std::make_shared<HDL_parameter>();
+    p->set_name("local_p");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->set_raw_value(std::make_shared<Numeric_token>("74"));
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1054,25 +1034,25 @@ TEST(parameter_extraction, simple_expressions) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("simple_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("32"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("5'o10"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("dimensionless_sv_numeric_p");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("'h3F"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("add_expr_p");
@@ -1082,7 +1062,7 @@ TEST(parameter_extraction, simple_expressions) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("sv_numeric_p")));
     e.set_operation(Expression_v2::expression_operator::add);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("sub_expr_p");
@@ -1092,7 +1072,7 @@ TEST(parameter_extraction, simple_expressions) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("sv_numeric_p")));
     e.set_operation(Expression_v2::expression_operator::subtract);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("mul_expr_p");
@@ -1102,7 +1082,7 @@ TEST(parameter_extraction, simple_expressions) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("sv_numeric_p")));
     e.set_operation(Expression_v2::expression_operator::multiply);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -1113,7 +1093,7 @@ TEST(parameter_extraction, simple_expressions) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("sv_numeric_p")));
     e.set_operation(Expression_v2::expression_operator::divide);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("modulo_expr_p");
@@ -1123,7 +1103,7 @@ TEST(parameter_extraction, simple_expressions) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("sv_numeric_p")));
     e.set_operation(Expression_v2::expression_operator::modulo);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("chained_expression");
@@ -1137,7 +1117,7 @@ TEST(parameter_extraction, simple_expressions) {
     e.set_rhs(std::make_shared<Expression_v2>(e2));
     e.set_operation(Expression_v2::expression_operator::add);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -1152,7 +1132,7 @@ TEST(parameter_extraction, simple_expressions) {
 
     p->set_raw_value(call);
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -1162,7 +1142,7 @@ TEST(parameter_extraction, simple_expressions) {
     call->add_argument(std::make_shared<Identifier_token>(qualified_identifier("add_expr_p")));
     p->set_raw_value(call);
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("parenthesised_expr_p");
@@ -1177,14 +1157,13 @@ TEST(parameter_extraction, simple_expressions) {
     e.set_lhs(std::make_shared<Expression_v2>(e2));
     e.set_operation(Expression_v2::expression_operator::multiply);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        EXPECT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1230,19 +1209,19 @@ TEST(parameter_extraction, bitwise_expressions) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("9"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("12"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("b_and_p");
@@ -1252,7 +1231,7 @@ TEST(parameter_extraction, bitwise_expressions) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::bitwise_and);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("b_or_p");
@@ -1261,7 +1240,7 @@ TEST(parameter_extraction, bitwise_expressions) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::bitwise_or);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("b_xor_p");
@@ -1270,7 +1249,7 @@ TEST(parameter_extraction, bitwise_expressions) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::bitwise_xor);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("b_xnor_p");
@@ -1279,7 +1258,7 @@ TEST(parameter_extraction, bitwise_expressions) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::bitwise_xnor);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("b_xnor2_p");
@@ -1288,13 +1267,12 @@ TEST(parameter_extraction, bitwise_expressions) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::bitwise_xnor);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        EXPECT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1330,19 +1308,19 @@ TEST(parameter_extraction, power_expression) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("2"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("5"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("pow_expr");
@@ -1352,13 +1330,12 @@ TEST(parameter_extraction, power_expression) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::power);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        EXPECT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1388,19 +1365,19 @@ TEST(parameter_extraction, arithmetic_shift_left) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("3"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("2"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("shl_expr");
@@ -1410,13 +1387,12 @@ TEST(parameter_extraction, arithmetic_shift_left) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::arithmetic_shift_left);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        EXPECT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1448,7 +1424,7 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
@@ -1457,13 +1433,13 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     e.set_lhs(std::make_shared<Numeric_token>("8"));
     e.set_operation(Expression_v2::subtract);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("2"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("shr_a_expr");
@@ -1473,7 +1449,7 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::arithmetic_shift_right);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("shr_l_expr");
@@ -1482,13 +1458,12 @@ TEST(parameter_extraction, arithmetic_shift_right) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::logic_shift_right);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        EXPECT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1523,25 +1498,25 @@ TEST(parameter_extraction, logical_and_or) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("op_a");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("3"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_b");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("0"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("op_c");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("5"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("log_and_expr");
@@ -1551,7 +1526,7 @@ TEST(parameter_extraction, logical_and_or) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::logical_and);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("log_or_expr");
@@ -1560,7 +1535,7 @@ TEST(parameter_extraction, logical_and_or) {
     e.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_b")));
     e.set_operation(Expression_v2::expression_operator::logical_or);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("mixed_expr");
@@ -1573,13 +1548,12 @@ TEST(parameter_extraction, logical_and_or) {
     e2.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("op_c")));
     e2.set_operation(Expression_v2::expression_operator::logical_or);
     p->set_raw_value(std::make_shared<Expression_v2>(e2));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        EXPECT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -1620,21 +1594,20 @@ TEST(parameter_extraction, package_parameters_use) {
     auto pkg = resources[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
     p->set_name("package_param");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("test_package", "bus_base")));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
@@ -1679,13 +1652,13 @@ TEST(parameter_extraction, interface_parameter_use) {
     auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(mod_statements[3]);
     auto parameters = stmt->get_parameters();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
     p->set_name("TEST_PARAM");
     p->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("test_interface", "DATA_WIDTH")));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
@@ -1705,7 +1678,7 @@ TEST(parameter_extraction, negative_number_parameters) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
 
     auto p = std::make_shared<HDL_parameter>();
@@ -1716,13 +1689,12 @@ TEST(parameter_extraction, negative_number_parameters) {
     e.set_lhs(std::make_shared<Numeric_token>("16'sd32767"));
     e.set_operation(Expression_v2::subtract);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> av;
@@ -1769,19 +1741,18 @@ TEST(parameter_extraction, instance_parameter) {
             {"test_param", {"4"}}
     };
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
     auto p = std::make_shared<HDL_parameter>();
 
     p->set_name("test_param");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("4"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), def_parameters.size());
 
-    for (const auto &p : def_parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *def_parameters[i]);
     }
 
     check_params.clear();
@@ -1790,7 +1761,7 @@ TEST(parameter_extraction, instance_parameter) {
 
     p->set_name("param_1");
     p->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("test_param")));
-    check_params.insert(p);
+    check_params.push_back(p);
     p = std::make_shared<HDL_parameter>();
 
     p->set_name("param_2");
@@ -1799,7 +1770,7 @@ TEST(parameter_extraction, instance_parameter) {
     e.set_rhs(std::make_shared<Numeric_token>("5"));
     e.set_operation(Expression_v2::add);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
     p = std::make_shared<HDL_parameter>();
 
     p->set_name("param_3");
@@ -1811,13 +1782,12 @@ TEST(parameter_extraction, instance_parameter) {
     e2.set_rhs(std::make_shared<Numeric_token>("1"));
     e2.set_operation(Expression_v2::multiply);
     p->set_raw_value(std::make_shared<Expression_v2>(e2));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), inst_parameters.size());
 
-    for (const auto &p : inst_parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *inst_parameters[i]);
     }
 
 }
@@ -1865,30 +1835,29 @@ TEST(parameter_extraction, interface_parameters) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("DATA_WIDTH");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("32"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("USER_WIDTH");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("24"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("DEST_WIDTH");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("8"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> av;
@@ -2061,14 +2030,14 @@ TEST(parameter_extraction, param_ternary_conditional) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
     p->set_name("condition");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("2"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
 
@@ -2086,7 +2055,7 @@ TEST(parameter_extraction, param_ternary_conditional) {
     t.set_false_value(
         std::make_shared<Numeric_token>("34"));
     p->set_raw_value(std::make_shared<Ternary>(t));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
 
@@ -2101,14 +2070,13 @@ TEST(parameter_extraction, param_ternary_conditional) {
 
     t.set_false_value(std::make_shared<Numeric_token>("34"));
     p->set_raw_value(std::make_shared<Ternary>(t));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -2139,14 +2107,14 @@ TEST(parameter_extraction, nested_ternary_conditional) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
     p->set_name("condition");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("2"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
 
@@ -2171,15 +2139,14 @@ TEST(parameter_extraction, nested_ternary_conditional) {
     inner_t.set_false_value(std::make_shared<Numeric_token>("96"));
     t.set_true_value(std::make_shared<Ternary>(inner_t));
     p->set_raw_value(std::make_shared<Ternary>(t));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -2209,14 +2176,14 @@ TEST(parameter_extraction, complex_ternary_conditional) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
 
     p->set_name("NM");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("4"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
 
@@ -2234,15 +2201,14 @@ TEST(parameter_extraction, complex_ternary_conditional) {
     t.set_false_value(std::make_shared<Numeric_token>("1"));
 
     p->set_raw_value(std::make_shared<Ternary>(t));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -2306,9 +2272,10 @@ TEST(parameter_processing, typedef_in_package_parameter) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto module = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
-    Parameters_map declared_params;
-    for (const auto &p : module->get_parameter_statements()) declared_params.insert(p);
-    auto param = declared_params.get("array_parameter");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : module->get_parameter_statements())
+        if (d->get_name() == "array_parameter") param = d;
+    ASSERT_NE(param, nullptr);
     HDL_parameter p;
     p.set_name("array_parameter");
     p.set_type(std::make_shared<HDL_external_type>(qualified_identifier("test_pkg", "test_type")));
@@ -2349,7 +2316,7 @@ TEST(parameter_extraction, wide_int_parameter) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("TEST_PARAM");
@@ -2366,14 +2333,13 @@ TEST(parameter_extraction, wide_int_parameter) {
       });
     p->set_type(std::make_shared<HDL_simple_type>(param_type));
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -2799,7 +2765,7 @@ TEST(parameter_extraction, ternary_in_cast) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
     auto parameters = resource->get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     Cast c;
@@ -2821,13 +2787,12 @@ TEST(parameter_extraction, ternary_in_cast) {
     p->set_name("TEST_PARAM");
     p->set_raw_value(std::make_shared<Cast>(c));
     p->set_type(Type_engine::create_primitive_type("integer"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
 

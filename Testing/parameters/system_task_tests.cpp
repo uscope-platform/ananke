@@ -45,7 +45,7 @@ TEST(system_task, simple) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("CAST");
@@ -55,13 +55,12 @@ TEST(system_task, simple) {
 
     p->set_raw_value(call);
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -92,7 +91,7 @@ TEST(system_task, multiple) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("CAST");
@@ -106,7 +105,7 @@ TEST(system_task, multiple) {
 
     p->set_raw_value(call);
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("CAST_2");
@@ -115,12 +114,11 @@ TEST(system_task, multiple) {
     call->add_argument(std::make_shared<Real_token>("12.2"));
     p->set_raw_value(call);
 
-    check_params.insert(p);
+    check_params.push_back(p);
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -152,9 +150,15 @@ TEST(system_task, propagation) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
+    p->set_name("PARAMETER_1");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    p->set_raw_value(std::make_shared<Numeric_token>("5"));
+    check_params.push_back(p);
+
+    p = std::make_shared<HDL_parameter>();
     p->set_name("CAST");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     auto call = std::make_shared<HDL_builtin_function>(HDL_builtin_function::function::rtoi);
@@ -166,19 +170,12 @@ TEST(system_task, propagation) {
 
     p->set_raw_value(call);
 
-    check_params.insert(p);
-    p = std::make_shared<HDL_parameter>();
-    p->set_name("PARAMETER_1");
-    p->set_type(Type_engine::create_primitive_type("implicit"));
-    p->set_raw_value(std::make_shared<Numeric_token>("5"));
-    check_params.insert(p);
-
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -209,12 +206,12 @@ TEST(system_task, nested) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("PARAMETER_1");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("46"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("CAST");
@@ -230,13 +227,12 @@ TEST(system_task, nested) {
 
     p->set_raw_value(outer_call);
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
 
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
@@ -395,9 +391,10 @@ TEST(system_task, bits_type_argument_no_dependency) {
     )";
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    Parameters_map declared_params;
-    for (const auto &p : resource.get_parameter_statements()) declared_params.insert(p);
-    auto param = declared_params.get("B");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "B") param = d;
+    ASSERT_NE(param, nullptr);
     EXPECT_TRUE(param->get_dependencies().data.empty());
     auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(defaults.at(qualified_identifier("B")).get_integer(), 8);
@@ -1050,11 +1047,10 @@ TEST(system_task, bits_struct_port_field_dependency) {
 
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[1]->as<hdl_resource_statement>();
-    Parameters_map declared_params;
-    for (const auto &p : resource.get_parameter_statements()) declared_params.insert(p);
-    ASSERT_TRUE(declared_params.contains("STRIDE_WIDTH"));
-
-    auto param = declared_params.get("STRIDE_WIDTH");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "STRIDE_WIDTH") param = d;
+    ASSERT_NE(param, nullptr);
     auto deps = param->get_dependencies().data;
     ASSERT_EQ(deps.size(), 1u);
     auto dep = *deps.begin();
@@ -1102,13 +1098,17 @@ TEST(system_task, bits_struct_port_field_elaboration) {
     ASSERT_EQ(ast.size(), 1u);
     ASSERT_EQ(ast[0]->get_dependencies().size(), 1u);
     auto leaf = ast[0]->get_dependencies()[0];
-    ASSERT_TRUE(leaf->get_parameters().contains("STRIDE_WIDTH"));
-    auto val = leaf->get_parameters().get("STRIDE_WIDTH")->get_numeric_value();
+    ASSERT_TRUE(leaf->has_parameter("STRIDE_WIDTH"));
+    auto stride_param = leaf->find_parameter("STRIDE_WIDTH");
+    ASSERT_NE(stride_param, nullptr);
+    auto val = stride_param->get_numeric_value();
     ASSERT_TRUE(val.has_value());
     // Correct value is $bits(logic [31:0]) = 32. Buggy behavior solves to 1.
     EXPECT_EQ(val.value().get_value(), 32);
-    ASSERT_TRUE(leaf->get_parameters().contains("PARAM_WIDTH"));
-    auto whole = leaf->get_parameters().get("PARAM_WIDTH")->get_numeric_value();
+    ASSERT_TRUE(leaf->has_parameter("PARAM_WIDTH"));
+    auto whole_param = leaf->find_parameter("PARAM_WIDTH");
+    ASSERT_NE(whole_param, nullptr);
+    auto whole = whole_param->get_numeric_value();
     ASSERT_TRUE(whole.has_value());
     // 16 (nblocks) + 16 (nlines) + 32 (stride) = 64.
     EXPECT_EQ(whole.value().get_value(), 64);

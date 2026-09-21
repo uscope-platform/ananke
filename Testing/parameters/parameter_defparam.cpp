@@ -39,9 +39,9 @@ TEST(parameter_defparam, simple_override) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto child_params = ast_v2->get_dependencies()[0]->get_parameters();
-    ASSERT_TRUE(child_params.contains("P"));
-    EXPECT_EQ(child_params.get("P")->get_numeric_value(), 5);
+    auto child = ast_v2->get_dependencies()[0];
+    ASSERT_TRUE(child->has_parameter("P"));
+    EXPECT_EQ(child->find_parameter("P")->get_numeric_value(), 5);
 }
 
 TEST(parameter_defparam, override_with_parent_param) {
@@ -66,9 +66,9 @@ TEST(parameter_defparam, override_with_parent_param) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto child_params = ast_v2->get_dependencies()[0]->get_parameters();
-    ASSERT_TRUE(child_params.contains("P"));
-    EXPECT_EQ(child_params.get("P")->get_numeric_value(), 8);
+    auto child = ast_v2->get_dependencies()[0];
+    ASSERT_TRUE(child->has_parameter("P"));
+    EXPECT_EQ(child->find_parameter("P")->get_numeric_value(), 8);
 }
 
 TEST(parameter_defparam, nested_override) {
@@ -96,9 +96,9 @@ TEST(parameter_defparam, nested_override) {
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
     auto mid_node = ast_v2->get_dependencies()[0];
-    auto leaf_params = mid_node->get_dependencies()[0]->get_parameters();
-    ASSERT_TRUE(leaf_params.contains("Q"));
-    EXPECT_EQ(leaf_params.get("Q")->get_numeric_value(), 9);
+    auto leaf = mid_node->get_dependencies()[0];
+    ASSERT_TRUE(leaf->has_parameter("Q"));
+    EXPECT_EQ(leaf->find_parameter("Q")->get_numeric_value(), 9);
 }
 
 TEST(parameter_defparam, root_qualified_warns_and_does_not_crash) {
@@ -121,9 +121,9 @@ TEST(parameter_defparam, root_qualified_warns_and_does_not_crash) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto child_params = ast_v2->get_dependencies()[0]->get_parameters();
-    ASSERT_TRUE(child_params.contains("P"));
-    EXPECT_EQ(child_params.get("P")->get_numeric_value(), 0);
+    auto child = ast_v2->get_dependencies()[0];
+    ASSERT_TRUE(child->has_parameter("P"));
+    EXPECT_EQ(child->find_parameter("P")->get_numeric_value(), 0);
 }
 
 TEST(parameter_defparam, unit_qualified_warns_and_does_not_crash) {
@@ -146,7 +146,7 @@ TEST(parameter_defparam, unit_qualified_warns_and_does_not_crash) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto child_params = ast_v2->get_dependencies()[0]->get_parameters();
-    ASSERT_TRUE(child_params.contains("P"));
-    EXPECT_EQ(child_params.get("P")->get_numeric_value(), 0);
+    auto child = ast_v2->get_dependencies()[0];
+    ASSERT_TRUE(child->has_parameter("P"));
+    EXPECT_EQ(child->find_parameter("P")->get_numeric_value(), 0);
 }

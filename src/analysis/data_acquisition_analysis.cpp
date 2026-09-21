@@ -153,8 +153,9 @@ std::optional<std::vector<data_stream>> data_acquisition_analysis::process_node(
 void data_acquisition_analysis::process_source(const std::shared_ptr<hdl_ast_node> &node, const data_stream &in_stream) {
     spdlog::trace("Found data source at node: {}", node->get_name());
     std::string node_names;
-    if(node->has_parameter("PRAGMA_MKFG_DATAPOINT_NAMES")){
-        node_names = node->get_parameter_value("PRAGMA_MKFG_DATAPOINT_NAMES")->get_string_value();
+    auto names_param = node->find_parameter("PRAGMA_MKFG_DATAPOINT_NAMES");
+    if (names_param) {
+        node_names = names_param->get_string_value();
     } else {
         node_names = node->get_name() + "data_out";
     }
@@ -165,7 +166,7 @@ void data_acquisition_analysis::process_source(const std::shared_ptr<hdl_ast_nod
         spdlog::warn("parameter named {} not found on module : {}.{}", n_points_params, node->get_type(), node->get_name());
         return;
     }
-    auto n_params = node->get_parameter_value(n_points_params)->get_numeric_value();
+    auto n_params = node->find_parameter(n_points_params)->get_numeric_value();
 
     std::string port_suffix = specs_manager.get_component_spec(node->get_type(), in_stream.if_name);
     auto names = parse_datapoint_names(node_names);
@@ -177,7 +178,7 @@ void data_acquisition_analysis::process_source(const std::shared_ptr<hdl_ast_nod
             spdlog::warn("parameter named {} not found on module : {}.{}", addr_param_name, node->get_type(), node->get_name());
             return;
         }
-        auto addr_value_opt = node->get_parameter_value(addr_param_name)->get_int_array_value();
+        auto addr_value_opt = node->find_parameter(addr_param_name)->get_int_array_value();
         if(!addr_value_opt.has_value()) {
             spdlog::warn("data source in module  {}.{}, does not have a valid address", node->get_type(), node->get_name());
             return;
@@ -194,7 +195,7 @@ void data_acquisition_analysis::process_source(const std::shared_ptr<hdl_ast_nod
 
     std::bitset<1024> output_signs;
     if(node->has_parameter("OUTPUT_SIGNED")){
-        auto val = node->get_parameter_value("OUTPUT_SIGNED")->get_numeric_value();
+        auto val = node->find_parameter("OUTPUT_SIGNED")->get_numeric_value();
         if(val.has_value()) {
             output_signs = val.value().to_bitset();
         } else {
@@ -228,9 +229,10 @@ void data_acquisition_analysis::process_source(const std::shared_ptr<hdl_ast_nod
 
        hdl_integer addr_base = 0;
        if(node->has_parameter("OUTPUT_DESTINATION_BASE")){
-           auto val = node->get_parameter_value("OUTPUT_DESTINATION_BASE")->get_numeric_value();
+           auto base_param = node->find_parameter("OUTPUT_DESTINATION_BASE");
+           auto val = base_param->get_numeric_value();
            if(val.has_value()) {
-               addr_base = node->get_parameter_value("OUTPUT_DESTINATION_BASE")->get_numeric_value().value();
+               addr_base = base_param->get_numeric_value().value();
            } else {
                spdlog::warn("The OUTPUT_DESTINATION_BASE parameter for data source {}, does not have a valid value, assuming it to be 0",node->get_name());
            }
@@ -296,10 +298,12 @@ data_acquisition_analysis::process_1_to_1_node(const std::shared_ptr<hdl_ast_nod
     hdl_integer remapping_addr = 0;
     std::string remapping_type;
     if(specs_manager.get_component_spec(node->get_type(), "remapping") == "true"){
-        remapping_type = node->get_parameter_value("REMAP_TYPE")->get_string_value();
-        auto val = node->get_parameter_value("REMAP_OFFSET")->get_numeric_value();
+        auto remap_type_param = node->find_parameter("REMAP_TYPE");
+        remapping_type = remap_type_param ? remap_type_param->get_string_value() : "";
+        auto remap_offset_param = node->find_parameter("REMAP_OFFSET");
+        auto val = remap_offset_param ? remap_offset_param->get_numeric_value() : std::optional<hdl_integer>(0);
         if(val.has_value()) {
-            remapping_addr = node->get_parameter_value("REMAP_OFFSET")->get_numeric_value().value();
+            remapping_addr = val.value();
         } else {
             spdlog::warn("The REMAP_OFFSET parameter for data source {}, does not have a valid value, assuming it to be 0", node->get_name());
         }
@@ -329,7 +333,8 @@ hdl_integer
 data_acquisition_analysis::find_datapoint_width(const std::shared_ptr<hdl_ast_node> &node, std::string name) {
     for(auto &item:node->get_dependencies()){
         if(item->get_name() == name){
-            auto val = item->get_parameter_value("DATA_WIDTH")->get_numeric_value();
+            auto width_param = item->find_parameter("DATA_WIDTH");
+            auto val = width_param ? width_param->get_numeric_value() : std::optional<hdl_integer>(0);
             if(val.has_value()) {
                 return val.value();
             } else {

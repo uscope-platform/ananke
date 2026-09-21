@@ -970,9 +970,8 @@ TEST(function_processing, anonymous_struct_local_in_function) {
     sv_analyzer analyzer;
 
     auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    Parameters_map declared_params;
-    for (const auto &p : resource.get_parameter_statements()) declared_params.insert(p);
-    EXPECT_FALSE(declared_params.contains("tmp"));
+    for (const auto &d : resource.get_parameter_statements())
+        EXPECT_FALSE(d->get_name() == "tmp");
     auto functions = resource.get_functions();
 
     ASSERT_TRUE(functions.contains("compute"));
@@ -1022,9 +1021,8 @@ TEST(function_processing, anonymous_enum_local_in_function) {
     sv_analyzer analyzer;
 
     auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    Parameters_map declared_params;
-    for (const auto &p : resource.get_parameter_statements()) declared_params.insert(p);
-    EXPECT_FALSE(declared_params.contains("state"));
+    for (const auto &d : resource.get_parameter_statements())
+        EXPECT_FALSE(d->get_name() == "state");
     auto functions = resource.get_functions();
 
     ASSERT_TRUE(functions.contains("compute"));

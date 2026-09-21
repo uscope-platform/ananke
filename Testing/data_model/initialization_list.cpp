@@ -510,11 +510,21 @@ TEST(Initialization_list, get_array_dependencies) {
 
     auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    Parameters_map params;
-    for (const auto &p : resource.get_parameter_statements()) params.insert(p);
-    auto deps_a = params.get("INITIAL_REGISTER_VALUES")->get_dependencies();
-    auto deps_b = params.get("FIXED_REGISTER_VALUES")->get_dependencies();
-    auto deps_c = params.get("VARIABLE_INITIAL_VALUES")->get_dependencies();
+    std::shared_ptr<HDL_parameter> init_param;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "INITIAL_REGISTER_VALUES") init_param = d;
+    ASSERT_NE(init_param, nullptr);
+    auto deps_a = init_param->get_dependencies();
+    std::shared_ptr<HDL_parameter> fixed_param;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "FIXED_REGISTER_VALUES") fixed_param = d;
+    ASSERT_NE(fixed_param, nullptr);
+    auto deps_b = fixed_param->get_dependencies();
+    std::shared_ptr<HDL_parameter> var_param;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "VARIABLE_INITIAL_VALUES") var_param = d;
+    ASSERT_NE(var_param, nullptr);
+    auto deps_c = var_param->get_dependencies();
 
     parameter_deps_t check_a, check_b;
     check_a.data = {qualified_identifier("VARIABLE_INITIAL_VALUES"), qualified_identifier("N_REGISTERS"), qualified_identifier("FIXED_REGISTER_VALUES")};

@@ -254,17 +254,20 @@ void parameter_solver::update_parameters_map(
     const std::shared_ptr<hdl_ast_node>& node,
     const std::shared_ptr<data_store> &d_store
 ) {
-    auto node_parameters = node->get_parameters();
+    std::vector<std::shared_ptr<HDL_parameter>> node_parameters = node->get_parameters();
     auto resource = d_store->get_HDL_resource(node->get_type());
     for (const auto &param : resource.value()->get_parameter_statements()) {
         const auto &p_name = param->get_name();
         std::shared_ptr<HDL_parameter> ast_param;
-        if(node_parameters.contains(p_name))
-            ast_param = std::make_shared<HDL_parameter>(*node_parameters.get(p_name));
+        auto it = std::find_if(node_parameters.begin(), node_parameters.end(),
+            [&](const auto &p) { return p && p->get_name() == p_name; });
+        if (it != node_parameters.end())
+            ast_param = std::make_shared<HDL_parameter>(**it);
         else
             ast_param = std::make_shared<HDL_parameter>(*param);
         ast_param->set_value(solved_parameters.at(param->get_identifier()));
-        node_parameters.insert(ast_param);
+        if (it != node_parameters.end()) *it = ast_param;
+        else node_parameters.push_back(ast_param);
     }
 
     node->set_parameters(node_parameters);
@@ -291,7 +294,8 @@ resolved_parameter parameter_solver::resolve_instance_dependency(
     if (examined_node) {
         for (const auto &brother_inst : examined_node->get_dependencies()) {
             if (brother_inst->get_name() == instance_name) {
-                auto inst_param = brother_inst->get_parameters().get(dep.get_name());
+                auto inst_param = brother_inst->find_parameter(dep.get_name());
+                if (!inst_param) return resolved_parameter(0);
                 auto val = inst_param->get_numeric_value();
                 if (val.has_value()) {
                     return val.value();
@@ -325,7 +329,8 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
 
     //retrieve default package parameters
     std::vector<std::shared_ptr<HDL_parameter>> combined_params = node_parameters;
-    for (const auto &[name, param] : node_overrides) {
+    for (const auto &param : node_overrides) {
+        const auto &name = param->get_name();
         auto it = std::find_if(combined_params.begin(), combined_params.end(),
             [&](const auto &p) { return p && p->get_name() == name; });
         if (it != combined_params.end()) *it = param;
@@ -761,8 +766,8 @@ std::map<std::string, std::shared_ptr<hdl_type>> collect_override_scope_types(
         }
     }
     if (parent_node) {
-        for (const auto &[name, p] : parent_node->get_parameters()) {
-            if (p && p->is_type_param && p->get_type()) scope[name] = p->get_type();
+        for (const auto &p : parent_node->get_parameters()) {
+            if (p && p->is_type_param && p->get_type()) scope[p->get_name()] = p->get_type();
         }
     }
     if (parent_node && d_store && !parent_node->get_type().empty()) {
@@ -1181,13 +1186,12 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     for (const auto &p : spec_decls) {
         if (p) spec_by_name[p->get_name()] = p;
     }
-    auto node_overrides = work.node->get_parameters();
 
     std::vector<std::shared_ptr<HDL_parameter>> to_solve;
     for (const auto &param : spec_decls) {
         if (!param) continue;
-        if (node_overrides.contains(param->get_name())) {
-            to_solve.push_back(node_overrides.get(param->get_name()));
+        if (auto o = work.node->find_parameter(param->get_name())) {
+            to_solve.push_back(o);
         } else {
             to_solve.push_back(param);
         }
@@ -1200,7 +1204,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             progress = false;
             for (const auto &param : to_solve) {
                 const auto &p_name = param->get_name();
-                if (node_overrides.contains(p_name)) continue;
+                if (work.node->has_parameter(p_name)) continue;
                 if (deferred.contains(p_name)) continue;
                 const auto deps = param->get_dependencies();
                 bool loop_local = !deps.loop_vars.empty();
@@ -1245,13 +1249,14 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     if (parent_node) {
         auto scope_types = collect_override_scope_types(parent_node, parent_resource, d_store);
         if (!scope_types.empty()) {
-            for (auto &[override_name, param] : node_overrides) {
+            for (const auto &param : work.node->get_parameters()) {
                 annotate_override_type_queries(param->get_expression(), scope_types, d_store);
             }
         }
     }
 
-    for(auto &[override_name, param]:node_overrides) {
+    for (const auto &param : work.node->get_parameters()) {
+        const auto &override_name = param->get_name();
         auto spec_it = spec_by_name.find(override_name);
         if (spec_it != spec_by_name.end()) {
             auto spec_param = spec_it->second;
@@ -1297,7 +1302,8 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
-    for(auto &[override_name, param]:node_overrides) {
+    for (const auto &param : work.node->get_parameters()) {
+        const auto &override_name = param->get_name();
         auto p = param;
         std::optional<qualified_identifier> dtype_ref;
         if (param->is_type_param && param->get_expression()) {
@@ -1317,7 +1323,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);
             } else if (dep.get_package_prefix().empty() && dep.get_instance().empty() && spec_by_name.contains(dep.get_name())) {
                 continue;
-            } else if(!node_overrides.contains(dep.get_name())) {
+            } else if(!work.node->has_parameter(dep.get_name())) {
                 if (type_derived_bare.contains(dep.get_name())) {
                     std::vector<std::map<qualified_identifier, resolved_parameter>::const_iterator> providers;
                     for (auto it = ctx.begin(); it != ctx.end(); ++it) {

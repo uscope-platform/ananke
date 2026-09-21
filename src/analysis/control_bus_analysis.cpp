@@ -69,7 +69,8 @@ void control_bus_analysis::analize_node(const std::vector<analysis_context> &n) 
 std::vector<analysis_context> control_bus_analysis::process_interconnect(const analysis_context &inst) {
     std::vector<analysis_context> ret_val;
     auto ic = inst.node;
-    auto addr_value = ic->get_parameter_value("SLAVE_ADDR")->get_value();
+    auto slave_addr = ic->find_parameter("SLAVE_ADDR");
+    auto addr_value = slave_addr ? slave_addr->get_value() : std::nullopt;
     if (!addr_value.has_value() || !addr_value.value().is_int_array()) {
         spdlog::warn("The SLAVE_ADDR parameter for interconnect {} is not an integer array, skipping the subtree", ic->get_name());
         return ret_val;
@@ -141,10 +142,12 @@ std::vector<analysis_context> control_bus_analysis::process_nested_module(const 
 
     proxy_target tgt;
     if(inst.node->has_parameter("PRAGMA_MKFG_PROXY")){
-        if(inst.node->get_parameter_value("PRAGMA_MKFG_PROXY")->get_string_value()=="TRUE") {
-            tgt.module = inst.node->get_parameter_value("PRAGMA_MKFG_PROXY_TL")->get_string_value();
-            tgt.interface = inst.node->get_parameter_value("PRAGMA_MKFG_PROXY_IF")->get_string_value();
-
+        auto proxy = inst.node->find_parameter("PRAGMA_MKFG_PROXY");
+        if(proxy && proxy->get_string_value()=="TRUE") {
+            auto tl = inst.node->find_parameter("PRAGMA_MKFG_PROXY_TL");
+            auto iface = inst.node->find_parameter("PRAGMA_MKFG_PROXY_IF");
+            tgt.module = tl ? tl->get_string_value() : "";
+            tgt.interface = iface ? iface->get_string_value() : "";
         }
     }
     modules_array_stack.push_back(modules_array_size);
@@ -176,15 +179,15 @@ std::vector<analysis_context> control_bus_analysis::process_nested_module(const 
         breakNested:;
     }
 
-    for(auto &[item_name, item]:inst.node->get_parameters()){
-        if(item_name == "PRAGMA_MKFG_MODULE_TOP"){
-            auto top = inst.node->get_parameter_value("PRAGMA_MKFG_MODULE_TOP")->get_string_value();
+    for (const auto &item : inst.node->get_parameters()) {
+        if(item->get_name() == "PRAGMA_MKFG_MODULE_TOP"){
+            auto top = item->get_string_value();
             for(auto &node:ret_stack){
                 node.current_module_top = top;
             }
         }
-        if(item_name == "PRAGMA_MKFG_CHILD_PREFIX"){
-            auto prefix = inst.node->get_parameter_value("PRAGMA_MKFG_CHILD_PREFIX")->get_string_value();
+        if(item->get_name() == "PRAGMA_MKFG_CHILD_PREFIX"){
+            auto prefix = item->get_string_value();
             for(auto &node:ret_stack){
                 node.current_module_prefix = prefix;
             }

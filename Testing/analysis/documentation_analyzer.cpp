@@ -64,10 +64,8 @@ TEST( documentation_analyzer , simple_peripheral) {
        }
 )"};
 
-    Parameters_map params;
-
     documentation_analyzer doc(test_pattern);
-    doc.process_documentation(params);
+    doc.process_documentation();
     std::unordered_map<std::string, module_documentation> results = doc.get_modules_documentation();
 
     module_documentation check_doc;
@@ -188,10 +186,9 @@ TEST( documentation_analyzer , parametric_peripheral) {
         ]
        }
 )par";
-    Parameters_map params;
     std::vector<std::string> comm = {doc_comment};
     documentation_analyzer doc(comm);
-    doc.process_documentation(params);
+    doc.process_documentation();
     std::unordered_map<std::string, module_documentation> results = doc.get_modules_documentation();
 
     module_documentation check_doc;
@@ -264,10 +261,8 @@ TEST( documentation_analyzer , processor_doc) {
             ]
         }
 )"};
-    Parameters_map params;
-
     documentation_analyzer doc(test_pattern);
-    doc.process_documentation(params);
+    doc.process_documentation();
     std::unordered_map<std::string, processor_instance> results = doc.get_processors_documentation();
 
     processor_instance check_doc;

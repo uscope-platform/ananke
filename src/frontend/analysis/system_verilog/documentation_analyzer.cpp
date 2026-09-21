@@ -47,8 +47,7 @@ documentation_analyzer::documentation_analyzer(const std::vector<std::string> &c
 
 
 
-void documentation_analyzer::process_documentation(Parameters_map parameters) {
-    parameters_dict = std::move(parameters);
+void documentation_analyzer::process_documentation() {
     std::vector<nlohmann::json> documentation_comments;
 
     for(auto &content:raw_documentation_comments){

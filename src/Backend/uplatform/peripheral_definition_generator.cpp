@@ -76,7 +76,7 @@ peripheral_definition_generator::peripheral_definition_generator(std::shared_ptr
     peripheral_defs = periph_buffer;
 }
 
-void peripheral_definition_generator::generate_peripheral(const std::shared_ptr<hdl_resource_statement> &res, Parameters_map &parameters, const std::string& inst_name) {
+void peripheral_definition_generator::generate_peripheral(const std::shared_ptr<hdl_resource_statement> &res, const std::vector<std::shared_ptr<HDL_parameter>> &parameters, const std::string& inst_name) {
 
     nlohmann::json specs;
 
@@ -93,12 +93,15 @@ void peripheral_definition_generator::generate_peripheral(const std::shared_ptr<
     auto mod_doc = res->get_documentation();
 
     if(mod_doc.is_variant()){
-        std::string variant = parameters.get(mod_doc.get_variant_parameter())->get_string_value();
+        std::string variant;
+        for (const auto &p : parameters) {
+            if (p->get_name() == mod_doc.get_variant_parameter()) { variant = p->get_string_value(); break; }
+        }
         periph_name += "_" + variant;
         variant_peripherals[inst_name] = periph_name;
-        specs["registers"] = generate_variant_module_registers(mod_doc.get_registers(), parameters, variant);
+        specs["registers"] = generate_variant_module_registers(mod_doc.get_registers(), variant);
     }else if(mod_doc.is_parametric()) {
-        specs["registers"] = generate_parametric_module_registers(mod_doc.get_registers(), parameters);
+        specs["registers"] = generate_parametric_module_registers(mod_doc.get_registers());
     } else{
         specs["registers"] = generate_simple_module_registers(mod_doc.get_registers());
     }
@@ -132,7 +135,7 @@ peripheral_definition_generator::generate_simple_module_registers(const std::vec
 
         std::vector<nlohmann::json> fields = {};
         for(auto &item:doc.get_fields()){
-            fields.push_back(generate_field(item, {}));
+            fields.push_back(generate_field(item));
         }
         reg["fields"] = fields;
         ret.push_back(reg);
@@ -142,8 +145,7 @@ peripheral_definition_generator::generate_simple_module_registers(const std::vec
 
 std::vector<nlohmann::json>
 peripheral_definition_generator::generate_parametric_module_registers(
-        const std::vector<register_documentation> &r,
-        const Parameters_map &parameters
+        const std::vector<register_documentation> &r
 ) {
     std::vector<nlohmann::json> ret;
     for(int i = 0; i<r.size(); i++){
@@ -164,7 +166,7 @@ peripheral_definition_generator::generate_parametric_module_registers(
         std::vector<nlohmann::json> fields = {};
         for(int j = 0; j<doc.get_fields().size(); j++){
             auto item = doc.get_fields()[j];
-            auto f = generate_field(item, parameters);
+            auto f = generate_field(item);
             f["order"] = j;
             fields.push_back(f);
         }
@@ -181,7 +183,6 @@ peripheral_definition_generator::generate_parametric_module_registers(
 
 std::vector<nlohmann::json>
 peripheral_definition_generator::generate_variant_module_registers(const std::vector<register_documentation> &r,
-                                                                   const Parameters_map &parameters,
                                                                    const std::string &variant) {
     std::vector<nlohmann::json> ret;
 
@@ -205,7 +206,7 @@ peripheral_definition_generator::generate_variant_module_registers(const std::ve
             std::vector<nlohmann::json> fields = {};
             for(int j = 0; j<doc.get_fields().size(); j++){
                 auto item = doc.get_fields()[j];
-                auto f = generate_field(item, parameters);
+                auto f = generate_field(item);
                 f["order"] = j;
                 fields.push_back(f);
             }
@@ -222,7 +223,7 @@ peripheral_definition_generator::generate_variant_module_registers(const std::ve
 }
 
 
-nlohmann::json peripheral_definition_generator::generate_field(field_documentation &doc, const Parameters_map &parameters) {
+nlohmann::json peripheral_definition_generator::generate_field(field_documentation &doc) {
     nlohmann::json ret;
     ret["name"] = doc.get_name();
     ret["description"] = doc.get_description();

@@ -19,7 +19,6 @@
 
 
 #include <memory>
-#include "data_model/HDL/parameters/Parameters_map.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 #include "data_model/HDL/statement/hdl_loop_statement.hpp"
 

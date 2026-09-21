@@ -251,8 +251,8 @@ application_definition_generator::get_parameters(const json &spec, std::shared_p
     for(auto &item:spec["registers"]){
         if(item.contains("n_registers") && item["n_registers"].is_array() && !item["n_registers"].empty()){
             std::vector<std::string> parameters = item["n_registers"];
-            if(node->get_parameters().contains(parameters[0])){
-                auto val = node->get_parameter_value(parameters[0])->get_numeric_value();
+            if(node->has_parameter(parameters[0])){
+                auto val = node->find_parameter(parameters[0])->get_numeric_value();
                 if(!val.has_value()) {
                     spdlog::warn("The parameter defining the number of registers in peripheral {} is undefined, setting it to 1 out of precaution", node->get_name());
                     ret_map[parameters[0]] = 1;
@@ -265,8 +265,8 @@ application_definition_generator::get_parameters(const json &spec, std::shared_p
             for(auto &f:item["fields"]){
                 if(f.contains("n_fields") && f["n_fields"].is_array() && !f["n_fields"].empty()){
                     std::vector<std::string> parameters = f["n_fields"];
-                    if(node->get_parameters().contains(parameters[0])){
-                        auto val = node->get_parameter_value(parameters[0])->get_numeric_value();
+                    if(node->has_parameter(parameters[0])){
+                        auto val = node->find_parameter(parameters[0])->get_numeric_value();
                         if(!val.has_value()) {
                             spdlog::warn("The parameter defining the number of fields in peripheral {} is undefined, setting it to 1 out of precaution", node->get_name());
                             ret_map[parameters[0]] = 1;

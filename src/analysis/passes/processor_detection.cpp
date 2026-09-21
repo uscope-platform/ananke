@@ -24,7 +24,6 @@ processor_detection::processor_detection(const std::shared_ptr<data_store> &d) {
 void processor_detection::process_node(const std::shared_ptr<hdl_ast_node> &node) {
     if (node->get_dependency_class() == primitive) return;
     auto node_spec_opt = d_store->get_HDL_resource(node->get_type());
-    auto node_params = node->get_parameters();
     if (!node_spec_opt.has_value()) {
         spdlog::warn("Skipping processor detection for module {} that was not found in the current repository", node->get_type());
         return;
@@ -35,7 +34,11 @@ void processor_detection::process_node(const std::shared_ptr<hdl_ast_node> &node
 
         for(auto &proc:processors){
             auto addr_s = proc.get_address();
-            auto addr_vals = node_params.get(addr_s);
+            auto addr_vals = node->find_parameter(addr_s);
+            if (!addr_vals) {
+                spdlog::warn("Processor {} does not have a valid address, thus it will be omitted from the application file", proc.get_name());
+                continue;
+            }
             hdl_integer address;
 
             auto addr_value = addr_vals->get_value();

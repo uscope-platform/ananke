@@ -28,7 +28,6 @@
 #include "data_model/documentation/channel_group.hpp"
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
-#include "data_model/HDL/parameters/Parameters_map.hpp"
 
 static constexpr auto doc_comment_pattern = ctre::search<R"(/\*\*.*?\*\*/)">;
 
@@ -36,7 +35,7 @@ class documentation_analyzer {
 public:
     explicit documentation_analyzer(const std::vector<std::string> &comments);
     void set_source_path(const std::string &f_path) {path = f_path;};
-    void process_documentation(Parameters_map parameters);
+    void process_documentation();
     std::unordered_map<std::string, module_documentation> get_modules_documentation();
     std::unordered_map<std::string, processor_instance> get_processors_documentation();
     std::unordered_map<std::string, std::vector<channel_group>> get_channel_groups() const{return groups;};
@@ -51,8 +50,6 @@ private:
     void analyze_variant_peripheral(nlohmann::json &obj);
     // PROCESSORS DOCUMENTATION
     void analyze_processor_instance(nlohmann::json &obj);
-
-    Parameters_map parameters_dict;
 
     std::vector<std::string> raw_documentation_comments;
 

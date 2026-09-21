@@ -61,8 +61,7 @@ std::optional<hdl_file> sv_analyzer::analyze(const std::string &path, const std:
     documentation_analyzer doc(documentation_comments);
     doc.set_source_path(path);
 
-    Parameters_map parameters;
-    doc.process_documentation(parameters);
+    doc.process_documentation();
 
     auto modules_doc = doc.get_modules_documentation();
     for(auto &e: result.get_content()){

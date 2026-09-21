@@ -55,9 +55,10 @@ TEST(parameter_extraction, simple_function_parameter) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    Parameters_map declared_params;
-    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
-    auto param =  declared_params.get("TEST_PARAM");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : resource->get_parameter_statements())
+        if (d->get_name() == "TEST_PARAM") param = d;
+    ASSERT_NE(param, nullptr);
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -108,9 +109,10 @@ TEST(parameter_extraction, concat_in_function) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    Parameters_map declared_params;
-    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
-    auto param =  declared_params.get("TEST_PARAM");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : resource->get_parameter_statements())
+        if (d->get_name() == "TEST_PARAM") param = d;
+    ASSERT_NE(param, nullptr);
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -157,9 +159,10 @@ TEST(parameter_extraction, replication_in_function) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    Parameters_map declared_params;
-    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
-    auto param =  declared_params.get("TEST_PARAM");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : resource->get_parameter_statements())
+        if (d->get_name() == "TEST_PARAM") param = d;
+    ASSERT_NE(param, nullptr);
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -205,9 +208,10 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    Parameters_map declared_params;
-    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
-    auto param =  declared_params.get("TEST_PARAM");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : resource->get_parameter_statements())
+        if (d->get_name() == "TEST_PARAM") param = d;
+    ASSERT_NE(param, nullptr);
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -289,9 +293,10 @@ TEST(parameter_extraction, loop_function_parameter) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    Parameters_map declared_params;
-    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
-    auto param = declared_params.get("TEST_PARAM");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : resource->get_parameter_statements())
+        if (d->get_name() == "TEST_PARAM") param = d;
+    ASSERT_NE(param, nullptr);
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -352,9 +357,10 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    Parameters_map declared_params;
-    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
-    auto param = declared_params.get("TEST_PARAM");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : resource->get_parameter_statements())
+        if (d->get_name() == "TEST_PARAM") param = d;
+    ASSERT_NE(param, nullptr);
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -411,9 +417,10 @@ TEST(parameter_extraction, function_with_arguments) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    Parameters_map declared_params;
-    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
-    auto param = declared_params.get("TEST_PARAM");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : resource->get_parameter_statements())
+        if (d->get_name() == "TEST_PARAM") param = d;
+    ASSERT_NE(param, nullptr);
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -1184,10 +1191,11 @@ TEST(parameter_extraction, function_call_sites_stable_across_solves) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(
         analyzer.analyze("", test_pattern).value().get_content()[0]);
 
-    Parameters_map declared_params;
-    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
+    auto call_stmts = resource->get_parameter_statements();
     auto call_print = [&](const std::string &name) {
-        return declared_params.get(name)->get_expression()->print();
+        for (const auto &d : call_stmts)
+            if (d->get_name() == name) return d->get_expression()->print();
+        return std::string{};
     };
     const std::string y_before = call_print("Y");
     const std::string z_before = call_print("Z");
@@ -1299,9 +1307,10 @@ TEST(parameter_extraction, function_return_struct_read_leaks_into_dependencies) 
     auto mod = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[2]);
     parameter_solver::propagate_functions(mod, d_store);
 
-    Parameters_map declared_params;
-    for (const auto &p : mod->get_parameter_statements()) declared_params.insert(p);
-    auto param = declared_params.get("RESULT");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : mod->get_parameter_statements())
+        if (d->get_name() == "RESULT") param = d;
+    ASSERT_NE(param, nullptr);
     auto call = std::dynamic_pointer_cast<HDL_function_call>(param->get_expression());
     ASSERT_TRUE(call);
     ASSERT_TRUE(call->get_linked_definition());
@@ -1377,9 +1386,10 @@ TEST(parameter_extraction, function_struct_local_return_solves) {
     parameter_solver::propagate_types(mod, d_store);
     parameter_solver::propagate_functions(mod, d_store);
 
-    Parameters_map declared_params;
-    for (const auto &p : mod->get_parameter_statements()) declared_params.insert(p);
-    auto param = declared_params.get("RESULT");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : mod->get_parameter_statements())
+        if (d->get_name() == "RESULT") param = d;
+    ASSERT_NE(param, nullptr);
     for (const auto &d : param->get_dependencies().data) {
         EXPECT_NE(d.get_name(), "FETCH_WIDTH") << "leaked dep: " << d.print();
         if (!d.get_instance().empty()) {
@@ -1914,10 +1924,14 @@ TEST(parameter_extraction, cast_size_single_operand) {
     check_w.set_type(Type_engine::create_primitive_type("integer"));
     check_w.set_raw_value(top_w);
 
-    Parameters_map declared_params;
-    for (const auto &p : mod->get_parameter_statements()) declared_params.insert(p);
-    EXPECT_EQ(check_v, *declared_params.get("V"));
-    EXPECT_EQ(check_w, *declared_params.get("W"));
+    auto mod_decls = mod->get_parameter_statements();
+    auto find_decl = [&](const std::string &name) {
+        for (const auto &d : mod_decls)
+            if (d->get_name() == name) return d;
+        return std::shared_ptr<HDL_parameter>{};
+    };
+    EXPECT_EQ(check_v, *find_decl("V"));
+    EXPECT_EQ(check_w, *find_decl("W"));
 
     auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer().get_value(), 131);

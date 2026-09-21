@@ -646,7 +646,8 @@ end rtl;)";
     HDL_ast_builder_v2 b(s_store, d_store, Depfile());
     auto ast = b.build_ast(std::vector<std::string>({"top"}));
     ASSERT_EQ(ast.size(), 1u);
-    auto param = ast[0]->get_parameters().get("n");
+    auto param = ast[0]->find_parameter("n");
+    ASSERT_NE(param, nullptr);
     ASSERT_TRUE(param->get_value().has_value());
     ASSERT_EQ(param->get_value()->get_integer().get_value(), 8);
 }
@@ -676,7 +677,8 @@ endmodule)";
     HDL_ast_builder_v2 b(s_store, d_store, Depfile());
     auto ast = b.build_ast(std::vector<std::string>({"top"}));
     ASSERT_EQ(ast.size(), 1u);
-    auto param = ast[0]->get_parameters().get("N");
+    auto param = ast[0]->find_parameter("N");
+    ASSERT_NE(param, nullptr);
     ASSERT_TRUE(param->get_value().has_value());
     ASSERT_EQ(param->get_value()->get_integer().get_value(), 8);
 }
@@ -713,7 +715,8 @@ end rtl;)";
     HDL_ast_builder_v2 b(s_store, d_store, Depfile());
     auto ast = b.build_ast(std::vector<std::string>({"top"}));
     ASSERT_EQ(ast.size(), 1u);
-    auto param = ast[0]->get_parameters().get("n");
+    auto param = ast[0]->find_parameter("n");
+    ASSERT_NE(param, nullptr);
     ASSERT_TRUE(param->get_value().has_value());
     ASSERT_EQ(param->get_value()->get_integer().get_value(), 8);
 }
@@ -745,7 +748,8 @@ endmodule)";
     HDL_ast_builder_v2 b(s_store, d_store, Depfile());
     auto ast = b.build_ast(std::vector<std::string>({"top"}));
     ASSERT_EQ(ast.size(), 1u);
-    auto param = ast[0]->get_parameters().get("RESULT");
+    auto param = ast[0]->find_parameter("RESULT");
+    ASSERT_NE(param, nullptr);
     ASSERT_TRUE(param->get_value().has_value());
     ASSERT_EQ(param->get_value()->get_integer().get_value(), 42);
 }
@@ -791,7 +795,8 @@ endmodule)";
     HDL_ast_builder_v2 b(s_store, d_store, Depfile());
     auto ast = b.build_ast(std::vector<std::string>({"top"}));
     ASSERT_EQ(ast.size(), 1u);
-    auto param = ast[0]->get_parameters().get("DATA");
+    auto param = ast[0]->find_parameter("DATA");
+    ASSERT_NE(param, nullptr);
     ASSERT_TRUE(param->get_value().has_value());
     ASSERT_EQ(param->get_value()->get_integer().get_value(), 255);
 
@@ -1013,11 +1018,15 @@ endmodule
     ASSERT_EQ(child->get_name(), "i_child");
 
 
-    auto top_cfg = ast->get_parameters().get("Cfg")->get_numeric_value();
+    auto top_cfg_param = ast->find_parameter("Cfg");
+    ASSERT_NE(top_cfg_param, nullptr);
+    auto top_cfg = top_cfg_param->get_numeric_value();
     ASSERT_TRUE(top_cfg.has_value());
     EXPECT_EQ(top_cfg->get_value(), 1000);
 
-    auto child_cfg = child->get_parameters().get("Cfg")->get_numeric_value();
+    auto child_cfg_param = child->find_parameter("Cfg");
+    ASSERT_NE(child_cfg_param, nullptr);
+    auto child_cfg = child_cfg_param->get_numeric_value();
     ASSERT_TRUE(child_cfg.has_value());
     EXPECT_EQ(child_cfg->get_value(), 1000);
 }
@@ -1058,7 +1067,9 @@ endmodule
     ASSERT_EQ(btb->get_name(), "i_btb");
 
     // struct { valid + 8-bit target } = 9 bits
-    auto w = btb->get_parameters().get("BRAM_WORD_BITS")->get_numeric_value();
+    auto w_param = btb->find_parameter("BRAM_WORD_BITS");
+    ASSERT_NE(w_param, nullptr);
+    auto w = w_param->get_numeric_value();
     ASSERT_TRUE(w.has_value());
     EXPECT_EQ(w->get_value(), 9);
 }
@@ -1096,7 +1107,9 @@ TEST(hdl_ast_builder, signing_cast_in_generate_loop_condition) {
     std::vector<int64_t> seen_idx;
     for (auto &d : ast->get_dependencies()) {
         if (d->get_type() != "gen_item") continue;
-        auto idx = d->get_parameters().get("IDX")->get_numeric_value();
+        auto idx_param = d->find_parameter("IDX");
+        ASSERT_NE(idx_param, nullptr);
+        auto idx = idx_param->get_numeric_value();
         ASSERT_TRUE(idx.has_value());
         seen_idx.push_back(idx->get_value());
     }
@@ -1158,7 +1171,9 @@ endmodule
         EXPECT_EQ(logs.count("requires at least one argument"), 0u) << phase;
         EXPECT_EQ(logs.count("could not be resolved"), 0u) << phase;
 
-        auto w = ast->get_parameters().get("BRAM_WORD_BITS")->get_numeric_value();
+        auto w_param = ast->find_parameter("BRAM_WORD_BITS");
+    ASSERT_NE(w_param, nullptr);
+    auto w = w_param->get_numeric_value();
         ASSERT_TRUE(w.has_value()) << phase;
         EXPECT_EQ(w->get_value(), 9) << phase;
     };
@@ -1251,7 +1266,9 @@ endmodule)";
     ASSERT_EQ(mux->get_name(), "pma_mux_i");
 
     // struct { uncacheable + io + 3-bit hint } = 5 bits
-    auto w = mux->get_parameters().get("DATA_WIDTH")->get_numeric_value();
+    auto w_param = mux->find_parameter("DATA_WIDTH");
+    ASSERT_NE(w_param, nullptr);
+    auto w = w_param->get_numeric_value();
     ASSERT_TRUE(w.has_value());
     EXPECT_EQ(w->get_value(), 5);
 }
@@ -1295,7 +1312,9 @@ endmodule
     ASSERT_EQ(fifo->get_name(), "i_fifo");
 
     // struct { 32-bit instr + 1-bit cf_valid } = 33 bits (pre-fix: 0)
-    auto w = fifo->get_parameters().get("DTYPE_WIDTH")->get_numeric_value();
+    auto w_param = fifo->find_parameter("DTYPE_WIDTH");
+    ASSERT_NE(w_param, nullptr);
+    auto w = w_param->get_numeric_value();
     ASSERT_TRUE(w.has_value());
     EXPECT_EQ(w->get_value(), 33);
 }
@@ -1335,7 +1354,9 @@ endmodule
     ASSERT_EQ(child->get_name(), "i_child");
 
     // struct { 1-bit vld + 16-bit data } = 17 bits (pre-fix: 0)
-    auto w = child->get_parameters().get("W")->get_numeric_value();
+    auto w_param = child->find_parameter("W");
+    ASSERT_NE(w_param, nullptr);
+    auto w = w_param->get_numeric_value();
     ASSERT_TRUE(w.has_value());
     EXPECT_EQ(w->get_value(), 17);
 }
@@ -1362,8 +1383,8 @@ endmodule
     log_capture logs;
     auto ast = b.build_ast(std::vector<std::string>{"buf_mini"})[0];
     EXPECT_EQ(logs.count("can't be solved"), 0u);
-    EXPECT_FALSE(ast->get_parameters().contains("reg_n"));
-    EXPECT_FALSE(ast->get_parameters().contains("reg_q"));
+    EXPECT_FALSE(ast->has_parameter("reg_n"));
+    EXPECT_FALSE(ast->has_parameter("reg_q"));
 }
 
 TEST(hdl_ast_builder, loop_var_token_in_generate_override) {
@@ -1390,7 +1411,9 @@ endmodule
     std::vector<int64_t> seen;
     for (auto &d : ast->get_dependencies()) {
         if (d->get_type() != "leaf") continue;
-        seen.push_back(d->get_parameters().get("P")->get_numeric_value()->get_value());
+        auto seen_param = d->find_parameter("P");
+        ASSERT_NE(seen_param, nullptr);
+        seen.push_back(seen_param->get_numeric_value()->get_value());
     }
     std::sort(seen.begin(), seen.end());
     EXPECT_EQ(seen, (std::vector<int64_t>{1, 2, 3, 4}));
@@ -1423,7 +1446,9 @@ endmodule
     std::vector<int64_t> seen;
     for (auto &d : ast->get_dependencies()) {
         if (d->get_type() != "leaf2") continue;
-        seen.push_back(d->get_parameters().get("P")->get_numeric_value()->get_value());
+        auto seen_param = d->find_parameter("P");
+        ASSERT_NE(seen_param, nullptr);
+        seen.push_back(seen_param->get_numeric_value()->get_value());
     }
     std::sort(seen.begin(), seen.end());
     EXPECT_EQ(seen, (std::vector<int64_t>{1, 2, 10}));

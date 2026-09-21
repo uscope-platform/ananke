@@ -15,6 +15,7 @@
 
 
 #include "analysis/loop_solver.hpp"
+#include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 #include <spdlog/spdlog.h>
 

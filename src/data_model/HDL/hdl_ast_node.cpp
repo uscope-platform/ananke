@@ -28,7 +28,7 @@ hdl_ast_node::hdl_ast_node(const hdl_instance_statement &stmt) {
     array_quantifier = stmt.get_array_quantifier();
 
     for (const auto &param : stmt.get_parameters()) {
-        parameters.insert(param);
+        parameters.push_back(param);
     }
     for (const auto& [port_name, nets] : stmt.get_ports()) {
         ports_map[port_name] = nets;
@@ -65,15 +65,29 @@ void hdl_ast_node::add_port_connection(const std::string& port_name, std::vector
 }
 
 void hdl_ast_node::add_parameter(const std::shared_ptr<HDL_parameter> &p) {
-    parameters.insert(p);
+    for (auto &e : parameters) {
+        if (e->get_name() == p->get_name()) { e = p; return; }
+    }
+    parameters.push_back(p);
 }
 
-void hdl_ast_node::set_parameters(Parameters_map &p) {
-    parameters = std::move(p);
+void hdl_ast_node::set_parameters(const std::vector<std::shared_ptr<HDL_parameter>> &p) {
+    parameters = p;
 }
 
-Parameters_map hdl_ast_node::get_parameters() {
+const std::vector<std::shared_ptr<HDL_parameter>> &hdl_ast_node::get_parameters() const {
     return parameters;
+}
+
+std::shared_ptr<HDL_parameter> hdl_ast_node::find_parameter(const std::string &s) const {
+    for (const auto &e : parameters) {
+        if (e->get_name() == s) return e;
+    }
+    return nullptr;
+}
+
+bool hdl_ast_node::has_parameter(const std::string &s) const {
+    return find_parameter(s) != nullptr;
 }
 
 bool operator==(const hdl_ast_node &lhs, const hdl_ast_node &rhs) {
@@ -84,7 +98,12 @@ bool operator==(const hdl_ast_node &lhs, const hdl_ast_node &rhs) {
     ret &= lhs.architecture == rhs.architecture;
     ret &= lhs.dep_class == rhs.dep_class;
     ret &= lhs.ports_map == rhs.ports_map;
-    ret &= lhs.parameters == rhs.parameters;
+    if (lhs.parameters.size() != rhs.parameters.size()) return false;
+    for (size_t i = 0; i < lhs.parameters.size(); i++) {
+        const auto &l = lhs.parameters[i];
+        const auto &r = rhs.parameters[i];
+        ret &= (!l && !r) || (l && r && *l == *r);
+    }
     ret &= lhs.wildcard_assignment == rhs.wildcard_assignment;
     ret &= lhs.groups == rhs.groups;
 
@@ -124,8 +143,8 @@ nlohmann::json hdl_ast_node::dump() {
     ret["ports_map"] = port_map_dump;
 
     std::map<std::string, nlohmann::json> params_vect;
-    for(auto &[n, param] : parameters) {
-        params_vect.insert({n, param->dump()});
+    for (const auto &param : parameters) {
+        params_vect.insert({param->get_name(), param->dump()});
     }
     ret["parameters"] = params_vect;
 

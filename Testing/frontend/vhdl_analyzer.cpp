@@ -109,9 +109,9 @@ std::shared_ptr<Expression_v2> make_binary(Expression_v2::expression_operator op
 int64_t eval_generic(const std::string &decl_body, const std::string &gname) {
     std::string pattern = "entity top is\n    generic ( " + decl_body + " );\nend top;\n";
     auto res = parse_first_entity(pattern);
-    Parameters_map declared_params;
-    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
-    auto param = declared_params.get(gname);
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &pp : res->get_parameter_statements())
+        if (pp->get_name() == gname) param = pp;
     if (!param) return -999999;
     std::map<qualified_identifier, resolved_parameter> ctx;
     auto val = param->evaluate(ctx);
@@ -391,9 +391,10 @@ end top;
 )";
 
     auto res = parse_first_entity(test_pattern);
-    Parameters_map declared_params;
-    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
-    auto param = declared_params.get("width");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &pp : res->get_parameter_statements())
+        if (pp->get_name() == "width") param = pp;
+    ASSERT_NE(param, nullptr);
     ASSERT_NE(param, nullptr);
 
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -417,9 +418,10 @@ end top;
 )";
 
     auto res = parse_first_entity(test_pattern);
-    Parameters_map declared_params;
-    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
-    auto param = declared_params.get("n");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &pp : res->get_parameter_statements())
+        if (pp->get_name() == "n") param = pp;
+    ASSERT_NE(param, nullptr);
     ASSERT_NE(param, nullptr);
 
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -542,9 +544,9 @@ TEST(vhdl_analyzer, aggregate_not_confused_with_parenthesized_expr) {
 double eval_generic_double(const std::string &decl_body, const std::string &gname) {
     std::string pattern = "entity top is\n    generic ( " + decl_body + " );\nend top;\n";
     auto res = parse_first_entity(pattern);
-    Parameters_map declared_params;
-    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
-    auto param = declared_params.get(gname);
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &pp : res->get_parameter_statements())
+        if (pp->get_name() == gname) param = pp;
     if (!param) return -999999.0;
     std::map<qualified_identifier, resolved_parameter> ctx;
     auto val = param->evaluate(ctx);
@@ -578,9 +580,10 @@ entity top is
 end top;
 )";
     auto res = parse_first_entity(test_pattern);
-    Parameters_map declared_params;
-    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
-    auto param = declared_params.get("w");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &pp : res->get_parameter_statements())
+        if (pp->get_name() == "w") param = pp;
+    ASSERT_NE(param, nullptr);
     ASSERT_NE(param, nullptr);
     std::map<qualified_identifier, resolved_parameter> ctx;
     ctx[qualified_identifier("n")] = resolved_parameter(8);
@@ -592,9 +595,10 @@ end top;
 
 TEST(vhdl_analyzer, builtin_function_unknown_does_not_crash) {
     auto res = parse_first_entity("entity top is\n    generic ( V : integer := foo(3) );\nend top;\n");
-    Parameters_map declared_params;
-    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
-    auto param = declared_params.get("v");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &pp : res->get_parameter_statements())
+        if (pp->get_name() == "v") param = pp;
+    ASSERT_NE(param, nullptr);
     ASSERT_NE(param, nullptr);
 }
 
@@ -648,9 +652,9 @@ namespace {
     std::shared_ptr<hdl_type> generic_type(const std::string &decl_body, const std::string &gname) {
         std::string pattern = "entity top is\n    generic ( " + decl_body + " );\nend top;\n";
         auto res = parse_first_entity(pattern);
-        Parameters_map declared_params;
-        for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
-        auto param = declared_params.get(gname);
+        std::shared_ptr<HDL_parameter> param;
+        for (const auto &pp : res->get_parameter_statements())
+            if (pp->get_name() == gname) param = pp;
         if (!param) return nullptr;
         return param->get_type();
     }
@@ -712,9 +716,10 @@ entity top is
 end top;
 )";
     auto res = parse_first_entity(test_pattern);
-    Parameters_map declared_params;
-    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
-    auto param = declared_params.get("v");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &pp : res->get_parameter_statements())
+        if (pp->get_name() == "v") param = pp;
+    ASSERT_NE(param, nullptr);
     ASSERT_NE(param, nullptr);
 
     auto bound = make_binary(Expression_v2::subtract,

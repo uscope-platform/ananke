@@ -48,11 +48,10 @@ TEST(parameter_extraction, struct_typed_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    Parameters_map parameters;
-    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
-    ASSERT_TRUE(parameters.contains("struct_param"));
-
-    auto p = parameters.get("struct_param");
+    std::shared_ptr<HDL_parameter> p;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "struct_param") p = d;
+    ASSERT_NE(p, nullptr);
     HDL_struct_type check_struct;
     check_struct.packed = true;
     struct_member m;
@@ -104,11 +103,10 @@ TEST(parameter_extraction, nested_struct_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    Parameters_map parameters;
-    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
-    ASSERT_TRUE(parameters.contains("struct_param"));
-
-    auto p = parameters.get("struct_param");
+    std::shared_ptr<HDL_parameter> p;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "struct_param") p = d;
+    ASSERT_NE(p, nullptr);
 
 
     ASSERT_TRUE(p->get_type()->is<HDL_struct_type>());
@@ -198,11 +196,10 @@ TEST(parameter_extraction, inline_nested_struct_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    Parameters_map parameters;
-    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
-    ASSERT_TRUE(parameters.contains("struct_param"));
-
-    auto p = parameters.get("struct_param");
+    std::shared_ptr<HDL_parameter> p;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "struct_param") p = d;
+    ASSERT_NE(p, nullptr);
 
     HDL_struct_type inner_check;
     inner_check.packed = true;
@@ -290,11 +287,10 @@ TEST(parameter_extraction, struct_unpacked_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    Parameters_map parameters;
-    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
-    ASSERT_TRUE(parameters.contains("struct_param"));
-
-    auto p = parameters.get("struct_param");
+    std::shared_ptr<HDL_parameter> p;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "struct_param") p = d;
+    ASSERT_NE(p, nullptr);
     HDL_struct_type check_struct;
     struct_member m;
     m.name = "field_a";
@@ -433,11 +429,10 @@ TEST(parameter_extraction, anonymous_packed_struct_typed_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    Parameters_map parameters;
-    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
-    ASSERT_TRUE(parameters.contains("anon_struct"));
-
-    auto p = parameters.get("anon_struct");
+    std::shared_ptr<HDL_parameter> p;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "anon_struct") p = d;
+    ASSERT_NE(p, nullptr);
     ASSERT_TRUE(p->get_type()->is<HDL_struct_type>());
     auto &st = p->get_type()->as<HDL_struct_type>();
     EXPECT_TRUE(st.packed);
@@ -471,11 +466,10 @@ TEST(parameter_extraction, anonymous_unpacked_struct_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    Parameters_map parameters;
-    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
-    ASSERT_TRUE(parameters.contains("anon_struct"));
-
-    auto p = parameters.get("anon_struct");
+    std::shared_ptr<HDL_parameter> p;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "anon_struct") p = d;
+    ASSERT_NE(p, nullptr);
     ASSERT_TRUE(p->get_type()->is<HDL_struct_type>());
     auto &st = p->get_type()->as<HDL_struct_type>();
     EXPECT_FALSE(st.packed);
@@ -583,14 +577,17 @@ TEST(parameter_extraction, package_union_parameter) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto params = ast_v2->get_parameters();
-    ASSERT_TRUE(params.contains("DEFAULT_VAL"));
-    auto val = params.get("DEFAULT_VAL")->get_numeric_value();
+    ASSERT_TRUE(ast_v2->has_parameter("DEFAULT_VAL"));
+    auto val_param = ast_v2->find_parameter("DEFAULT_VAL");
+    ASSERT_NE(val_param, nullptr);
+    auto val = val_param->get_numeric_value();
     ASSERT_TRUE(val.has_value());
     EXPECT_EQ(val.value().get_value(), 0xABCD);
 
-    ASSERT_TRUE(params.contains("test_field_access"));
-    auto field_val = params.get("test_field_access")->get_numeric_value();
+    ASSERT_TRUE(ast_v2->has_parameter("test_field_access"));
+    auto field_param = ast_v2->find_parameter("test_field_access");
+    ASSERT_NE(field_param, nullptr);
+    auto field_val = field_param->get_numeric_value();
     ASSERT_TRUE(field_val.has_value());
     EXPECT_EQ(field_val.value().get_value(), 0xAB);
 }
@@ -1020,12 +1017,15 @@ endmodule
     d_store->store_file({"/dev/zero", "file_hash", file});
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
-    auto params = ast_v2->get_parameters();
 
-    ASSERT_TRUE(params.contains("M_IDX"));
-    EXPECT_EQ(params.get("M_IDX")->get_numeric_value(), 3);
-    ASSERT_TRUE(params.contains("P_IDX"));
-    EXPECT_EQ(params.get("P_IDX")->get_numeric_value(), 3);
+    ASSERT_TRUE(ast_v2->has_parameter("M_IDX"));
+    auto midx_param = ast_v2->find_parameter("M_IDX");
+    ASSERT_NE(midx_param, nullptr);
+    EXPECT_EQ(midx_param->get_numeric_value(), 3);
+    ASSERT_TRUE(ast_v2->has_parameter("P_IDX"));
+    auto pidx_param = ast_v2->find_parameter("P_IDX");
+    ASSERT_NE(pidx_param, nullptr);
+    EXPECT_EQ(pidx_param->get_numeric_value(), 3);
 }
 
 TEST(parameter_extraction, function_nested_call_arithmetic) {
@@ -1065,12 +1065,15 @@ endmodule
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
-    auto params = ast_v2->get_parameters();
 
-    ASSERT_TRUE(params.contains("B_MUL"));
-    EXPECT_EQ(params.get("B_MUL")->get_numeric_value(), 110);
-    ASSERT_TRUE(params.contains("B_ADD"));
-    EXPECT_EQ(params.get("B_ADD")->get_numeric_value(), 19);
+    ASSERT_TRUE(ast_v2->has_parameter("B_MUL"));
+    auto bmul_param = ast_v2->find_parameter("B_MUL");
+    ASSERT_NE(bmul_param, nullptr);
+    EXPECT_EQ(bmul_param->get_numeric_value(), 110);
+    ASSERT_TRUE(ast_v2->has_parameter("B_ADD"));
+    auto badd_param = ast_v2->find_parameter("B_ADD");
+    ASSERT_NE(badd_param, nullptr);
+    EXPECT_EQ(badd_param->get_numeric_value(), 19);
 }
 
 TEST(parameter_extraction, struct_array_element_field_read) {
@@ -1099,14 +1102,17 @@ endmodule
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
-    auto params = ast_v2->get_parameters();
 
-    ASSERT_TRUE(params.contains("W"));
-    ASSERT_TRUE(params.get("W")->get_numeric_value().has_value());
-    EXPECT_EQ(params.get("W")->get_numeric_value().value().get_value(), 11);
-    ASSERT_TRUE(params.contains("M"));
-    ASSERT_TRUE(params.get("M")->get_numeric_value().has_value());
-    EXPECT_EQ(params.get("M")->get_numeric_value().value().get_value(), 23);
+    ASSERT_TRUE(ast_v2->has_parameter("W"));
+    auto w_param = ast_v2->find_parameter("W");
+    ASSERT_NE(w_param, nullptr);
+    ASSERT_TRUE(w_param->get_numeric_value().has_value());
+    EXPECT_EQ(w_param->get_numeric_value().value().get_value(), 11);
+    ASSERT_TRUE(ast_v2->has_parameter("M"));
+    auto m_param = ast_v2->find_parameter("M");
+    ASSERT_NE(m_param, nullptr);
+    ASSERT_TRUE(m_param->get_numeric_value().has_value());
+    EXPECT_EQ(m_param->get_numeric_value().value().get_value(), 23);
 }
 
 TEST(parameter_extraction, nested_generate_loops) {
@@ -1136,8 +1142,9 @@ endmodule
     ASSERT_EQ(deps.size(), 4);
     std::vector<int64_t> expected = {10, 11, 20, 21};
     for (size_t k = 0; k < expected.size(); ++k) {
-        auto lp = deps[k]->get_parameters();
-        EXPECT_EQ(lp.get("V")->get_numeric_value(), expected[k]) << "instance " << k;
+        auto lp = deps[k]->find_parameter("V");
+        ASSERT_NE(lp, nullptr) << "instance " << k;
+        EXPECT_EQ(lp->get_numeric_value(), expected[k]) << "instance " << k;
     }
 }
 
@@ -1171,15 +1178,17 @@ endmodule
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto params = ast_v2->get_parameters();
-    ASSERT_TRUE(params.contains("P"));
-    EXPECT_EQ(params.get("P")->get_numeric_value(), 6);
+    ASSERT_TRUE(ast_v2->has_parameter("P"));
+    auto p_param = ast_v2->find_parameter("P");
+    ASSERT_NE(p_param, nullptr);
+    EXPECT_EQ(p_param->get_numeric_value(), 6);
 
     auto deps = ast_v2->get_dependencies();
     ASSERT_EQ(deps.size(), 2);
     std::vector<int64_t> expected_q = {0, 100};
     for (size_t i = 0; i < expected_q.size(); ++i) {
-        auto lp = deps[i]->get_parameters();
-        EXPECT_EQ(lp.get("V")->get_numeric_value(), expected_q[i]) << "instance " << i;
+        auto lp = deps[i]->find_parameter("V");
+        ASSERT_NE(lp, nullptr) << "instance " << i;
+        EXPECT_EQ(lp->get_numeric_value(), expected_q[i]) << "instance " << i;
     }
 }

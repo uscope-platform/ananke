@@ -25,7 +25,6 @@
 
 #include "data_model/HDL/HDL_definitions.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
-#include "data_model/HDL/parameters/Parameters_map.hpp"
 #include "data_model/HDL/HDL_net.hpp"
 #include "data_model/documentation/channel_group.hpp"
 #include "data_model/documentation/processor_instance.hpp"
@@ -55,10 +54,10 @@ public:
 
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);
 
-    void set_parameters(Parameters_map &p);
-    Parameters_map get_parameters();
-    bool has_parameter(const std::string &s) { return parameters.contains(s); }
-    std::shared_ptr<HDL_parameter> get_parameter_value(const std::string& parameter_name) { return parameters.get(parameter_name); }
+    void set_parameters(const std::vector<std::shared_ptr<HDL_parameter>> &p);
+    const std::vector<std::shared_ptr<HDL_parameter>> &get_parameters() const;
+    std::shared_ptr<HDL_parameter> find_parameter(const std::string &s) const;
+    bool has_parameter(const std::string &s) const;
 
     std::string get_name() const { return name; }
     void set_name(const std::string &n) { name = n; }
@@ -146,7 +145,7 @@ std::string name;
     std::string architecture;
     bool active = true;
     dependency_class dep_class = module;
-    Parameters_map parameters;
+    std::vector<std::shared_ptr<HDL_parameter>> parameters;
     std::unordered_map<std::string, std::vector<HDL_net>> ports_map;
     bool wildcard_assignment = false;
     std::vector<channel_group> groups;

@@ -33,20 +33,20 @@ TEST( analysis_test , package) {
     
     auto resource = analyzer.analyze("", test_file.view()).value() .get_content()[0]->as<hdl_resource_statement>();
 
-    Parameters_map check_map;
+    std::vector<std::shared_ptr<HDL_parameter>> check_map;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("bus_base");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     Expression_v2 e;
     p->set_raw_value(std::make_shared<Numeric_token>("32'h43c00000"));
-    check_map.insert(p);
+    check_map.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("timebase");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("bus_base")));
-    check_map.insert(p);
+    check_map.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("gpio");
@@ -66,19 +66,19 @@ TEST( analysis_test , package) {
     e.set_rhs(std::make_shared<Numeric_token>("1"));
     e.set_operation(Expression_v2::add);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_map.insert(p);
+    check_map.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("scope_mux");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("gpio")));
-    check_map.insert(p);
+    check_map.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("out_of_order");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Identifier_token>(qualified_identifier("scope_mux")));
-    check_map.insert(p);
+    check_map.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("modulo_parameter");
@@ -87,7 +87,7 @@ TEST( analysis_test , package) {
     e.set_rhs(std::make_shared<Numeric_token>("2"));
     e.set_operation(Expression_v2::modulo);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_map.insert(p);
+    check_map.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("subtraction_parameter");
@@ -96,13 +96,12 @@ TEST( analysis_test , package) {
     e.set_rhs(std::make_shared<Numeric_token>("'b10"));
     e.set_operation(Expression_v2::subtract);
     p->set_raw_value(std::make_shared<Expression_v2>(e));
-    check_map.insert(p);
+    check_map.push_back(p);
 
     auto parameters = resource.get_parameter_statements();
     ASSERT_EQ(check_map.size(), parameters.size());
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_map.contains(p->get_name()));
-        ASSERT_EQ(*check_map.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_map.size(); ++i) {
+        ASSERT_EQ(*check_map[i], *parameters[i]);
     }
 
 }
@@ -280,9 +279,6 @@ TEST(analysis_test, port_concat_assignment) {
     sv_analyzer analyzer;
     
     auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    Parameters_map parameters;
-    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
-
     auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
     ASSERT_NE(stmt, nullptr);
 
@@ -310,9 +306,6 @@ TEST(analysis_test, interfaces_array) {
     sv_analyzer analyzer;
     
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    Parameters_map parameters;
-    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
-
     auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
     ASSERT_NE(stmt, nullptr);
 

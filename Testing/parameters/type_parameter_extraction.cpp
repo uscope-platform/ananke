@@ -33,17 +33,16 @@ TEST(type_parameter_extraction, with_default) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("T");
     p->is_type_param = true;
     p->set_type(Type_engine::create_primitive_type("int"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 }
 
@@ -58,16 +57,15 @@ TEST(type_parameter_extraction, no_default) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("T");
     p->is_type_param = true;
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 }
 
@@ -82,17 +80,16 @@ TEST(type_parameter_extraction, unsigned_type) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("B");
     p->is_type_param = true;
     p->set_type(Type_engine::create_primitive_type("bit"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 }
 
@@ -106,17 +103,16 @@ TEST(type_parameter_extraction, localparam_type) {
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
     auto parameters = resource.get_parameter_statements();
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("U");
     p->is_type_param = true;
     p->set_type(Type_engine::create_primitive_type("int"));
-    check_params.insert(p);
+    check_params.push_back(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
-    for (const auto &p : parameters) {
-        ASSERT_TRUE(check_params.contains(p->get_name()));
-        ASSERT_EQ(*check_params.get(p->get_name()), *p);
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 }
 
@@ -230,9 +226,10 @@ TEST(type_parameter_extraction, override_type_param) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"parent"}))[0];
 
-    auto child_params = ast_v2->get_dependencies()[0]->get_parameters();
-    ASSERT_TRUE(child_params.contains("T"));
-    auto t = child_params.get("T");
+    auto child = ast_v2->get_dependencies()[0];
+    ASSERT_TRUE(child->has_parameter("T"));
+    auto t = child->find_parameter("T");
+    ASSERT_NE(t, nullptr);
     ASSERT_TRUE(t->is_type_param);
     ASSERT_TRUE(t->get_type() != nullptr);
     EXPECT_TRUE(t->get_type()->is<HDL_simple_type>());
@@ -261,11 +258,15 @@ TEST(type_parameter_extraction, override_recomputes_dependent_param) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"parent"}))[0];
 
-    auto child_params = ast_v2->get_dependencies()[0]->get_parameters();
-    ASSERT_TRUE(child_params.contains("T"));
-    ASSERT_TRUE(child_params.get("T")->is_type_param);
-    ASSERT_TRUE(child_params.contains("W"));
-    EXPECT_EQ(child_params.get("W")->get_numeric_value(), 16);
+    auto child = ast_v2->get_dependencies()[0];
+    ASSERT_TRUE(child->has_parameter("T"));
+    auto t_param = child->find_parameter("T");
+    ASSERT_NE(t_param, nullptr);
+    ASSERT_TRUE(t_param->is_type_param);
+    ASSERT_TRUE(child->has_parameter("W"));
+    auto w_param = child->find_parameter("W");
+    ASSERT_NE(w_param, nullptr);
+    EXPECT_EQ(w_param->get_numeric_value(), 16);
 }
 
 TEST(type_parameter_extraction, used_in_port_declaration) {
@@ -281,11 +282,11 @@ TEST(type_parameter_extraction, used_in_port_declaration) {
     sv_analyzer analyzer;
     auto resources = analyzer.analyze("", test_pattern).value();
     auto resource = resources.get_content()[0]->as<hdl_resource_statement>();
-    Parameters_map params;
-    for (const auto &p : resource.get_parameter_statements()) params.insert(p);
     // THis test mainly verifies that using a parametrized type on a port does not crash the program
-    ASSERT_TRUE(params.contains("T"));
-    auto t = params.get("T");
+    std::shared_ptr<HDL_parameter> t;
+    for (const auto &d : resource.get_parameter_statements())
+        if (d->get_name() == "T") t = d;
+    ASSERT_NE(t, nullptr);
     ASSERT_TRUE(t->is_type_param);
     EXPECT_TRUE(t->get_type()->is<HDL_simple_type>());
     EXPECT_TRUE(t->get_type()->as<HDL_simple_type>().get_signed());

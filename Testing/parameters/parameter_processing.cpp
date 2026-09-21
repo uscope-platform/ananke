@@ -80,9 +80,9 @@ TEST(parameter_processing, override_after_fatal) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_module"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
-    ASSERT_TRUE(dependency_parameters.contains("PARAM_1"));
-    EXPECT_EQ(dependency_parameters.get("PARAM_1")->get_numeric_value(), 256);
+    auto dep = ast_v2->get_dependencies()[0];
+    ASSERT_TRUE(dep->has_parameter("PARAM_1"));
+    EXPECT_EQ(dep->find_parameter("PARAM_1")->get_numeric_value(),  256);
 }
 
 
@@ -122,9 +122,9 @@ TEST(parameter_processing, mixed_dep_override) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
-    ASSERT_TRUE(dependency_parameters.contains("OPT_NONESEL"));
-    EXPECT_EQ(dependency_parameters.get("OPT_NONESEL")->get_numeric_value(), 1);
+    auto dep = ast_v2->get_dependencies()[0];
+    ASSERT_TRUE(dep->has_parameter("OPT_NONESEL"));
+    EXPECT_EQ(dep->find_parameter("OPT_NONESEL")->get_numeric_value(),  1);
 }
 
 
@@ -230,9 +230,11 @@ TEST(parameter_processing, replication_after_cast_in_assignment_pattern) {
     auto& pkg = resources[0]->as<hdl_resource_statement>();
 
     std::vector<std::shared_ptr<Expression_base>> stack;
-    Parameters_map declared_params;
-    for (const auto &p : pkg.get_parameter_statements()) declared_params.insert(p);
-    stack.push_back(declared_params.get("c")->get_expression());
+    std::shared_ptr<HDL_parameter> c_param;
+    for (const auto &d : pkg.get_parameter_statements())
+        if (d->get_name() == "c") c_param = d;
+    ASSERT_NE(c_param, nullptr);
+    stack.push_back(c_param->get_expression());
     while (!stack.empty()) {
         auto node = stack.back();
         stack.pop_back();
@@ -334,9 +336,9 @@ TEST(parameter_processing, array_instance_parameter_override) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
+    auto dep = ast_v2->get_dependencies()[0];
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
 
     auto p = std::make_shared<HDL_parameter>();
     p->set_name("param_1");
@@ -344,7 +346,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     p->set_raw_value(std::make_shared<Numeric_token>(4, 0));
     p->set_value(4);
 
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     mdarray<hdl_integer> av;
@@ -362,7 +364,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     });
     p->set_type(std::make_shared<HDL_simple_type>(t));
     p->set_value(av);
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("param_3");
@@ -376,7 +378,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     e1.set_operation(Expression_v2::multiply);
     p->set_raw_value(std::make_shared<Expression_v2>(e1));
     p->set_value(11);
-    check_params.insert(p);
+    check_params.push_back(p);
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("p1_t");
@@ -385,7 +387,7 @@ TEST(parameter_processing, array_instance_parameter_override) {
     tk2.add_array_index(std::make_shared<Numeric_token>(0, 1));
     p->set_raw_value(std::make_shared<Numeric_token>(tk));
     p->set_value(9);
-    check_params.insert(p);
+    check_params.push_back(p);
 
 
     p = std::make_shared<HDL_parameter>();
@@ -395,13 +397,12 @@ TEST(parameter_processing, array_instance_parameter_override) {
     tk2.add_array_index(std::make_shared<Numeric_token>(1, 1));
     p->set_raw_value(std::make_shared<Identifier_token>(tk2));
     p->set_value(8);
-    check_params.insert(p);
+    check_params.push_back(p);
 
-    ASSERT_EQ(check_params.size(), dependency_parameters.size());
+    ASSERT_EQ(check_params.size(), dep->get_parameters().size());
 
-    for(const auto& [name, item]:check_params){
-        ASSERT_TRUE(dependency_parameters.contains(name));
-        ASSERT_EQ(*item, *dependency_parameters.get(name));
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *dep->get_parameters()[i]);
     }
 
 }
@@ -439,9 +440,11 @@ TEST(parameter_processing, packed_array_initialization_expression_override) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
+    auto dep = ast_v2->get_dependencies()[0];
 
-    auto array_val = dependency_parameters.get("TRIGGER_REGISTERS_IDX")->get_int_array_value();
+    auto array_param = dep->find_parameter("TRIGGER_REGISTERS_IDX");
+    ASSERT_NE(array_param, nullptr);
+    auto array_val = array_param->get_int_array_value();
     ASSERT_TRUE(array_val.has_value());
     ASSERT_EQ(array_val.value().get_value({0,0,0}), 5);
 
@@ -490,9 +493,15 @@ TEST(parameter_processing, simple_for_array_parameter) {
     auto deps = ast_v2->get_dependencies();
 
     ASSERT_EQ(deps.size(), 3);
-    ASSERT_EQ(deps[0]->get_parameters().get("N_TRIGGER_REGISTERS")->get_numeric_value(), 4);
-    ASSERT_EQ(deps[1]->get_parameters().get("N_TRIGGER_REGISTERS")->get_numeric_value(), 2);
-    ASSERT_EQ(deps[2]->get_parameters().get("N_TRIGGER_REGISTERS")->get_numeric_value(), 6);
+    auto trig0 = deps[0]->find_parameter("N_TRIGGER_REGISTERS");
+    auto trig1 = deps[1]->find_parameter("N_TRIGGER_REGISTERS");
+    auto trig2 = deps[2]->find_parameter("N_TRIGGER_REGISTERS");
+    ASSERT_NE(trig0, nullptr);
+    ASSERT_NE(trig1, nullptr);
+    ASSERT_NE(trig2, nullptr);
+    ASSERT_EQ(trig0->get_numeric_value(), 4);
+    ASSERT_EQ(trig1->get_numeric_value(), 2);
+    ASSERT_EQ(trig2->get_numeric_value(), 6);
 
 }
 
@@ -536,11 +545,16 @@ TEST(parameter_processing, complex_for_array_parameter) {
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
     auto deps = ast_v2->get_dependencies();
 
-    auto a = deps[0]->get_parameters().get("N_TRIGGER_REGISTERS")->get_numeric_value();
     ASSERT_EQ(deps.size(), 3);
-    ASSERT_EQ(deps[0]->get_parameters().get("N_TRIGGER_REGISTERS")->get_numeric_value(), 6);
-    ASSERT_EQ(deps[1]->get_parameters().get("N_TRIGGER_REGISTERS")->get_numeric_value(), 2);
-    ASSERT_EQ(deps[2]->get_parameters().get("N_TRIGGER_REGISTERS")->get_numeric_value(), 4);
+    auto trig0 = deps[0]->find_parameter("N_TRIGGER_REGISTERS");
+    auto trig1 = deps[1]->find_parameter("N_TRIGGER_REGISTERS");
+    auto trig2 = deps[2]->find_parameter("N_TRIGGER_REGISTERS");
+    ASSERT_NE(trig0, nullptr);
+    ASSERT_NE(trig1, nullptr);
+    ASSERT_NE(trig2, nullptr);
+    ASSERT_EQ(trig0->get_numeric_value(), 6);
+    ASSERT_EQ(trig1->get_numeric_value(), 2);
+    ASSERT_EQ(trig2->get_numeric_value(), 4);
 
 }
 
@@ -584,7 +598,8 @@ TEST(parameter_processing, complex_vector_function_parameter) {
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
 
-    auto param = ast_v2->get_parameters().get("AXI_ADDRESSES");
+    auto param = ast_v2->find_parameter("AXI_ADDRESSES");
+    ASSERT_NE(param, nullptr);
     ASSERT_TRUE(param->get_int_array_value().has_value());
     auto param_value = param->get_int_array_value().value().get_1d_slice({0, 0});
     mdarray<hdl_integer>::md_1d_array reference = {44, 100, 200, 300, 667};
@@ -630,7 +645,8 @@ TEST(parameter_processing, complex_vector_function_parameter_endiannes_mismatch)
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
 
-    auto param = ast_v2->get_parameters().get("AXI_ADDRESSES");
+    auto param = ast_v2->find_parameter("AXI_ADDRESSES");
+    ASSERT_NE(param, nullptr);
     auto param_value = param->get_int_array_value().value().get_1d_slice({0, 0});
     mdarray<hdl_integer>::md_1d_array reference = {667, 300, 200, 100, 44};
     ASSERT_EQ(param_value, reference);
@@ -800,10 +816,10 @@ TEST(parameter_processing, package_function_called_from_module) {
     auto pkg = resources[0]->as<hdl_resource_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
-    Parameters_map declared_params;
-    for (const auto &p : mod->get_parameter_statements()) declared_params.insert(p);
-    ASSERT_TRUE(declared_params.contains("RESULT"));
-    auto param = declared_params.get("RESULT");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : mod->get_parameter_statements())
+        if (d->get_name() == "RESULT") param = d;
+    ASSERT_NE(param, nullptr);
 
     HDL_parameter p;
     p.set_name("RESULT");
@@ -860,10 +876,10 @@ TEST(parameter_processing, package_function_called_from_module_and_typedef) {
     auto pkg2 = resources[1]->as<hdl_resource_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
 
-    Parameters_map declared_params;
-    for (const auto &p : mod->get_parameter_statements()) declared_params.insert(p);
-    ASSERT_TRUE(declared_params.contains("RESULT"));
-    auto param = declared_params.get("RESULT");
+    std::shared_ptr<HDL_parameter> param;
+    for (const auto &d : mod->get_parameter_statements())
+        if (d->get_name() == "RESULT") param = d;
+    ASSERT_NE(param, nullptr);
 
     HDL_parameter p;
     p.set_name("RESULT");
@@ -925,10 +941,12 @@ TEST(parameter_processing, override_with_system_task) {
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
 
-    auto params = ast_v2->get_dependencies()[0]->get_parameters();
-    auto param_1 = params.get("param_1");
+    auto dep = ast_v2->get_dependencies()[0];
+    auto param_1 = dep->find_parameter("param_1");
+    ASSERT_NE(param_1, nullptr);
     EXPECT_EQ(param_1->get_numeric_value(), 6);
-    auto p1_t = params.get("p1_t");
+    auto p1_t = dep->find_parameter("p1_t");
+    ASSERT_NE(p1_t, nullptr);
     EXPECT_EQ(p1_t->get_numeric_value(), 8);
 }
 
@@ -966,8 +984,8 @@ TEST(parameter_processing, interface_default_parameters) {
 
 
     auto dep = ast_v2->get_dependencies()[0];
-    auto params = dep->get_parameters();
-    auto param_1 = params.get("DATA_WIDTH");
+    auto param_1 = dep->find_parameter("DATA_WIDTH");
+    ASSERT_NE(param_1, nullptr);
     EXPECT_EQ(param_1->get_numeric_value(), 32);
 }
 
@@ -1018,8 +1036,8 @@ TEST(parameter_processing, override_with_interface_param) {
 
 
     auto dep = ast_v2->get_dependencies()[1];
-    auto params = dep->get_parameters();
-    auto param_1 = params.get("param_1");
+    auto param_1 = dep->find_parameter("param_1");
+    ASSERT_NE(param_1, nullptr);
     EXPECT_EQ(param_1->get_numeric_value(), 32);
 }
 
@@ -1075,8 +1093,8 @@ TEST(parameter_processing, nested_override_with_interface_param) {
 
 
     auto dep = ast_v2->get_dependencies()[1]->get_dependencies()[0];
-    auto params = dep->get_parameters();
-    auto param_1 = params.get("param_1");
+    auto param_1 = dep->find_parameter("param_1");
+    ASSERT_NE(param_1, nullptr);
     EXPECT_EQ(param_1->get_numeric_value()->get_value(), 32);
 }
 
@@ -1141,8 +1159,8 @@ TEST(parameter_processing, double_nested_override_with_interface_param) {
 
 
     auto dep = ast_v2->get_dependencies()[1]->get_dependencies()[0]->get_dependencies()[0];
-    auto params = dep->get_parameters();
-    auto param_1 = params.get("param_1");
+    auto param_1 = dep->find_parameter("param_1");
+    ASSERT_NE(param_1, nullptr);
     EXPECT_EQ(param_1->get_numeric_value()->get_value(), 55);
 }
 
@@ -1256,15 +1274,18 @@ TEST(parameter_processing, override_with_function_parameter) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto fcn_param = ast_v2->get_parameters().get("FUNCTION_PARAM");
+    auto fcn_param = ast_v2->find_parameter("FUNCTION_PARAM");
+    ASSERT_NE(fcn_param, nullptr);
     mdarray<hdl_integer>::md_1d_array reference = {100, 130, 356};
     ASSERT_TRUE(fcn_param->get_int_array_value().has_value());
     EXPECT_EQ(fcn_param->get_int_array_value().value().get_1d_slice({0, 0}), reference);
 
-    auto params = ast_v2->get_dependencies()[0]->get_parameters();
-    auto param_1 = params.get("param_1");
+    auto dep = ast_v2->get_dependencies()[0];
+    auto param_1 = dep->find_parameter("param_1");
+    ASSERT_NE(param_1, nullptr);
     EXPECT_EQ(param_1->get_numeric_value(), 356);
-    auto p1_t = params.get("p1_t");
+    auto p1_t = dep->find_parameter("p1_t");
+    ASSERT_NE(p1_t, nullptr);
     EXPECT_EQ(p1_t->get_numeric_value(), 358);
 }
 
@@ -1400,8 +1421,12 @@ TEST(parameter_processing, parameter_with_for_loop) {
     std::vector<hdl_integer> p1_t;
 
     for(auto dep : deps) {
-        auto val_1 = dep->get_parameters().get("DMA_BASE_ADDRESS")->get_numeric_value();
-        auto val_2 =  dep->get_parameters().get("p1_t")->get_numeric_value();
+        auto dma_param = dep->find_parameter("DMA_BASE_ADDRESS");
+        auto p1t_param = dep->find_parameter("p1_t");
+        ASSERT_NE(dma_param, nullptr);
+        ASSERT_NE(p1t_param, nullptr);
+        auto val_1 = dma_param->get_numeric_value();
+        auto val_2 =  p1t_param->get_numeric_value();
         ASSERT_TRUE(val_1.has_value());
         param_1.push_back(val_1.value());
         ASSERT_TRUE(val_2.has_value());
@@ -1468,8 +1493,12 @@ TEST(parameter_processing, parameter_with_for_loop_incr) {
     std::vector<hdl_integer> p1_t;
 
     for(auto dep : deps) {
-        auto val_1 = dep->get_parameters().get("DMA_BASE_ADDRESS")->get_numeric_value();
-        auto val_2 =  dep->get_parameters().get("p1_t")->get_numeric_value();
+        auto dma_param = dep->find_parameter("DMA_BASE_ADDRESS");
+        auto p1t_param = dep->find_parameter("p1_t");
+        ASSERT_NE(dma_param, nullptr);
+        ASSERT_NE(p1t_param, nullptr);
+        auto val_1 = dma_param->get_numeric_value();
+        auto val_2 =  p1t_param->get_numeric_value();
         ASSERT_TRUE(val_1.has_value());
         param_1.push_back(val_1.value());
         ASSERT_TRUE(val_2.has_value());
@@ -1527,7 +1556,9 @@ TEST(parameter_processing, parent_parameter_collision) {
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
     auto deps = ast_v2->get_dependencies();
-    ASSERT_EQ(deps[0]->get_parameters().get("INNER_PARAMETER")->get_numeric_value(), 2);
+    auto inner_param = deps[0]->find_parameter("INNER_PARAMETER");
+    ASSERT_NE(inner_param, nullptr);
+    ASSERT_EQ(inner_param->get_numeric_value(), 2);
 
 }
 
@@ -1575,8 +1606,10 @@ TEST(parameter_processing, override_after_function_localparam) {
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"PwmGenerator"}))[0];
 
     auto deps = ast_v2->get_dependencies();
-    ASSERT_EQ(deps[0]->get_parameters().get("INITIAL_STOPPED_STATE")->get_numeric_value(), 52);
-    auto i_l = deps[0]->get_parameters().get("INITIAL_STOPPED_STATE")->get_expression();
+    auto stopped_param = deps[0]->find_parameter("INITIAL_STOPPED_STATE");
+    ASSERT_NE(stopped_param, nullptr);
+    ASSERT_EQ(stopped_param->get_numeric_value(), 52);
+    auto i_l = stopped_param->get_expression();
     ASSERT_TRUE(i_l->is<Identifier_token>());
 }
 
@@ -1625,15 +1658,15 @@ TEST(parameter_processing, init_list_override) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top_module"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
+    auto dep = ast_v2->get_dependencies()[0];
 
-    Parameters_map check_params;
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
     HDL_parameter p;
     p.set_name("NS");
     p.set_type(Type_engine::create_primitive_type("implicit"));
     p.set_raw_value(std::make_shared<Numeric_token>("2"));
     p.set_value(2);
-    check_params.insert(std::make_shared<HDL_parameter>(p));
+    check_params.push_back(std::make_shared<HDL_parameter>(p));
     p = HDL_parameter();
     p.set_name("SLAVE_ADDR");
     auto param_type = HDL_simple_type();
@@ -1661,7 +1694,7 @@ TEST(parameter_processing, init_list_override) {
     av.set_1d_slice({0,0}, {1136656448,1136656384});
     p.set_value(av);
 
-    check_params.insert(std::make_shared<HDL_parameter>(p));
+    check_params.push_back(std::make_shared<HDL_parameter>(p));
     p = HDL_parameter();
     p.set_name("SLAVE_MASK");
     Replication r;
@@ -1685,14 +1718,13 @@ TEST(parameter_processing, init_list_override) {
     av.set_1d_slice({0,0}, {64,64});
     p.set_value(av);
 
-    check_params.insert(std::make_shared<HDL_parameter>(p));
+    check_params.push_back(std::make_shared<HDL_parameter>(p));
 
 
-    ASSERT_EQ(check_params.size(), dependency_parameters.size());
+    ASSERT_EQ(check_params.size(), dep->get_parameters().size());
 
-    for(const auto& [name, item]:check_params){
-        ASSERT_TRUE(dependency_parameters.contains(name));
-        ASSERT_EQ(*item, *dependency_parameters.get(name));
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *dep->get_parameters()[i]);
     }
 }
 
@@ -1736,10 +1768,12 @@ TEST(parameter_processing, override_as_dependency) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top_module"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
-    EXPECT_TRUE(dependency_parameters.contains("main_filter_resolution"));
+    auto dep = ast_v2->get_dependencies()[0];
+    EXPECT_TRUE(dep->has_parameter("main_filter_resolution"));
 
-    auto value = dependency_parameters.get("main_filter_resolution")->get_numeric_value();
+    auto mf_param = dep->find_parameter("main_filter_resolution");
+    ASSERT_NE(mf_param, nullptr);
+    auto value = mf_param->get_numeric_value();
     EXPECT_EQ(value.value(), 13);
 }
 
@@ -1804,11 +1838,15 @@ endmodule
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top_module"}))[0];
     auto dep_0 = ast_v2->get_dependencies()[0]->get_dependencies()[0];
-    EXPECT_TRUE(dep_0->get_parameters().contains("addr2"));
-    EXPECT_EQ(dep_0->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 394416);
+    EXPECT_TRUE(dep_0->has_parameter("addr2"));
+    auto addr2_0 = dep_0->find_parameter("addr2");
+    ASSERT_NE(addr2_0, nullptr);
+    EXPECT_EQ(addr2_0->get_numeric_value().value().get_value(), 394416);
     auto dep_6 = ast_v2->get_dependencies()[0]->get_dependencies()[6];
-    EXPECT_TRUE(dep_6->get_parameters().contains("addr2"));
-    EXPECT_EQ(dep_6->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 1200);
+    EXPECT_TRUE(dep_6->has_parameter("addr2"));
+    auto addr2_6 = dep_6->find_parameter("addr2");
+    ASSERT_NE(addr2_6, nullptr);
+    EXPECT_EQ(addr2_6->get_numeric_value().value().get_value(), 1200);
 }
 
 TEST(parameter_processing, override_parameter_in_loop_index_with_package) {
@@ -1874,11 +1912,15 @@ endmodule
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top_module"}))[0];
     auto dep_0 = ast_v2->get_dependencies()[0]->get_dependencies()[0];
-    EXPECT_TRUE(dep_0->get_parameters().contains("addr2"));
-    EXPECT_EQ(dep_0->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 394416);
+    EXPECT_TRUE(dep_0->has_parameter("addr2"));
+    auto addr2_0 = dep_0->find_parameter("addr2");
+    ASSERT_NE(addr2_0, nullptr);
+    EXPECT_EQ(addr2_0->get_numeric_value().value().get_value(), 394416);
     auto dep_6 = ast_v2->get_dependencies()[0]->get_dependencies()[6];
-    EXPECT_TRUE(dep_6->get_parameters().contains("addr2"));
-    EXPECT_EQ(dep_6->get_parameters().get("addr2")->get_numeric_value().value().get_value(), 1200);
+    EXPECT_TRUE(dep_6->has_parameter("addr2"));
+    auto addr2_6 = dep_6->find_parameter("addr2");
+    ASSERT_NE(addr2_6, nullptr);
+    EXPECT_EQ(addr2_6->get_numeric_value().value().get_value(), 1200);
 }
 
 
@@ -1913,13 +1955,17 @@ TEST(parameter_processing, override_with_package_ref_in_array_init) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
     auto inst = ast_v2->get_dependencies()[0];
-    EXPECT_TRUE(inst->get_parameters().contains("X"));
-    EXPECT_TRUE(inst->get_parameters().get("X")->get_numeric_value().has_value());
-    EXPECT_EQ(inst->get_parameters().get("X")->get_numeric_value().value().get_value(), 30);
+    EXPECT_TRUE(inst->has_parameter("X"));
+    auto x_param = inst->find_parameter("X");
+    ASSERT_NE(x_param, nullptr);
+    EXPECT_TRUE(x_param->get_numeric_value().has_value());
+    EXPECT_EQ(x_param->get_numeric_value().value().get_value(), 30);
 
-    EXPECT_TRUE(inst->get_parameters().contains("Y"));
-    EXPECT_TRUE(inst->get_parameters().get("Y")->get_numeric_value().has_value());
-    EXPECT_EQ(inst->get_parameters().get("Y")->get_numeric_value().value().get_value(), 60);
+    EXPECT_TRUE(inst->has_parameter("Y"));
+    auto y_param = inst->find_parameter("Y");
+    ASSERT_NE(y_param, nullptr);
+    EXPECT_TRUE(y_param->get_numeric_value().has_value());
+    EXPECT_EQ(y_param->get_numeric_value().value().get_value(), 60);
 }
 
 TEST(parameter_processing, intermediate_interface_param) {
@@ -1968,7 +2014,8 @@ TEST(parameter_processing, intermediate_interface_param) {
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
-    auto param = ast_v2->get_dependencies()[1]->get_parameters().get("local_dw");
+    auto param = ast_v2->get_dependencies()[1]->find_parameter("local_dw");
+    ASSERT_NE(param, nullptr);
     EXPECT_EQ(param->get_numeric_value().value(), 8);
 }
 
@@ -2017,7 +2064,8 @@ TEST(parameter_processing, intermediate_interface_in_override_param) {
 
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
-    auto param = ast_v2->get_dependencies()[1]->get_dependencies()[0]->get_parameters().get("DATA_WIDTH_2");
+    auto param = ast_v2->get_dependencies()[1]->get_dependencies()[0]->find_parameter("DATA_WIDTH_2");
+    ASSERT_NE(param, nullptr);
     EXPECT_EQ(param->get_numeric_value().value(), 8);
 }
 
@@ -2108,17 +2156,23 @@ TEST(parameter_processing, interface_param_same_name_as_child_param_with_loopbac
 
     // noise_generator is dependency[1] in top (after the interface instance)
     // axis_skid_buffer is dependency[1] in noise_generator (after the reg_in interface instance)
-    auto params = ast_v2->get_dependencies()[1]->get_dependencies()[1]->get_parameters();
+    auto dep = ast_v2->get_dependencies()[1]->get_dependencies()[1];
 
     // These should resolve to 32 from the interface default/override,
     // but the 100-pass bug prevents resolution
-    EXPECT_TRUE(params.contains("DATA_WIDTH"));
-    EXPECT_TRUE(params.contains("DEST_WIDTH"));
-    EXPECT_TRUE(params.contains("USER_WIDTH"));
+    EXPECT_TRUE(dep->has_parameter("DATA_WIDTH"));
+    EXPECT_TRUE(dep->has_parameter("DEST_WIDTH"));
+    EXPECT_TRUE(dep->has_parameter("USER_WIDTH"));
 
-    auto dw = params.get("DATA_WIDTH")->get_numeric_value();
-    auto dew = params.get("DEST_WIDTH")->get_numeric_value();
-    auto uw = params.get("USER_WIDTH")->get_numeric_value();
+    auto dw_p = dep->find_parameter("DATA_WIDTH");
+    auto dew_p = dep->find_parameter("DEST_WIDTH");
+    auto uw_p = dep->find_parameter("USER_WIDTH");
+    ASSERT_NE(dw_p, nullptr);
+    ASSERT_NE(dew_p, nullptr);
+    ASSERT_NE(uw_p, nullptr);
+    auto dw = dw_p->get_numeric_value();
+    auto dew = dew_p->get_numeric_value();
+    auto uw = uw_p->get_numeric_value();
 
     EXPECT_TRUE(dw.has_value());
     EXPECT_TRUE(dew.has_value());
@@ -2181,10 +2235,12 @@ TEST(parameter_processing, interface_param_same_name_as_child_param_no_loopback)
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
 
-    auto params = ast_v2->get_dependencies()[1]->get_dependencies()[0]->get_parameters();
+    auto dep = ast_v2->get_dependencies()[1]->get_dependencies()[0];
 
-    EXPECT_TRUE(params.contains("DATA_WIDTH"));
-    auto dw = params.get("DATA_WIDTH")->get_numeric_value();
+    EXPECT_TRUE(dep->has_parameter("DATA_WIDTH"));
+    auto dw_p = dep->find_parameter("DATA_WIDTH");
+    ASSERT_NE(dw_p, nullptr);
+    auto dw = dw_p->get_numeric_value();
     EXPECT_TRUE(dw.has_value());
     if(dw.has_value()) EXPECT_EQ(dw.value().get_value(), 8);
 }
@@ -2224,8 +2280,8 @@ TEST(parameter_processing, ternary_with_package_override) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
     auto inst = ast_v2->get_dependencies()[0];
-    EXPECT_TRUE(inst->get_parameters().contains("N_PARAMETERS"));
-    EXPECT_TRUE(inst->get_parameters().contains("INITIAL_PARAMETERS_VALUES"));
+    EXPECT_TRUE(inst->has_parameter("N_PARAMETERS"));
+    EXPECT_TRUE(inst->has_parameter("INITIAL_PARAMETERS_VALUES"));
 }
 
 TEST(parameter_processing, override_dep_on_local_param_chain) {
@@ -2255,17 +2311,23 @@ TEST(parameter_processing, override_dep_on_local_param_chain) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
-    EXPECT_TRUE(dependency_parameters.contains("W"));
-    auto w_val = dependency_parameters.get("W")->get_numeric_value();
+    auto dep = ast_v2->get_dependencies()[0];
+    EXPECT_TRUE(dep->has_parameter("W"));
+    auto w_param = dep->find_parameter("W");
+    ASSERT_NE(w_param, nullptr);
+    auto w_val = w_param->get_numeric_value();
     EXPECT_EQ(w_val.value(), 8);
 
-    EXPECT_TRUE(dependency_parameters.contains("X"));
-    auto x_val = dependency_parameters.get("X")->get_numeric_value();
+    EXPECT_TRUE(dep->has_parameter("X"));
+    auto x_param = dep->find_parameter("X");
+    ASSERT_NE(x_param, nullptr);
+    auto x_val = x_param->get_numeric_value();
     EXPECT_EQ(x_val.value(), 9);
 
-    EXPECT_TRUE(dependency_parameters.contains("P"));
-    auto p_val = dependency_parameters.get("P")->get_numeric_value();
+    EXPECT_TRUE(dep->has_parameter("P"));
+    auto p_param = dep->find_parameter("P");
+    ASSERT_NE(p_param, nullptr);
+    auto p_val = p_param->get_numeric_value();
     EXPECT_EQ(p_val.value(), 10);
 }
 
@@ -2298,9 +2360,11 @@ TEST(parameter_processing, packed_struct_override) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
-    EXPECT_TRUE(dependency_parameters.contains("s"));
-    auto val = dependency_parameters.get("s")->get_numeric_value();
+    auto dep = ast_v2->get_dependencies()[0];
+    EXPECT_TRUE(dep->has_parameter("s"));
+    auto val_param = dep->find_parameter("s");
+    ASSERT_NE(val_param, nullptr);
+    auto val = val_param->get_numeric_value();
     ASSERT_TRUE(val.has_value());
     // packed '{100, 200} => field_a=100 (MSB), field_b=200 (LSB) => (100 << 32) | 200
     EXPECT_EQ(val.value().get_value(), 429496729800ULL);
@@ -2335,9 +2399,11 @@ TEST(parameter_processing, packed_struct_field_override_child_param) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
-    EXPECT_TRUE(dependency_parameters.contains("field_val"));
-    auto val = dependency_parameters.get("field_val")->get_numeric_value();
+    auto dep = ast_v2->get_dependencies()[0];
+    EXPECT_TRUE(dep->has_parameter("field_val"));
+    auto field_param = dep->find_parameter("field_val");
+    ASSERT_NE(field_param, nullptr);
+    auto val = field_param->get_numeric_value();
     ASSERT_TRUE(val.has_value());
     EXPECT_EQ(val.value().get_value(), 17);
 }
@@ -2371,9 +2437,11 @@ TEST(parameter_processing, unpacked_struct_field_override_child_param) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
-    EXPECT_TRUE(dependency_parameters.contains("field_val"));
-    auto val = dependency_parameters.get("field_val")->get_numeric_value();
+    auto dep = ast_v2->get_dependencies()[0];
+    EXPECT_TRUE(dep->has_parameter("field_val"));
+    auto field_param = dep->find_parameter("field_val");
+    ASSERT_NE(field_param, nullptr);
+    auto val = field_param->get_numeric_value();
     ASSERT_TRUE(val.has_value());
     EXPECT_EQ(val.value().get_value(), 17);
 }
@@ -2405,9 +2473,11 @@ TEST(parameter_processing, unpacked_struct_override) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
 
-    auto dependency_parameters = ast_v2->get_dependencies()[0]->get_parameters();
-    EXPECT_TRUE(dependency_parameters.contains("s"));
-    auto val = dependency_parameters.get("s")->get_int_array_value();
+    auto dep = ast_v2->get_dependencies()[0];
+    EXPECT_TRUE(dep->has_parameter("s"));
+    auto val_param = dep->find_parameter("s");
+    ASSERT_NE(val_param, nullptr);
+    auto val = val_param->get_int_array_value();
     ASSERT_TRUE(val.has_value());
     // unpacked struct => array, last member at index 0
     EXPECT_EQ(val->get_value({0}), hdl_integer(200));
@@ -2431,11 +2501,14 @@ TEST(parameter_processing, circular_self_reference) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto params = ast_v2->get_parameters();
-    ASSERT_TRUE(params.contains("A"));
-    EXPECT_EQ(params.get("A")->get_numeric_value(), 0);
-    ASSERT_TRUE(params.contains("B"));
-    EXPECT_EQ(params.get("B")->get_numeric_value(), 42);
+    ASSERT_TRUE(ast_v2->has_parameter("A"));
+    auto a_param = ast_v2->find_parameter("A");
+    ASSERT_NE(a_param, nullptr);
+    EXPECT_EQ(a_param->get_numeric_value(), 0);
+    ASSERT_TRUE(ast_v2->has_parameter("B"));
+    auto b_param = ast_v2->find_parameter("B");
+    ASSERT_NE(b_param, nullptr);
+    EXPECT_EQ(b_param->get_numeric_value(), 42);
 }
 
 TEST(parameter_processing, circular_mutual_dependency) {
@@ -2456,13 +2529,18 @@ TEST(parameter_processing, circular_mutual_dependency) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto params = ast_v2->get_parameters();
-    ASSERT_TRUE(params.contains("A"));
-    EXPECT_EQ(params.get("A")->get_numeric_value(), 0);
-    ASSERT_TRUE(params.contains("B"));
-    EXPECT_EQ(params.get("B")->get_numeric_value(), 0);
-    ASSERT_TRUE(params.contains("C"));
-    EXPECT_EQ(params.get("C")->get_numeric_value(), 99);
+    ASSERT_TRUE(ast_v2->has_parameter("A"));
+    auto a_param = ast_v2->find_parameter("A");
+    ASSERT_NE(a_param, nullptr);
+    EXPECT_EQ(a_param->get_numeric_value(), 0);
+    ASSERT_TRUE(ast_v2->has_parameter("B"));
+    auto b_param = ast_v2->find_parameter("B");
+    ASSERT_NE(b_param, nullptr);
+    EXPECT_EQ(b_param->get_numeric_value(), 0);
+    ASSERT_TRUE(ast_v2->has_parameter("C"));
+    auto c_param = ast_v2->find_parameter("C");
+    ASSERT_NE(c_param, nullptr);
+    EXPECT_EQ(c_param->get_numeric_value(), 99);
 }
 
 TEST(parameter_processing, circular_three_way_cycle) {
@@ -2484,15 +2562,22 @@ TEST(parameter_processing, circular_three_way_cycle) {
     HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
     auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
 
-    auto params = ast_v2->get_parameters();
-    ASSERT_TRUE(params.contains("A"));
-    EXPECT_EQ(params.get("A")->get_numeric_value(), 0);
-    ASSERT_TRUE(params.contains("B"));
-    EXPECT_EQ(params.get("B")->get_numeric_value(), 0);
-    ASSERT_TRUE(params.contains("C"));
-    EXPECT_EQ(params.get("C")->get_numeric_value(), 0);
-    ASSERT_TRUE(params.contains("D"));
-    EXPECT_EQ(params.get("D")->get_numeric_value(), 77);
+    ASSERT_TRUE(ast_v2->has_parameter("A"));
+    auto a_param = ast_v2->find_parameter("A");
+    ASSERT_NE(a_param, nullptr);
+    EXPECT_EQ(a_param->get_numeric_value(), 0);
+    ASSERT_TRUE(ast_v2->has_parameter("B"));
+    auto b_param = ast_v2->find_parameter("B");
+    ASSERT_NE(b_param, nullptr);
+    EXPECT_EQ(b_param->get_numeric_value(), 0);
+    ASSERT_TRUE(ast_v2->has_parameter("C"));
+    auto c_param = ast_v2->find_parameter("C");
+    ASSERT_NE(c_param, nullptr);
+    EXPECT_EQ(c_param->get_numeric_value(), 0);
+    ASSERT_TRUE(ast_v2->has_parameter("D"));
+    auto d_param = ast_v2->find_parameter("D");
+    ASSERT_NE(d_param, nullptr);
+    EXPECT_EQ(d_param->get_numeric_value(), 77);
 }
 
 TEST(parameter_processing, shift_of_clog2_roundtrip) {
@@ -2553,11 +2638,23 @@ TEST(parameter_processing, generate_localparam_genvar_index) {
     auto deps = ast_v2->get_dependencies();
 
     ASSERT_EQ(deps.size(), 2);
-    ASSERT_EQ(deps[0]->get_parameters().get("ELEM")->get_numeric_value(), 10);
-    ASSERT_EQ(deps[1]->get_parameters().get("ELEM")->get_numeric_value(), 20);
-    ASSERT_EQ(deps[0]->get_parameters().get("UI")->get_numeric_value(), 0);
-    ASSERT_EQ(deps[1]->get_parameters().get("UI")->get_numeric_value(), 1);
-    ASSERT_EQ(deps[0]->get_parameters().get("UIP1")->get_numeric_value(), 10);
-    ASSERT_EQ(deps[1]->get_parameters().get("UIP1")->get_numeric_value(), 11);
+    auto elem0 = deps[0]->find_parameter("ELEM");
+    ASSERT_NE(elem0, nullptr);
+    ASSERT_EQ(elem0->get_numeric_value(), 10);
+    auto elem1 = deps[1]->find_parameter("ELEM");
+    ASSERT_NE(elem1, nullptr);
+    ASSERT_EQ(elem1->get_numeric_value(), 20);
+    auto ui0 = deps[0]->find_parameter("UI");
+    ASSERT_NE(ui0, nullptr);
+    ASSERT_EQ(ui0->get_numeric_value(), 0);
+    auto ui1 = deps[1]->find_parameter("UI");
+    ASSERT_NE(ui1, nullptr);
+    ASSERT_EQ(ui1->get_numeric_value(), 1);
+    auto uip0 = deps[0]->find_parameter("UIP1");
+    ASSERT_NE(uip0, nullptr);
+    ASSERT_EQ(uip0->get_numeric_value(), 10);
+    auto uip1 = deps[1]->find_parameter("UIP1");
+    ASSERT_NE(uip1, nullptr);
+    ASSERT_EQ(uip1->get_numeric_value(), 11);
 
 }
