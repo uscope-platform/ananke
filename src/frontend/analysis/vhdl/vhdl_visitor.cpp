@@ -93,10 +93,9 @@ void vhdl_visitor::exitArchitecture_body(mgp_vh::vhdlParser::Architecture_bodyCo
         if (item->is<hdl_resource_statement>() && item->as<hdl_resource_statement>().getName() == entity_name) {
             auto &entity = item->as<hdl_resource_statement>();
             arch_res->set_ports(entity.get_port_specs());
-            // Declarations live as statements now: carry them over
-            // (set_parameters stays map-only by design).
+            // Declarations live as statements now: carry them over.
             for (auto &stmt : entity.get_statements()) {
-                if (auto p = std::dynamic_pointer_cast<HDL_parameter>(stmt)) arch_res->add_parameter(p);
+                if (auto p = std::dynamic_pointer_cast<HDL_parameter>(stmt)) arch_res->add_statement(p);
             }
             break;
         }
@@ -728,11 +727,11 @@ void vhdl_visitor::finalize_generic(mgp_vh::vhdlParser::Identifier_listContext *
     if (pending_resolved_type)
         base->set_type(pending_resolved_type);
     pending_resolved_type = nullptr;
-    modules_factory.add_parameter(base);
+    modules_factory.add_statement(base);
     for (size_t i = 1; i < ids->identifier().size(); i++) {
         auto clone = std::make_shared<HDL_parameter>(*base);
         clone->set_name(canon(ids->identifier(i)->getText()));
-        modules_factory.add_parameter(clone);
+        modules_factory.add_statement(clone);
     }
     if (in_entity_declaration) {
         for (auto *id : ids->identifier())

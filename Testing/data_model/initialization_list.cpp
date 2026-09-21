@@ -510,7 +510,8 @@ TEST(Initialization_list, get_array_dependencies) {
 
     auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto params = resource.get_parameters();
+    Parameters_map params;
+    for (const auto &p : resource.get_parameter_statements()) params.insert(p);
     auto deps_a = params.get("INITIAL_REGISTER_VALUES")->get_dependencies();
     auto deps_b = params.get("FIXED_REGISTER_VALUES")->get_dependencies();
     auto deps_c = params.get("VARIABLE_INITIAL_VALUES")->get_dependencies();
@@ -551,7 +552,7 @@ TEST(Initialization_list, concatenation_of_packed_arrays) {
 
     auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto p = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto p = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     auto param = p[qualified_identifier("INITIAL_REGISTER_VALUES")];
     mdarray<hdl_integer>::md_1d_array check_array = {224,1,0,0,2,2,2};
     auto result = param.get_int_array().get_1d_slice({0,0});

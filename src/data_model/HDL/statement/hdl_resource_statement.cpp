@@ -32,7 +32,6 @@ hdl_resource_statement::hdl_resource_statement(const hdl_resource_statement &c) 
     line_n = c.line_n;
     hdl_dependency_type = c.hdl_dependency_type;
     language = c.language;
-    parameters_spec = c.parameters_spec;
     doc = c.doc;
     processor_docs = c.processor_docs;
     port_specs = c.port_specs;
@@ -44,8 +43,6 @@ parameter_deps_t hdl_resource_statement::get_dependencies() const {
     parameter_deps_t deps;
     for (const auto &stmt : statements)
         deps.merge(stmt->get_dependencies());
-    for (const auto &[_, param] : parameters_spec)
-        deps.merge(param->get_dependencies());
     for (const auto &[_, type] : typedefs)
         deps.merge(type->get_dependencies());
     return deps;
@@ -70,7 +67,6 @@ bool hdl_resource_statement::is_empty() {
     ret &= hdl_dependency_type == module;
     ret &= processor_docs.empty();
     ret &= port_specs.empty();
-    ret &= parameters_spec.empty();
     ret &= statements.empty();
     ret &= typedefs.empty();
 
@@ -99,10 +95,6 @@ std::shared_ptr<const hdl_function_statement> hdl_resource_statement::get_functi
     return nullptr;
 }
 
-void hdl_resource_statement::set_parameters(Parameters_map p) {
-    parameters_spec = std::move(p);
-}
-
 bool operator==(const hdl_resource_statement &lhs, const hdl_resource_statement &rhs) {
     bool ret = true;
 
@@ -113,7 +105,6 @@ bool operator==(const hdl_resource_statement &lhs, const hdl_resource_statement 
     ret &= lhs.language == rhs.language;
     ret &= lhs.processor_docs == rhs.processor_docs;
     ret &= lhs.port_specs == rhs.port_specs;
-    ret &= lhs.parameters_spec == rhs.parameters_spec;
     ret &= lhs.typedefs == rhs.typedefs;
     if (lhs.statements.size() != rhs.statements.size()) return false;
     for (int i = 0; i < lhs.statements.size(); i++) {

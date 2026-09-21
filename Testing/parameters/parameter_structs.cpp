@@ -48,7 +48,8 @@ TEST(parameter_extraction, struct_typed_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto parameters = resource.get_parameters();
+    Parameters_map parameters;
+    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
     ASSERT_TRUE(parameters.contains("struct_param"));
 
     auto p = parameters.get("struct_param");
@@ -73,7 +74,7 @@ TEST(parameter_extraction, struct_typed_parameter) {
     EXPECT_TRUE(p->get_expression()->is<Concatenation>());
     EXPECT_EQ(p->get_expression()->as<Concatenation>(), c);
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     qualified_identifier check_id = qualified_identifier("struct_param");
     EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(180388626449));
 }
@@ -103,7 +104,8 @@ TEST(parameter_extraction, nested_struct_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto parameters = resource.get_parameters();
+    Parameters_map parameters;
+    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
     ASSERT_TRUE(parameters.contains("struct_param"));
 
     auto p = parameters.get("struct_param");
@@ -121,7 +123,7 @@ TEST(parameter_extraction, nested_struct_parameter) {
     EXPECT_TRUE(p->get_expression()->is<Concatenation>());
     EXPECT_EQ(p->get_expression()->as<Concatenation>(), outer_c);
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     qualified_identifier check_id = qualified_identifier("struct_param");
     EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(3405692606));
 }
@@ -142,7 +144,7 @@ TEST(parameter_extraction, packed_struct_access_initialization) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     qualified_identifier check_id = qualified_identifier("struct_access_param");
     EXPECT_EQ(defaults[check_id], 17);
 }
@@ -171,7 +173,7 @@ TEST(parameter_extraction, nested_packed_struct_access_initialization) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     qualified_identifier check_id = qualified_identifier("struct_access_param");
     EXPECT_EQ(defaults[check_id], 254);
 }
@@ -196,7 +198,8 @@ TEST(parameter_extraction, inline_nested_struct_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto parameters = resource.get_parameters();
+    Parameters_map parameters;
+    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
     ASSERT_TRUE(parameters.contains("struct_param"));
 
     auto p = parameters.get("struct_param");
@@ -241,7 +244,7 @@ TEST(parameter_extraction, inline_nested_struct_parameter) {
     EXPECT_TRUE(p->get_expression()->is<Concatenation>());
     EXPECT_EQ(p->get_expression()->as<Concatenation>(), outer_c);
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     qualified_identifier check_id = qualified_identifier("struct_param");
     EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(3405692606));
 }
@@ -267,7 +270,7 @@ TEST(parameter_extraction, inline_nested_struct_access_initialization) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     qualified_identifier check_id = qualified_identifier("struct_access_param");
     EXPECT_EQ(defaults[check_id], 254);
 }
@@ -287,7 +290,8 @@ TEST(parameter_extraction, struct_unpacked_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto parameters = resource.get_parameters();
+    Parameters_map parameters;
+    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
     ASSERT_TRUE(parameters.contains("struct_param"));
 
     auto p = parameters.get("struct_param");
@@ -311,7 +315,7 @@ TEST(parameter_extraction, struct_unpacked_parameter) {
     EXPECT_TRUE(p->get_expression()->is<Concatenation>());
     EXPECT_EQ(p->get_expression()->as<Concatenation>(), c);
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {17, 42});
 
@@ -341,7 +345,7 @@ TEST(parameter_extraction, unpacked_struct_access_initialization) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     qualified_identifier check_id = qualified_identifier("struct_access_param");
     EXPECT_EQ(defaults[check_id], 32);
 
@@ -364,7 +368,7 @@ TEST(parameter_extraction, packed_struct_parametrized_member_width) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
     qualified_identifier s_id = qualified_identifier("s");
     ASSERT_TRUE(defaults.contains(s_id));
@@ -392,7 +396,7 @@ TEST(parameter_extraction, packed_struct_parametrized_member_width_wide) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
     qualified_identifier s_id = qualified_identifier("s");
     ASSERT_TRUE(defaults.contains(s_id));
@@ -429,7 +433,8 @@ TEST(parameter_extraction, anonymous_packed_struct_typed_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto parameters = resource.get_parameters();
+    Parameters_map parameters;
+    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
     ASSERT_TRUE(parameters.contains("anon_struct"));
 
     auto p = parameters.get("anon_struct");
@@ -448,7 +453,7 @@ TEST(parameter_extraction, anonymous_packed_struct_typed_parameter) {
     ASSERT_TRUE(st.member[1].type != nullptr);
     ASSERT_EQ(st.member[1].type->as<HDL_simple_type>().get_packed_dimensions()[0],check_dim);
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     qualified_identifier check_id = qualified_identifier("anon_struct");
     EXPECT_EQ(defaults[check_id], static_cast<uint64_t>(180388626449));
 }
@@ -466,7 +471,8 @@ TEST(parameter_extraction, anonymous_unpacked_struct_parameter) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto parameters = resource.get_parameters();
+    Parameters_map parameters;
+    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
     ASSERT_TRUE(parameters.contains("anon_struct"));
 
     auto p = parameters.get("anon_struct");
@@ -479,7 +485,7 @@ TEST(parameter_extraction, anonymous_unpacked_struct_parameter) {
     EXPECT_EQ(st.member[1].name, "field_b");
     ASSERT_TRUE(st.member[1].type != nullptr);
 
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     mdarray<hdl_integer> array_value;
     array_value.set_1d_slice({0, 0}, {17, 42});
     qualified_identifier sid = qualified_identifier("anon_struct");
@@ -518,7 +524,7 @@ TEST(parameter_extraction, enum_parameter_evaluation) {
     )";
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(defaults.at(qualified_identifier("S")).get_integer(), 1);
     EXPECT_EQ(defaults.at(qualified_identifier("V")).get_integer(), 2);
 }
@@ -533,7 +539,7 @@ TEST(parameter_extraction, enum_with_explicit_values) {
     )";
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(defaults.at(qualified_identifier("X")).get_integer(), 20);
     EXPECT_EQ(defaults.at(qualified_identifier("Y")).get_integer(), 30);
 }
@@ -623,7 +629,7 @@ endmodule
     )";
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto defaults = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(defaults.at(qualified_identifier("W")).get_integer(), 8);
     EXPECT_EQ(defaults.at(qualified_identifier("V")).get_integer(), 9);
 }
@@ -646,7 +652,7 @@ TEST(parameter_extraction, int_to_struct_cast) {
     sv_analyzer analyzer;
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
     auto& pkg = resources[0]->as<hdl_resource_statement>();
-    auto solved = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
 
     ASSERT_EQ(0, solved.at(qualified_identifier("TEST_ZERO")).get_integer());
     ASSERT_EQ(5, solved.at(qualified_identifier("TEST_VAL")).get_integer());
@@ -694,8 +700,8 @@ TEST(parameter_extraction, cross_package_enum_init) {
     std::shared_ptr<hdl_resource_statement> p_pkg = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
     parameter_solver::propagate_types(p_pkg, d_store);
-    auto pkg_context = parameter_solver::retrieve_package_parameters(p_pkg->get_parameters(), d_store);
-    auto solved = parameter_solver::process_parameters(p_pkg->get_parameters(), pkg_context);
+    auto pkg_context = parameter_solver::retrieve_package_parameters(p_pkg->get_parameter_statements(), d_store);
+    auto solved = parameter_solver::process_parameters(p_pkg->get_parameter_statements(), pkg_context);
 
     ASSERT_EQ(1, solved.at(qualified_identifier("CVA6ConfigDcacheType")).get_integer().get_value());
 }
@@ -737,8 +743,8 @@ endmodule
     ASSERT_TRUE(mod);
 
     parameter_solver::propagate_types(mod, d_store);
-    auto mod_context = parameter_solver::retrieve_package_parameters(mod->get_parameters(), d_store);
-    auto solved = parameter_solver::process_parameters(mod->get_parameters(), mod_context);
+    auto mod_context = parameter_solver::retrieve_package_parameters(mod->get_parameter_statements(), d_store);
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), mod_context);
 
     mdarray<hdl_integer> expected;
     expected.set_1d_slice({0, 0}, {
@@ -783,8 +789,8 @@ endpackage
     ASSERT_TRUE(pkg);
 
     parameter_solver::propagate_types(pkg, d_store);
-    auto pkg_context = parameter_solver::retrieve_package_parameters(pkg->get_parameters(), d_store);
-    auto solved = parameter_solver::process_parameters(pkg->get_parameters(), pkg_context);
+    auto pkg_context = parameter_solver::retrieve_package_parameters(pkg->get_parameter_statements(), d_store);
+    auto solved = parameter_solver::process_parameters(pkg->get_parameter_statements(), pkg_context);
 
     EXPECT_EQ(solved.at(qualified_identifier("CFG")).get_integer().get_value(), 0x11223344);
     qualified_identifier base_id("base");
@@ -813,7 +819,7 @@ endmodule
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
     mdarray<hdl_integer> expected;
     expected.set_1d_slice({0, 0}, {
@@ -838,7 +844,7 @@ endpackage
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer().get_value(), 3);
 }
 
@@ -858,7 +864,7 @@ endpackage
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer().get_value(), 17);
 }
 
@@ -878,7 +884,7 @@ endpackage
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer().get_value(), 0x2245);
 
     qualified_identifier m_id("m");
@@ -905,7 +911,7 @@ endpackage
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer().get_value(), 3);
 }
 
@@ -973,7 +979,7 @@ endmodule
     // The shared base object must be unpolluted by the merge.
     EXPECT_TRUE(typedefs["unit_type_t"]->as<HDL_enum_type>().get_unpacked_dimensions().empty());
 
-    auto solved = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
     mdarray<hdl_integer> expected;
     expected.set_1d_slice({0, 0}, {

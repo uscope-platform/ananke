@@ -97,11 +97,6 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                 auto res = res_opt.value();
                 crash_ctx.set(type, res_path);
 
-                // TEMPORARY (see collect_parameter_declarations): the solver
-                // still works on maps, so materialize it from the statements
-                // beforehand. Same shared_ptrs, so solver writes stay visible.
-                res->set_parameters(collect_parameter_declarations(*res));
-
                 // Resolve file-level `use`/`import` statements: record the package
                 // dependency and pull the imported package's constants into the
                 // solving context (unqualified), so `N := WIDTH` after `use pkg.all`
@@ -116,9 +111,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                         working_instance->add_package_dependency(imp->get_package());
                         auto pkg = d_store->get_HDL_resource(imp->get_package());
                         if (!pkg.has_value()) continue;
-                        // TEMPORARY (see collect_parameter_declarations).
-                        pkg.value()->set_parameters(collect_parameter_declarations(*pkg.value()));
-                        auto pkg_params = pkg.value()->get_parameters();
+                        auto pkg_params = pkg.value()->get_parameter_statements();
                         auto pkg_deps = parameter_solver::retrieve_package_parameters(pkg_params, d_store);
                         auto pkg_solved = parameter_solver::process_parameters(pkg_params, pkg_deps);
                         for (auto &[id, val] : pkg_solved) {
@@ -254,10 +247,11 @@ void HDL_ast_builder_v2::elaborate_loop_locals(
     }
 
     std::set<std::string> elaborated;
-    const auto params = resource->get_parameters();
+    const auto params = resource->get_parameter_statements();
     for (size_t pass = 0; pass <= params.size(); ++pass) {
         bool progress = false;
-        for (const auto &[p_name, param] : params) {
+        for (const auto &param : params) {
+            const auto &p_name = param->get_name();
             if (elaborated.contains(p_name)) continue;
             const auto deps = param->get_dependencies();
             bool candidate = !deps.loop_vars.empty();

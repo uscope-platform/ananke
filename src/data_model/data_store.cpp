@@ -170,9 +170,10 @@ std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_package_p
     const std::string member = inst.empty() ? dep.get_name() : inst.front();
     return pick_owned_resource(pkg, member,
         [&member](const std::shared_ptr<hdl_resource_statement> &res) {
-            // TEMPORARY (see collect_parameter_declarations): the map is
-            // materialized beforehand only along the build path.
-            return collect_parameter_declarations(*res).contains(member);
+            for (const auto &p : res->get_parameter_statements()) {
+                if (p->get_name() == member) return true;
+            }
+            return false;
         });
 }
 

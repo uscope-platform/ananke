@@ -53,7 +53,7 @@ struct work_order {
 class parameter_solver {
 public:
     static std::map<qualified_identifier, resolved_parameter> process_parameters(
-        const Parameters_map &map,
+        const std::vector<std::shared_ptr<HDL_parameter>> &params,
         const std::map<qualified_identifier, resolved_parameter> &context
     );
     static void update_parameters_map(
@@ -74,7 +74,7 @@ public:
     static void propagate_imports(std::shared_ptr<hdl_resource_statement> &resource,
         const std::map<std::string, hdl_function_statement> &imported_functions,
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types);
-    static std::map<qualified_identifier, resolved_parameter> retrieve_package_parameters(const Parameters_map &node_parameters, const std::shared_ptr<data_store> &d_store);
+    static std::map<qualified_identifier, resolved_parameter> retrieve_package_parameters(const std::vector<std::shared_ptr<HDL_parameter>> &node_parameters, const std::shared_ptr<data_store> &d_store);
     static void remap_keyed_literals(const std::shared_ptr<Expression_base> &expr,
                               const std::shared_ptr<hdl_type> &type);
     static std::map<qualified_identifier, resolved_parameter> solve_complex_overrides(
@@ -83,10 +83,6 @@ public:
             const std::map<qualified_identifier, resolved_parameter> &node_defaults
         );
     static std::string get_full_path(const std::shared_ptr<hdl_ast_node> &node);
-    // TEMPORARY migration bridge (see collect_parameter_declarations):
-    // materialize the legacy map on first use. The builder does this
-    // beforehand; this covers direct callers (e.g. tests).
-    static void ensure_parameters_materialized(std::shared_ptr<hdl_resource_statement> &resource);
 
 private:
     static void resolve_interface_chain(

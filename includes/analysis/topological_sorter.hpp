@@ -16,13 +16,13 @@
 #ifndef ANANKE_TOPOLOGICAL_SORTER_HPP
 #define ANANKE_TOPOLOGICAL_SORTER_HPP
 
-#include "data_model/HDL/parameters/Parameters_map.hpp"
+#include "data_model/HDL/parameters/HDL_parameter.hpp"
 
 
 class topological_sorter {
 public:
     topological_sorter() = default;
-    void analyze(const Parameters_map &p,const std::map<qualified_identifier, resolved_parameter> &context);
+    void analyze(const std::vector<std::shared_ptr<HDL_parameter>> &params, const std::map<qualified_identifier, resolved_parameter> &context);
     std::optional<qualified_identifier> get_next();
     void purge(const qualified_identifier &id);
     [[nodiscard]] bool empty() const;

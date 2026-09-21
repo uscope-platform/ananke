@@ -33,8 +33,6 @@ TEST( analysis_test , package) {
     
     auto resource = analyzer.analyze("", test_file.view()).value() .get_content()[0]->as<hdl_resource_statement>();
 
-    Parameters_map parameters = resource.get_parameters();
-
     Parameters_map check_map;
 
     auto p = std::make_shared<HDL_parameter>();
@@ -100,7 +98,12 @@ TEST( analysis_test , package) {
     p->set_raw_value(std::make_shared<Expression_v2>(e));
     check_map.insert(p);
 
-    ASSERT_EQ(check_map, parameters);
+    auto parameters = resource.get_parameter_statements();
+    ASSERT_EQ(check_map.size(), parameters.size());
+    for (const auto &p : parameters) {
+        ASSERT_TRUE(check_map.contains(p->get_name()));
+        ASSERT_EQ(*check_map.get(p->get_name()), *p);
+    }
 
 }
 
@@ -167,14 +170,14 @@ TEST( analysis_test , sv_module) {
     p->set_name("module_parameter_1");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("56"));
-    check_res.add_parameter(p);
+    check_res.add_statement(p);
 
 
     p = std::make_shared<HDL_parameter>();
     p->set_name("module_parameter_2");
     p->set_type(Type_engine::create_primitive_type("implicit"));
     p->set_raw_value(std::make_shared<Numeric_token>("74"));
-    check_res.add_parameter(p);
+    check_res.add_statement(p);
 
     auto sc = std::make_shared<hdl_instance_statement>();
     sc->set_name("SC");
@@ -277,7 +280,8 @@ TEST(analysis_test, port_concat_assignment) {
     sv_analyzer analyzer;
     
     auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto parameters = resource.get_parameters();
+    Parameters_map parameters;
+    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
 
     auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
     ASSERT_NE(stmt, nullptr);
@@ -306,7 +310,8 @@ TEST(analysis_test, interfaces_array) {
     sv_analyzer analyzer;
     
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto parameters = resource.get_parameters();
+    Parameters_map parameters;
+    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
 
     auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
     ASSERT_NE(stmt, nullptr);
@@ -340,7 +345,8 @@ TEST(analysis_test, parameter_array_assignment) {
 
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto parameters = resource.get_parameters();
+    Parameters_map parameters;
+    for (const auto &p : resource.get_parameter_statements()) parameters.insert(p);
 
     auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
     ASSERT_NE(stmt, nullptr);

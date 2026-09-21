@@ -109,7 +109,9 @@ std::shared_ptr<Expression_v2> make_binary(Expression_v2::expression_operator op
 int64_t eval_generic(const std::string &decl_body, const std::string &gname) {
     std::string pattern = "entity top is\n    generic ( " + decl_body + " );\nend top;\n";
     auto res = parse_first_entity(pattern);
-    auto param = res->get_parameters().get(gname);
+    Parameters_map declared_params;
+    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
+    auto param = declared_params.get(gname);
     if (!param) return -999999;
     std::map<qualified_identifier, resolved_parameter> ctx;
     auto val = param->evaluate(ctx);
@@ -300,7 +302,7 @@ end top;
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
-    expected.add_parameter(make_integer_param("n", std::make_shared<Numeric_token>("8")));
+    expected.add_statement(make_integer_param("n", std::make_shared<Numeric_token>("8")));
 
     ASSERT_EQ(*res, expected);
 }
@@ -327,7 +329,7 @@ end top;
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
-    expected.add_parameter(make_integer_param("width", expr));
+    expected.add_statement(make_integer_param("width", expr));
 
     ASSERT_EQ(*res, expected);
 }
@@ -353,8 +355,8 @@ end top;
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
-    expected.add_parameter(make_integer_param("a", std::make_shared<Numeric_token>("4")));
-    expected.add_parameter(make_integer_param("b", b_expr));
+    expected.add_statement(make_integer_param("a", std::make_shared<Numeric_token>("4")));
+    expected.add_statement(make_integer_param("b", b_expr));
 
     ASSERT_EQ(*res, expected);
 }
@@ -375,7 +377,7 @@ end top;
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
-    expected.add_parameter(make_integer_param("width",
+    expected.add_statement(make_integer_param("width",
         std::make_shared<Identifier_token>(qualified_identifier("data_width"))));
 
     ASSERT_EQ(*res, expected);
@@ -389,7 +391,9 @@ end top;
 )";
 
     auto res = parse_first_entity(test_pattern);
-    auto param = res->get_parameters().get("width");
+    Parameters_map declared_params;
+    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
+    auto param = declared_params.get("width");
     ASSERT_NE(param, nullptr);
 
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -413,7 +417,9 @@ end top;
 )";
 
     auto res = parse_first_entity(test_pattern);
-    auto param = res->get_parameters().get("n");
+    Parameters_map declared_params;
+    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
+    auto param = declared_params.get("n");
     ASSERT_NE(param, nullptr);
 
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -439,9 +445,9 @@ end top;
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
-    expected.add_parameter(make_integer_param("a", std::make_shared<Numeric_token>("8")));
-    expected.add_parameter(make_integer_param("b", std::make_shared<Numeric_token>("8")));
-    expected.add_parameter(make_integer_param("c", std::make_shared<Numeric_token>("8")));
+    expected.add_statement(make_integer_param("a", std::make_shared<Numeric_token>("8")));
+    expected.add_statement(make_integer_param("b", std::make_shared<Numeric_token>("8")));
+    expected.add_statement(make_integer_param("c", std::make_shared<Numeric_token>("8")));
 
     ASSERT_EQ(*res, expected);
 }
@@ -501,7 +507,7 @@ end top;
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
-    expected.add_parameter(make_concat_param("v", {"1", "2", "3"}));
+    expected.add_statement(make_concat_param("v", {"1", "2", "3"}));
 
     ASSERT_EQ(*res, expected);
 }
@@ -520,7 +526,7 @@ end top;
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
-    expected.add_parameter(make_concat_param("v", {"7", "8"}));
+    expected.add_statement(make_concat_param("v", {"7", "8"}));
 
     ASSERT_EQ(*res, expected);
 }
@@ -536,7 +542,9 @@ TEST(vhdl_analyzer, aggregate_not_confused_with_parenthesized_expr) {
 double eval_generic_double(const std::string &decl_body, const std::string &gname) {
     std::string pattern = "entity top is\n    generic ( " + decl_body + " );\nend top;\n";
     auto res = parse_first_entity(pattern);
-    auto param = res->get_parameters().get(gname);
+    Parameters_map declared_params;
+    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
+    auto param = declared_params.get(gname);
     if (!param) return -999999.0;
     std::map<qualified_identifier, resolved_parameter> ctx;
     auto val = param->evaluate(ctx);
@@ -570,7 +578,9 @@ entity top is
 end top;
 )";
     auto res = parse_first_entity(test_pattern);
-    auto param = res->get_parameters().get("w");
+    Parameters_map declared_params;
+    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
+    auto param = declared_params.get("w");
     ASSERT_NE(param, nullptr);
     std::map<qualified_identifier, resolved_parameter> ctx;
     ctx[qualified_identifier("n")] = resolved_parameter(8);
@@ -582,7 +592,9 @@ end top;
 
 TEST(vhdl_analyzer, builtin_function_unknown_does_not_crash) {
     auto res = parse_first_entity("entity top is\n    generic ( V : integer := foo(3) );\nend top;\n");
-    auto param = res->get_parameters().get("v");
+    Parameters_map declared_params;
+    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
+    auto param = declared_params.get("v");
     ASSERT_NE(param, nullptr);
 }
 
@@ -616,7 +628,7 @@ end top;
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
-    expected.add_parameter(make_integer_param("v", cast));
+    expected.add_statement(make_integer_param("v", cast));
 
     ASSERT_EQ(*res, expected);
 }
@@ -636,7 +648,9 @@ namespace {
     std::shared_ptr<hdl_type> generic_type(const std::string &decl_body, const std::string &gname) {
         std::string pattern = "entity top is\n    generic ( " + decl_body + " );\nend top;\n";
         auto res = parse_first_entity(pattern);
-        auto param = res->get_parameters().get(gname);
+        Parameters_map declared_params;
+        for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
+        auto param = declared_params.get(gname);
         if (!param) return nullptr;
         return param->get_type();
     }
@@ -698,7 +712,9 @@ entity top is
 end top;
 )";
     auto res = parse_first_entity(test_pattern);
-    auto param = res->get_parameters().get("v");
+    Parameters_map declared_params;
+    for (const auto &pp : res->get_parameter_statements()) declared_params.insert(pp);
+    auto param = declared_params.get("v");
     ASSERT_NE(param, nullptr);
 
     auto bound = make_binary(Expression_v2::subtract,
@@ -931,15 +947,15 @@ end top;
     check_res.set_name("top");
     check_res.set_type(module);
     check_res.set_line_n(2);
-    check_res.add_parameter(make_integer_param("width", std::make_shared<Numeric_token>("8")));
-    check_res.add_parameter(make_typed_param("flag", "boolean",
+    check_res.add_statement(make_integer_param("width", std::make_shared<Numeric_token>("8")));
+    check_res.add_statement(make_typed_param("flag", "boolean",
                                           std::make_shared<Identifier_token>(qualified_identifier("true"))));
     // `string` is not a modeled builtin in the type engine: the value is a
     // String_token but the declared type degrades to an external reference.
     auto name = std::make_shared<HDL_parameter>("name");
     name->set_type(std::make_shared<HDL_external_type>(qualified_identifier("string")));
     name->set_raw_value(std::make_shared<String_token>("\"blinky\""));
-    check_res.add_parameter(name);
+    check_res.add_statement(name);
     std::unordered_map<std::string, HDL_port> ports;
     ports["dout"] = {output_port};
     check_res.set_ports(ports);
@@ -1545,8 +1561,8 @@ end params_pkg;
     expected.set_name("params_pkg");
     expected.set_type(package);
     expected.set_line_n(2);
-    expected.add_parameter(make_integer_param("width", std::make_shared<Numeric_token>("8")));
-    expected.add_parameter(make_integer_param("depth", std::make_shared<Numeric_token>("4")));
+    expected.add_statement(make_integer_param("width", std::make_shared<Numeric_token>("8")));
+    expected.add_statement(make_integer_param("depth", std::make_shared<Numeric_token>("4")));
 
     ASSERT_EQ(*res, expected);
 }
@@ -1568,7 +1584,7 @@ end top;
     expected.set_name("top");
     expected.set_type(module);
     expected.set_line_n(2);
-    expected.add_parameter(make_integer_param(
+    expected.add_statement(make_integer_param(
         "n", std::make_shared<Identifier_token>(qualified_identifier("params_pkg", "width"))));
 
     ASSERT_EQ(*res, expected);
@@ -1596,7 +1612,7 @@ end top;
 
     auto resources = file.get_content();
     auto &top = resources[1]->as<hdl_resource_statement>();
-    auto pkg_params = parameter_solver::retrieve_package_parameters(top.get_parameters(), d_store);
+    auto pkg_params = parameter_solver::retrieve_package_parameters(top.get_parameter_statements(), d_store);
     auto it = pkg_params.find(qualified_identifier("params_pkg", "width"));
     ASSERT_NE(it, pkg_params.end());
     ASSERT_EQ(it->second.get_integer().get_value(), 8);

@@ -31,7 +31,7 @@ TEST(type_parameter_extraction, with_default) {
     )";
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto parameters = resource.get_parameters();
+    auto parameters = resource.get_parameter_statements();
 
     Parameters_map check_params;
     auto p = std::make_shared<HDL_parameter>();
@@ -41,9 +41,9 @@ TEST(type_parameter_extraction, with_default) {
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
-    for (const auto& [name, item] : check_params) {
-        ASSERT_TRUE(parameters.contains(name));
-        ASSERT_EQ(*item, *parameters.get(name));
+    for (const auto &p : parameters) {
+        ASSERT_TRUE(check_params.contains(p->get_name()));
+        ASSERT_EQ(*check_params.get(p->get_name()), *p);
     }
 }
 
@@ -56,7 +56,7 @@ TEST(type_parameter_extraction, no_default) {
     )";
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto parameters = resource.get_parameters();
+    auto parameters = resource.get_parameter_statements();
 
     Parameters_map check_params;
     auto p = std::make_shared<HDL_parameter>();
@@ -65,9 +65,9 @@ TEST(type_parameter_extraction, no_default) {
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
-    for (const auto& [name, item] : check_params) {
-        ASSERT_TRUE(parameters.contains(name));
-        ASSERT_EQ(*item, *parameters.get(name));
+    for (const auto &p : parameters) {
+        ASSERT_TRUE(check_params.contains(p->get_name()));
+        ASSERT_EQ(*check_params.get(p->get_name()), *p);
     }
 }
 
@@ -80,7 +80,7 @@ TEST(type_parameter_extraction, unsigned_type) {
     )";
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto parameters = resource.get_parameters();
+    auto parameters = resource.get_parameter_statements();
 
     Parameters_map check_params;
     auto p = std::make_shared<HDL_parameter>();
@@ -90,9 +90,9 @@ TEST(type_parameter_extraction, unsigned_type) {
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
-    for (const auto& [name, item] : check_params) {
-        ASSERT_TRUE(parameters.contains(name));
-        ASSERT_EQ(*item, *parameters.get(name));
+    for (const auto &p : parameters) {
+        ASSERT_TRUE(check_params.contains(p->get_name()));
+        ASSERT_EQ(*check_params.get(p->get_name()), *p);
     }
 }
 
@@ -104,7 +104,7 @@ TEST(type_parameter_extraction, localparam_type) {
     )";
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto parameters = resource.get_parameters();
+    auto parameters = resource.get_parameter_statements();
 
     Parameters_map check_params;
     auto p = std::make_shared<HDL_parameter>();
@@ -114,9 +114,9 @@ TEST(type_parameter_extraction, localparam_type) {
     check_params.insert(p);
 
     ASSERT_EQ(check_params.size(), parameters.size());
-    for (const auto& [name, item] : check_params) {
-        ASSERT_TRUE(parameters.contains(name));
-        ASSERT_EQ(*item, *parameters.get(name));
+    for (const auto &p : parameters) {
+        ASSERT_TRUE(check_params.contains(p->get_name()));
+        ASSERT_EQ(*check_params.get(p->get_name()), *p);
     }
 }
 
@@ -131,7 +131,7 @@ TEST(type_parameter_extraction, processing_with_default) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto result = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto result = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
     ASSERT_TRUE(result.contains(qualified_identifier("T")));
     ASSERT_TRUE(result.contains(qualified_identifier("X")));
@@ -149,7 +149,7 @@ TEST(type_parameter_extraction, processing_no_default) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto result = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto result = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
     ASSERT_TRUE(result.contains(qualified_identifier("T")));
     ASSERT_TRUE(result.contains(qualified_identifier("X")));
@@ -168,7 +168,7 @@ TEST(type_parameter_extraction, processing_type_param_chain) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto result = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto result = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
     EXPECT_EQ(result.at(qualified_identifier("B")).get_integer(), 32);
 }
@@ -184,7 +184,7 @@ TEST(type_parameter_extraction, processing_bits_of_type_param) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto result = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto result = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
     EXPECT_EQ(result.at(qualified_identifier("B")).get_integer(), 16);
 }
@@ -201,7 +201,7 @@ TEST(type_parameter_extraction, processing_multiple_type_params) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto result = parameter_solver::process_parameters(resource.get_parameters(), {});
+    auto result = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
 
     ASSERT_TRUE(result.contains(qualified_identifier("A")));
     ASSERT_TRUE(result.contains(qualified_identifier("B")));
@@ -281,7 +281,8 @@ TEST(type_parameter_extraction, used_in_port_declaration) {
     sv_analyzer analyzer;
     auto resources = analyzer.analyze("", test_pattern).value();
     auto resource = resources.get_content()[0]->as<hdl_resource_statement>();
-    auto params = resource.get_parameters();
+    Parameters_map params;
+    for (const auto &p : resource.get_parameter_statements()) params.insert(p);
     // THis test mainly verifies that using a parametrized type on a port does not crash the program
     ASSERT_TRUE(params.contains("T"));
     auto t = params.get("T");

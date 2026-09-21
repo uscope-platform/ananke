@@ -554,7 +554,7 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
                 param->set_name(name);
                 param->set_type(pending_anon_struct_type);
                 if (param->get_expression())
-                    modules_factory.add_parameter(param);
+                    modules_factory.add_statement(param);
             } else if (dt->KW_ENUM()) {
                 in_anonymous_struct = false;
                 type_engine.stop_composite_type_declaration("", true);
@@ -882,9 +882,9 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
                     maybe_open_composite_type_default(dt, tas.size() == 1, p);
                     if (pending_composite_type_param == p) {
                         if (modules_factory.is_current_valid())
-                            modules_factory.add_parameter(p);
+                            modules_factory.add_statement(p);
                         else if (interfaces_factory.is_current_valid())
-                            interfaces_factory.add_parameter(p);
+                            interfaces_factory.add_statement(p);
                         continue;
                     }
                 }
@@ -902,9 +902,9 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
                 }
             }
             if (modules_factory.is_current_valid())
-                modules_factory.add_parameter(p);
+                modules_factory.add_statement(p);
             else if (interfaces_factory.is_current_valid())
-                interfaces_factory.add_parameter(p);
+                interfaces_factory.add_statement(p);
             if (p->get_type() && p->get_type()->is<HDL_simple_type>()
                 && (p->get_type()->as<HDL_simple_type>().get_signed()
                     || !p->get_type()->as<HDL_simple_type>().get_packed_dimensions().empty()))
@@ -941,9 +941,9 @@ void sv_visitor::enterParameter_port_declaration(sv2017::Parameter_port_declarat
                     maybe_open_composite_type_default(dt, tas.size() == 1, p);
                     if (pending_composite_type_param == p) {
                         if (modules_factory.is_current_valid())
-                            modules_factory.add_parameter(p);
+                            modules_factory.add_statement(p);
                         else if (interfaces_factory.is_current_valid())
-                            interfaces_factory.add_parameter(p);
+                            interfaces_factory.add_statement(p);
                         continue;
                     }
                 }
@@ -961,9 +961,9 @@ void sv_visitor::enterParameter_port_declaration(sv2017::Parameter_port_declarat
                 }
             }
             if (modules_factory.is_current_valid())
-                modules_factory.add_parameter(p);
+                modules_factory.add_statement(p);
             else if (interfaces_factory.is_current_valid())
-                interfaces_factory.add_parameter(p);
+                interfaces_factory.add_statement(p);
             if (p->get_type() && p->get_type()->is<HDL_simple_type>()
                 && (p->get_type()->as<HDL_simple_type>().get_signed()
                     || !p->get_type()->as<HDL_simple_type>().get_packed_dimensions().empty()))
@@ -1536,9 +1536,9 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
         }
         param->set_type(t);
         if(modules_factory.is_current_valid()){
-            modules_factory.add_parameter(param);
+            modules_factory.add_statement(param);
         } else if(interfaces_factory.is_current_valid()){
-            interfaces_factory.add_parameter(param);
+            interfaces_factory.add_statement(param);
         }
     }
 }
@@ -1854,9 +1854,9 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
                     maybe_open_composite_type_default(dt, tas.size() == 1, p);
                     if (pending_composite_type_param == p) {
                         if (modules_factory.is_current_valid())
-                            modules_factory.add_parameter(p);
+                            modules_factory.add_statement(p);
                         else if (interfaces_factory.is_current_valid())
-                            interfaces_factory.add_parameter(p);
+                            interfaces_factory.add_statement(p);
                         continue;
                     }
                 }
@@ -1874,9 +1874,9 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
                 }
             }
             if (modules_factory.is_current_valid())
-                modules_factory.add_parameter(p);
+                modules_factory.add_statement(p);
             else if (interfaces_factory.is_current_valid())
-                interfaces_factory.add_parameter(p);
+                interfaces_factory.add_statement(p);
             if (p->get_type() && p->get_type()->is<HDL_simple_type>()
                 && (p->get_type()->as<HDL_simple_type>().get_signed()
                     || !p->get_type()->as<HDL_simple_type>().get_packed_dimensions().empty()))

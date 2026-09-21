@@ -35,8 +35,10 @@
 #include "data_model/HDL/statement/hdl_statements.hpp"
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 
+#include <algorithm>
 #include <set>
 #include <sstream>
+#include <unordered_map>
 
 void parameter_solver::resolve_interface_chain(
     work_order &work,
@@ -134,46 +136,48 @@ static void annotate_identifier_types(
     }
 }
 
-static std::map<qualified_identifier, std::shared_ptr<hdl_type>> build_type_map(const Parameters_map &map) {
+static std::map<qualified_identifier, std::shared_ptr<hdl_type>> build_type_map(const std::vector<std::shared_ptr<HDL_parameter>> &params) {
     std::map<qualified_identifier, std::shared_ptr<hdl_type>> types;
-    for (const auto &[name, param] : map) {
-        types[qualified_identifier(name)] = param->get_type();
+    for (const auto &param : params) {
+        if (param) types[qualified_identifier(param->get_name())] = param->get_type();
     }
     return types;
 }
 
-void parameter_solver::ensure_parameters_materialized(std::shared_ptr<hdl_resource_statement> &resource) {
-    if (resource && resource->get_parameters().empty())
-        resource->set_parameters(collect_parameter_declarations(*resource));
-}
-
 std::map<qualified_identifier, resolved_parameter> parameter_solver::process_parameters(
-    const Parameters_map &map_in,
+    const std::vector<std::shared_ptr<HDL_parameter>> &params_in,
     const std::map<qualified_identifier, resolved_parameter> &context
 ) {
     std::map<qualified_identifier, resolved_parameter> ctx = context;
 
     std::map<qualified_identifier, resolved_parameter> solved_parameters;
 
-    topological_sorter s;
-    s.analyze(map_in, ctx);
+    std::unordered_map<std::string, std::shared_ptr<HDL_parameter>> by_name;
+    for (const auto &param : params_in) {
+        if (param) by_name[param->get_name()] = param;
+    }
 
-    auto type_map = build_type_map(map_in);
+    topological_sorter s;
+    s.analyze(params_in, ctx);
+
+    auto type_map = build_type_map(params_in);
 
     std::map<qualified_identifier, std::shared_ptr<hdl_type>> type_ctx;
-    for (const auto &[name, param] : map_in) {
+    for (const auto &param : params_in) {
+        if (!param) continue;
         if (param->is_type_param && param->get_type()) {
-            type_ctx[qualified_identifier(name)] = param->get_type();
+            type_ctx[qualified_identifier(param->get_name())] = param->get_type();
         }
     }
 
-    for (const auto &[name, param] : map_in) {
+    for (const auto &param : params_in) {
+        if (!param) continue;
         auto ev = extract_enum_values(param);
         ctx.insert(ev.begin(), ev.end());
     }
 
     while (auto next = s.get_next()) {
-        auto param = map_in.const_get(next.value().get_name());
+        auto param = by_name.at(next.value().get_name());
         crash_ctx.parameter = next.value().get_name();
         if (param->is_type_param) {
             std::shared_ptr<hdl_type> resolved_type;
@@ -252,7 +256,8 @@ void parameter_solver::update_parameters_map(
 ) {
     auto node_parameters = node->get_parameters();
     auto resource = d_store->get_HDL_resource(node->get_type());
-    for(auto &[p_name, param]:resource.value()->get_parameters()) {
+    for (const auto &param : resource.value()->get_parameter_statements()) {
+        const auto &p_name = param->get_name();
         std::shared_ptr<HDL_parameter> ast_param;
         if(node_parameters.contains(p_name))
             ast_param = std::make_shared<HDL_parameter>(*node_parameters.get(p_name));
@@ -316,12 +321,15 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
         return {};
     }
     auto node_overrides = work.node->get_parameters();
-    auto node_parameters = node_spec.value()->get_parameters();
+    auto node_parameters = node_spec.value()->get_parameter_statements();
 
     //retrieve default package parameters
-    Parameters_map combined_params = node_parameters;
+    std::vector<std::shared_ptr<HDL_parameter>> combined_params = node_parameters;
     for (const auto &[name, param] : node_overrides) {
-        combined_params.insert(param);
+        auto it = std::find_if(combined_params.begin(), combined_params.end(),
+            [&](const auto &p) { return p && p->get_name() == name; });
+        if (it != combined_params.end()) *it = param;
+        else combined_params.push_back(param);
     }
 
     // Pre-propagate retrieve: spec params still carry external typedef
@@ -347,7 +355,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     return solved_parameters;
 }
 std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_package_parameters(
-    const Parameters_map &node_parameters,
+    const std::vector<std::shared_ptr<HDL_parameter>> &node_parameters,
     const std::shared_ptr<data_store> &d_store
 ) {
     std::map<qualified_identifier, resolved_parameter> package_parameters;
@@ -359,12 +367,8 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
                              std::shared_ptr<hdl_resource_statement> package) -> bool {
         if (!resolved_packages.insert(pkg_name).second) return false;
 
-        // TEMPORARY (see collect_parameter_declarations): nested packages are
-        // never pre-collected by the builder, so materialize beforehand here.
-        package->set_parameters(collect_parameter_declarations(*package));
-
         // 1. FIRST: Scan sub-package dependencies recursively
-        auto sub_pkg_deps = retrieve_package_parameters(package->get_parameters(), d_store);
+        auto sub_pkg_deps = retrieve_package_parameters(package->get_parameter_statements(), d_store);
         package_parameters.insert(sub_pkg_deps.begin(), sub_pkg_deps.end());
 
         // 2. SECOND: Extract typedef enums from THIS package into the context BEFORE processing its parameters
@@ -381,7 +385,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
         }
         propagate_types(package, d_store);
         // 3. THIRD: Now solve the package parameters with ALL enums and sub-package deps present in package_parameters!
-        auto pkg_solved = process_parameters(package->get_parameters(), package_parameters);
+        auto pkg_solved = process_parameters(package->get_parameter_statements(), package_parameters);
 
         for (auto &[pkg_id, pkg_val] : pkg_solved) {
             // Canonical instance-preserving form (pkg::S.F): the
@@ -402,7 +406,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
         return true;
     };
 
-    for (auto &[p_name, param] : node_parameters) {
+    for (auto &param : node_parameters) {
+        if (!param) continue;
+        const auto &p_name = param->get_name();
         auto deps = param->get_dependencies();
         for (const auto& dep : deps.data) {
             std::string dbg_p = p_name;
@@ -512,9 +518,8 @@ void parameter_solver::remap_keyed_literals(const std::shared_ptr<Expression_bas
 void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement> &resource,
                                          const std::map<std::string, hdl_function_statement> &imported_functions,
                                          const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
-    ensure_parameters_materialized(resource);
     std::map<std::string, hdl_function_def_ptr> linked_definitions;
-    for (auto &[_, param] : resource->get_parameters()) {
+    for (const auto &param : resource->get_parameter_statements()) {
         for (auto &fcn : param->get_dependencies().functions) {
             if (!fcn.get_package_prefix().empty()) continue;
             if (!imported_functions.contains(fcn.get_name())) continue;
@@ -549,8 +554,7 @@ void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement>
 }
 
 void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
-    ensure_parameters_materialized(resource);
-    for (auto &[_, param] : resource->get_parameters()) {
+    for (const auto &param : resource->get_parameter_statements()) {
         // If the parameter type itself is directly an external type
         if (param->get_type()->is<HDL_external_type>()) {
             auto &ext = param->get_type()->as<HDL_external_type>();
@@ -659,7 +663,7 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
         }
     }
 
-    for (auto &[_, param] : resource->get_parameters()) {
+    for (const auto &param : resource->get_parameter_statements()) {
         remap_keyed_literals(param->get_expression(), param->get_type());
     }
 }
@@ -687,7 +691,7 @@ std::shared_ptr<hdl_type> resolve_port_type_ref(
     auto tds = resource->get_typedefs();
     auto it = tds.find(q.get_name());
     if (it != tds.end() && it->second) return it->second;
-    for (const auto &[_, pp] : resource->get_parameters()) {
+    for (const auto &pp : resource->get_parameter_statements()) {
         if (pp->is_type_param && pp->get_name() == q.get_name() && pp->get_type())
             return pp->get_type();
     }
@@ -999,7 +1003,6 @@ void parameter_solver::propagate_port_types(
     std::shared_ptr<hdl_resource_statement> &resource,
     const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types,
     const std::shared_ptr<data_store> &d_store) {
-    ensure_parameters_materialized(resource);
     std::map<std::string, std::shared_ptr<hdl_type>> ports;
     for (const auto &[pname, pspec] : resource->get_port_specs()) {
         if (pspec.direction == interface_port) continue;
@@ -1007,8 +1010,8 @@ void parameter_solver::propagate_port_types(
     }
     if (ports.empty()) return;
     std::set<std::string> param_names;
-    for (const auto &[pname, _] : resource->get_parameters()) param_names.insert(pname);
-    for (auto &[_, param] : resource->get_parameters()) {
+    for (const auto &p : resource->get_parameter_statements()) param_names.insert(p->get_name());
+    for (const auto &param : resource->get_parameter_statements()) {
         annotate_port_tokens_expr(param->get_expression(), ports, param_names,
             resource, imported_types, d_store, false);
     }
@@ -1052,7 +1055,6 @@ std::shared_ptr<hdl_function_statement> find_function_def(
 }
 
 void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
-    ensure_parameters_materialized(resource);
 
     // Bodies populated below can reveal further (nested) calls, so repeat
     // until no new definition is propagated. Each (parameter, function) pair
@@ -1061,7 +1063,8 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
     bool progress = true;
     while (progress) {
         progress = false;
-        for (auto &[name, param] : resource->get_parameters()) {
+        for (const auto &param : resource->get_parameter_statements()) {
+            const auto &name = param->get_name();
 
             auto deps = param->get_dependencies();
             for (const auto& fcn:deps.functions) {
@@ -1169,7 +1172,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
            work.node->get_type(), work.node->get_name());
         return {};
     }
-    auto node_parameters = node_spec.value()->get_parameters();
+    // TEMPORARY (future refactor of this function to vectors): the working
+    // maps below are still map-based; seed them from the declarations.
+    Parameters_map node_parameters;
+    for (const auto &p : node_spec.value()->get_parameter_statements()) node_parameters.insert(p);
     auto node_overrides = work.node->get_parameters();
 
     Parameters_map to_solve;
@@ -1217,9 +1223,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         auto parent_spec = d_store->get_HDL_resource(parent_node->get_type());
         if (parent_spec.has_value()) {
             parent_resource = parent_spec.value();
-            for (const auto &[name, pp] : parent_resource->get_parameters()) {
+            for (const auto &pp : parent_resource->get_parameter_statements()) {
                 if (pp->is_type_param && pp->get_type()) {
-                    parent_type_ctx[qualified_identifier(name)] = pp->get_type();
+                    parent_type_ctx[qualified_identifier(pp->get_name())] = pp->get_type();
                 }
             }
         }
@@ -1358,7 +1364,12 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
-    auto solution = process_parameters(to_solve, ctx);
+    // TEMPORARY (future refactor of this function to vectors): process takes
+    // the declarations in order now; to_solve iteration order was unordered
+    // anyway and the sorter re-imposes determinism.
+    std::vector<std::shared_ptr<HDL_parameter>> to_solve_vec;
+    for (const auto &[_, param] : to_solve) to_solve_vec.push_back(param);
+    auto solution = process_parameters(to_solve_vec, ctx);
     // Silent placeholders for the deferred loop locals: no single
     // module-scope value exists, and solving them here would warn
     // "missing value" and default to 0. Per-iteration values are injected

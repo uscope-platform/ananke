@@ -55,7 +55,9 @@ TEST(parameter_extraction, simple_function_parameter) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    auto param =  resource->get_parameters().get("TEST_PARAM");
+    Parameters_map declared_params;
+    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
+    auto param =  declared_params.get("TEST_PARAM");
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -77,7 +79,7 @@ TEST(parameter_extraction, simple_function_parameter) {
     ASSERT_EQ(p, *param);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("TEST_PARAM"), 100}
@@ -106,7 +108,9 @@ TEST(parameter_extraction, concat_in_function) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    auto param =  resource->get_parameters().get("TEST_PARAM");
+    Parameters_map declared_params;
+    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
+    auto param =  declared_params.get("TEST_PARAM");
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -121,7 +125,7 @@ TEST(parameter_extraction, concat_in_function) {
     EXPECT_EQ(p, *param);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("TEST_PARAM"), 3}
@@ -153,7 +157,9 @@ TEST(parameter_extraction, replication_in_function) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    auto param =  resource->get_parameters().get("TEST_PARAM");
+    Parameters_map declared_params;
+    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
+    auto param =  declared_params.get("TEST_PARAM");
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -168,7 +174,7 @@ TEST(parameter_extraction, replication_in_function) {
     EXPECT_EQ(p, *param);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("TEST_PARAM"), 15}
@@ -199,7 +205,9 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    auto param =  resource->get_parameters().get("TEST_PARAM");
+    Parameters_map declared_params;
+    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
+    auto param =  declared_params.get("TEST_PARAM");
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -214,7 +222,7 @@ TEST(parameter_extraction, cast_in_concat_in_function) {
     EXPECT_EQ(p, *param);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("TEST_PARAM"), 19}
@@ -281,7 +289,9 @@ TEST(parameter_extraction, loop_function_parameter) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    auto param = resource->get_parameters().get("TEST_PARAM");
+    Parameters_map declared_params;
+    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
+    auto param = declared_params.get("TEST_PARAM");
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -305,7 +315,7 @@ TEST(parameter_extraction, loop_function_parameter) {
     ASSERT_EQ(p, *param);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {0, 100, 200});
@@ -342,7 +352,9 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    auto param = resource->get_parameters().get("TEST_PARAM");
+    Parameters_map declared_params;
+    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
+    auto param = declared_params.get("TEST_PARAM");
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -366,7 +378,7 @@ TEST(parameter_extraction, parametric_loop_function_parameter) {
     ASSERT_EQ(p, *param);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {0, 100, 200});
@@ -399,7 +411,9 @@ TEST(parameter_extraction, function_with_arguments) {
     sv_analyzer analyzer;
 
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
-    auto param = resource->get_parameters().get("TEST_PARAM");
+    Parameters_map declared_params;
+    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
+    auto param = declared_params.get("TEST_PARAM");
 
     HDL_parameter p;
     p.set_name("TEST_PARAM");
@@ -423,7 +437,7 @@ TEST(parameter_extraction, function_with_arguments) {
     ASSERT_EQ(p, *param);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
@@ -481,7 +495,7 @@ TEST(parameter_extraction, function_with_variables) {
 
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     EXPECT_EQ(defaults[sid], 42);
@@ -514,7 +528,7 @@ TEST(parameter_extraction, concat_size_mixup_in_function) {
 
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     EXPECT_EQ(defaults[sid], 26);
@@ -543,7 +557,7 @@ TEST(parameter_extraction, top_level_function_simple) {
     auto functions = resource->get_functions();
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     EXPECT_EQ(defaults[sid], 77);
@@ -571,7 +585,7 @@ TEST(parameter_extraction, top_level_function_with_args) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     EXPECT_EQ(defaults[sid], 12);
@@ -606,7 +620,7 @@ TEST(parameter_extraction, conditional_in_function) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     EXPECT_EQ(defaults[sid], 47);
@@ -639,7 +653,7 @@ TEST(parameter_extraction, struct_returning_function) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     mdarray<hdl_integer> av;
     av.set_1d_slice({0, 0}, {0x1000, 0x400});
@@ -681,7 +695,7 @@ TEST(parameter_extraction, packed_struct_returning_function) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
 
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
@@ -721,7 +735,7 @@ TEST(parameter_extraction, packed_struct_returning_function_reverse_order) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
 
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
@@ -767,7 +781,7 @@ TEST(parameter_extraction, packed_struct_returning_computed_fields) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("P");
     ASSERT_TRUE(defaults.contains(sid));
@@ -800,7 +814,7 @@ TEST(parameter_extraction, concat_and_assignment_in_function) {
 
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     EXPECT_EQ(defaults[sid], 26);
@@ -825,7 +839,7 @@ TEST(parameter_extraction, return_statement_function_parameter) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier tcid = qualified_identifier("TEST_PARAM");
     ASSERT_TRUE(defaults.contains(tcid));
@@ -864,7 +878,7 @@ TEST(parameter_extraction, case_statement_function_parameter) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier mid = qualified_identifier("P_M");
     ASSERT_TRUE(defaults.contains(mid));
@@ -893,7 +907,7 @@ TEST(parameter_extraction, initialized_local_function_parameter) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     ASSERT_TRUE(defaults.contains(sid));
@@ -924,7 +938,7 @@ TEST(parameter_extraction, nested_call_function_parameter) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     ASSERT_TRUE(defaults.contains(sid));
@@ -954,7 +968,7 @@ TEST(parameter_extraction, streaming_function_parameter) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("P_SRC");
     ASSERT_TRUE(defaults.contains(sid));
@@ -989,7 +1003,7 @@ TEST(parameter_extraction, anonymous_struct_local_function_parameter) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     ASSERT_TRUE(defaults.contains(sid));
@@ -1016,7 +1030,7 @@ TEST(parameter_extraction, anonymous_enum_member_function_parameter) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     ASSERT_TRUE(defaults.contains(sid));
@@ -1043,7 +1057,7 @@ TEST(parameter_extraction, anonymous_enum_local_function_parameter) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     ASSERT_TRUE(defaults.contains(sid));
@@ -1104,7 +1118,7 @@ TEST(parameter_extraction, function_multi_site_no_cross_contamination) {
         ASSERT_NE(before, "<missing>");
 
         parameter_solver::propagate_functions(resource, nullptr);
-        auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+        auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
         EXPECT_EQ(defaults[qualified_identifier("Y")], 1);
         EXPECT_EQ(defaults[qualified_identifier("Z")], 0);
@@ -1139,7 +1153,7 @@ TEST(parameter_extraction, function_nested_call_solves) {
     ASSERT_NE(compute_before, "<missing>");
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     ASSERT_TRUE(defaults.contains(sid));
@@ -1170,8 +1184,10 @@ TEST(parameter_extraction, function_call_sites_stable_across_solves) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(
         analyzer.analyze("", test_pattern).value().get_content()[0]);
 
+    Parameters_map declared_params;
+    for (const auto &p : resource->get_parameter_statements()) declared_params.insert(p);
     auto call_print = [&](const std::string &name) {
-        return resource->get_parameters().get(name)->get_expression()->print();
+        return declared_params.get(name)->get_expression()->print();
     };
     const std::string y_before = call_print("Y");
     const std::string z_before = call_print("Z");
@@ -1179,14 +1195,14 @@ TEST(parameter_extraction, function_call_sites_stable_across_solves) {
     ASSERT_EQ(z_before, "compute2(64)");
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto first = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto first = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
     ASSERT_EQ(first[qualified_identifier("Y")], 1);
     ASSERT_EQ(first[qualified_identifier("Z")], 0);
 
     EXPECT_EQ(call_print("Y"), y_before);
     EXPECT_EQ(call_print("Z"), z_before);
 
-    auto second = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto second = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
     EXPECT_EQ(second[qualified_identifier("Y")], 1);
     EXPECT_EQ(second[qualified_identifier("Z")], 0);
     EXPECT_EQ(call_print("Y"), y_before);
@@ -1214,7 +1230,7 @@ TEST(parameter_extraction, function_formal_shadows_caller_name) {
         analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     ASSERT_TRUE(defaults.contains(qualified_identifier("Y")));
     EXPECT_EQ(defaults[qualified_identifier("Y")], 1);
@@ -1239,7 +1255,7 @@ TEST(parameter_extraction, function_actuals_evaluate_in_caller_context) {
         analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     ASSERT_TRUE(defaults.contains(qualified_identifier("Y")));
     EXPECT_EQ(defaults[qualified_identifier("Y")], 10);
@@ -1283,7 +1299,9 @@ TEST(parameter_extraction, function_return_struct_read_leaks_into_dependencies) 
     auto mod = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[2]);
     parameter_solver::propagate_functions(mod, d_store);
 
-    auto param = mod->get_parameters().get("RESULT");
+    Parameters_map declared_params;
+    for (const auto &p : mod->get_parameter_statements()) declared_params.insert(p);
+    auto param = declared_params.get("RESULT");
     auto call = std::dynamic_pointer_cast<HDL_function_call>(param->get_expression());
     ASSERT_TRUE(call);
     ASSERT_TRUE(call->get_linked_definition());
@@ -1340,7 +1358,7 @@ TEST(parameter_extraction, function_struct_local_return_solves) {
         std::static_pointer_cast<hdl_resource_statement>(resources[1]), "build_config");
     ASSERT_NE(def_before, "<missing>");
 
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     // Seed exactly as retrieve_package_parameters exports: instance-preserving
     // canonical form plus the flat legacy alias for bare pkg::FIELD reads.
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -1359,7 +1377,9 @@ TEST(parameter_extraction, function_struct_local_return_solves) {
     parameter_solver::propagate_types(mod, d_store);
     parameter_solver::propagate_functions(mod, d_store);
 
-    auto param = mod->get_parameters().get("RESULT");
+    Parameters_map declared_params;
+    for (const auto &p : mod->get_parameter_statements()) declared_params.insert(p);
+    auto param = declared_params.get("RESULT");
     for (const auto &d : param->get_dependencies().data) {
         EXPECT_NE(d.get_name(), "FETCH_WIDTH") << "leaked dep: " << d.print();
         if (!d.get_instance().empty()) {
@@ -1368,7 +1388,7 @@ TEST(parameter_extraction, function_struct_local_return_solves) {
         }
     }
 
-    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), ctx);
     qualified_identifier sid = qualified_identifier("RESULT");
     ASSERT_TRUE(solved.contains(sid));
     ASSERT_TRUE(solved.at(sid).is_integer());
@@ -1419,7 +1439,7 @@ TEST(parameter_extraction, struct_field_downstream_uses) {
     auto pkg = resources[0]->as<hdl_resource_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
 
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     // Seed exactly as retrieve_package_parameters exports: instance-preserving
     // canonical form plus the flat legacy alias for bare pkg::FIELD reads.
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -1437,7 +1457,7 @@ TEST(parameter_extraction, struct_field_downstream_uses) {
 
     parameter_solver::propagate_types(mod, d_store);
     parameter_solver::propagate_functions(mod, d_store);
-    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), ctx);
 
     EXPECT_EQ(solved.at(qualified_identifier("XL")).get_integer(), 32);
     EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer(), 1);
@@ -1491,7 +1511,7 @@ TEST(parameter_extraction, interrupt_shaped_uses) {
     auto pkg = resources[0]->as<hdl_resource_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
 
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto &[id, val] : pkg_defaults) {
         qualified_identifier qid(id.get_name());
@@ -1509,7 +1529,7 @@ TEST(parameter_extraction, interrupt_shaped_uses) {
 
     parameter_solver::propagate_types(mod, d_store);
     parameter_solver::propagate_functions(mod, d_store);
-    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), ctx);
 
     ASSERT_TRUE(solved.contains(qualified_identifier("XL2")));
     EXPECT_EQ(solved.at(qualified_identifier("XL2")).get_integer(), 32);
@@ -1544,7 +1564,7 @@ TEST(parameter_extraction, wide_struct_member_roundtrip) {
     auto resources = file.get_content();
     auto pkg = resources[0]->as<hdl_resource_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto &[id, val] : pkg_defaults) {
         qualified_identifier qid(id.get_name());
@@ -1559,7 +1579,7 @@ TEST(parameter_extraction, wide_struct_member_roundtrip) {
     }
     parameter_solver::propagate_types(mod, d_store);
     parameter_solver::propagate_functions(mod, d_store);
-    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), ctx);
     EXPECT_EQ(solved.at(qualified_identifier("A")).get_integer(), 7);
     EXPECT_EQ(solved.at(qualified_identifier("B")).get_integer(), 9);
     EXPECT_EQ(pkg_defaults.at(qualified_identifier("U")).get_integer().to_wide().str(),
@@ -1595,7 +1615,7 @@ TEST(parameter_extraction, huge_struct_member_roundtrip) {
     auto resources = file.get_content();
     auto pkg = resources[0]->as<hdl_resource_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
-    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto &[id, val] : pkg_defaults) {
         qualified_identifier qid(id.get_name());
@@ -1610,7 +1630,7 @@ TEST(parameter_extraction, huge_struct_member_roundtrip) {
     }
     parameter_solver::propagate_types(mod, d_store);
     parameter_solver::propagate_functions(mod, d_store);
-    auto solved = parameter_solver::process_parameters(mod->get_parameters(), ctx);
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), ctx);
     EXPECT_EQ(solved.at(qualified_identifier("A")).get_integer(), 0x80000007LL);
     EXPECT_EQ(solved.at(qualified_identifier("B")).get_integer(), 9);
     EXPECT_EQ(solved.at(qualified_identifier("TOPBIT")).get_integer(), 1);
@@ -1652,7 +1672,7 @@ TEST(parameter_extraction, package_localparam_struct_shapes) {
     std::map<qualified_identifier, resolved_parameter> pctx;
     pctx[qualified_identifier("config_pkg", "", "E_ZERO")] = 0;
     pctx[qualified_identifier("config_pkg", "", "E_ONE")] = 1;
-    auto solved = parameter_solver::process_parameters(pkg->get_parameters(), pctx);
+    auto solved = parameter_solver::process_parameters(pkg->get_parameter_statements(), pctx);
     EXPECT_EQ(solved.at(qualified_identifier("A")).get_integer(), 5);
     EXPECT_EQ(solved.at(qualified_identifier("P")).get_integer(), (5LL << 32) | 1);
     EXPECT_EQ(solved.at(qualified_identifier("Q")).get_integer(), (7LL << 32) | 9);
@@ -1677,7 +1697,7 @@ TEST(parameter_extraction, cast_in_binary_inside_literal) {
     auto file = analyzer.analyze("", test_pattern).value();
     auto resources = file.get_content();
     auto pkg = resources[0]->as<hdl_resource_statement>();
-    auto solved = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer(), (4LL << 32) | 5);
 }
 
@@ -1714,7 +1734,7 @@ TEST(parameter_extraction, keyed_struct_literal_member_order) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     d_store->store_file({"/dev/zero", "file_hash", file});
     parameter_solver::propagate_types(pkg, d_store);
-    auto solved = parameter_solver::process_parameters(pkg->get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(pkg->get_parameter_statements(), {});
     auto field = [&](const std::string &root, const std::string &name) {
         qualified_identifier qid(name);
         qid.set_instance_prefix({root});
@@ -1761,7 +1781,7 @@ TEST(parameter_extraction, ternary_unsized_cast_branches) {
     d_store->store_file({"/dev/zero", "file_hash", file});
     parameter_solver::propagate_types(mod, d_store);
     parameter_solver::propagate_functions(mod, d_store);
-    auto solved = parameter_solver::process_parameters(mod->get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("V0")).get_integer(), 1);
     EXPECT_EQ(solved.at(qualified_identifier("V1")).get_integer(), 2);
     EXPECT_EQ(solved.at(qualified_identifier("W0")).get_integer(), 0);
@@ -1790,7 +1810,7 @@ TEST(parameter_extraction, cast_scalar_target_widths) {
     auto file = analyzer.analyze("", test_pattern).value();
     auto resources = file.get_content();
     auto pkg = resources[0]->as<hdl_resource_statement>();
-    auto solved = parameter_solver::process_parameters(pkg.get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     // NOTE: compared in the int64 domain (get_value): hdl_integer operator==
     // is width-relative and would alias e.g. 200 and -56 at 8 bits.
     EXPECT_EQ(solved.at(qualified_identifier("A")).get_integer().get_value(), -5);
@@ -1837,7 +1857,7 @@ TEST(parameter_extraction, function_struct_bit_cast_width) {
     d_store->store_file({"/dev/zero", "file_hash", file});
     parameter_solver::propagate_types(mod, d_store);
     parameter_solver::propagate_functions(mod, d_store);
-    auto solved = parameter_solver::process_parameters(mod->get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), {});
     auto field = [&](const std::string &name) {
         qualified_identifier qid(name);
         qid.set_instance_prefix({"R"});
@@ -1894,10 +1914,12 @@ TEST(parameter_extraction, cast_size_single_operand) {
     check_w.set_type(Type_engine::create_primitive_type("integer"));
     check_w.set_raw_value(top_w);
 
-    EXPECT_EQ(check_v, *mod->get_parameters().get("V"));
-    EXPECT_EQ(check_w, *mod->get_parameters().get("W"));
+    Parameters_map declared_params;
+    for (const auto &p : mod->get_parameter_statements()) declared_params.insert(p);
+    EXPECT_EQ(check_v, *declared_params.get("V"));
+    EXPECT_EQ(check_w, *declared_params.get("W"));
 
-    auto solved = parameter_solver::process_parameters(mod->get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer().get_value(), 131);
     EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer().get_value(), 4);
 }
@@ -1922,7 +1944,7 @@ TEST(parameter_extraction, package_function_owner_disambiguates) {
     decoy->set_name("test_pkg");
     auto other = std::make_shared<HDL_parameter>("OTHER");
     other->set_type(Type_engine::create_primitive_type("integer"));
-    decoy->add_parameter(other);
+    decoy->add_statement(other);
 
     auto real = std::make_shared<hdl_resource_statement>();
     real->set_name("test_pkg");
@@ -1943,7 +1965,7 @@ TEST(parameter_extraction, package_function_owner_disambiguates) {
 
     auto mod = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0]);
     parameter_solver::propagate_functions(mod, d_store);
-    auto solved = parameter_solver::process_parameters(mod->get_parameters(), {});
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), {});
 
     qualified_identifier sid = qualified_identifier("RESULT");
     ASSERT_TRUE(solved.contains(sid));
@@ -1976,7 +1998,7 @@ TEST(parameter_extraction, while_loop_solvable) {
         analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     // 8 -> 4 -> 2 -> 1 : three iterations until the predicate fails.
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
@@ -2013,7 +2035,7 @@ TEST(parameter_extraction, repeat_loop_solvable) {
         analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
         {qualified_identifier("TEST_R"), 9}
@@ -2051,7 +2073,7 @@ TEST(parameter_extraction, do_while_loop_solvable) {
         analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     // 4 -> 2 -> 1 -> 0: three iterations. Input 0: one iteration by the
     // at-least-once semantics.
@@ -2085,7 +2107,7 @@ TEST(parameter_extraction, function_chained_addition_operands) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("R"), 31}
@@ -2119,7 +2141,7 @@ TEST(parameter_extraction, function_for_loop_if_body) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("R"), 3}
@@ -2157,7 +2179,7 @@ TEST(parameter_extraction, function_call_in_loop_body) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("R"), 4}
@@ -2191,7 +2213,7 @@ TEST(parameter_extraction, function_ternary_in_loop_body) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("R"), 4}
@@ -2224,7 +2246,7 @@ TEST(parameter_extraction, function_cast_in_loop_body) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("R"), 10}
@@ -2257,7 +2279,7 @@ TEST(parameter_extraction, function_indexed_local_accumulation) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
 
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("R"), 21}
@@ -2307,9 +2329,9 @@ TEST(parameter_extraction, function_enum_cast_loop_var_argument) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameters(), d_store);
+    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameter_statements(), d_store);
     if (auto overlaid = overlay_unambiguous_scope(pkg_ctx)) pkg_ctx = *overlaid;
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), pkg_ctx);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), pkg_ctx);
 
     std::map<qualified_identifier, resolved_parameter> check_defaults  = {
         {qualified_identifier("R"), 37}
@@ -2332,7 +2354,7 @@ endmodule
     sv_analyzer analyzer;
     auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
     parameter_solver::propagate_functions(resource, nullptr);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), {});
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
     EXPECT_EQ(defaults.at(qualified_identifier("V")).get_integer(), 5);
 }
 
@@ -2357,8 +2379,8 @@ endmodule
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
     parameter_solver::propagate_functions(resource, d_store);
-    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameters(), d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), pkg_ctx);
+    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameter_statements(), d_store);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), pkg_ctx);
     EXPECT_EQ(defaults.at(qualified_identifier("V_MIN")).get_integer(), 6);
     EXPECT_EQ(defaults.at(qualified_identifier("V_MAX")).get_integer(), 7);
 }
@@ -2393,8 +2415,8 @@ endmodule
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
     parameter_solver::propagate_functions(resource, d_store);
-    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameters(), d_store);
-    auto defaults = parameter_solver::process_parameters(resource->get_parameters(), pkg_ctx);
+    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameter_statements(), d_store);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), pkg_ctx);
     EXPECT_EQ(defaults.at(qualified_identifier("V_MIN")).get_integer(), 35);
     EXPECT_EQ(defaults.at(qualified_identifier("V_MAX")).get_integer(), 45);
 
@@ -2501,7 +2523,7 @@ end lang_ent;
     vpkg_check.set_name("lang_pkg");
     vpkg_check.set_type(package);
     vpkg_check.set_line_n(2);
-    vpkg_check.add_parameter(make_int_param("width", "8"));
+    vpkg_check.add_statement(make_int_param("width", "8"));
     auto *vpkg = find_vhdl("lang_pkg");
     ASSERT_NE(vpkg, nullptr);
     ASSERT_EQ(*vpkg, vpkg_check);
@@ -2511,7 +2533,7 @@ end lang_ent;
     vent_check.set_name("lang_ent");
     vent_check.set_type(module);
     vent_check.set_line_n(5);
-    vent_check.add_parameter(make_int_param("w", "8"));
+    vent_check.add_statement(make_int_param("w", "8"));
     auto *vent = find_vhdl("lang_ent");
     ASSERT_NE(vent, nullptr);
     ASSERT_EQ(*vent, vent_check);

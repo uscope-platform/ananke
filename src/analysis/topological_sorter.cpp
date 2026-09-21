@@ -18,10 +18,18 @@
 #include "data_model/HDL/types/HDL_struct_type.hpp"
 #include "data_model/HDL/types/HDL_union_type.hpp"
 
-void topological_sorter::analyze(const Parameters_map &p, const std::map<qualified_identifier, resolved_parameter> & context) {
+#include <unordered_map>
 
+void topological_sorter::analyze(const std::vector<std::shared_ptr<HDL_parameter>> &params, const std::map<qualified_identifier, resolved_parameter> & context) {
 
-    for (auto &[name, parameter]:p) {
+    std::unordered_map<std::string, std::shared_ptr<HDL_parameter>> by_name;
+    for (auto &parameter : params) {
+        if (parameter) by_name[parameter->get_name()] = parameter;
+    }
+
+    for (auto &parameter : params) {
+        if (!parameter) continue;
+        const auto &name = parameter->get_name();
         auto deps_list = parameter->get_dependencies();
         if (!topo_map.contains(qualified_identifier(name))) topo_map[qualified_identifier(name)] = {};
         if (parameter->is_type_param) {
@@ -37,15 +45,15 @@ void topological_sorter::analyze(const Parameters_map &p, const std::map<qualifi
             if (!context.contains(dep)) {
                 qualified_identifier effective_dep = dep;
                 for (auto &inst : dep.get_instance()) {
-                    if (p.contains(inst)) {
-                        auto sp = p.const_get(inst);
+                    if (by_name.contains(inst)) {
+                        auto sp = by_name.at(inst);
                         if (sp && sp->get_type() && (sp->get_type()->is<HDL_struct_type>() || sp->get_type()->is<HDL_union_type>())) {
                             effective_dep = qualified_identifier(inst);
                         }
                         break;
                     }
                 }
-                if (!p.contains(effective_dep.get_name())) continue;
+                if (!by_name.contains(effective_dep.get_name())) continue;
                 topo_map[effective_dep].dependents.insert(qualified_identifier(name));
                 topo_map[qualified_identifier(name)].dependencies.insert(effective_dep);
             }

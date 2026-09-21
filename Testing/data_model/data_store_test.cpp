@@ -491,9 +491,9 @@ TEST( data_store_test , package_owner_unique_match) {
     auto real = make_package("test_pkg");
 
     auto wanted_param = std::make_shared<HDL_parameter>("WANTED");
-    decoy->add_parameter(wanted_param);
+    decoy->add_statement(wanted_param);
     auto other_param = std::make_shared<HDL_parameter>("OTHER");
-    real->add_parameter(other_param);
+    real->add_statement(other_param);
 
     hdl_function_statement func;
     func.set_name("buildit");
@@ -559,7 +559,7 @@ TEST( data_store_test , conflict_reported_despite_resolution) {
     auto *store = new data_store(true, "/tmp/test_data_store");
     auto decoy = make_package("test_pkg");
     auto real = make_package("test_pkg");
-    real->add_parameter(std::make_shared<HDL_parameter>("WANTED"));
+    real->add_statement(std::make_shared<HDL_parameter>("WANTED"));
     store_package(store, "/path/decoy", decoy);
     store_package(store, "/path/real", real);
 
@@ -579,8 +579,8 @@ TEST( data_store_test , package_owner_ambiguous_falls_back) {
     auto *store = new data_store(true, "/tmp/test_data_store");
     auto first = make_package("test_pkg");
     auto second = make_package("test_pkg");
-    first->add_parameter(std::make_shared<HDL_parameter>("X"));
-    second->add_parameter(std::make_shared<HDL_parameter>("X"));
+    first->add_statement(std::make_shared<HDL_parameter>("X"));
+    second->add_statement(std::make_shared<HDL_parameter>("X"));
     store_package(store, "/path/first", first);
     store_package(store, "/path/second", second);
 

@@ -26,7 +26,7 @@ public:
     void new_interface(const std::string &name, unsigned int line_n);
     std::shared_ptr<hdl_resource_statement> get_interface();
     bool is_current_valid(){return valid_resource;}
-    void add_parameter(const std::shared_ptr<HDL_parameter> &p);
+    void add_statement(std::shared_ptr<hdl_statement_base> s);
     void set_language(hdl_language l) { language = l; }
 
 private:
