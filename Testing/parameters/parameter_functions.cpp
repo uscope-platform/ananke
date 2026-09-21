@@ -2538,3 +2538,38 @@ end lang_ent;
     ASSERT_NE(vent, nullptr);
     ASSERT_EQ(*vent, vent_check);
 }
+
+TEST(parameter_extraction, duplicate_declaration_each_gets_function_link) {
+    // Same-name declarations are distinct objects; function propagation must
+    // link each of them. Regression test: the propagation dedup used to be
+    // keyed by name, so only the first one was linked and the solved value
+    // defaulted to 0 ("empty body").
+    auto test_pattern = R"(
+    module test_mod #()();
+        function int unsigned f(logic a);
+            f = 1;
+        endfunction
+        localparam P = f(1);
+        localparam P = f(1);
+    endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto mod = std::static_pointer_cast<hdl_resource_statement>(
+        analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    HDL_parameter check;
+    check.set_name("P");
+    check.set_type(Type_engine::create_primitive_type("implicit"));
+    HDL_function_call call("f");
+    call.add_argument(std::make_shared<Numeric_token>("1"));
+    check.set_raw_value(std::make_shared<HDL_function_call>(call));
+
+    auto decls = mod->get_parameter_statements();
+    ASSERT_EQ(decls.size(), 2u);
+    for (const auto &p : decls) ASSERT_EQ(check, *p);
+
+    parameter_solver::propagate_functions(mod, nullptr);
+    auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), {});
+    EXPECT_EQ(solved.at(qualified_identifier("P")).get_integer().get_value(), 1);
+}

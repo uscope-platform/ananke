@@ -1059,17 +1059,18 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
     // Bodies populated below can reveal further (nested) calls, so repeat
     // until no new definition is propagated. Each (parameter, function) pair
     // is attempted once, which also bounds (mutually) recursive functions.
-    std::map<std::string, std::set<qualified_identifier>> attempted;
+    // The pair is keyed by parameter identity, not name: same-name
+    // declarations from different generate branches are distinct objects and
+    // each needs its own propagation.
+    std::map<const HDL_parameter*, std::set<qualified_identifier>> attempted;
     bool progress = true;
     while (progress) {
         progress = false;
         for (const auto &param : resource->get_parameter_statements()) {
-            const auto &name = param->get_name();
-
             auto deps = param->get_dependencies();
             for (const auto& fcn:deps.functions) {
-                if (attempted[name].contains(fcn)) continue;
-                attempted[name].insert(fcn);
+                if (attempted[param.get()].contains(fcn)) continue;
+                attempted[param.get()].insert(fcn);
                 if (!fcn.get_package_prefix().empty()) {
                     if (!d_store) continue;
                     const auto pkg = fcn.get_package_prefix().back();
