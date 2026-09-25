@@ -26,15 +26,13 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_repeat_statement)
 parameter_deps_t hdl_repeat_statement::get_dependencies() const {
     parameter_deps_t deps;
     if (count) deps.merge(count->get_dependencies());
-    for (const auto& stmt : loop_body)
-        if (stmt) deps.merge(stmt->get_dependencies());
+    merge_body_deps(deps, loop_body);
     return deps;
 }
 
 void hdl_repeat_statement::propagate_function(const hdl_function_def_ptr &def) {
     if (count) count->propagate_function(def);
-    for (auto &stmt : loop_body)
-        if (stmt) stmt->propagate_function(def);
+    propagate_body_functions(loop_body, def);
 }
 
 bool hdl_repeat_statement::equals(const hdl_statement_base &other) const {

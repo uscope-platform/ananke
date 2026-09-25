@@ -51,11 +51,9 @@ parameter_deps_t hdl_conditional_statement::get_dependencies() const {
     for (const auto &b : branches) {
         if (b.condition)
             deps.merge(b.condition->get_dependencies());
-        for (const auto &stmt : b.body)
-            deps.merge(stmt->get_dependencies());
+        merge_body_deps(deps, b.body);
     }
-    for (const auto &stmt : else_body)
-        deps.merge(stmt->get_dependencies());
+    merge_body_deps(deps, else_body);
     return deps;
 }
 
@@ -63,11 +61,9 @@ void hdl_conditional_statement::propagate_function(const hdl_function_def_ptr &d
     for (auto &b : branches) {
         if (b.condition)
             b.condition->propagate_function(def);
-        for (auto &stmt : b.body)
-            if (stmt) stmt->propagate_function(def);
+        propagate_body_functions(b.body, def);
     }
-    for (auto &stmt : else_body)
-        if (stmt) stmt->propagate_function(def);
+    propagate_body_functions(else_body, def);
 }
 
 bool hdl_conditional_statement::equals(const hdl_statement_base& other) const {
@@ -80,12 +76,12 @@ bool hdl_conditional_statement::equals(const hdl_statement_base& other) const {
                         *branches[i].condition == *rhs.branches[i].condition);
         if (!cond_eq) return false;
         if (!std::ranges::equal(branches[i].body, rhs.branches[i].body,
-            [](const auto& a, const auto& b) { return *a == *b; }))
+            [](const auto& a, const auto& b) { if (!a || !b) return a == b; return *a == *b; }))
             return false;
     }
 
     return std::ranges::equal(else_body, rhs.else_body,
-        [](const auto& a, const auto& b) { return *a == *b; });
+        [](const auto& a, const auto& b) { if (!a || !b) return a == b; return *a == *b; });
 }
 
 std::string hdl_conditional_statement::print() const {

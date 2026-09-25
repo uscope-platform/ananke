@@ -41,8 +41,7 @@ hdl_resource_statement::hdl_resource_statement(const hdl_resource_statement &c) 
 
 parameter_deps_t hdl_resource_statement::get_dependencies() const {
     parameter_deps_t deps;
-    for (const auto &stmt : statements)
-        deps.merge(stmt->get_dependencies());
+    merge_body_deps(deps, statements);
     for (const auto &[_, type] : typedefs)
         deps.merge(type->get_dependencies());
     return deps;
@@ -108,7 +107,9 @@ bool operator==(const hdl_resource_statement &lhs, const hdl_resource_statement 
     ret &= lhs.typedefs == rhs.typedefs;
     if (lhs.statements.size() != rhs.statements.size()) return false;
     for (int i = 0; i < lhs.statements.size(); i++) {
-        ret &= *lhs.statements[i] == *rhs.statements[i];
+        const auto &l = lhs.statements[i];
+        const auto &r = rhs.statements[i];
+        ret &= (!l && !r) || (l && r && *l == *r);
     }
 
     return ret;

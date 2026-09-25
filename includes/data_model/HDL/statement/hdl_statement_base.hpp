@@ -17,6 +17,7 @@
 #define ANANKE_HDL_STATEMENT_BASE_HPP
 
 #include <memory>
+#include <vector>
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 
 class hdl_function_statement;
@@ -47,5 +48,18 @@ public:
 
     friend void PrintTo(const hdl_statement_base& s, std::ostream* os);
 };
+
+using hdl_statement_body = std::vector<std::shared_ptr<hdl_statement_base>>;
+
+// Shared body traversal: every compound statement merges body deps and
+// forwards function definitions the same way (null-safe).
+inline void merge_body_deps(parameter_deps_t &deps, const hdl_statement_body &body) {
+    for (const auto &stmt : body)
+        if (stmt) deps.merge(stmt->get_dependencies());
+}
+inline void propagate_body_functions(const hdl_statement_body &body, const hdl_function_def_ptr &def) {
+    for (const auto &stmt : body)
+        if (stmt) stmt->propagate_function(def);
+}
 
 #endif //ANANKE_HDL_STATEMENT_BASE_HPP

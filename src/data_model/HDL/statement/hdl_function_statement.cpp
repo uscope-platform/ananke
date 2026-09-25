@@ -24,9 +24,9 @@ CEREAL_REGISTER_TYPE(hdl_function_statement)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_function_statement)
 
 bool hdl_function_statement::is_scalar() const {
+    if (body.size() != 1) return false;
     auto assignment = std::dynamic_pointer_cast<hdl_assignment_statement>(body[0]);
-    return body.size() == 1
-        && assignment != nullptr
+    return assignment != nullptr
         && assignment->get_target().get_instance().empty()
         && assignment->get_target().get_name() == name
         && assignment->get_index() == nullptr;
@@ -34,9 +34,7 @@ bool hdl_function_statement::is_scalar() const {
 
 parameter_deps_t hdl_function_statement::get_dependencies() const {
     parameter_deps_t deps;
-    for (const auto& stmt : body) {
-        if (stmt) deps.merge(stmt->get_dependencies());
-    }
+    merge_body_deps(deps, body);
     for (const auto& v : local_variables) {
         if (v) deps.merge(v->get_dependencies());
     }
@@ -55,7 +53,7 @@ bool hdl_function_statement::equals(const hdl_statement_base& other) const {
     }
     if (body.size() != rhs.body.size()) return false;
     for (size_t i = 0; i < body.size(); i++)
-        retval &= *body[i] == *rhs.body[i];
+        retval &= (!body[i] && !rhs.body[i]) || (body[i] && rhs.body[i] && *body[i] == *rhs.body[i]);
     if (local_variables.size() != rhs.local_variables.size()) return false;
     for (size_t i = 0; i < local_variables.size(); i++) {
         if (!local_variables[i] && !rhs.local_variables[i]) continue;
