@@ -2658,3 +2658,81 @@ TEST(parameter_processing, generate_localparam_genvar_index) {
     ASSERT_EQ(uip1->get_numeric_value(), 11);
 
 }
+
+TEST(parameter_processing, diamond_package_solved_once) {
+    auto test_pattern = R"(
+        package pkg_d;
+            parameter d = 5;
+        endpackage
+        package pkg_b;
+            parameter b = pkg_d::d + 1;
+        endpackage
+        package pkg_c;
+            parameter c = pkg_d::d + 2;
+        endpackage
+        module top #(parameter X = pkg_b::b + pkg_c::c)();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    // End to end: X resolves through both branches of the diamond.
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    auto x_param = ast->find_parameter("X");
+    ASSERT_NE(x_param, nullptr);
+    ASSERT_EQ(x_param->get_numeric_value().value().get_value(), 13);
+
+    // Direct retrieve through the diamond: pkg_d is reachable via pkg_b and
+    // pkg_c; all three solve exactly once per call (single shared
+    // visited-set in retrieve_package_parameters) with correct values.
+    std::shared_ptr<hdl_resource_statement> top;
+    for (auto &stmt : file.get_content()) {
+        auto res = std::dynamic_pointer_cast<hdl_resource_statement>(stmt);
+        if (res && res->getName() == "top") top = res;
+    }
+    ASSERT_NE(top, nullptr);
+    auto solved = parameter_solver::retrieve_package_parameters(top->get_parameter_statements(), d_store);
+    EXPECT_EQ(solved.at(qualified_identifier("pkg_d", "d")).get_integer(), 5);
+    EXPECT_EQ(solved.at(qualified_identifier("pkg_b", "b")).get_integer(), 6);
+    EXPECT_EQ(solved.at(qualified_identifier("pkg_c", "c")).get_integer(), 7);
+}
+
+TEST(parameter_processing, selective_import_resolves_item_only) {
+    auto test_pattern = R"(
+        package pkg_a;
+            parameter ITEM = 42;
+            parameter OTHER = 99;
+        endpackage
+        package pkg_b;
+            parameter ITEM = 7;
+        endpackage
+        import pkg_a::ITEM;
+        module top #(
+            parameter Y = ITEM,
+            parameter Z = OTHER
+        )();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    auto y_param = ast->find_parameter("Y");
+    ASSERT_NE(y_param, nullptr);
+    // Selective import wins over the same-named member of pkg_b: no ambiguity.
+    EXPECT_EQ(y_param->get_numeric_value().value().get_value(), 42);
+    // OTHER was not imported: stays undefined, defaults to 0 (99 would leak).
+    auto z_param = ast->find_parameter("Z");
+    ASSERT_NE(z_param, nullptr);
+    EXPECT_EQ(z_param->get_numeric_value().value().get_value(), 0);
+}

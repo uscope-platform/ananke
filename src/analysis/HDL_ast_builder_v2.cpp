@@ -131,10 +131,12 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                 crash_ctx.set(type, res_path);
 
                 // Resolve file-level `use`/`import` statements: record the package
-                // dependency and pull the imported package's constants into the
-                // solving context (unqualified), so `N := WIDTH` after `use pkg.all`
-                // resolves. Imported constants are never attached to the node.
-                std::map<qualified_identifier, resolved_parameter> imported_params;
+                // dependency and hand the imports to the solver, which solves the
+                // packages once (single union retrieve) and pulls the imported
+                // constants into the solving context unqualified, so
+                // `N := WIDTH` after `use pkg.all` resolves. Imported constants
+                // are never attached to the node.
+                std::vector<package_import> imports;
                 std::map<std::string, hdl_function_statement> imported_functions;
                 std::map<std::string, std::shared_ptr<hdl_type>> imported_types;
                 if (auto file = d_store->get_file<hdl_file>(res_path)) {
@@ -143,14 +145,13 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                         if (!imp) continue;
                         working_instance->add_package_dependency(imp->get_package());
                         auto pkg = d_store->get_HDL_resource(imp->get_package());
+                        package_import pi;
+                        pi.package_name = imp->get_package();
+                        pi.wildcard = imp->is_wildcard();
+                        pi.item = imp->is_wildcard() ? "" : imp->get_item();
+                        if (pkg.has_value()) pi.package = pkg.value();
+                        imports.push_back(std::move(pi));
                         if (!pkg.has_value()) continue;
-                        auto pkg_params = pkg.value()->get_parameter_statements();
-                        auto pkg_deps = parameter_solver::retrieve_package_parameters(pkg_params, d_store);
-                        auto pkg_solved = parameter_solver::process_parameters(pkg_params, pkg_deps);
-                        for (auto &[id, val] : pkg_solved) {
-                            if (imp->is_wildcard() || id.get_name() == imp->get_item())
-                                imported_params[qualified_identifier(id.get_name())] = val;
-                        }
                         for (auto &[name, fn] : pkg.value()->get_functions())
                             if (imp->is_wildcard() || imp->get_item() == name)
                                 imported_functions[name] = fn;
@@ -161,7 +162,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                 }
 
                 spdlog::trace("Processing dependency {} in module {}",working_instance->get_name(), type);
-                auto current_param_values = parameter_solver::override_parameters(wo, d_store, imported_params, imported_functions, imported_types);
+                auto current_param_values = parameter_solver::override_parameters(wo, d_store, imports, imported_functions, imported_types);
                 if (!wo.param_chain.empty()) wo.param_chain.back() = current_param_values;
 
                 std::vector<work_order> child_wo;

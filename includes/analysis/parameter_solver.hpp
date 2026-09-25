@@ -38,6 +38,16 @@ struct pending_parameter_override {
     std::shared_ptr<Expression_base> value;
 };
 
+// File-level `use`/`import` statement resolved by the builder: the imported
+// package (null when unresolvable — skipped) plus the wildcard/item filter.
+// Solved package values enter the instance scope unqualified per this filter.
+struct package_import {
+    std::string package_name;
+    std::shared_ptr<hdl_resource_statement> package;
+    bool wildcard = false;
+    std::string item;
+};
+
 struct work_order {
     std::shared_ptr<hdl_ast_node> node;
     std::map<qualified_identifier, resolved_parameter> parent_parameters;
@@ -63,7 +73,7 @@ public:
         );
 
     static std::map<qualified_identifier, resolved_parameter> override_parameters(work_order &work, const std::shared_ptr<data_store> &d_store,
-        const std::map<qualified_identifier, resolved_parameter> &imported = {},
+        const std::vector<package_import> &imports = {},
         const std::map<std::string, hdl_function_statement> &imported_functions = {},
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types = {});
     static void propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store);
@@ -74,7 +84,10 @@ public:
     static void propagate_imports(std::shared_ptr<hdl_resource_statement> &resource,
         const std::map<std::string, hdl_function_statement> &imported_functions,
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types);
-    static std::map<qualified_identifier, resolved_parameter> retrieve_package_parameters(const std::vector<std::shared_ptr<HDL_parameter>> &node_parameters, const std::shared_ptr<data_store> &d_store);
+    static std::map<qualified_identifier, resolved_parameter> retrieve_package_parameters(
+        const std::vector<std::shared_ptr<HDL_parameter>> &node_parameters,
+        const std::shared_ptr<data_store> &d_store,
+        const std::vector<std::pair<std::string, std::shared_ptr<hdl_resource_statement>>> &explicit_packages = {});
     static void remap_keyed_literals(const std::shared_ptr<Expression_base> &expr,
                               const std::shared_ptr<hdl_type> &type);
     static std::map<qualified_identifier, resolved_parameter> solve_complex_overrides(
