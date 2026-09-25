@@ -33,7 +33,6 @@ public:
         _name = n;
         _instance_prefix = {};
         _package_prefix = {};
-        _package_prefix = {};
     }
 
     qualified_identifier(const std::string &p, const std::string &n) {
@@ -49,6 +48,7 @@ public:
     }
     void set_package_prefix(const std::vector<std::string> &p){_package_prefix = p;}
     void set_instance_prefix(const std::vector<std::string> &i){_instance_prefix = i;}
+    bool is_bare() const {return _package_prefix.empty() && _instance_prefix.empty();}
     const std::string &get_name() const {return _name;}
     const std::vector<std::string> &get_instance() const {return _instance_prefix;}
     const std::vector<std::string> &get_package_prefix() const {return _package_prefix;}
@@ -112,5 +112,17 @@ struct parameter_deps_t {
         return !(lhs == rhs);
     }
 };
+
+// Loop-local predicate shared by the parent-scope filter
+// (parameter_solver::solve_complex_overrides) and the per-iteration elaboration
+// (HDL_ast_builder_v2::elaborate_loop_locals): directly loop-var dependent, or
+// transitively dependent on an already-collected loop local.
+inline bool depends_on_loop(const parameter_deps_t &deps, const std::set<std::string> &done) {
+    if (!deps.loop_vars.empty()) return true;
+    for (const auto &dep : deps.data) {
+        if (dep.is_bare() && done.contains(dep.get_name())) return true;
+    }
+    return false;
+}
 
 #endif //ANANKE_QUALIFIED_IDENTIFIER_HPP

@@ -832,7 +832,7 @@ void annotate_override_type_queries(
                     }
                 } else if (!tok.is_type_placeholder()) {
                     const auto id = tok.get_value();
-                    if (id.get_package_prefix().empty() && id.get_instance().empty()) {
+                    if (id.is_bare()) {
                         auto it = scope_types.find(id.get_name());
                         if (it != scope_types.end() && it->second) {
                             tok.set_expression_type(it->second);
@@ -1222,18 +1222,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             const auto &p_name = param->get_name();
             if (override_by_name.contains(p_name)) continue;
             if (skipped.contains(p_name)) continue;
-            const auto &deps = dep_cache.at(p_name);
-            bool loop_local = !deps.loop_vars.empty();
-            if (!loop_local) {
-                for (const auto &dep : deps.data) {
-                    if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
-                        skipped.contains(dep.get_name())) {
-                        loop_local = true;
-                        break;
-                    }
-                }
-            }
-            if (loop_local) {
+            if (depends_on_loop(dep_cache.at(p_name), skipped)) {
                 skipped.insert(p_name);
                 progress = true;
             }
@@ -1312,7 +1301,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         auto t = ts_param->get_type();
         if (!t) continue;
         for (auto &td : t->get_dependencies().data) {
-            if (td.get_package_prefix().empty() && td.get_instance().empty())
+            if (td.is_bare())
                 type_derived_bare.insert(td.get_name());
         }
     }
@@ -1334,7 +1323,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                     continue;
                 }
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);
-            } else if (dep.get_package_prefix().empty() && dep.get_instance().empty() && spec_by_name.contains(dep.get_name())) {
+            } else if (dep.is_bare() && spec_by_name.contains(dep.get_name())) {
                 continue;
             } else if(!override_by_name.contains(dep.get_name())) {
                 if (type_derived_bare.contains(dep.get_name())) {

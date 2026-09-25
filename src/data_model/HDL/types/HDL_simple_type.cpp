@@ -63,7 +63,7 @@ std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<quali
             for (const auto *bound : {dim.first_bound.get(), dim.second_bound.get()}) {
                 if (!bound) continue;
                 for (const auto &dep : bound->get_dependencies().data) {
-                    if (dep.get_package_prefix().empty() && dep.get_instance().empty()) return true;
+                    if (dep.is_bare()) return true;
                 }
             }
         }

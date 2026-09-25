@@ -45,7 +45,7 @@ std::optional<resolved_type> HDL_enum_type::evaluate_type(
         for (const auto *bound : {dim.first_bound.get(), dim.second_bound.get()}) {
             if (!bound) continue;
             for (const auto &dep : bound->get_dependencies().data) {
-                if (dep.get_package_prefix().empty() && dep.get_instance().empty()) dim_needs_scope = true;
+                if (dep.is_bare()) dim_needs_scope = true;
             }
         }
     }

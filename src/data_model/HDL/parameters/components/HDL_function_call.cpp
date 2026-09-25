@@ -170,8 +170,7 @@ void HDL_function_call::walk_body(
                     if (!asgn->get_index() && rt && rt->is<HDL_struct_type>() &&
                         asgn->get_value() && asgn->get_value()->is<Identifier_token>()) {
                         const auto &rid = asgn->get_value()->as<Identifier_token>().get_value();
-                        if (rid.get_instance().empty() && rid.get_package_prefix().empty() &&
-                            rid.get_name() != fcn_name) {
+                        if (rid.is_bare() && rid.get_name() != fcn_name) {
                             const auto &members = rt->as<HDL_struct_type>().member;
                             for (size_t i = 0; i < members.size(); ++i) {
                                 const int64_t midx = static_cast<int64_t>(i);

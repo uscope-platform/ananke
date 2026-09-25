@@ -284,18 +284,7 @@ void HDL_ast_builder_v2::elaborate_loop_locals(
         for (const auto &param : params) {
             const auto &p_name = param->get_name();
             if (elaborated.contains(p_name)) continue;
-            const auto &deps = dep_cache.at(p_name);
-            bool candidate = !deps.loop_vars.empty();
-            if (!candidate) {
-                for (const auto &dep : deps.data) {
-                    if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
-                        elaborated.contains(dep.get_name())) {
-                        candidate = true;
-                        break;
-                    }
-                }
-            }
-            if (!candidate) continue;
+            if (!depends_on_loop(dep_cache.at(p_name), elaborated)) continue;
             auto v = param->evaluate(ctx);
             if (!v.has_value() || v->is_undefined()) continue;
             ctx[param->get_identifier()] = v.value();
