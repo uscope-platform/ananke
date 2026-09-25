@@ -49,9 +49,9 @@ public:
     }
     void set_package_prefix(const std::vector<std::string> &p){_package_prefix = p;}
     void set_instance_prefix(const std::vector<std::string> &i){_instance_prefix = i;}
-    std::string get_name() const {return _name;}
-    std::vector<std::string>  get_instance() const {return _instance_prefix;}
-    std::vector<std::string> get_package_prefix() const {return _package_prefix;}
+    const std::string &get_name() const {return _name;}
+    const std::vector<std::string> &get_instance() const {return _instance_prefix;}
+    const std::vector<std::string> &get_package_prefix() const {return _package_prefix;}
 
     friend bool operator==(const qualified_identifier &lhs, const qualified_identifier &rhs) {
         return std::tie(lhs._package_prefix, lhs._name, lhs._instance_prefix) == std::tie(rhs._package_prefix, rhs._name, rhs._instance_prefix);

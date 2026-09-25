@@ -61,15 +61,17 @@ void parameter_solver::resolve_interface_chain(
     auto parent = examined_node->get_parent();
     if (!parent) return;
     auto ports = parent->get_ports();
-    if (!ports.contains(current_instance)) return;
-    instance_name = ports.at(current_instance)[0].get_name();
+    if (auto it = ports.find(current_instance); it != ports.end())
+        instance_name = it->second[0].get_name();
+    else return;
     examined_node = parent;
 
     while (is_interface_at(instance_name, examined_node->get_parent())) {
         auto next_parent = examined_node->get_parent();
         ports = next_parent->get_ports();
-        if (!ports.contains(instance_name)) break;
-        instance_name = ports.at(instance_name)[0].get_name();
+        if (auto it = ports.find(instance_name); it != ports.end())
+            instance_name = it->second[0].get_name();
+        else break;
         examined_node = next_parent;
     }
 
@@ -240,6 +242,10 @@ void parameter_solver::update_parameters_map(
     const std::shared_ptr<data_store> &d_store
 ) {
     std::vector<std::shared_ptr<HDL_parameter>> node_parameters = node->get_parameters();
+    std::unordered_map<std::string, size_t> node_idx;
+    for (size_t i = 0; i < node_parameters.size(); ++i) {
+        if (node_parameters[i]) node_idx[node_parameters[i]->get_name()] = i;
+    }
     auto resource = d_store->get_HDL_resource(node->get_type());
     for (const auto &param : resource.value()->get_parameter_statements()) {
         const auto &p_name = param->get_name();
@@ -248,15 +254,17 @@ void parameter_solver::update_parameters_map(
         // unrolling instead): skip them here rather than throwing on .at().
         if (solved_it == solved_parameters.end()) continue;
         std::shared_ptr<HDL_parameter> ast_param;
-        auto it = std::find_if(node_parameters.begin(), node_parameters.end(),
-            [&](const auto &p) { return p && p->get_name() == p_name; });
-        if (it != node_parameters.end())
-            ast_param = std::make_shared<HDL_parameter>(**it);
+        auto it = node_idx.find(p_name);
+        if (it != node_idx.end())
+            ast_param = std::make_shared<HDL_parameter>(*node_parameters[it->second]);
         else
             ast_param = std::make_shared<HDL_parameter>(*param);
         ast_param->set_value(solved_it->second);
-        if (it != node_parameters.end()) *it = ast_param;
-        else node_parameters.push_back(ast_param);
+        if (it != node_idx.end()) node_parameters[it->second] = ast_param;
+        else {
+            node_idx[p_name] = node_parameters.size();
+            node_parameters.push_back(ast_param);
+        }
     }
 
     node->set_parameters(node_parameters);
@@ -267,16 +275,18 @@ resolved_parameter parameter_solver::resolve_instance_dependency(
     work_order &work,
     const std::shared_ptr<data_store> &d_store
 ) {
-    auto instance_name = dep.get_instance().back();
+    const auto &inst_path = dep.get_instance();
+    const auto &inst_key = inst_path.back();
+    std::string instance_name = inst_key;
     std::shared_ptr<hdl_ast_node> examined_node = work.node;
 
     auto current_ports = work.node->get_ports();
-    if (current_ports.contains(dep.get_instance().back())) {
-        instance_name = current_ports.at(dep.get_instance().back())[0].get_name();
+    if (auto it = current_ports.find(inst_key); it != current_ports.end()) {
+        instance_name = it->second[0].get_name();
         examined_node = work.node->get_parent();
-    } else if (work.interfaces_map.contains(dep.get_instance().back())) {
+    } else if (work.interfaces_map.contains(inst_key)) {
         resolve_interface_chain(work, d_store, examined_node, instance_name);
-    } else if (examined_node) {
+    } else {
         examined_node = examined_node->get_parent();
     }
 
@@ -289,14 +299,14 @@ resolved_parameter parameter_solver::resolve_instance_dependency(
                 if (val.has_value()) {
                     return val.value();
                 }
-                spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", dep.get_instance().back(), dep.get_name());
+                spdlog::warn("The instance parameter {}::{} has no value, using 0 as a default", inst_key, dep.get_name());
                 return resolved_parameter(0);
             }
         }
     }
 
     auto path = get_full_path(work.node);
-    spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, dep.get_instance().back(), dep.get_name());
+    spdlog::warn("The instance parameter {}.{}::{} was not found, using 0 as a default", path, inst_key, dep.get_name());
     resolved_parameter value;
     value.set_undefined();
     return value;
@@ -318,12 +328,18 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
 
     //retrieve default package parameters
     std::vector<std::shared_ptr<HDL_parameter>> combined_params = node_parameters;
+    std::unordered_map<std::string, size_t> combined_idx;
+    for (size_t i = 0; i < combined_params.size(); ++i) {
+        if (combined_params[i]) combined_idx[combined_params[i]->get_name()] = i;
+    }
     for (const auto &param : node_overrides) {
-        const auto &name = param->get_name();
-        auto it = std::find_if(combined_params.begin(), combined_params.end(),
-            [&](const auto &p) { return p && p->get_name() == name; });
-        if (it != combined_params.end()) *it = param;
-        else combined_params.push_back(param);
+        if (!param) continue;
+        auto it = combined_idx.find(param->get_name());
+        if (it != combined_idx.end()) combined_params[it->second] = param;
+        else {
+            combined_idx[param->get_name()] = combined_params.size();
+            combined_params.push_back(param);
+        }
     }
 
     // Pre-propagate retrieve: spec params still carry external typedef
@@ -1169,21 +1185,23 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     }
     // Spec declarations in order, with a name index for the membership and
     // spec-object lookups below (to_solve covers exactly the spec names, so
-    // one index serves both).
+    // one index serves both). Overrides indexed once instead of a linear
+    // find_parameter per spec.
     auto spec_decls = node_spec.value()->get_parameter_statements();
     std::unordered_map<std::string, std::shared_ptr<HDL_parameter>> spec_by_name;
     for (const auto &p : spec_decls) {
         if (p) spec_by_name[p->get_name()] = p;
     }
+    std::unordered_map<std::string, std::shared_ptr<HDL_parameter>> override_by_name;
+    for (const auto &o : work.node->get_parameters()) {
+        if (o) override_by_name[o->get_name()] = o;
+    }
 
     std::vector<std::shared_ptr<HDL_parameter>> to_solve;
     for (const auto &param : spec_decls) {
         if (!param) continue;
-        if (auto o = work.node->find_parameter(param->get_name())) {
-            to_solve.push_back(o);
-        } else {
-            to_solve.push_back(param);
-        }
+        auto oit = override_by_name.find(param->get_name());
+        to_solve.push_back(oit != override_by_name.end() ? oit->second : param);
     }
 
     // Loop locals (params depending on generate loop vars) have no parent-scope
@@ -1202,7 +1220,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         progress = false;
         for (const auto &param : to_solve) {
             const auto &p_name = param->get_name();
-            if (work.node->has_parameter(p_name)) continue;
+            if (override_by_name.contains(p_name)) continue;
             if (skipped.contains(p_name)) continue;
             const auto &deps = dep_cache.at(p_name);
             bool loop_local = !deps.loop_vars.empty();
@@ -1301,11 +1319,11 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
 
     for (const auto &param : work.node->get_parameters()) {
         std::optional<qualified_identifier> dtype_ref;
-        if (param->is_type_param && param->get_expression()) {
-            if (param->get_expression()->is<Identifier_token>())
-                dtype_ref = param->get_expression()->as<Identifier_token>().get_value();
-            else if (param->get_expression()->is<Type_ref>())
-                dtype_ref = param->get_expression()->as<Type_ref>().get_target();
+        if (auto expr = param->get_expression(); param->is_type_param && expr) {
+            if (expr->is<Identifier_token>())
+                dtype_ref = expr->as<Identifier_token>().get_value();
+            else if (expr->is<Type_ref>())
+                dtype_ref = expr->as<Type_ref>().get_target();
         }
         for(auto &dep: param->get_dependencies().data) {
             if (ctx.contains(dep)) continue;
@@ -1318,7 +1336,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
                 ctx[dep] = resolve_instance_dependency(dep, work, d_store);
             } else if (dep.get_package_prefix().empty() && dep.get_instance().empty() && spec_by_name.contains(dep.get_name())) {
                 continue;
-            } else if(!work.node->has_parameter(dep.get_name())) {
+            } else if(!override_by_name.contains(dep.get_name())) {
                 if (type_derived_bare.contains(dep.get_name())) {
                     std::vector<std::map<qualified_identifier, resolved_parameter>::const_iterator> providers;
                     for (auto it = ctx.begin(); it != ctx.end(); ++it) {
