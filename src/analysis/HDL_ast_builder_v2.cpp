@@ -51,20 +51,21 @@ namespace {
         std::unordered_map<std::string, std::vector<HDL_net>> new_ports;
         for (auto &[port_name, nets] : node->get_ports()) {
             std::vector<HDL_net> port_content;
+            port_content.reserve(nets.size());
             for (auto &n : nets) {
                 if (n.is_array()) {
                     auto new_net = n;
                     Expression_v2 n_idx;
                     n_idx.set_lhs(std::make_shared<Numeric_token>(std::variant<hdl_integer, double>(idx), 0));
                     new_net.set_index({n_idx});
-                    port_content.emplace_back(new_net);
+                    port_content.emplace_back(std::move(new_net));
                 } else {
                     port_content.push_back(n);
                 }
             }
-            new_ports[port_name] = port_content;
+            new_ports.emplace(port_name, std::move(port_content));
         }
-        node->set_ports(new_ports);
+        node->set_ports(std::move(new_ports));
     }
 }
 HDL_ast_builder_v2::HDL_ast_builder_v2(const std::shared_ptr<settings_store> &s, const std::shared_ptr<data_store> &d,
@@ -83,7 +84,7 @@ std::vector<std::shared_ptr<hdl_ast_node>> HDL_ast_builder_v2::build_ast(const s
     for(auto &item:modules){
         auto ast = build_ast(item);
         m.apply_passes(ast);
-        ret.push_back(ast);
+        ret.push_back(std::move(ast));
     }
 
 
@@ -97,9 +98,9 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
         top->set_type(top_level_module);
         top->set_dependency_class(module);
 
+        if (top_level_module.empty()) return top;
         std::stack< work_order> working_stack;
         working_stack.push({top, {}, "TL", {}, {}, {top_level_module}, {{}}});
-        if (top_level_module.empty()) return top;
         while (!working_stack.empty()) {
             auto wo = std::move(working_stack.top());
             auto working_instance = wo.node;
@@ -192,23 +193,6 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
     return top;
 }
 
-bool HDL_ast_builder_v2::evaluate_condition(const std::shared_ptr<Expression_base> &cond,
-    const std::map<qualified_identifier, resolved_parameter> &parameters) {
-    if (!cond) return false;
-    auto result = cond->evaluate(parameters);
-    return result.has_value() && result.value().is_integer() && result.value().get_integer() != 0;
-}
-
-std::expected<void, solver_errors> HDL_ast_builder_v2::process_quantifier(const std::shared_ptr<HDL_parameter> &quantifier, const std::map<qualified_identifier, resolved_parameter> &parameters) {
-
-    if (quantifier != nullptr) {
-        auto value = quantifier->evaluate(parameters);
-        if (!value.has_value()) return std::unexpected{value.error()};
-        quantifier->set_value(value.value());
-    }
-    return {};
-}
-
 std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::process_statement(
     const std::shared_ptr<hdl_statement_base> &stmt,
     work_order &wo,
@@ -234,7 +218,7 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     auto child = std::make_shared<hdl_ast_node>(*inst);
     child->set_parent(wo.node);
     child->set_active(active);
-    auto type = inst->get_type();
+    const auto &type = inst->get_type();
     auto &module_chain = wo.module_chain;
     auto &param_chain = wo.param_chain;
     const auto &params = param_chain.back();
@@ -251,7 +235,11 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     if (inst->get_array_quantifier()) {
         child->add_array_quantifier(std::make_shared<HDL_parameter>(*inst->get_array_quantifier()));
     }
-    if (auto err = process_quantifier(child->get_array_quantifier(), params); !err) return std::unexpected{err.error()};
+    if (auto q = child->get_array_quantifier()) {
+        auto value = q->evaluate(params);
+        if (!value.has_value()) return std::unexpected{value.error()};
+        q->set_value(value.value());
+    }
     auto child_chain = module_chain;
     child_chain.push_back(type);
     auto child_param_chain = param_chain;
@@ -267,7 +255,7 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     }
 
     if (!active && recurses) return orders;
-    orders.push_back({child, params, wo.path + "." + wo.node->get_name(), wo.interfaces_map, {}, child_chain, child_param_chain});
+    orders.push_back({child, params, wo.path + "." + wo.node->get_name(), wo.interfaces_map, {}, std::move(child_chain), std::move(child_param_chain)});
     return orders;
 }
 
@@ -287,12 +275,16 @@ void HDL_ast_builder_v2::elaborate_loop_locals(
 
     std::set<std::string> elaborated;
     const auto params = resource->get_parameter_statements();
+    std::unordered_map<std::string, parameter_deps_t> dep_cache;
+    for (const auto &param : params) {
+        if (param) dep_cache.emplace(param->get_name(), param->get_dependencies());
+    }
     for (size_t pass = 0; pass <= params.size(); ++pass) {
         bool progress = false;
         for (const auto &param : params) {
             const auto &p_name = param->get_name();
             if (elaborated.contains(p_name)) continue;
-            const auto deps = param->get_dependencies();
+            const auto &deps = dep_cache.at(p_name);
             bool candidate = !deps.loop_vars.empty();
             if (!candidate) {
                 for (const auto &dep : deps.data) {
@@ -354,7 +346,11 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     std::vector<work_order> orders;
     bool any_matched = false;
     for (auto &branch : cond.get_branches()) {
-        bool selected = evaluate_condition(branch.condition, wo.param_chain.back());
+        bool selected = false;
+        if (branch.condition) {
+            auto result = branch.condition->evaluate(wo.param_chain.back());
+            selected = result.has_value() && result.value().is_integer() && result.value().get_integer() != 0;
+        }
         any_matched = any_matched || selected;
         for (auto &body_stmt : branch.body) {
             auto w = process_statement(body_stmt, wo, selected);

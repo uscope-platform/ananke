@@ -49,7 +49,7 @@ public:
     explicit hdl_ast_node(const hdl_instance_statement &stmt);
 
     void add_port_connection(const std::string& port_name, std::vector<HDL_net> value);
-    void set_ports(const std::unordered_map<std::string, std::vector<HDL_net>> &p) { ports_map = p; }
+    void set_ports(std::unordered_map<std::string, std::vector<HDL_net>> p) { ports_map = std::move(p); }
     std::unordered_map<std::string, std::vector<HDL_net>> get_ports() { return ports_map; }
 
     void add_parameter(const std::shared_ptr<HDL_parameter> &p);

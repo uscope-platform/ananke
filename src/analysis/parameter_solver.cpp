@@ -136,14 +136,6 @@ static void annotate_identifier_types(
     }
 }
 
-static std::map<qualified_identifier, std::shared_ptr<hdl_type>> build_type_map(const std::vector<std::shared_ptr<HDL_parameter>> &params) {
-    std::map<qualified_identifier, std::shared_ptr<hdl_type>> types;
-    for (const auto &param : params) {
-        if (param) types[qualified_identifier(param->get_name())] = param->get_type();
-    }
-    return types;
-}
-
 std::map<qualified_identifier, resolved_parameter> parameter_solver::process_parameters(
     const std::vector<std::shared_ptr<HDL_parameter>> &params_in,
     const std::map<qualified_identifier, resolved_parameter> &context
@@ -153,28 +145,21 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
     std::map<qualified_identifier, resolved_parameter> solved_parameters;
 
     std::unordered_map<std::string, std::shared_ptr<HDL_parameter>> by_name;
+    std::map<qualified_identifier, std::shared_ptr<hdl_type>> type_map;
+    std::map<qualified_identifier, std::shared_ptr<hdl_type>> type_ctx;
     for (const auto &param : params_in) {
-        if (param) by_name[param->get_name()] = param;
+        if (!param) continue;
+        by_name[param->get_name()] = param;
+        type_map[qualified_identifier(param->get_name())] = param->get_type();
+        if (param->is_type_param && param->get_type()) {
+            type_ctx[qualified_identifier(param->get_name())] = param->get_type();
+        }
+        auto ev = extract_enum_values(param);
+        ctx.insert(ev.begin(), ev.end());
     }
 
     topological_sorter s;
     s.analyze(params_in, ctx);
-
-    auto type_map = build_type_map(params_in);
-
-    std::map<qualified_identifier, std::shared_ptr<hdl_type>> type_ctx;
-    for (const auto &param : params_in) {
-        if (!param) continue;
-        if (param->is_type_param && param->get_type()) {
-            type_ctx[qualified_identifier(param->get_name())] = param->get_type();
-        }
-    }
-
-    for (const auto &param : params_in) {
-        if (!param) continue;
-        auto ev = extract_enum_values(param);
-        ctx.insert(ev.begin(), ev.end());
-    }
 
     while (auto next = s.get_next()) {
         auto param = by_name.at(next.value().get_name());
@@ -417,10 +402,8 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_pa
 
     for (auto &param : node_parameters) {
         if (!param) continue;
-        const auto &p_name = param->get_name();
         auto deps = param->get_dependencies();
         for (const auto& dep : deps.data) {
-            std::string dbg_p = p_name;
             if (!dep.get_package_prefix().empty()) {
                 auto pkg_name = dep.get_package_prefix().back();
                 auto package = d_store->get_package_param_owner(pkg_name, dep);
@@ -529,7 +512,8 @@ void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement>
                                          const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
     std::map<std::string, hdl_function_def_ptr> linked_definitions;
     for (const auto &param : resource->get_parameter_statements()) {
-        for (auto &fcn : param->get_dependencies().functions) {
+        const auto deps = param->get_dependencies();
+        for (auto &fcn : deps.functions) {
             if (!fcn.get_package_prefix().empty()) continue;
             if (!imported_functions.contains(fcn.get_name())) continue;
             auto &linked_definition = linked_definitions.try_emplace(fcn.get_name()).first->second;
@@ -546,7 +530,7 @@ void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement>
             }
             param->propagate_function(linked_definition);
         }
-        for (auto &type : param->get_dependencies().types) {
+        for (auto &type : deps.types) {
             if (!type.get_package_prefix().empty()) continue;
             if (imported_types.contains(type.get_name()))
                 param->set_type(imported_types.at(type.get_name()));
@@ -554,8 +538,8 @@ void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement>
         // A declared type name that wasn't resolvable at parse time keeps its
         // name on the (dimensionless) placeholder type; swap in the imported
         // typedef so the real width/orientation is used.
-        if (param->get_type() && param->get_type()->is<HDL_simple_type>()) {
-            auto &simple = param->get_type()->as<HDL_simple_type>();
+        if (auto cur = param->get_type(); cur && cur->is<HDL_simple_type>()) {
+            auto &simple = cur->as<HDL_simple_type>();
             if (imported_types.contains(simple.get_type_name()))
                 param->set_type(imported_types.at(simple.get_type_name()));
         }
@@ -670,9 +654,6 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
             }
             }
         }
-    }
-
-    for (const auto &param : resource->get_parameter_statements()) {
         remap_keyed_literals(param->get_expression(), param->get_type());
     }
 }
@@ -1019,8 +1000,12 @@ void parameter_solver::propagate_port_types(
     }
     if (ports.empty()) return;
     std::set<std::string> param_names;
-    for (const auto &p : resource->get_parameter_statements()) param_names.insert(p->get_name());
-    for (const auto &param : resource->get_parameter_statements()) {
+    std::vector<std::shared_ptr<HDL_parameter>> params;
+    for (const auto &p : resource->get_parameter_statements()) {
+        param_names.insert(p->get_name());
+        params.push_back(p);
+    }
+    for (const auto &param : params) {
         annotate_port_tokens_expr(param->get_expression(), ports, param_names,
             resource, imported_types, d_store, false);
     }
@@ -1207,6 +1192,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     // parent_parameters. Exclude them here so this function is a single
     // straight solve over parent-scope params. Instance overrides are always
     // solved (concrete per-instance values).
+    std::unordered_map<std::string, parameter_deps_t> dep_cache;
+    for (const auto &param : to_solve) {
+        if (param) dep_cache.emplace(param->get_name(), param->get_dependencies());
+    }
     std::set<std::string> skipped;
     bool progress = true;
     while (progress) {
@@ -1215,7 +1204,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
             const auto &p_name = param->get_name();
             if (work.node->has_parameter(p_name)) continue;
             if (skipped.contains(p_name)) continue;
-            const auto deps = param->get_dependencies();
+            const auto &deps = dep_cache.at(p_name);
             bool loop_local = !deps.loop_vars.empty();
             if (!loop_local) {
                 for (const auto &dep : deps.data) {
