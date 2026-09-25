@@ -151,8 +151,8 @@ std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<q
         spdlog::warn("Cast to unsupported type '{}' not evaluated, defaulting to 0", target_type);
         return 0;
     } else {
-        // Mirror of set_container_sizes: the content was sized with the
-        // cast-width type. Evaluate the size first to rebuild it locally.
+        // The content is sized with the cast-width type: evaluate the size
+        // first to rebuild it locally.
         std::optional<resolved_type> content_sizing;
         if (size) {
             if (auto early_size = size->evaluate(context);
@@ -225,9 +225,9 @@ std::optional<resolved_type> Cast::resolve_expression_type(
             return result;
         }
     }
-    // Mirror of set_container_sizes: size-casts never forwarded through here
-    // (valid sizes return early above with content left untouched), while
-    // type-casts forwarded the incoming container type unchanged.
+    // Size-casts never forward through here (valid sizes return early above
+    // with content left untouched), while type-casts forward the incoming
+    // container type unchanged.
     if (content) return content->resolve_expression_type(context, type_cast ? expected_type : std::nullopt);
     return std::nullopt;
 }

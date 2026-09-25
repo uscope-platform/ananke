@@ -86,8 +86,7 @@ std::expected<resolved_parameter, solver_errors>  HDL_parameter::evaluate(const 
         }
     }
     // Single-phase evaluation: the container type travels alongside the
-    // context instead of being stamped onto (possibly shared) nodes by
-    // set_container_sizes. Nodes derive per-site sizing locally from it.
+    // context. Nodes derive per-site sizing locally from it.
     auto val = raw_value->evaluate(context, container_size);
     if (!val) return std::unexpected{val.error()};
     if (type->is<HDL_simple_type>()) {

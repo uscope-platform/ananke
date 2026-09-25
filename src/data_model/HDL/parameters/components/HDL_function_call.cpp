@@ -445,9 +445,8 @@ std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(con
         }
     }
 
-    // Locals mirror the set_container_sizes flag derivation: with an incoming
-    // container type they hold what the members would have held after sizing;
-    // otherwise the members are used unchanged, exactly as before.
+    // With an incoming container type the locals hold the sized member values;
+    // otherwise the members are used unchanged.
     const bool packing_l = expected_type ? expected_type->unpacked_sizes.empty() : false;
     bool container_unpacked_ascending_l = false;
     bool has_return_unpacked_ascending_l = false;

@@ -25,9 +25,8 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Concatenation)
 
 namespace {
 // Sizing derivation shared by evaluate/resolve when an incoming container
-// type is present. It replaces the old set_container_sizes pass (deleted
-// with it): same branch structure and per-component narrowing, but computed
-// into locals instead of mutating members.
+// type is present: per-component narrowing computed into locals instead of
+// mutating members.
 struct concat_expected_sizing {
     bool packing = false;
     std::vector<uint64_t> unpacked_dimension;

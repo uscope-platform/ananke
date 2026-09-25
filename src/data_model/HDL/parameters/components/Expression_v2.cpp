@@ -146,9 +146,9 @@ parameter_deps_t Expression_v2::get_dependencies() const {
 
 std::optional<resolved_type> Expression_v2::resolve_expression_type(
     const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) const {
-    // Mirror of set_container_sizes: when this node was reached with a
-    // container type, operands were unconditionally sized as 64-bit packed.
-    // With no expected type the operands keep their own (default) sizing.
+    // When this node is reached with a container type, operands are sized as
+    // 64-bit packed. With no expected type the operands keep their own
+    // (default) sizing.
     std::optional<resolved_type> operand_sizing;
     if (expected_type) {
         resolved_type r;
@@ -224,9 +224,8 @@ std::expected<resolved_parameter, solver_errors> Expression_v2::evaluate(
     std::expected<resolved_parameter, solver_errors> r_val, l_val;
     resolved_parameter ret_val;
 
-    // Mirror of set_container_sizes: when reached with a container type the
-    // operands were unconditionally sized as 64-bit packed; otherwise they
-    // keep their own (default) sizing.
+    // When reached with a container type the operands are sized as 64-bit
+    // packed; otherwise they keep their own (default) sizing.
     std::optional<resolved_type> operand_sizing;
     if (expected_type) {
         resolved_type r;

@@ -37,8 +37,7 @@ void Streaming::propagate_function(const hdl_function_def_ptr &def) {
 std::expected<resolved_parameter, solver_errors> Streaming::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
     if (components.empty()) return std::unexpected{missing_arguments};
 
-    // Mirror of set_container_sizes: the incoming container type was
-    // forwarded to components and slice size unchanged.
+    // Forward the incoming container type to components and slice size unchanged.
     // Evaluate all components; use declared literal width when available.
     std::vector<hdl_integer> values;
     std::vector<int64_t> widths;
@@ -116,8 +115,7 @@ std::optional<resolved_type> Streaming::resolve_expression_type(
     const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) const {
     uint64_t total_bits = 0;
     for (const auto &comp : components) {
-        // Mirror of set_container_sizes: the incoming container type was
-        // forwarded to components unchanged.
+        // Forward the incoming container type to components unchanged.
         auto comp_t = comp->resolve_expression_type(context, expected_type);
         if (!comp_t) return std::nullopt;
         if (comp_t->is_real) {
