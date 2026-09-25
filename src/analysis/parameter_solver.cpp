@@ -258,6 +258,10 @@ void parameter_solver::update_parameters_map(
     auto resource = d_store->get_HDL_resource(node->get_type());
     for (const auto &param : resource.value()->get_parameter_statements()) {
         const auto &p_name = param->get_name();
+        auto solved_it = solved_parameters.find(param->get_identifier());
+        // Loop locals have no parent-scope value (solved per iteration during
+        // unrolling instead): skip them here rather than throwing on .at().
+        if (solved_it == solved_parameters.end()) continue;
         std::shared_ptr<HDL_parameter> ast_param;
         auto it = std::find_if(node_parameters.begin(), node_parameters.end(),
             [&](const auto &p) { return p && p->get_name() == p_name; });
@@ -265,7 +269,7 @@ void parameter_solver::update_parameters_map(
             ast_param = std::make_shared<HDL_parameter>(**it);
         else
             ast_param = std::make_shared<HDL_parameter>(*param);
-        ast_param->set_value(solved_parameters.at(param->get_identifier()));
+        ast_param->set_value(solved_it->second);
         if (it != node_parameters.end()) *it = ast_param;
         else node_parameters.push_back(ast_param);
     }
@@ -1197,35 +1201,39 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
-    std::vector<std::shared_ptr<HDL_parameter>> loop_locals;
-        std::set<std::string> deferred;
-        bool progress = true;
-        while (progress) {
-            progress = false;
-            for (const auto &param : to_solve) {
-                const auto &p_name = param->get_name();
-                if (work.node->has_parameter(p_name)) continue;
-                if (deferred.contains(p_name)) continue;
-                const auto deps = param->get_dependencies();
-                bool loop_local = !deps.loop_vars.empty();
-                if (!loop_local) {
-                    for (const auto &dep : deps.data) {
-                        if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
-                            deferred.contains(dep.get_name())) {
-                            loop_local = true;
-                            break;
-                        }
+    // Loop locals (params depending on generate loop vars) have no parent-scope
+    // value: they are solved per iteration during loop unrolling
+    // (elaborate_loop_locals) and evaluated in the child solve via
+    // parent_parameters. Exclude them here so this function is a single
+    // straight solve over parent-scope params. Instance overrides are always
+    // solved (concrete per-instance values).
+    std::set<std::string> skipped;
+    bool progress = true;
+    while (progress) {
+        progress = false;
+        for (const auto &param : to_solve) {
+            const auto &p_name = param->get_name();
+            if (work.node->has_parameter(p_name)) continue;
+            if (skipped.contains(p_name)) continue;
+            const auto deps = param->get_dependencies();
+            bool loop_local = !deps.loop_vars.empty();
+            if (!loop_local) {
+                for (const auto &dep : deps.data) {
+                    if (dep.get_package_prefix().empty() && dep.get_instance().empty() &&
+                        skipped.contains(dep.get_name())) {
+                        loop_local = true;
+                        break;
                     }
                 }
-                if (loop_local) {
-                    loop_locals.push_back(param);
-                    deferred.insert(p_name);
-                    progress = true;
-                }
+            }
+            if (loop_local) {
+                skipped.insert(p_name);
+                progress = true;
             }
         }
-        to_solve.erase(std::remove_if(to_solve.begin(), to_solve.end(),
-            [&](const auto &p) { return deferred.contains(p->get_name()); }), to_solve.end());
+    }
+    to_solve.erase(std::remove_if(to_solve.begin(), to_solve.end(),
+        [&](const auto &p) { return skipped.contains(p->get_name()); }), to_solve.end());
 
     std::map<qualified_identifier, std::shared_ptr<hdl_type>> parent_type_ctx;
     std::shared_ptr<hdl_resource_statement> parent_resource;
@@ -1289,7 +1297,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     ctx.insert(work.parent_parameters.begin(), work.parent_parameters.end());
     ctx.insert(node_defaults.begin(), node_defaults.end());
     if (auto overlaid = overlay_unambiguous_scope(ctx)) {
-        ctx.insert(overlaid->begin(), overlaid->end());
+        ctx = std::move(*overlaid);
     }
 
     std::set<std::string> type_derived_bare;
@@ -1303,8 +1311,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     }
 
     for (const auto &param : work.node->get_parameters()) {
-        const auto &override_name = param->get_name();
-        auto p = param;
         std::optional<qualified_identifier> dtype_ref;
         if (param->is_type_param && param->get_expression()) {
             if (param->get_expression()->is<Identifier_token>())
@@ -1361,7 +1367,11 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         if (pspec.direction != interface_port) own_ports.insert(pname);
     }
 
-    for (const auto &param : spec_decls) {
+    // Iterate the filtered to_solve set (not spec_decls): skipped loop locals
+    // are never solved, so their deps must not pollute ctx with spurious
+    // "not found" resolutions. Overridden entries appear here as the override
+    // objects, whose deps are the ones actually evaluated.
+    for (const auto &param : to_solve) {
         auto p_id = param->get_identifier();
         if (ctx.contains(p_id)) continue;
         for (auto &dep : param->get_dependencies().data) {
@@ -1378,14 +1388,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
-    auto solution = process_parameters(to_solve, ctx);
-    // Silent placeholders for the deferred loop locals: no single
-    // module-scope value exists, and solving them here would warn
-    // "missing value" and default to 0. Per-iteration values are injected
-    // during loop unrolling instead.
-    for (const auto &param : loop_locals)
-        solution[param->get_identifier()] = resolved_parameter(0);
-    return solution;
+    return process_parameters(to_solve, ctx);
 }
 
 std::string parameter_solver::get_full_path(const std::shared_ptr<hdl_ast_node> &node) {

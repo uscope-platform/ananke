@@ -47,7 +47,8 @@ private:
 
     std::expected<std::vector<work_order>, solver_errors> process_statement(
         const std::shared_ptr<hdl_statement_base> &stmt,
-        work_order &wo
+        work_order &wo,
+        bool active = true
     );
     std::expected<std::vector<work_order>, solver_errors> process_instance(
         const std::shared_ptr<hdl_instance_statement> &inst,

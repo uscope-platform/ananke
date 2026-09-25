@@ -17,6 +17,7 @@
 #include "crash_context.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <set>
 
 #include "analysis/loop_solver.hpp"
@@ -33,6 +34,37 @@ namespace {
             ret += chain[i];
         }
         return ret;
+    }
+
+    // Implicit generate-indexed array ports: rewrite the index to the current
+    // iteration. Operates on node-owned nets only, stmt untouched. No-op when
+    // the node has no array ports.
+    void apply_generate_index(const std::shared_ptr<hdl_ast_node> &node, hdl_integer idx) {
+        bool found = false;
+        for (auto &[port_name, nets] : node->get_ports()) {
+            for (auto &n : nets) {
+                if (n.is_array()) { found = true; break; }
+            }
+            if (found) break;
+        }
+        if (!found) return;
+        std::unordered_map<std::string, std::vector<HDL_net>> new_ports;
+        for (auto &[port_name, nets] : node->get_ports()) {
+            std::vector<HDL_net> port_content;
+            for (auto &n : nets) {
+                if (n.is_array()) {
+                    auto new_net = n;
+                    Expression_v2 n_idx;
+                    n_idx.set_lhs(std::make_shared<Numeric_token>(std::variant<hdl_integer, double>(idx), 0));
+                    new_net.set_index({n_idx});
+                    port_content.emplace_back(new_net);
+                } else {
+                    port_content.push_back(n);
+                }
+            }
+            new_ports[port_name] = port_content;
+        }
+        node->set_ports(new_ports);
     }
 }
 HDL_ast_builder_v2::HDL_ast_builder_v2(const std::shared_ptr<settings_store> &s, const std::shared_ptr<data_store> &d,
@@ -69,7 +101,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
         working_stack.push({top, {}, "TL", {}, {}, {top_level_module}, {{}}});
         if (top_level_module.empty()) return top;
         while (!working_stack.empty()) {
-            auto wo = working_stack.top();
+            auto wo = std::move(working_stack.top());
             auto working_instance = wo.node;
             working_stack.pop();
 
@@ -149,11 +181,11 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                         }
                         continue;
                     }
-                    child_wo.insert(child_wo.end(), processed.value().begin(), processed.value().end());
+                    child_wo.insert(child_wo.end(), std::make_move_iterator(processed.value().begin()), std::make_move_iterator(processed.value().end()));
                 }
                 apply_parameter_overrides(res->get_statements(), wo.pending_overrides, child_wo);
-                for (const auto &c:child_wo| std::views::reverse) {
-                    working_stack.push(c);
+                for (auto &c:child_wo| std::views::reverse) {
+                    working_stack.push(std::move(c));
                 }
             }
         }
@@ -179,10 +211,11 @@ std::expected<void, solver_errors> HDL_ast_builder_v2::process_quantifier(const 
 
 std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::process_statement(
     const std::shared_ptr<hdl_statement_base> &stmt,
-    work_order &wo
+    work_order &wo,
+    bool active
 ) {
     if (auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(stmt))
-        return process_instance(inst, wo);
+        return process_instance(inst, wo, active);
     if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt))
         return process_loop(*loop, wo);
     if (auto cond = std::dynamic_pointer_cast<hdl_conditional_statement>(stmt))
@@ -212,17 +245,23 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
         return std::unexpected{recursive_module};
     }
     if (dep_file.is_module_excluded(type) || d_store->is_primitive(type)) child->set_dependency_class(primitive);
+    // The node shares the quantifier pointer with the resource statement: detach
+    // to a node-owned shallow copy (shares raw_value, own solved_value) before
+    // evaluating, so per-iteration values never alias each other or the stmt.
+    if (inst->get_array_quantifier()) {
+        child->add_array_quantifier(std::make_shared<HDL_parameter>(*inst->get_array_quantifier()));
+    }
     if (auto err = process_quantifier(child->get_array_quantifier(), params); !err) return std::unexpected{err.error()};
     auto child_chain = module_chain;
     child_chain.push_back(type);
     auto child_param_chain = param_chain;
     child_param_chain.push_back({});
     wo.node->add_child(child);
-    bool recurses = std::count(module_chain.begin(), module_chain.end(), type) > 0;
+    bool recurses = recursion_depth > 0;
 
     if (recurses && !params.empty()) {
         for (size_t i = 0; i + 1 < module_chain.size(); ++i) {
-            if (module_chain[i] == type && i < param_chain.size() && param_chain[i] == params)
+            if (module_chain[i] == type && param_chain[i] == params)
                 return orders;
         }
     }
@@ -243,7 +282,7 @@ void HDL_ast_builder_v2::elaborate_loop_locals(
     // of loop-dependent params sees the same scope as module-scope solve.
     // Only adds keys missing from ctx; per-iteration values are untouched.
     if (auto overlaid = overlay_unambiguous_scope(ctx)) {
-        ctx.insert(overlaid->begin(), overlaid->end());
+        ctx = std::move(*overlaid);
     }
 
     std::set<std::string> elaborated;
@@ -294,51 +333,15 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
             iter_wo.param_chain.back()[qualified_identifier(loop_var_name)] = resolved_parameter(idx);
             if (res_opt.has_value()) elaborate_loop_locals(res_opt.value(), iter_wo);
 
-            if (auto body_inst = std::dynamic_pointer_cast<hdl_instance_statement>(body_stmt)) {
-                auto child = std::make_shared<hdl_ast_node>(*body_inst);
-                child->set_parent(wo.node);
-                auto inst_type = body_inst->get_type();
-                auto dc = body_inst->get_dependency_class();
-                if ((dc == module || dc == interface) &&
-                    std::count(wo.module_chain.begin(), wo.module_chain.end(), inst_type) >= max_recursion_depth) {
-                    spdlog::error("Recursive module hierarchy detected at depth {} (limit {}): {} -> {}",
-                                  std::count(wo.module_chain.begin(), wo.module_chain.end(), inst_type) + 1,
-                                  max_recursion_depth, format_module_chain(wo.module_chain), inst_type);
-                    return std::unexpected{recursive_module};
-                }
-                if (dep_file.is_module_excluded(inst_type) || d_store->is_primitive(inst_type)) child->set_dependency_class(primitive);
-                if (auto err = process_quantifier(child->get_array_quantifier(), iter_wo.param_chain.back()); !err) return std::unexpected{err.error()};
-
-                std::unordered_map<std::string, std::vector<HDL_net>> new_ports;
-                for (auto &[port_name, nets] : child->get_ports()) {
-                    std::vector<HDL_net> port_content;
-                    for (auto &n : nets) {
-                        if (n.is_array()) {
-                            auto new_net = n;
-                            Expression_v2 n_idx;
-                            n_idx.set_lhs(std::make_shared<Numeric_token>(std::variant<hdl_integer, double>(idx), 0));
-                            new_net.set_index({n_idx});
-                            port_content.emplace_back(new_net);
-                        } else {
-                            port_content.push_back(n);
-                        }
-                    }
-                    new_ports[port_name] = port_content;
-                }
-                child->set_ports(new_ports);
-
-                auto child_chain = iter_wo.module_chain;
-                child_chain.push_back(inst_type);
-                auto child_param_chain = iter_wo.param_chain;
-                child_param_chain.push_back({});
-                wo.node->add_child(child);
-                orders.push_back({child, iter_wo.param_chain.back(), iter_wo.path + "." + wo.node->get_name(),
-                                  iter_wo.interfaces_map, {}, child_chain, child_param_chain});
-            } else {
-                auto w = process_statement(body_stmt, iter_wo);
-                if (!w) return std::unexpected{w.error()};
-                orders.insert(orders.end(), w.value().begin(), w.value().end());
+            // Single node-creation path: the loop only supplies the
+            // per-iteration context; instances, nested loops and conditionals
+            // all go through process_statement.
+            auto w = process_statement(body_stmt, iter_wo);
+            if (!w) return std::unexpected{w.error()};
+            if (std::dynamic_pointer_cast<hdl_instance_statement>(body_stmt)) {
+                for (auto &cwo : w.value()) apply_generate_index(cwo.node, idx);
             }
+            orders.insert(orders.end(), std::make_move_iterator(w.value().begin()), std::make_move_iterator(w.value().end()));
         }
     }
     return orders;
@@ -354,27 +357,15 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
         bool selected = evaluate_condition(branch.condition, wo.param_chain.back());
         any_matched = any_matched || selected;
         for (auto &body_stmt : branch.body) {
-            if (auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(body_stmt)) {
-                auto w = process_instance(inst, wo, selected);
-                if (!w)return std::unexpected{w.error()};
-                orders.insert(orders.end(), w.value().begin(), w.value().end());
-            } else {
-                auto w = process_statement(body_stmt, wo);
-                if (!w) return std::unexpected{w.error()};
-                orders.insert(orders.end(), w.value().begin(), w.value().end());
-            }
+            auto w = process_statement(body_stmt, wo, selected);
+            if (!w) return std::unexpected{w.error()};
+            orders.insert(orders.end(), std::make_move_iterator(w.value().begin()), std::make_move_iterator(w.value().end()));
         }
     }
     for (auto &body_stmt : cond.get_else_body()) {
-        if (auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(body_stmt)) {
-            auto w = process_instance(inst, wo, !any_matched);
-            if (!w) return std::unexpected{w.error()};
-            orders.insert(orders.end(), w.value().begin(), w.value().end());
-        } else {
-            auto w = process_statement(body_stmt, wo);
-            if (!w) return std::unexpected{w.error()};
-            orders.insert(orders.end(), w.value().begin(), w.value().end());
-        }
+        auto w = process_statement(body_stmt, wo, !any_matched);
+        if (!w) return std::unexpected{w.error()};
+        orders.insert(orders.end(), std::make_move_iterator(w.value().begin()), std::make_move_iterator(w.value().end()));
     }
     return orders;
 }
