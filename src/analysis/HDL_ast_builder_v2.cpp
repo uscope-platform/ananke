@@ -310,12 +310,13 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     const hdl_loop_statement &loop,
     work_order &wo
 ) {
-    if (!loop.get_init() || loop.get_init()->get_name().empty())
-        return {};
+    // Bounds validation lives in solve_loop (null init, empty name, null
+    // end/iteration all yield no indices); empty means nothing to unroll.
+    auto indices = loop_solver::solve_loop(loop, wo.param_chain.back());
+    if (indices.empty()) return {};
+    auto loop_var_name = loop.get_init()->get_name();
 
     std::vector<work_order> orders;
-    auto indices = loop_solver::solve_loop(loop, wo.param_chain.back());
-    auto loop_var_name = loop.get_init()->get_name();
     auto res_opt = d_store->get_HDL_resource(wo.node->get_type());
     for (auto &body_stmt : loop.get_body()) {
         for (auto &idx : indices) {

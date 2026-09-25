@@ -27,12 +27,8 @@ hdl_ast_node::hdl_ast_node(const hdl_instance_statement &stmt) {
     groups = stmt.get_channel_groups();
     array_quantifier = stmt.get_array_quantifier();
 
-    for (const auto &param : stmt.get_parameters()) {
-        parameters.push_back(param);
-    }
-    for (const auto& [port_name, nets] : stmt.get_ports()) {
-        ports_map[port_name] = nets;
-    }
+    parameters = stmt.get_parameters();
+    ports_map = stmt.get_ports();
 }
 
 hdl_ast_node::hdl_ast_node(const hdl_ast_node &c) {
@@ -107,13 +103,8 @@ bool operator==(const hdl_ast_node &lhs, const hdl_ast_node &rhs) {
     ret &= lhs.wildcard_assignment == rhs.wildcard_assignment;
     ret &= lhs.groups == rhs.groups;
 
-    if(lhs.array_quantifier != nullptr && rhs.array_quantifier != nullptr) {
-        ret &= *lhs.array_quantifier == *rhs.array_quantifier;
-    } else if(lhs.array_quantifier == nullptr && rhs.array_quantifier == nullptr) {
-        ret &= true;
-    } else {
-        ret = false;
-    }
+    ret &= (!lhs.array_quantifier && !rhs.array_quantifier) ||
+        (lhs.array_quantifier && rhs.array_quantifier && *lhs.array_quantifier == *rhs.array_quantifier);
 
     ret &= lhs.child_instances == rhs.child_instances;
     ret &= lhs.bus_address == rhs.bus_address;
