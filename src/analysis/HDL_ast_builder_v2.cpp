@@ -144,7 +144,13 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                         auto imp = std::dynamic_pointer_cast<hdl_import_stmt>(stmt);
                         if (!imp) continue;
                         working_instance->add_package_dependency(imp->get_package());
-                        auto pkg = d_store->get_HDL_resource(imp->get_package());
+                        // Selective imports resolve to the item's owner so values
+                        // and types agree with the solver under duplicate package
+                        // names; wildcards keep first-match (cross-file merging
+                        // belongs to the later ImportScope stage).
+                        auto pkg = imp->is_wildcard()
+                            ? d_store->get_HDL_resource(imp->get_package())
+                            : d_store->get_package_member_owner(imp->get_package(), imp->get_item());
                         package_import pi;
                         pi.package_name = imp->get_package();
                         pi.wildcard = imp->is_wildcard();

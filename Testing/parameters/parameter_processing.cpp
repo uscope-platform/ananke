@@ -2736,3 +2736,114 @@ TEST(parameter_processing, selective_import_resolves_item_only) {
     ASSERT_NE(z_param, nullptr);
     EXPECT_EQ(z_param->get_numeric_value().value().get_value(), 0);
 }
+
+TEST(parameter_processing, selective_import_picks_member_owner) {
+    // Two same-named packages: only the second declares EXTRA. The selective
+    // import must resolve to the declaring owner, not first-match.
+    auto file_a = R"(
+        package dup;
+            parameter ITEM = 1;
+        endpackage
+    )";
+    auto file_b = R"(
+        package dup;
+            parameter ITEM = 2;
+            parameter EXTRA = 20;
+        endpackage
+        import dup::EXTRA;
+        module top #(parameter Y = EXTRA)();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto res_a = analyzer.analyze("", file_a).value();
+    auto res_b = analyzer.analyze("", file_b).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/a.sv", "hash_a", res_a});
+    d_store->store_file({"/dev/b.sv", "hash_b", res_b});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    auto y_param = ast->find_parameter("Y");
+    ASSERT_NE(y_param, nullptr);
+    EXPECT_EQ(y_param->get_numeric_value().value().get_value(), 20);
+}
+
+#include <sstream>
+#include <spdlog/sinks/ostream_sink.h>
+namespace {
+struct warn_counter {
+    std::ostringstream stream;
+    std::shared_ptr<spdlog::sinks::ostream_sink_mt> sink =
+        std::make_shared<spdlog::sinks::ostream_sink_mt>(stream);
+    warn_counter() { spdlog::default_logger()->sinks().push_back(sink); }
+    ~warn_counter() {
+        auto &sinks = spdlog::default_logger()->sinks();
+        sinks.erase(std::remove(sinks.begin(), sinks.end(), sink), sinks.end());
+    }
+    size_t count(const std::string &needle) const {
+        size_t n = 0, pos = 0;
+        const auto &s = stream.str();
+        while ((pos = s.find(needle, pos)) != std::string::npos) { ++n; pos += needle.size(); }
+        return n;
+    }
+};
+}
+
+TEST(parameter_processing, typedef_cast_of_loop_var_in_loop_local) {
+    // Loop-local `F` shares its name with the child param it overrides, and
+    // its `pkg::T'(genvar)` initializer parses as a size cast holding the
+    // typedef reference. The cast must evaluate per iteration (F=i); without
+    // that the child override self-loops in the sorter (circular warnings)
+    // and every iteration silently solves to 0.
+    // NOTE: package and design are analyzed in separate calls (as in real
+    // per-file flows), so the typedef is unknown at design-parse time and the
+    // cast takes the size-cast path. A single analyze call would resolve it as
+    // a type cast and never exercise this.
+    auto pkg_pattern = R"(
+        package p;
+            typedef enum logic [1:0] { A, B, C } fmt_e;
+        endpackage
+    )";
+    auto test_pattern = R"(
+        module child #(parameter p::fmt_e F = p::fmt_e'(0))();
+            localparam int W = int'(F);
+        endmodule
+        module top();
+            for (genvar i = 0; i < 2; i++) begin : g
+                if (1) begin : b
+                    localparam p::fmt_e F = p::fmt_e'(i);
+                    child #(.F(F)) inst();
+                end
+            end
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto pkg_file = analyzer.analyze("/dev/pkg.sv", pkg_pattern).value();
+    auto file = analyzer.analyze("/dev/design.sv", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/pkg.sv", "hash_pkg", pkg_file});
+    d_store->store_file({"/dev/design.sv", "hash_design", file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    warn_counter logs;
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    EXPECT_EQ(logs.count("circular dependency"), 0u);
+    auto deps = ast->get_dependencies();
+    ASSERT_EQ(deps.size(), 2u);
+    auto f0 = deps[0]->find_parameter("F");
+    auto f1 = deps[1]->find_parameter("F");
+    ASSERT_NE(f0, nullptr);
+    ASSERT_NE(f1, nullptr);
+    EXPECT_EQ(f0->get_numeric_value().value().get_value(), 0);
+    EXPECT_EQ(f1->get_numeric_value().value().get_value(), 1);
+    auto w0 = deps[0]->find_parameter("W");
+    auto w1 = deps[1]->find_parameter("W");
+    ASSERT_NE(w0, nullptr);
+    ASSERT_NE(w1, nullptr);
+    EXPECT_EQ(w0->get_numeric_value().value().get_value(), 0);
+    EXPECT_EQ(w1->get_numeric_value().value().get_value(), 1);
+}

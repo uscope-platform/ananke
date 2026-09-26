@@ -81,6 +81,11 @@ public:
         const std::string& pkg, const std::string& type_name);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_package_function_owner(
         const std::string& pkg, const std::string& func_name);
+    // Member owner across all categories (param, typedef, function): for
+    // selective `import pkg::ITEM`, where the member kind is not known upfront.
+    // Same owner policy as the per-kind lookups above.
+    std::optional<std::shared_ptr<hdl_resource_statement>> get_package_member_owner(
+        const std::string& pkg, const std::string& member);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, const std::string &arch);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, std::string &path);
     std::optional<Script> get_script(std::string& name);

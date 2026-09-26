@@ -590,7 +590,8 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
         // If the parameter type itself is directly an external type
         if (param->get_type()->is<HDL_external_type>()) {
             auto &ext = param->get_type()->as<HDL_external_type>();
-            auto pkg_name = ext.get_value().get_package_prefix()[0];
+            if (ext.get_value().get_package_prefix().empty()) continue;
+            auto pkg_name = ext.get_value().get_package_prefix().back();
             auto type_name = ext.get_value().get_name();
             auto res = d_store->get_package_typedef_owner(pkg_name, type_name);
             if (res.has_value()) {
@@ -651,7 +652,7 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
                 auto &ext = t->as<HDL_external_type>();
                 if (ext.get_value().get_package_prefix().empty()) continue;
                 auto res = d_store->get_package_typedef_owner(
-                    ext.get_value().get_package_prefix()[0], ext.get_value().get_name());
+                    ext.get_value().get_package_prefix().back(), ext.get_value().get_name());
                 if (!res.has_value()) continue;
                 auto type_def = res.value()->get_typedefs()[ext.get_value().get_name()];
                 if (type_def) id_token.set_expression_type(type_def);
@@ -674,7 +675,30 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
                 if (t.get_condition()) stack.push_back(t.get_condition());
             } else if (node->is<Cast>()) {
                 auto &c = node->as<Cast>();
-                if (c.get_size_expr()) stack.push_back(c.get_size_expr());
+                if (auto size = c.get_size_expr()) {
+                    // Typedef in cast-size position (e.g. fp_format_e in
+                    // `pkg::T'(x)`, which the frontend builds as a size cast
+                    // when the typedef lives in another file): resolve it like
+                    // a type placeholder so the dep classifies as a type, not
+                    // a value. Otherwise it is walked past and the size can
+                    // never evaluate.
+                    if (size->is<Identifier_token>()) {
+                        auto &size_id = size->as<Identifier_token>();
+                        const auto pfx = size_id.get_value().get_package_prefix();
+                        if (!pfx.empty()) {
+                            auto res = d_store->get_package_typedef_owner(
+                                pfx.back(), size_id.get_value().get_name());
+                            if (res.has_value()) {
+                                auto type_def = res.value()->get_typedefs()[size_id.get_value().get_name()];
+                                if (type_def) {
+                                    size_id.set_expression_type(type_def);
+                                    size_id.set_type_placeholder(true);
+                                }
+                            }
+                        }
+                    }
+                    stack.push_back(size);
+                }
                 if (c.get_content()) stack.push_back(c.get_content());
             } else if (node->is<HDL_function_call>()) {
                 for (auto &arg : node->as<HDL_function_call>().get_arguments()) {
@@ -802,7 +826,9 @@ std::map<std::string, std::shared_ptr<hdl_type>> collect_override_scope_types(
         for (const auto &stmt : file.value().get_content()) {
             auto imp = std::dynamic_pointer_cast<hdl_import_stmt>(stmt);
             if (!imp) continue;
-            auto pkg = d_store->get_HDL_resource(imp->get_package());
+            auto pkg = imp->is_wildcard()
+                ? d_store->get_HDL_resource(imp->get_package())
+                : d_store->get_package_member_owner(imp->get_package(), imp->get_item());
             if (!pkg.has_value()) continue;
             for (const auto &[name, t] : pkg.value()->get_typedefs()) {
                 if (!t) continue;
@@ -1065,7 +1091,7 @@ void resolve_function_return_type(const std::shared_ptr<hdl_function_statement> 
     if (!rt || !rt->is<HDL_external_type>()) return;
     auto &ext = rt->as<HDL_external_type>();
     if (ext.get_value().get_package_prefix().empty()) return;
-    auto res = d_store->get_package_typedef_owner(ext.get_value().get_package_prefix()[0],
+    auto res = d_store->get_package_typedef_owner(ext.get_value().get_package_prefix().back(),
                                                     ext.get_value().get_name());
     if (!res.has_value()) return;
     auto type_def = res.value()->get_typedefs()[ext.get_value().get_name()];

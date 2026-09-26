@@ -193,6 +193,18 @@ std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_package_f
         });
 }
 
+std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_package_member_owner(
+    const std::string& pkg, const std::string& member) {
+    return pick_owned_resource(pkg, member,
+        [&member](const std::shared_ptr<hdl_resource_statement> &res) {
+            for (const auto &p : res->get_parameter_statements()) {
+                if (p && p->get_name() == member) return true;
+            }
+            if (res->get_typedefs().contains(member)) return true;
+            return res->get_function_shared(member) != nullptr;
+        });
+}
+
 void data_store::store_file(const cached_item &file) {
     cache.insert_or_assign(file.path, file);
 }

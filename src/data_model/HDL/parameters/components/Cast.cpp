@@ -15,6 +15,9 @@
 
 #include <spdlog/spdlog.h>
 #include "data_model/HDL/parameters/components/Cast.hpp"
+#include "data_model/HDL/parameters/components/token/Type_ref.hpp"
+#include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include "data_model/HDL/types/HDL_external_type.hpp"
 #include "analysis/type_cast_engine.hpp"
 
 #include <cereal/types/polymorphic.hpp>
@@ -168,7 +171,36 @@ std::expected<resolved_parameter, solver_errors> Cast::evaluate(const std::map<q
         if (!content_val.value().is_integer()) return content_val.value();
         if (!size) return std::unexpected{missing_value};
         auto raw_cast_size = size->evaluate(context);
-        if (!raw_cast_size.has_value()) return std::unexpected{missing_value};
+        if (!raw_cast_size.has_value()) {
+            // The size is not a value expression: it is a typedef reference in
+            // cast position (a Type_ref node, or an Identifier flagged as a
+            // type placeholder with a resolved non-external type by
+            // propagate_types). Size from the incoming container instead,
+            // mirroring the type_cast branch. Genuine missing value sizes
+            // (unflagged, unresolvable) still fail as before.
+            bool type_position = size->is<Type_ref>();
+            if (!type_position && size->is<Identifier_token>()) {
+                auto &size_id = size->as<Identifier_token>();
+                auto size_type = size_id.get_expression_type();
+                type_position = size_id.is_type_placeholder() && size_type &&
+                    !size_type->is<HDL_external_type>();
+            }
+            if (!type_position) return std::unexpected{missing_value};
+            auto raw_val = content_val.value().get_integer();
+            uint64_t container = 64;
+            if (expected_type && !expected_type->packed_sizes.empty()) {
+                container = packed_width(*expected_type);
+            }
+            hdl_integer result;
+            if (raw_val.get_value() == 0) {
+                result.set_value(0);
+            } else {
+                wide_integer mask = (wide_integer(1) << container) - 1;
+                result.set_value(raw_val.to_wide() & mask);
+            }
+            result.set_size(container);
+            return result;
+        }
         if (!raw_cast_size.value().is_integer()) {
             spdlog::warn("Cast size evaluates to a non integer");
             return content_val.value();
