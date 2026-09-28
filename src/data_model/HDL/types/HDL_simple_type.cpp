@@ -109,6 +109,21 @@ std::optional<resolved_type> HDL_simple_type::evaluate_type(const std::map<quali
         result.packed_right.push_back(s_b.value().get_integer().get_value());
     }
 
+    // Fallback for base scalars passed in as type parameters
+    if (result.packed_sizes.empty() && result.unpacked_sizes.empty() && !result.is_real) {
+        if (type_name == "bit" || type_name == "logic" || type_name == "reg") {
+            result.packed_sizes.push_back(1);
+            result.packed_ascending.push_back(false);
+            result.packed_left.push_back(0);
+            result.packed_right.push_back(0);
+        } else if (type_name == "byte") {
+            result.packed_sizes.push_back(8);
+            result.packed_ascending.push_back(false);
+            result.packed_left.push_back(7);
+            result.packed_right.push_back(0);
+        }
+    }
+
     return result;
 }
 

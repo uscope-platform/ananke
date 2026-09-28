@@ -1114,5 +1114,42 @@ TEST(system_task, bits_struct_port_field_elaboration) {
     EXPECT_EQ(whole.value().get_value(), 64);
 }
 
+TEST(system_task, bits_scalar_repro) {
+    // Repro for hwpf_stride_arb.sv:93 `.DATA_WIDTH($bits(hpdcache_req_t))`
+    // where `parameter type hpdcache_req_t = logic` defaults to bare logic.
+    // Bare scalar must be 1 bit, byte 8 bits — not "unsupported type" -> 0.
+    auto test_pattern = R"(
+        module test_mod ();
+            localparam LB = $bits(logic);
+            localparam BB = $bits(bit);
+            localparam RB = $bits(reg);
+            localparam YB = $bits(byte);
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
+    EXPECT_EQ(defaults.at(qualified_identifier("LB")).get_integer(), 1);
+    EXPECT_EQ(defaults.at(qualified_identifier("BB")).get_integer(), 1);
+    EXPECT_EQ(defaults.at(qualified_identifier("RB")).get_integer(), 1);
+    EXPECT_EQ(defaults.at(qualified_identifier("YB")).get_integer(), 8);
+}
+
+TEST(system_task, bits_type_param_default_logic_repro) {
+    // Minimal shape of hwpf_stride_arb.sv:33,93:
+    // `parameter type hpdcache_req_t = logic` + `.DATA_WIDTH($bits(hpdcache_req_t))`.
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter type type_param = logic
+        )();
+            localparam DATA_WIDTH = $bits(type_param);
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
+    EXPECT_EQ(defaults.at(qualified_identifier("DATA_WIDTH")).get_integer(), 1);
+}
+
 
 
