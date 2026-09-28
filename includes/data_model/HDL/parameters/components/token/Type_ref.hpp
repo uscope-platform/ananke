@@ -26,7 +26,7 @@ public:
 
     parameter_deps_t get_dependencies() const override {
         parameter_deps_t deps;
-        deps.data.insert(target);
+        deps.types.insert(target);
         return deps;
     }
 

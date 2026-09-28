@@ -1231,8 +1231,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         if (auto expr = param->get_expression(); param->is_type_param && expr) {
             if (expr->is<Identifier_token>())
                 dtype_ref = expr->as<Identifier_token>().get_value();
-            else if (expr->is<Type_ref>())
-                dtype_ref = expr->as<Type_ref>().get_target();
         }
         for(auto &dep: param->get_dependencies().data) {
             if (ctx.contains(dep)) continue;
