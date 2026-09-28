@@ -58,9 +58,15 @@ std::expected<resolved_parameter, solver_errors> Ternary::evaluate(const std::ma
 }
 
 std::optional<resolved_type> Ternary::resolve_expression_type(
-    const std::map<qualified_identifier, resolved_parameter> &context, [[maybe_unused]] const std::optional<resolved_type> &expected_type) const {
-    auto t_t = true_value ? true_value->resolve_expression_type(context) : std::nullopt;
-    auto f_t = false_value ? false_value->resolve_expression_type(context) : std::nullopt;
+    const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) const {
+    std::optional<resolved_type> operand_sizing;
+    if (expected_type) {
+        resolved_type r;
+        r.packed_sizes.push_back(64);
+        operand_sizing = r;
+    }
+    auto t_t = true_value ? true_value->resolve_expression_type(context, operand_sizing) : std::nullopt;
+    auto f_t = false_value ? false_value->resolve_expression_type(context, operand_sizing) : std::nullopt;
 
     if (!t_t) return f_t;
     if (!f_t) return t_t;

@@ -2225,6 +2225,28 @@ TEST(parameter_extraction, complex_ternary_conditional) {
 
 
 
+TEST(parameter_extraction, paren_ternary_shift_sizing) {
+    // End-to-end pin for the Ternary container-sizing hole: the shift result
+    // (5<<40, 43 bits) only survives truncation if the ternary operand
+    // resolves container-aware (64) rather than self-determined (32).
+    // With the hole, the shift truncates to 32 bits and yields 0.
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter logic [63:0] y = (1 ? int'(5) : 8'd0) << 40
+        )();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
+    ASSERT_TRUE(solved.contains(qualified_identifier("y")));
+    ASSERT_EQ(5497558138880LL, solved.at(qualified_identifier("y")).get_integer().get_value());
+}
+
+
 TEST(parameter_extraction, paren_ternary_multiply_lhs) {
     // A parenthesized ternary used as an operand must survive as the
     // multiply's left-hand side instead of being dropped.
