@@ -55,6 +55,14 @@ public:
         return dynamic_cast<const T*>(this) != nullptr;
     }
 
+    // Visits each direct subexpression of this node, in source order. Leaf
+    // tokens have no subexpressions and are a no-op. Defined in
+    // expression_traversal.hpp (which sees the complete composite types);
+    // centralizes child dispatch so tree walks don't repeat the 8-way
+    // is<>/as<> chain.
+    template<typename Fn>
+    void visit_subexpressions(Fn &&fn);
+
     bool operator==(const Expression_base& other) const {
         return typeid(*this) == typeid(other) && isEqual(other);
     }

@@ -17,6 +17,7 @@
 #include "crash_context.hpp"
 
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
+#include "data_model/HDL/parameters/components/expression_traversal.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/Replication.hpp"
@@ -102,41 +103,10 @@ static void annotate_identifier_types(
             if (it != type_map.end()) {
                 id_token.set_expression_type(it->second);
             }
-        } else if (node->is<Expression_v2>()) {
-            auto &e = node->as<Expression_v2>();
-            if (e.get_rhs()) stack.push_back(e.get_rhs());
-            if (e.get_lhs()) stack.push_back(e.get_lhs());
-        } else if (node->is<Concatenation>()) {
-            for (auto &comp : node->as<Concatenation>().get_components()) {
-                if (comp) stack.push_back(comp);
-            }
-        } else if (node->is<Replication>()) {
-            auto &r = node->as<Replication>();
-            if (r.get_size()) stack.push_back(r.get_size());
-            if (r.get_item()) stack.push_back(r.get_item());
-        } else if (node->is<Ternary>()) {
-            auto &t = node->as<Ternary>();
-            if (t.get_false_value()) stack.push_back(t.get_false_value());
-            if (t.get_true_value()) stack.push_back(t.get_true_value());
-            if (t.get_condition()) stack.push_back(t.get_condition());
-        } else if (node->is<Cast>()) {
-            auto &c = node->as<Cast>();
-            if (c.get_size_expr()) stack.push_back(c.get_size_expr());
-            if (c.get_content()) stack.push_back(c.get_content());
-        } else if (node->is<HDL_function_call>()) {
-            for (auto &arg : node->as<HDL_function_call>().get_arguments()) {
-                if (arg) stack.push_back(arg);
-            }
-        } else if (node->is<HDL_builtin_function>()) {
-            for (auto &arg : node->as<HDL_builtin_function>().get_arguments()) {
-                if (arg) stack.push_back(arg);
-            }
-        } else if (node->is<Streaming>()) {
-            auto &st = node->as<Streaming>();
-            if (st.get_slice_size()) stack.push_back(st.get_slice_size());
-            for (auto &comp : st.get_components()) {
-                if (comp) stack.push_back(comp);
-            }
+        } else {
+            node->visit_subexpressions([&](const std::shared_ptr<Expression_base> &c) {
+                stack.push_back(c);
+            });
         }
     }
 }
@@ -504,29 +474,11 @@ void parameter_solver::remap_keyed_literals(const std::shared_ptr<Expression_bas
         }
         return;
     }
-    if (expr->is<Expression_v2>()) {
-        auto &e = expr->as<Expression_v2>();
-        remap_keyed_literals(e.get_lhs(), type);
-        remap_keyed_literals(e.get_rhs(), type);
-        return;
-    }
-    if (expr->is<Ternary>()) {
-        auto &t = expr->as<Ternary>();
-        remap_keyed_literals(t.get_condition(), type);
-        remap_keyed_literals(t.get_true_value(), type);
-        remap_keyed_literals(t.get_false_value(), type);
-        return;
-    }
-    if (expr->is<Cast>()) {
-        auto &c = expr->as<Cast>();
-        remap_keyed_literals(c.get_content(), type);
-        remap_keyed_literals(c.get_size_expr(), type);
-        return;
-    }
-    if (expr->is<Replication>()) {
-        auto &r = expr->as<Replication>();
-        remap_keyed_literals(r.get_item(), type);
-        remap_keyed_literals(r.get_size(), type);
+    if (expr->is<Expression_v2>() || expr->is<Ternary>() || expr->is<Cast>() ||
+        expr->is<Replication>()) {
+        expr->visit_subexpressions([&](const std::shared_ptr<Expression_base> &c) {
+            remap_keyed_literals(c, type);
+        });
         return;
     }
     if (expr->is<Streaming>()) {
@@ -656,64 +608,38 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
                 if (!res.has_value()) continue;
                 auto type_def = res.value()->get_typedefs()[ext.get_value().get_name()];
                 if (type_def) id_token.set_expression_type(type_def);
-            } else if (node->is<Expression_v2>()) {
-                auto &e = node->as<Expression_v2>();
-                if (e.get_rhs()) stack.push_back(e.get_rhs());
-                if (e.get_lhs()) stack.push_back(e.get_lhs());
-            } else if (node->is<Concatenation>()) {
-                for (auto &comp : node->as<Concatenation>().get_components()) {
-                    if (comp) stack.push_back(comp);
-                }
-            } else if (node->is<Replication>()) {
-                auto &r = node->as<Replication>();
-                if (r.get_size()) stack.push_back(r.get_size());
-                if (r.get_item()) stack.push_back(r.get_item());
-            } else if (node->is<Ternary>()) {
-                auto &t = node->as<Ternary>();
-                if (t.get_false_value()) stack.push_back(t.get_false_value());
-                if (t.get_true_value()) stack.push_back(t.get_true_value());
-                if (t.get_condition()) stack.push_back(t.get_condition());
-            } else if (node->is<Cast>()) {
-                auto &c = node->as<Cast>();
-                if (auto size = c.get_size_expr()) {
-                    // Typedef in cast-size position (e.g. fp_format_e in
-                    // `pkg::T'(x)`, which the frontend builds as a size cast
-                    // when the typedef lives in another file): resolve it like
-                    // a type placeholder so the dep classifies as a type, not
-                    // a value. Otherwise it is walked past and the size can
-                    // never evaluate.
-                    if (size->is<Identifier_token>()) {
-                        auto &size_id = size->as<Identifier_token>();
-                        const auto pfx = size_id.get_value().get_package_prefix();
-                        if (!pfx.empty()) {
-                            auto res = d_store->get_package_typedef_owner(
-                                pfx.back(), size_id.get_value().get_name());
-                            if (res.has_value()) {
-                                auto type_def = res.value()->get_typedefs()[size_id.get_value().get_name()];
-                                if (type_def) {
-                                    size_id.set_expression_type(type_def);
-                                    size_id.set_type_placeholder(true);
+            } else {
+                // Cast-size typedef special (see above): resolve before the
+                // shared child walk pushes size + content.
+                if (node->is<Cast>()) {
+                    auto &c = node->as<Cast>();
+                    if (auto size = c.get_size_expr()) {
+                        // Typedef in cast-size position (e.g. fp_format_e in
+                        // `pkg::T'(x)`, which the frontend builds as a size cast
+                        // when the typedef lives in another file): resolve it like
+                        // a type placeholder so the dep classifies as a type, not
+                        // a value. Otherwise it is walked past and the size can
+                        // never evaluate.
+                        if (size->is<Identifier_token>()) {
+                            auto &size_id = size->as<Identifier_token>();
+                            const auto pfx = size_id.get_value().get_package_prefix();
+                            if (!pfx.empty()) {
+                                auto res = d_store->get_package_typedef_owner(
+                                    pfx.back(), size_id.get_value().get_name());
+                                if (res.has_value()) {
+                                    auto type_def = res.value()->get_typedefs()[size_id.get_value().get_name()];
+                                    if (type_def) {
+                                        size_id.set_expression_type(type_def);
+                                        size_id.set_type_placeholder(true);
+                                    }
                                 }
                             }
                         }
                     }
-                    stack.push_back(size);
                 }
-                if (c.get_content()) stack.push_back(c.get_content());
-            } else if (node->is<HDL_function_call>()) {
-                for (auto &arg : node->as<HDL_function_call>().get_arguments()) {
-                    if (arg) stack.push_back(arg);
-                }
-            } else if (node->is<HDL_builtin_function>()) {
-                for (auto &arg : node->as<HDL_builtin_function>().get_arguments()) {
-                    if (arg) stack.push_back(arg);
-                }
-            } else if (node->is<Streaming>()) {
-                auto &st = node->as<Streaming>();
-                if (st.get_slice_size()) stack.push_back(st.get_slice_size());
-                for (auto &comp : st.get_components()) {
-                    if (comp) stack.push_back(comp);
-                }
+                node->visit_subexpressions([&](const std::shared_ptr<Expression_base> &c) {
+                    stack.push_back(c);
+                });
             }
             }
         }
@@ -917,33 +843,11 @@ void annotate_override_type_queries(
         }
         return;
     }
-    if (expr->is<Expression_v2>()) {
-        auto &e = expr->as<Expression_v2>();
-        if (e.get_lhs()) annotate_override_type_queries(e.get_lhs(), scope_types, d_store);
-        if (e.get_rhs()) annotate_override_type_queries(e.get_rhs(), scope_types, d_store);
-    } else if (expr->is<Concatenation>()) {
-        for (auto &comp : expr->as<Concatenation>().get_components()) {
-            if (comp) annotate_override_type_queries(comp, scope_types, d_store);
-        }
-    } else if (expr->is<Replication>()) {
-        auto &r = expr->as<Replication>();
-        if (r.get_size()) annotate_override_type_queries(r.get_size(), scope_types, d_store);
-        if (r.get_item()) annotate_override_type_queries(r.get_item(), scope_types, d_store);
-    } else if (expr->is<Ternary>()) {
-        auto &t = expr->as<Ternary>();
-        if (t.get_condition()) annotate_override_type_queries(t.get_condition(), scope_types, d_store);
-        if (t.get_true_value()) annotate_override_type_queries(t.get_true_value(), scope_types, d_store);
-        if (t.get_false_value()) annotate_override_type_queries(t.get_false_value(), scope_types, d_store);
-    } else if (expr->is<Cast>()) {
-        auto &c = expr->as<Cast>();
-        if (c.get_size_expr()) annotate_override_type_queries(c.get_size_expr(), scope_types, d_store);
-        if (c.get_content()) annotate_override_type_queries(c.get_content(), scope_types, d_store);
-    } else if (expr->is<Streaming>()) {
-        auto &st = expr->as<Streaming>();
-        if (st.get_slice_size()) annotate_override_type_queries(st.get_slice_size(), scope_types, d_store);
-        for (auto &comp : st.get_components()) {
-            if (comp) annotate_override_type_queries(comp, scope_types, d_store);
-        }
+    if (expr->is<Expression_v2>() || expr->is<Concatenation>() || expr->is<Replication>() ||
+        expr->is<Ternary>() || expr->is<Cast>() || expr->is<Streaming>()) {
+        expr->visit_subexpressions([&](const std::shared_ptr<Expression_base> &c) {
+            annotate_override_type_queries(c, scope_types, d_store);
+        });
     }
 }
 
@@ -1011,45 +915,12 @@ void annotate_port_tokens_expr(
         if (in_type_operand) tok.set_expression_type(mt);
         return;
     }
-    if (expr->is<Expression_v2>()) {
-        auto &e = expr->as<Expression_v2>();
-        if (e.get_lhs()) annotate_port_tokens_expr(e.get_lhs(), ports, param_names,
-            resource, imported_types, d_store, in_type_operand);
-        if (e.get_rhs()) annotate_port_tokens_expr(e.get_rhs(), ports, param_names,
-            resource, imported_types, d_store, in_type_operand);
-    } else if (expr->is<Concatenation>()) {
-        for (auto &comp : expr->as<Concatenation>().get_components()) {
-            if (comp) annotate_port_tokens_expr(comp, ports, param_names, resource,
+    if (expr->is<Expression_v2>() || expr->is<Concatenation>() || expr->is<Replication>() ||
+        expr->is<Ternary>() || expr->is<Cast>() || expr->is<Streaming>()) {
+        expr->visit_subexpressions([&](const std::shared_ptr<Expression_base> &c) {
+            annotate_port_tokens_expr(c, ports, param_names, resource,
                 imported_types, d_store, in_type_operand);
-        }
-    } else if (expr->is<Replication>()) {
-        auto &r = expr->as<Replication>();
-        if (r.get_size()) annotate_port_tokens_expr(r.get_size(), ports, param_names,
-            resource, imported_types, d_store, in_type_operand);
-        if (r.get_item()) annotate_port_tokens_expr(r.get_item(), ports, param_names,
-            resource, imported_types, d_store, in_type_operand);
-    } else if (expr->is<Ternary>()) {
-        auto &t = expr->as<Ternary>();
-        if (t.get_condition()) annotate_port_tokens_expr(t.get_condition(), ports, param_names,
-            resource, imported_types, d_store, in_type_operand);
-        if (t.get_true_value()) annotate_port_tokens_expr(t.get_true_value(), ports, param_names,
-            resource, imported_types, d_store, in_type_operand);
-        if (t.get_false_value()) annotate_port_tokens_expr(t.get_false_value(), ports, param_names,
-            resource, imported_types, d_store, in_type_operand);
-    } else if (expr->is<Cast>()) {
-        auto &c = expr->as<Cast>();
-        if (c.get_size_expr()) annotate_port_tokens_expr(c.get_size_expr(), ports, param_names,
-            resource, imported_types, d_store, in_type_operand);
-        if (c.get_content()) annotate_port_tokens_expr(c.get_content(), ports, param_names,
-            resource, imported_types, d_store, in_type_operand);
-    } else if (expr->is<Streaming>()) {
-        auto &st = expr->as<Streaming>();
-        if (st.get_slice_size()) annotate_port_tokens_expr(st.get_slice_size(), ports, param_names,
-            resource, imported_types, d_store, in_type_operand);
-        for (auto &comp : st.get_components()) {
-            if (comp) annotate_port_tokens_expr(comp, ports, param_names, resource,
-                imported_types, d_store, in_type_operand);
-        }
+        });
     }
 }
 } // namespace
