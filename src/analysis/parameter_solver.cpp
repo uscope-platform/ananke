@@ -27,6 +27,7 @@
 #include "data_model/HDL/parameters/components/HDL_builtin_function.hpp"
 #include "data_model/HDL/parameters/components/Streaming.hpp"
 #include "data_model/HDL/parameters/components/token/Type_ref.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include "data_model/HDL/statement/hdl_import_stmt.hpp"
 #include "data_model/hdl_file.hpp"
 #include "data_model/HDL/types/hdl_type.hpp"
@@ -711,6 +712,95 @@ std::shared_ptr<hdl_type> walk_port_field(
     return resolve_port_type_ref(cur, resource, imported_types, d_store);
 }
 
+// Resolve param-dependent dimension bounds of a type bound across scopes.
+// A typedef's bare bounds (e.g. [WIDTH-1:0]) belong to the scope where the
+// typedef was declared. When the type is passed through a type-param override
+// into another module, re-resolving those bounds at a later $bits site would
+// pick up shadowing names (or warn as undefined). Evaluating evaluable bounds
+// now, with the binding scope's values, carries the owner scope in the type.
+// Bounds that do not evaluate stay symbolic, preserving today's behavior.
+std::shared_ptr<Expression_base> resolve_bound(
+    const std::shared_ptr<Expression_base> &bound,
+    const std::map<qualified_identifier, resolved_parameter> &ctx) {
+    if (!bound) return bound;
+    auto val = bound->evaluate(ctx);
+    if (!val.has_value() || !val->is_integer()) return bound;
+    return std::make_shared<Numeric_token>(std::to_string(val->get_integer().get_value()));
+}
+
+dimension_t resolve_dimension(
+    const dimension_t &d,
+    const std::map<qualified_identifier, resolved_parameter> &ctx) {
+    dimension_t out = d;
+    out.first_bound = resolve_bound(d.first_bound, ctx);
+    out.second_bound = resolve_bound(d.second_bound, ctx);
+    return out;
+}
+
+std::vector<dimension_t> resolve_dimensions(
+    const std::vector<dimension_t> &dims,
+    const std::map<qualified_identifier, resolved_parameter> &ctx) {
+    std::vector<dimension_t> out;
+    out.reserve(dims.size());
+    for (const auto &d : dims) out.push_back(resolve_dimension(d, ctx));
+    return out;
+}
+
+std::shared_ptr<hdl_type> resolve_type_dims(
+    const std::shared_ptr<hdl_type> &t,
+    const std::map<qualified_identifier, resolved_parameter> &ctx) {
+    if (!t) return t;
+    if (t->is<HDL_simple_type>()) {
+        auto copy = t->as<HDL_simple_type>();
+        // NOTE: setters append, so rebuild into a fresh object instead of
+        // clear-then-set on the copy.
+        HDL_simple_type fresh;
+        fresh.set_signed(copy.get_signed());
+        fresh.set_real(copy.get_real());
+        fresh.set_implicit(copy.get_implicit());
+        fresh.set_type_name(copy.get_type_name());
+        fresh.set_packed_dimensions(resolve_dimensions(copy.get_packed_dimensions(), ctx));
+        fresh.set_unpacked_dimensions(resolve_dimensions(copy.get_unpacked_dimensions(), ctx));
+        return std::make_shared<HDL_simple_type>(fresh);
+    }
+    if (t->is<HDL_struct_type>()) {
+        auto copy = t->as<HDL_struct_type>();
+        HDL_struct_type fresh;
+        fresh.packed = copy.packed;
+        fresh.member.reserve(copy.member.size());
+        for (const auto &m : copy.member) {
+            struct_member fm;
+            fm.name = m.name;
+            fm.type = resolve_type_dims(m.type, ctx);
+            fresh.member.push_back(std::move(fm));
+        }
+        fresh.set_unpacked_dimensions(resolve_dimensions(copy.get_unpacked_dimensions(), ctx));
+        return std::make_shared<HDL_struct_type>(fresh);
+    }
+    if (t->is<HDL_union_type>()) {
+        auto copy = t->as<HDL_union_type>();
+        HDL_union_type fresh;
+        fresh.packed = copy.packed;
+        fresh.members.reserve(copy.members.size());
+        for (const auto &m : copy.members) {
+            struct_member fm;
+            fm.name = m.name;
+            fm.type = resolve_type_dims(m.type, ctx);
+            fresh.members.push_back(std::move(fm));
+        }
+        return std::make_shared<HDL_union_type>(fresh);
+    }
+    if (t->is<HDL_enum_type>()) {
+        auto copy = t->as<HDL_enum_type>();
+        HDL_enum_type fresh;
+        fresh.members = copy.members;
+        fresh.base_type = resolve_type_dims(copy.base_type, ctx);
+        fresh.set_unpacked_dimensions(resolve_dimensions(copy.get_unpacked_dimensions(), ctx));
+        return std::make_shared<HDL_enum_type>(fresh);
+    }
+    return t;
+}
+
 bool is_type_query_builtin(HDL_builtin_function::function f) {
     using function = HDL_builtin_function::function;
     switch (f) {
@@ -1214,6 +1304,13 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     ctx.insert(node_defaults.begin(), node_defaults.end());
     if (auto overlaid = overlay_unambiguous_scope(ctx)) {
         ctx = std::move(*overlaid);
+    }
+
+    // type parameters should be resolved at the binding stage, not where used (for example in $bits() calls)
+    for (const auto &param : work.node->get_parameters()) {
+        if (!param || !param->is_type_param || !param->get_type()) continue;
+        if (!override_by_name.contains(param->get_name())) continue;
+        param->set_type(resolve_type_dims(param->get_type(), ctx));
     }
 
     std::set<std::string> type_derived_bare;

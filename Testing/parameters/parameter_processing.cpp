@@ -2847,3 +2847,86 @@ TEST(parameter_processing, typedef_cast_of_loop_var_in_loop_local) {
     EXPECT_EQ(w0->get_numeric_value().value().get_value(), 0);
     EXPECT_EQ(w1->get_numeric_value().value().get_value(), 1);
 }
+
+TEST(parameter_processing, bits_typedef_owner_scope_repro) {
+    // Type passed through a type param keeps the width it had where the
+    // typedef was declared: inner_t is WIDTH bits in outer, so $bits at the
+    // leaf must see 8 + WIDTH even though WIDTH is not visible there.
+    auto test_pattern = R"(
+        module leaf #(parameter int W = 0)();
+        endmodule
+        module mid #(parameter type t = logic)();
+            leaf #(.W($bits(t))) g();
+        endmodule
+        module outer #(parameter int WIDTH = 128)();
+            typedef logic [WIDTH-1:0] data_t;
+            typedef struct packed {
+                logic [7:0] a;
+                data_t b;
+            } pkt_t;
+            mid #(.t(pkt_t)) d();
+        endmodule
+        module top();
+            outer a();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    warn_counter logs;
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    EXPECT_EQ(logs.count("is not defined in the design"), 0u);
+    auto leaf = ast_v2->get_dependencies()[0]->get_dependencies()[0]->get_dependencies()[0];
+    auto w_param = leaf->find_parameter("W");
+    ASSERT_NE(w_param, nullptr);
+    auto w_val = w_param->get_numeric_value();
+    ASSERT_TRUE(w_val.has_value());
+    // 8 (a) + 128 (b) = 136.
+    EXPECT_EQ(w_val.value().get_value(), 136);
+}
+
+TEST(parameter_processing, bits_typedef_owner_scope_shadow_repro) {
+    // Shadowing variant: mid declares its own WIDTH=32, but the typedef was
+    // declared in outer (=128), so W must stay 136. An innermost-wins lookup
+    // at the $bits site would wrongly pick 32 -> 40.
+    auto test_pattern = R"(
+        module leaf #(parameter int W = 0)();
+        endmodule
+        module mid #(parameter int WIDTH = 32, parameter type t = logic)();
+            leaf #(.W($bits(t))) g();
+        endmodule
+        module outer #(parameter int WIDTH = 128)();
+            typedef logic [WIDTH-1:0] data_t;
+            typedef struct packed {
+                logic [7:0] a;
+                data_t b;
+            } pkt_t;
+            mid #(.t(pkt_t)) d();
+        endmodule
+        module top();
+            outer a();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    warn_counter logs;
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    EXPECT_EQ(logs.count("is not defined in the design"), 0u);
+    auto leaf = ast_v2->get_dependencies()[0]->get_dependencies()[0]->get_dependencies()[0];
+    auto w_param = leaf->find_parameter("W");
+    ASSERT_NE(w_param, nullptr);
+    auto w_val = w_param->get_numeric_value();
+    ASSERT_TRUE(w_val.has_value());
+    EXPECT_EQ(w_val.value().get_value(), 136);
+}
