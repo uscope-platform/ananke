@@ -18,6 +18,7 @@
 #include <cereal/archives/binary.hpp>
 
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
+#include "data_model/HDL/parameters/components/Ternary.hpp"
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 
 CEREAL_REGISTER_TYPE(Expression_v2)
@@ -71,6 +72,11 @@ std::string Expression_v2::print() const {
     }
 
     auto needs_parens = [&](const std::shared_ptr<Expression_base> &side, bool is_lhs_side) {
+        // A ternary is lower precedence than every binary operator and is
+        // not self-delimiting (unlike {concat}, casts, calls), so it always
+        // needs parens as an operand: without them `a ? b : c*d` reads as
+        // `a ? b : (c*d)`.
+        if (side->is<Ternary>()) return true;
         if (!side->is<Expression_v2>()) return false;
         auto inner_op = static_cast<const Expression_v2 &>(*side).get_operation();
         if (inner_op == none) return false;
@@ -87,6 +93,8 @@ std::string Expression_v2::print() const {
             oss << "(" << lhs->print() << ")";
         else
             oss << lhs->print();
+    } else {
+        oss << "<null>";
     }
     oss << op_str(operation);
     if (rhs) {
@@ -94,6 +102,8 @@ std::string Expression_v2::print() const {
             oss << "(" << rhs->print() << ")";
         else
             oss << rhs->print();
+    } else {
+        oss << "<null>";
     }
     return oss.str();
 }
