@@ -1114,10 +1114,7 @@ TEST(system_task, bits_struct_port_field_elaboration) {
     EXPECT_EQ(whole.value().get_value(), 64);
 }
 
-TEST(system_task, bits_scalar_repro) {
-    // Repro for hwpf_stride_arb.sv:93 `.DATA_WIDTH($bits(hpdcache_req_t))`
-    // where `parameter type hpdcache_req_t = logic` defaults to bare logic.
-    // Bare scalar must be 1 bit, byte 8 bits — not "unsupported type" -> 0.
+TEST(system_task, bits_of_scalar) {
     auto test_pattern = R"(
         module test_mod ();
             localparam LB = $bits(logic);
@@ -1135,9 +1132,7 @@ TEST(system_task, bits_scalar_repro) {
     EXPECT_EQ(defaults.at(qualified_identifier("YB")).get_integer(), 8);
 }
 
-TEST(system_task, bits_type_param_default_logic_repro) {
-    // Minimal shape of hwpf_stride_arb.sv:33,93:
-    // `parameter type hpdcache_req_t = logic` + `.DATA_WIDTH($bits(hpdcache_req_t))`.
+TEST(system_task, bits_of_scalar_as_type_parameter) {
     auto test_pattern = R"(
         module test_mod #(
             parameter type type_param = logic
