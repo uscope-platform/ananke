@@ -1300,7 +1300,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     }
 
     std::map<qualified_identifier, resolved_parameter> ctx;
-    ctx.insert(work.parent_parameters.begin(), work.parent_parameters.end());
+    if (work.parent_parameters) ctx.insert(work.parent_parameters->begin(), work.parent_parameters->end());
     ctx.insert(node_defaults.begin(), node_defaults.end());
     if (auto overlaid = overlay_unambiguous_scope(ctx)) {
         ctx = std::move(*overlaid);

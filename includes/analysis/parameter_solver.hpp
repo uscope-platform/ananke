@@ -25,6 +25,8 @@
 #include "analysis/topological_sorter.hpp"
 #include "data_model/data_store.hpp"
 
+#include <map>
+#include <memory>
 #include <set>
 
 
@@ -48,16 +50,21 @@ struct package_import {
     std::string item;
 };
 
+using param_map_t = std::map<qualified_identifier, resolved_parameter>;
+
 struct work_order {
     std::shared_ptr<hdl_ast_node> node;
-    std::map<qualified_identifier, resolved_parameter> parent_parameters;
+    // Shared with the parent frame in param_chain: never mutated in place.
+    std::shared_ptr<const param_map_t> parent_parameters;
     std::string path;
     std::unordered_map<std::string, std::string> interfaces_map;
     std::vector<pending_parameter_override> pending_overrides;
     std::vector<std::string> module_chain;
     // Parallel to module_chain: the resolved parameter set of each module in
     // the chain (the final entry is filled once that module is elaborated).
-    std::vector<std::map<qualified_identifier, resolved_parameter>> param_chain;
+    // Ancestor frames are shared with already-created child work orders, so
+    // the back (current) frame must be cloned before mutating when shared.
+    std::vector<std::shared_ptr<param_map_t>> param_chain;
 };
 
 class parameter_solver {

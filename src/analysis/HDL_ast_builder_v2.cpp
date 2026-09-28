@@ -36,6 +36,12 @@ namespace {
         return ret;
     }
 
+    param_map_t & mutable_frame(work_order &wo) {
+        auto &back = wo.param_chain.back();
+        if (back.use_count() != 1) back = std::make_shared<param_map_t>(*back);
+        return *back;
+    }
+
     // Implicit generate-indexed array ports: rewrite the index to the current
     // iteration. Operates on node-owned nets only, stmt untouched. No-op when
     // the node has no array ports.
@@ -100,7 +106,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
 
         if (top_level_module.empty()) return top;
         std::stack< work_order> working_stack;
-        working_stack.push({top, {}, "TL", {}, {}, {top_level_module}, {{}}});
+        working_stack.push({top, nullptr, "TL", {}, {}, {top_level_module}, {std::make_shared<param_map_t>()}});
         while (!working_stack.empty()) {
             auto wo = std::move(working_stack.top());
             auto working_instance = wo.node;
@@ -169,7 +175,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
 
                 spdlog::trace("Processing dependency {} in module {}",working_instance->get_name(), type);
                 auto current_param_values = parameter_solver::override_parameters(wo, d_store, imports, imported_functions, imported_types);
-                if (!wo.param_chain.empty()) wo.param_chain.back() = current_param_values;
+                if (!wo.param_chain.empty()) wo.param_chain.back() = std::make_shared<param_map_t>(std::move(current_param_values));
 
                 std::vector<work_order> child_wo;
                 wo.interfaces_map.clear();
@@ -243,20 +249,20 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
         child->add_array_quantifier(std::make_shared<HDL_parameter>(*inst->get_array_quantifier()));
     }
     if (auto q = child->get_array_quantifier()) {
-        auto value = q->evaluate(params);
+        auto value = q->evaluate(*params);
         if (!value.has_value()) return std::unexpected{value.error()};
         q->set_value(value.value());
     }
     auto child_chain = module_chain;
     child_chain.push_back(type);
     auto child_param_chain = param_chain;
-    child_param_chain.push_back({});
+    child_param_chain.push_back(std::make_shared<param_map_t>());
     wo.node->add_child(child);
     bool recurses = recursion_depth > 0;
 
-    if (recurses && !params.empty()) {
+    if (recurses && !params->empty()) {
         for (size_t i = 0; i + 1 < module_chain.size(); ++i) {
-            if (module_chain[i] == type && param_chain[i] == params)
+            if (module_chain[i] == type && *param_chain[i] == *params)
                 return orders;
         }
     }
@@ -270,7 +276,7 @@ void HDL_ast_builder_v2::elaborate_loop_locals(
     const std::shared_ptr<hdl_resource_statement> &resource,
     work_order &iter_wo
 ) {
-    auto &ctx = iter_wo.param_chain.back();
+    auto &ctx = mutable_frame(iter_wo);
 
     // Mirror solve_complex_overrides: seed bare package constants
     // (e.g. FP_ENCODINGS, NUM_FP_FORMATS) so per-iteration re-evaluation
@@ -308,7 +314,7 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
 ) {
     // Bounds validation lives in solve_loop (null init, empty name, null
     // end/iteration all yield no indices); empty means nothing to unroll.
-    auto indices = loop_solver::solve_loop(loop, wo.param_chain.back());
+    auto indices = loop_solver::solve_loop(loop, *wo.param_chain.back());
     if (indices.empty()) return {};
     auto loop_var_name = loop.get_init()->get_name();
 
@@ -319,7 +325,7 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
             // Per-iteration elaboration context: same frame as wo, with the
             // loop variable bound to the current index.
             work_order iter_wo = wo;
-            iter_wo.param_chain.back()[qualified_identifier(loop_var_name)] = resolved_parameter(idx);
+            mutable_frame(iter_wo)[qualified_identifier(loop_var_name)] = resolved_parameter(idx);
             if (res_opt.has_value()) elaborate_loop_locals(res_opt.value(), iter_wo);
 
             // Single node-creation path: the loop only supplies the
@@ -345,7 +351,7 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     for (auto &branch : cond.get_branches()) {
         bool selected = false;
         if (branch.condition) {
-            auto result = branch.condition->evaluate(wo.param_chain.back());
+            auto result = branch.condition->evaluate(*wo.param_chain.back());
             selected = result.has_value() && result.value().is_integer() && result.value().get_integer() != 0;
         }
         any_matched = any_matched || selected;
