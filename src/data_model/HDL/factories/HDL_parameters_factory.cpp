@@ -276,6 +276,8 @@ void HDL_parameters_factory::stop_ternary(){
         consumer_stack.pop();
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
+        } else if (expr_factory.active()) {
+            expr_factory.consume(result);
         } else {
             current_resource.set_type(current_type);
             current_resource.set_raw_value(result);

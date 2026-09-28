@@ -2225,6 +2225,45 @@ TEST(parameter_extraction, complex_ternary_conditional) {
 
 
 
+TEST(parameter_extraction, paren_ternary_multiply_lhs) {
+    // A parenthesized ternary used as an operand must survive as the
+    // multiply's left-hand side instead of being dropped.
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter y = (1 ? 8'd12 : 8'd34) * 2
+        )();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto parameters = resource.get_parameter_statements();
+
+    auto p = std::make_shared<HDL_parameter>();
+
+    p->set_name("y");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    Ternary t;
+    t.set_condition(std::make_shared<Numeric_token>("1"));
+    t.set_true_value(std::make_shared<Numeric_token>("8'd12"));
+    t.set_false_value(std::make_shared<Numeric_token>("8'd34"));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Ternary>(t));
+    e.set_rhs(std::make_shared<Numeric_token>("2"));
+    e.set_operation(Expression_v2::multiply);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
+
+    ASSERT_EQ(1u, parameters.size());
+    ASSERT_EQ(*p, *parameters[0]);
+
+    auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
+    ASSERT_TRUE(solved.contains(qualified_identifier("y")));
+    ASSERT_EQ(24, solved.at(qualified_identifier("y")));
+}
+
+
+
 TEST(parameter_extraction, typedef_parameter) {
     auto test_pattern = R"(
         module test_mod #()();
