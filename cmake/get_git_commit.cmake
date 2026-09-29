@@ -30,7 +30,7 @@ set(COMMIT_ID "UNKNOWN")
 find_package(Git QUIET)
 if(GIT_FOUND)
     execute_process(
-        COMMAND ${GIT_EXECUTABLE} -C "${SOURCE_DIR}" rev-parse HEAD
+        COMMAND ${GIT_EXECUTABLE} -C "${SOURCE_DIR}" rev-parse --short HEAD
         OUTPUT_VARIABLE COMMIT_ID
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
