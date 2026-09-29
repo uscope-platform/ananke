@@ -114,7 +114,6 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
         std::stack< work_order> working_stack;
         working_stack.push({
            top,
-            nullptr,
             "TL",
             {},
             {},
@@ -279,7 +278,13 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     }
 
     if (!active && recurses) return orders;
-    orders.push_back({child, params, wo.path + "." + wo.node->get_name(), wo.interfaces_map, {}, std::move(child_chain)});
+    orders.push_back({
+       child,
+        wo.path + "." + wo.node->get_name(),
+        wo.interfaces_map,
+       {},
+        std::move(child_chain)
+    });
     return orders;
 }
 

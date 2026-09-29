@@ -63,7 +63,6 @@ struct scope_frame {
 
 struct work_order {
     std::shared_ptr<hdl_ast_node> node;
-    std::shared_ptr<const param_map_t> parent_parameters;
     std::string path;
     std::unordered_map<std::string, std::string> interfaces_map;
     std::vector<pending_parameter_override> pending_overrides;

@@ -1122,8 +1122,8 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
 
     // Loop locals (params depending on generate loop vars) have no parent-scope
     // value: they are solved per iteration during loop unrolling
-    // (elaborate_loop_locals) and evaluated in the child solve via
-    // parent_parameters. Exclude them here so this function is a single
+    // (elaborate_loop_locals) and evaluated in the child solve via the parent
+    // scope frame. Exclude them here so this function is a single
     // straight solve over parent-scope params. Instance overrides are always
     // solved (concrete per-instance values).
     std::unordered_map<std::string, parameter_deps_t> dep_cache;
@@ -1206,7 +1206,10 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     }
 
     std::map<qualified_identifier, resolved_parameter> ctx;
-    if (work.parent_parameters) ctx.insert(work.parent_parameters->begin(), work.parent_parameters->end());
+    if (work.scope_chain.size() > 1) {
+        const auto &parent_frame = work.scope_chain[work.scope_chain.size() - 2].params;
+        if (parent_frame) ctx.insert(parent_frame->begin(), parent_frame->end());
+    }
     ctx.insert(node_defaults.begin(), node_defaults.end());
     if (auto overlaid = overlay_unambiguous_scope(ctx)) {
         ctx = std::move(*overlaid);
