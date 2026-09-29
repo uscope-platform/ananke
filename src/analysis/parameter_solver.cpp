@@ -775,7 +775,15 @@ void annotate_override_type_queries(
     const std::map<std::string, std::shared_ptr<hdl_type>> &scope_types,
     const std::shared_ptr<data_store> &d_store) {
     if (!expr) return;
-    std::vector<std::shared_ptr<Expression_base>> stack{expr};
+    // Reused across calls: this runs per override per instance, so keep the
+    // buffer instead of heap-allocating a fresh vector every time. Moved into
+    // a frame-local for the walk (a thread_local touched per iteration costs
+    // more than the malloc it saves) and handed back at the end. Safe: the
+    // loop body never re-enters this function; entries are always consumed.
+    // An exception mid-walk just drops the buffer; the static stays valid.
+    thread_local static std::vector<std::shared_ptr<Expression_base>> retained;
+    std::vector<std::shared_ptr<Expression_base>> stack = std::move(retained);
+    stack.push_back(expr);
     while (!stack.empty()) {
         auto node = std::move(stack.back());
         stack.pop_back();
@@ -851,6 +859,7 @@ void annotate_override_type_queries(
             });
         }
     }
+    retained = std::move(stack);
 }
 
 void annotate_port_tokens_expr(
@@ -862,12 +871,17 @@ void annotate_port_tokens_expr(
     const std::shared_ptr<data_store> &d_store,
     bool in_type_operand) {
     if (!expr) return;
-    
+
     struct work_item {
         std::shared_ptr<Expression_base> node;
         bool in_type;
     };
-    std::vector<work_item> stack{{expr, in_type_operand}};
+    // Same reuse discipline as annotate_override_type_queries above: steal
+    // the retained buffer into a frame-local (TLS per iteration costs more
+    // than the malloc it saves), hand it back at the end.
+    thread_local static std::vector<work_item> retained;
+    std::vector<work_item> stack = std::move(retained);
+    stack.push_back({expr, in_type_operand});
     while (!stack.empty()) {
         auto [node, in_type] = std::move(stack.back());
         stack.pop_back();
@@ -931,6 +945,7 @@ void annotate_port_tokens_expr(
             });
         }
     }
+    retained = std::move(stack);
 }
 } // namespace
 
