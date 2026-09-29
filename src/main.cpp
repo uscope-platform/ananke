@@ -17,6 +17,7 @@
 
 #include "main.hpp"
 #include "crash_context.hpp"
+#include "version.hpp"
 
 struct MainProfiler {
     MainProfiler() { LOG_TIMEPOINT("Application Start"); }
@@ -32,6 +33,8 @@ int main(int argc, char *argv[]){
     ananke::CLI_opt opts;
 
     CLI::App app("Ananke FPGA build system version 2.0");
+
+    app.set_version_flag("--version", []() { return std::string(ANANKE_COMMIT_ID); });
 
     app.add_option("-D,--depfile", opts.target, "Target Depfile")->check(CLI::ExistingFile);
     app.add_flag("--X",opts.generate_xilinx,"Generate Xilinx Makefile");

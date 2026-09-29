@@ -144,6 +144,23 @@ target_link_libraries(ananke_lib PUBLIC
 
 add_executable(ananke ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 
+# ---------------------------------------------------------------------------
+# Build-time commit id header (generated/version.hpp).
+# An ALL custom target (not an OUTPUT custom command) so the SHA stays fresh
+# without requiring a cmake re-configure after each commit. The script only
+# touches the file when the content changed to avoid needless rebuilds.
+# ---------------------------------------------------------------------------
+set(VERSION_HEADER "${CMAKE_BINARY_DIR}/generated/version.hpp")
+add_custom_target(ananke_version ALL
+    COMMAND ${CMAKE_COMMAND}
+        "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}"
+        "-DOUTPUT=${VERSION_HEADER}"
+        -P "${CMAKE_SOURCE_DIR}/cmake/get_git_commit.cmake"
+    COMMENT "Resolving git commit id"
+    VERBATIM
+)
+add_dependencies(ananke ananke_version)
+
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set_property(TARGET ananke PROPERTY INTERPROCEDURAL_OPTIMIZATION True)
 endif(CMAKE_BUILD_TYPE STREQUAL "Release")
