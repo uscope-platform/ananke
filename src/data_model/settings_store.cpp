@@ -60,6 +60,10 @@ std::filesystem::path settings_store::get_tool_path(const std::string &tool) {
     return tool_paths[tool];
 }
 
+std::string settings_store::get_selected_profile() const {
+    return selected_profile;
+}
+
 std::set<std::string> settings_store::get_default_includes() {
 
     std::set<std::string> raw_includes;

@@ -109,6 +109,39 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
 
 std::optional<int> ananke::load_data_cache() {
 
+    {
+        auto join = [](const auto &items) {
+            std::string out;
+            bool first = true;
+            for (const auto &item : items) {
+                if (!first) out += ", ";
+                first = false;
+                out += item;
+            }
+            if (out.empty()) out = "<none>";
+            return out;
+        };
+        spdlog::trace("Cache refresh starting:\n"
+                      "  profile='{}'\n"
+                      "  hdl_store='{}'\n"
+                      "  cache_dir='{}'\n"
+                      "  no_cache={}\n"
+                      "  refresh_cache={}\n"
+                      "  include_auto_discovery={}\n"
+                      "  default_includes=[{}]\n"
+                      "  excluded_paths=[{}]\n"
+                      "  defines=[{}]",
+                      s_store->get_selected_profile(),
+                      s_store->get_hdl_store().string(),
+                      opts.cache_dir,
+                      opts.no_cache,
+                      opts.refresh_cache,
+                      s_store->get_include_auto_discovery(),
+                      join(s_store->get_default_includes()),
+                      join(s_store->get_excluded_paths()),
+                      join(s_store->get_defines()));
+    }
+
     if (opts.refresh_cache) data_store::clear_cache(opts.cache_dir);
     d_store = std::make_shared<data_store>(opts.no_cache, opts.cache_dir);
 

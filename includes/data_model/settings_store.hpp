@@ -41,6 +41,7 @@ public:
 
     std::filesystem::path get_hdl_store();
     std::filesystem::path get_tool_path(const std::string &tool);
+    std::string get_selected_profile() const;
     std::set<std::string> get_default_includes();
     std::set<std::string> get_excluded_paths();
     std::set<std::string> get_defines();
