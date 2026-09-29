@@ -775,75 +775,81 @@ void annotate_override_type_queries(
     const std::map<std::string, std::shared_ptr<hdl_type>> &scope_types,
     const std::shared_ptr<data_store> &d_store) {
     if (!expr) return;
-    if (expr->is<HDL_builtin_function>()) {
-        auto &b = expr->as<HDL_builtin_function>();
-        const auto &args = b.get_arguments();
-        if (is_type_query_builtin(b.get_function()) && !args.empty()) {
-            if (auto first = args[0]; first && first->is<Identifier_token>()) {
-                auto &tok = first->as<Identifier_token>();
-                auto held = tok.get_expression_type();
-                if (held && held->is<HDL_external_type>()) {
-                    const auto q = held->as<HDL_external_type>().get_value();
-                    std::shared_ptr<hdl_type> real;
-                    if (!q.get_package_prefix().empty() && d_store) {
-                        auto res = d_store->get_package_typedef_owner(
-                            q.get_package_prefix().back(), q.get_name());
-                        if (res.has_value()) {
-                            auto tds = res.value()->get_typedefs();
-                            auto it = tds.find(q.get_name());
-                            if (it != tds.end()) real = it->second;
+    std::vector<std::shared_ptr<Expression_base>> stack{expr};
+    while (!stack.empty()) {
+        auto node = std::move(stack.back());
+        stack.pop_back();
+        if (!node) continue;
+        if (node->is<HDL_builtin_function>()) {
+            auto &b = node->as<HDL_builtin_function>();
+            const auto &args = b.get_arguments();
+            if (is_type_query_builtin(b.get_function()) && !args.empty()) {
+                if (auto first = args[0]; first && first->is<Identifier_token>()) {
+                    auto &tok = first->as<Identifier_token>();
+                    auto held = tok.get_expression_type();
+                    if (held && held->is<HDL_external_type>()) {
+                        const auto q = held->as<HDL_external_type>().get_value();
+                        std::shared_ptr<hdl_type> real;
+                        if (!q.get_package_prefix().empty() && d_store) {
+                            auto res = d_store->get_package_typedef_owner(
+                                q.get_package_prefix().back(), q.get_name());
+                            if (res.has_value()) {
+                                auto tds = res.value()->get_typedefs();
+                                auto it = tds.find(q.get_name());
+                                if (it != tds.end()) real = it->second;
+                            }
+                        } else {
+                            auto it = scope_types.find(q.get_name());
+                            if (it != scope_types.end()) real = it->second;
                         }
-                    } else {
-                        auto it = scope_types.find(q.get_name());
-                        if (it != scope_types.end()) real = it->second;
-                    }
-                    if (real) {
-                        tok.set_expression_type(real);
-                        tok.set_type_placeholder(true);
-                    }
-                } else if (!tok.is_type_placeholder()) {
-                    const auto id = tok.get_value();
-                    if (id.is_bare()) {
-                        auto it = scope_types.find(id.get_name());
-                        if (it != scope_types.end() && it->second) {
-                            tok.set_expression_type(it->second);
+                        if (real) {
+                            tok.set_expression_type(real);
                             tok.set_type_placeholder(true);
                         }
+                    } else if (!tok.is_type_placeholder()) {
+                        const auto id = tok.get_value();
+                        if (id.is_bare()) {
+                            auto it = scope_types.find(id.get_name());
+                            if (it != scope_types.end() && it->second) {
+                                tok.set_expression_type(it->second);
+                                tok.set_type_placeholder(true);
+                            }
+                        }
                     }
+                    for (auto &idx : tok.get_array_index()) {
+                        if (idx) stack.push_back(idx);
+                    }
+                } else if (first) {
+                    stack.push_back(first);
                 }
-                for (auto &idx : tok.get_array_index()) {
-                    if (idx) annotate_override_type_queries(idx, scope_types, d_store);
+                for (size_t i = 1; i < args.size(); ++i) {
+                    if (args[i]) stack.push_back(args[i]);
                 }
-            } else if (first) {
-                annotate_override_type_queries(first, scope_types, d_store);
+                continue;
             }
-            for (size_t i = 1; i < args.size(); ++i) {
-                if (args[i]) annotate_override_type_queries(args[i], scope_types, d_store);
+            for (auto &arg : args) {
+                if (arg) stack.push_back(arg);
             }
-            return;
+            continue;
         }
-        for (auto &arg : args) {
-            if (arg) annotate_override_type_queries(arg, scope_types, d_store);
+        if (node->is<HDL_function_call>()) {
+            for (auto &arg : node->as<HDL_function_call>().get_arguments()) {
+                if (arg) stack.push_back(arg);
+            }
+            continue;
         }
-        return;
-    }
-    if (expr->is<HDL_function_call>()) {
-        for (auto &arg : expr->as<HDL_function_call>().get_arguments()) {
-            if (arg) annotate_override_type_queries(arg, scope_types, d_store);
+        if (node->is<Identifier_token>()) {
+            for (auto &idx : node->as<Identifier_token>().get_array_index()) {
+                if (idx) stack.push_back(idx);
+            }
+            continue;
         }
-        return;
-    }
-    if (expr->is<Identifier_token>()) {
-        for (auto &idx : expr->as<Identifier_token>().get_array_index()) {
-            if (idx) annotate_override_type_queries(idx, scope_types, d_store);
+        if (node->is<Expression_v2>() || node->is<Concatenation>() || node->is<Replication>() ||
+            node->is<Ternary>() || node->is<Cast>() || node->is<Streaming>()) {
+            node->visit_subexpressions([&](const std::shared_ptr<Expression_base> &c) {
+                if (c) stack.push_back(c);
+            });
         }
-        return;
-    }
-    if (expr->is<Expression_v2>() || expr->is<Concatenation>() || expr->is<Replication>() ||
-        expr->is<Ternary>() || expr->is<Cast>() || expr->is<Streaming>()) {
-        expr->visit_subexpressions([&](const std::shared_ptr<Expression_base> &c) {
-            annotate_override_type_queries(c, scope_types, d_store);
-        });
     }
 }
 
@@ -856,67 +862,74 @@ void annotate_port_tokens_expr(
     const std::shared_ptr<data_store> &d_store,
     bool in_type_operand) {
     if (!expr) return;
-    if (expr->is<HDL_builtin_function>()) {
-        auto &b = expr->as<HDL_builtin_function>();
-        bool tq = is_type_query_builtin(b.get_function());
-        const auto &args = b.get_arguments();
-        for (size_t i = 0; i < args.size(); ++i) {
-            // Only the first argument is the type operand; dimension
-            // arguments (e.g. $size(v, K)) stay value positions. A nested
-            // type query re-enters the type operand regardless of the
-            // outer context (e.g. $clog2($bits(port.field))).
-            annotate_port_tokens_expr(args[i], ports, param_names, resource,
-                imported_types, d_store, tq && i == 0);
+    
+    struct work_item {
+        std::shared_ptr<Expression_base> node;
+        bool in_type;
+    };
+    std::vector<work_item> stack{{expr, in_type_operand}};
+    while (!stack.empty()) {
+        auto [node, in_type] = std::move(stack.back());
+        stack.pop_back();
+        if (!node) continue;
+        if (node->is<HDL_builtin_function>()) {
+            auto &b = node->as<HDL_builtin_function>();
+            bool tq = is_type_query_builtin(b.get_function());
+            const auto &args = b.get_arguments();
+            for (size_t i = 0; i < args.size(); ++i) {
+                // Only the first argument is the type operand; dimension
+                // arguments (e.g. $size(v, K)) stay value positions. A nested
+                // type query re-enters the type operand regardless of the
+                // outer context (e.g. $clog2($bits(port.field))).
+                if (args[i]) stack.push_back({args[i], tq && i == 0});
+            }
+            continue;
         }
-        return;
-    }
-    if (expr->is<HDL_function_call>()) {
-        for (auto &arg : expr->as<HDL_function_call>().get_arguments()) {
-            if (arg) annotate_port_tokens_expr(arg, ports, param_names, resource,
-                imported_types, d_store, false);
+        if (node->is<HDL_function_call>()) {
+            for (auto &arg : node->as<HDL_function_call>().get_arguments()) {
+                if (arg) stack.push_back({arg, false});
+            }
+            continue;
         }
-        return;
-    }
-    if (expr->is<Identifier_token>()) {
-        auto &tok = expr->as<Identifier_token>();
-        // Array indices are value positions, never the type operand.
-        for (auto &idx : tok.get_array_index()) {
-            if (idx) annotate_port_tokens_expr(idx, ports, param_names, resource,
-                imported_types, d_store, false);
+        if (node->is<Identifier_token>()) {
+            auto &tok = node->as<Identifier_token>();
+            // Array indices are value positions, never the type operand.
+            for (auto &idx : tok.get_array_index()) {
+                if (idx) stack.push_back({idx, false});
+            }
+            auto id = tok.get_value();
+            const auto &inst = id.get_instance();
+            std::string root;
+            std::vector<std::string> fields;
+            bool whole_port = false;
+            if (!inst.empty()) {
+                root = inst[0];
+                if (!ports.contains(root)) continue;
+                fields.insert(fields.end(), inst.begin() + 1, inst.end());
+                fields.push_back(id.get_name());
+            } else {
+                // Bare port name: only when it does not shadow a parameter.
+                if (!ports.contains(id.get_name()) || param_names.contains(id.get_name())) continue;
+                root = id.get_name();
+                whole_port = true;
+            }
+            auto base = ports.at(root);
+            auto mt = whole_port ? resolve_port_type_ref(base, resource, imported_types, d_store)
+                                 : walk_port_field(base, fields, resource, imported_types, d_store);
+            if (!mt || mt->is<HDL_external_type>()) continue;
+            // NOTE: dependencies are computed from the raw_value tree, so this
+            // only feeds type queries ($bits(port.field)); value resolution of
+            // port references still misses as before. The instance-dependency
+            // skip in solve_complex_overrides keeps those misses quiet.
+            if (in_type) tok.set_expression_type(mt);
+            continue;
         }
-        auto id = tok.get_value();
-        const auto &inst = id.get_instance();
-        std::string root;
-        std::vector<std::string> fields;
-        bool whole_port = false;
-        if (!inst.empty()) {
-            root = inst[0];
-            if (!ports.contains(root)) return;
-            fields.insert(fields.end(), inst.begin() + 1, inst.end());
-            fields.push_back(id.get_name());
-        } else {
-            // Bare port name: only when it does not shadow a parameter.
-            if (!ports.contains(id.get_name()) || param_names.contains(id.get_name())) return;
-            root = id.get_name();
-            whole_port = true;
+        if (node->is<Expression_v2>() || node->is<Concatenation>() || node->is<Replication>() ||
+            node->is<Ternary>() || node->is<Cast>() || node->is<Streaming>()) {
+            node->visit_subexpressions([&](const std::shared_ptr<Expression_base> &c) {
+                if (c) stack.push_back({c, in_type});
+            });
         }
-        auto base = ports.at(root);
-        auto mt = whole_port ? resolve_port_type_ref(base, resource, imported_types, d_store)
-                             : walk_port_field(base, fields, resource, imported_types, d_store);
-        if (!mt || mt->is<HDL_external_type>()) return;
-        // NOTE: dependencies are computed from the raw_value tree, so this
-        // only feeds type queries ($bits(port.field)); value resolution of
-        // port references still misses as before. The instance-dependency
-        // skip in solve_complex_overrides keeps those misses quiet.
-        if (in_type_operand) tok.set_expression_type(mt);
-        return;
-    }
-    if (expr->is<Expression_v2>() || expr->is<Concatenation>() || expr->is<Replication>() ||
-        expr->is<Ternary>() || expr->is<Cast>() || expr->is<Streaming>()) {
-        expr->visit_subexpressions([&](const std::shared_ptr<Expression_base> &c) {
-            annotate_port_tokens_expr(c, ports, param_names, resource,
-                imported_types, d_store, in_type_operand);
-        });
     }
 }
 } // namespace
