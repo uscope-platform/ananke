@@ -264,10 +264,11 @@ std::optional<int> ananke::build_flow() {
                 generator.write_makefile(makefile);
 
 
-                Vivado_manager manager(s_store, !opts.keep_makefile, dep.general.project_name);
-
                 LOG_TIMEPOINT("Build script generated");
-                if (!opts.makefile_only) manager.create_project("makefile.tcl",  !opts.no_open);
+                if (!opts.makefile_only) {
+                    Vivado_manager manager(s_store, !opts.keep_makefile, dep.general.project_name);
+                    manager.create_project("makefile.tcl",  !opts.no_open);
+                }
             }
         }
 
@@ -305,9 +306,11 @@ std::optional<int> ananke::build_flow() {
                 std::ofstream makefile("makefile.tcl");
                 generator.write_makefile(makefile);
 
-                Radiant_manager manager(s_store, !opts.keep_makefile, dep.general.project_name);
                 LOG_TIMEPOINT("Build script generated");
-                if (!opts.makefile_only) manager.create_project("makefile.tcl",  !opts.no_open);
+                if (!opts.makefile_only) {
+                    Radiant_manager manager(s_store, !opts.keep_makefile, dep.general.project_name);
+                    manager.create_project("makefile.tcl",  !opts.no_open);
+                }
             }
         }
         if (opts.generate_periph_definition || opts.generate_app_definition) {
