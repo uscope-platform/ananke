@@ -27,17 +27,20 @@
 #include "data_model/hdl_file.hpp"
 
 namespace {
-    std::string format_module_chain(const std::vector<std::string> &chain) {
+    std::string format_module_chain(const std::vector<scope_frame> &chain) {
         std::string ret;
         for (size_t i = 0; i < chain.size(); i++) {
             if (i) ret += " -> ";
-            ret += chain[i];
+            ret += chain[i].module;
         }
         return ret;
     }
 
+    // Copy-on-write accessor for the current scope frame: ancestor frames are
+    // shared with already-created child work orders, so clone before mutating
+    // when the back frame is shared.
     param_map_t & mutable_frame(work_order &wo) {
-        auto &back = wo.param_chain.back();
+        auto &back = wo.scope_chain.back().params;
         if (back.use_count() != 1) back = std::make_shared<param_map_t>(*back);
         return *back;
     }
@@ -115,8 +118,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
             "TL",
             {},
             {},
-            {top_level_module},
-            {std::make_shared<param_map_t>()}
+            {{top_level_module, std::make_shared<param_map_t>()}}
         });
         while (!working_stack.empty()) {
             auto wo = std::move(working_stack.top());
@@ -186,7 +188,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
 
                 spdlog::trace("Processing dependency {} in module {}",working_instance->get_name(), type);
                 auto current_param_values = parameter_solver::override_parameters(wo, d_store, imports, imported_functions, imported_types);
-                if (!wo.param_chain.empty()) wo.param_chain.back() = std::make_shared<param_map_t>(std::move(current_param_values));
+                if (!wo.scope_chain.empty()) wo.scope_chain.back().params = std::make_shared<param_map_t>(std::move(current_param_values));
 
                 std::vector<work_order> child_wo;
                 wo.interfaces_map.clear();
@@ -243,13 +245,13 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     child->set_parent(wo.node);
     child->set_active(active);
     const auto &type = inst->get_type();
-    auto &module_chain = wo.module_chain;
-    auto &param_chain = wo.param_chain;
-    const auto &params = param_chain.back();
-    auto recursion_depth = std::count(module_chain.begin(), module_chain.end(), type);
+    auto &scope_chain = wo.scope_chain;
+    const auto &params = scope_chain.back().params;
+    auto recursion_depth = std::count_if(scope_chain.begin(), scope_chain.end(),
+        [&](const auto &frame) { return frame.module == type; });
     if (recursion_depth >= max_recursion_depth) {
         spdlog::error("Recursive module hierarchy detected at depth {} (limit {}): {} -> {}",
-                      recursion_depth + 1, max_recursion_depth, format_module_chain(module_chain), type);
+                      recursion_depth + 1, max_recursion_depth, format_module_chain(scope_chain), type);
         return std::unexpected{recursive_module};
     }
     if (dep_file.is_module_excluded(type) || d_store->is_primitive(type)) child->set_dependency_class(primitive);
@@ -264,22 +266,20 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
         if (!value.has_value()) return std::unexpected{value.error()};
         q->set_value(value.value());
     }
-    auto child_chain = module_chain;
-    child_chain.push_back(type);
-    auto child_param_chain = param_chain;
-    child_param_chain.push_back(std::make_shared<param_map_t>());
+    auto child_chain = scope_chain;
+    child_chain.push_back({type, std::make_shared<param_map_t>()});
     wo.node->add_child(child);
     bool recurses = recursion_depth > 0;
 
     if (recurses && !params->empty()) {
-        for (size_t i = 0; i + 1 < module_chain.size(); ++i) {
-            if (module_chain[i] == type && *param_chain[i] == *params)
+        for (size_t i = 0; i + 1 < scope_chain.size(); ++i) {
+            if (scope_chain[i].module == type && *scope_chain[i].params == *params)
                 return orders;
         }
     }
 
     if (!active && recurses) return orders;
-    orders.push_back({child, params, wo.path + "." + wo.node->get_name(), wo.interfaces_map, {}, std::move(child_chain), std::move(child_param_chain)});
+    orders.push_back({child, params, wo.path + "." + wo.node->get_name(), wo.interfaces_map, {}, std::move(child_chain)});
     return orders;
 }
 
@@ -325,7 +325,7 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
 ) {
     // Bounds validation lives in solve_loop (null init, empty name, null
     // end/iteration all yield no indices); empty means nothing to unroll.
-    auto indices = loop_solver::solve_loop(loop, *wo.param_chain.back());
+    auto indices = loop_solver::solve_loop(loop, *wo.scope_chain.back().params);
     if (indices.empty()) return {};
     auto loop_var_name = loop.get_init()->get_name();
 
@@ -362,7 +362,7 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     for (auto &branch : cond.get_branches()) {
         bool selected = false;
         if (branch.condition) {
-            auto result = branch.condition->evaluate(*wo.param_chain.back());
+            auto result = branch.condition->evaluate(*wo.scope_chain.back().params);
             selected = result.has_value() && result.value().is_integer() && result.value().get_integer() != 0;
         }
         any_matched = any_matched || selected;

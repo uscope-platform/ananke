@@ -53,19 +53,21 @@ struct package_import {
 
 using param_map_t = std::map<qualified_identifier, resolved_parameter>;
 
+// One scope frame per module on the instantiation path: the module name plus
+// its solved parameter set. A single vector (not parallel arrays) so the
+// lockstep invariant holds by construction.
+struct scope_frame {
+    std::string module;
+    std::shared_ptr<param_map_t> params;
+};
+
 struct work_order {
     std::shared_ptr<hdl_ast_node> node;
-    // Shared with the parent frame in param_chain: never mutated in place.
     std::shared_ptr<const param_map_t> parent_parameters;
     std::string path;
     std::unordered_map<std::string, std::string> interfaces_map;
     std::vector<pending_parameter_override> pending_overrides;
-    std::vector<std::string> module_chain;
-    // Parallel to module_chain: the resolved parameter set of each module in
-    // the chain (the final entry is filled once that module is elaborated).
-    // Ancestor frames are shared with already-created child work orders, so
-    // the back (current) frame must be cloned before mutating when shared.
-    std::vector<std::shared_ptr<param_map_t>> param_chain;
+    std::vector<scope_frame> scope_chain;
 };
 
 class parameter_solver {
