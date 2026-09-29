@@ -1543,23 +1543,32 @@ void parameter_solver::collect_type_enum_values(
     std::map<qualified_identifier, resolved_parameter> &fields
 ) {
     if (!type) return;
-    if (type->is<HDL_enum_type>()) {
-        auto &et = type->as<HDL_enum_type>();
-        for (const auto &m : et.members) {
-            if (m.value.has_value())
-                fields[qualified_identifier(m.name)] = static_cast<hdl_integer>(m.value.value());
+    // Explicit work stack instead of recursion: struct/union nesting can be
+    // arbitrarily deep. Frames are just shared_ptrs (no per-frame state),
+    // so a plain local vector does no heap traffic worth reusing.
+    std::vector<std::shared_ptr<hdl_type>> stack{type};
+    while (!stack.empty()) {
+        auto node = std::move(stack.back());
+        stack.pop_back();
+        if (!node) continue;
+        if (node->is<HDL_enum_type>()) {
+            auto &et = node->as<HDL_enum_type>();
+            for (const auto &m : et.members) {
+                if (m.value.has_value())
+                    fields[qualified_identifier(m.name)] = static_cast<hdl_integer>(m.value.value());
+            }
+            continue;
         }
-        return;
-    }
-    // Recurse into member types so aliases typed by enums (possibly through
-    // more structs) seed bare members too. Simple/external leaves terminate.
-    const std::vector<struct_member> *members = nullptr;
-    if (type->is<HDL_struct_type>())
-        members = &type->as<HDL_struct_type>().member;
-    else if (type->is<HDL_union_type>())
-        members = &type->as<HDL_union_type>().members;
-    if (!members) return;
-    for (const auto &m : *members) {
-        if (m.type) collect_type_enum_values(m.type, fields);
+        // Recurse into member types so aliases typed by enums (possibly through
+        // more structs) seed bare members too. Simple/external leaves terminate.
+        const std::vector<struct_member> *members = nullptr;
+        if (node->is<HDL_struct_type>())
+            members = &node->as<HDL_struct_type>().member;
+        else if (node->is<HDL_union_type>())
+            members = &node->as<HDL_union_type>().members;
+        if (!members) continue;
+        for (const auto &m : *members) {
+            if (m.type) stack.push_back(m.type);
+        }
     }
 }
