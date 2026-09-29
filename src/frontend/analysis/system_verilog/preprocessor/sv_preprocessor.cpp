@@ -172,7 +172,7 @@ namespace preprocessor {
             if (full_path.empty()) {
                 auto discovered = resolve_include(std::string(name), true);
                 if (discovered.has_value()) return discovered.value();
-                spdlog::warn("include file not found: {}", std::string(name));
+                spdlog::warn("include file not found: {} at line {} in file: {}", std::string(name), line_number, path);
                 return {};
             }
             return include_dependency{full_path, include_resolution::regular};
