@@ -42,7 +42,7 @@ namespace preprocessor {
         std::string preprocess(const std::string_view &file_content, unsigned int initial_output_line);
         std::string flatten_source(const std::string_view &file_content);
         void set_include_directories(const std::set<std::string> &i_d){include_directories = i_d;}
-        void set_repository_index(const std::shared_ptr<repository_index> &idx){repository_index = idx;}
+        void set_repository_index(const std::shared_ptr<repository_index> &idx){repo_idx = idx;}
         void set_path(const std::string &s){path = s;}
         void set_defines(const std::set<std::string> &d) {global_defines = d;}
         std::vector<std::string> get_documentation_comments() {return documentation_comments;}
@@ -70,7 +70,7 @@ namespace preprocessor {
         std::set<std::string> active_includes;
         conditional_solver c_solver;
         std::set<std::string> include_directories;
-        std::shared_ptr<repository_index> repository_index;
+        std::shared_ptr<repository_index> repo_idx;
         std::set<include_dependency> includes;
         source_mapper source_map;
         unsigned int output_line_n = 0;

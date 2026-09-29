@@ -28,7 +28,7 @@ std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const s
     preproc.set_path(path);
     preproc.set_include_directories(include_directories);
     preproc.set_defines(defines);
-    if (repository_index) preproc.set_repository_index(repository_index);
+    if (repo_idx) preproc.set_repository_index(repo_idx);
     auto processed_content = preproc.preprocess(content);
     if (preproc.has_error()) last_error = preproc.get_error();
     includes = preproc.get_includes();
@@ -44,7 +44,7 @@ std::optional<hdl_file> sv_analyzer::analyze(const std::string &path, const std:
     preproc.set_path(path);
     preproc.set_include_directories(include_directories);
     preproc.set_defines(defines);
-    if (repository_index) preproc.set_repository_index(repository_index);
+    if (repo_idx) preproc.set_repository_index(repo_idx);
     auto processed_content = preproc.preprocess(file_content);
     if (preproc.has_error()) {
         last_error = preproc.get_error();

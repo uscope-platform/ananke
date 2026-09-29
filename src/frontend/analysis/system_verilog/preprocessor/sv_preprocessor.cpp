@@ -190,8 +190,8 @@ namespace preprocessor {
     }
 
     std::optional<include_dependency> sv_preprocessor::resolve_include(const std::string &name, bool quoted) {
-        if (!repository_index) return std::nullopt;
-        auto candidates = repository_index->lookup(name);
+        if (!repo_idx) return std::nullopt;
+        auto candidates = repo_idx->lookup(name);
         if (candidates.size() == 1) {
             return include_dependency{candidates[0].string(), include_resolution::auto_discovered};
         }
@@ -448,7 +448,7 @@ namespace preprocessor {
             sv_preprocessor nested_preproc;
             nested_preproc.definitions = definitions;
             nested_preproc.include_directories = include_directories;
-            nested_preproc.repository_index = repository_index;
+            nested_preproc.repo_idx = repo_idx;
             nested_preproc.path = path;
 
             // Evaluate the conditional branches cleanly using the existing rules
