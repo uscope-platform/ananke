@@ -21,6 +21,7 @@
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "analysis/parameter_solver.hpp"
+#include "analysis/package_solver.hpp"
 #include "data_model/HDL/parameters/components/Replication.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/Cast.hpp"
@@ -697,7 +698,7 @@ TEST(parameter_extraction, cross_package_enum_init) {
     std::shared_ptr<hdl_resource_statement> p_pkg = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
     parameter_solver::propagate_types(p_pkg, d_store);
-    auto pkg_context = parameter_solver::retrieve_package_parameters(p_pkg->get_parameter_statements(), d_store);
+    auto pkg_context = package_solver().retrieve(p_pkg->get_parameter_statements(), d_store);
     auto solved = parameter_solver::process_parameters(p_pkg->get_parameter_statements(), pkg_context);
 
     ASSERT_EQ(1, solved.at(qualified_identifier("CVA6ConfigDcacheType")).get_integer().get_value());
@@ -740,7 +741,7 @@ endmodule
     ASSERT_TRUE(mod);
 
     parameter_solver::propagate_types(mod, d_store);
-    auto mod_context = parameter_solver::retrieve_package_parameters(mod->get_parameter_statements(), d_store);
+    auto mod_context = package_solver().retrieve(mod->get_parameter_statements(), d_store);
     auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), mod_context);
 
     mdarray<hdl_integer> expected;
@@ -786,7 +787,7 @@ endpackage
     ASSERT_TRUE(pkg);
 
     parameter_solver::propagate_types(pkg, d_store);
-    auto pkg_context = parameter_solver::retrieve_package_parameters(pkg->get_parameter_statements(), d_store);
+    auto pkg_context = package_solver().retrieve(pkg->get_parameter_statements(), d_store);
     auto solved = parameter_solver::process_parameters(pkg->get_parameter_statements(), pkg_context);
 
     EXPECT_EQ(solved.at(qualified_identifier("CFG")).get_integer().get_value(), 0x11223344);

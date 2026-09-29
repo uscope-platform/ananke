@@ -99,6 +99,9 @@ std::vector<std::shared_ptr<hdl_ast_node>> HDL_ast_builder_v2::build_ast(const s
 
 std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &top_level_module) {
 
+        // Fresh flow: drop the previous flow's solved packages.
+        parameter_solver::reset_packages();
+
         auto top = std::make_shared<hdl_ast_node>();
         top->set_name("TL");
         top->set_type(top_level_module);
@@ -106,7 +109,15 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
 
         if (top_level_module.empty()) return top;
         std::stack< work_order> working_stack;
-        working_stack.push({top, nullptr, "TL", {}, {}, {top_level_module}, {std::make_shared<param_map_t>()}});
+        working_stack.push({
+           top,
+            nullptr,
+            "TL",
+            {},
+            {},
+            {top_level_module},
+            {std::make_shared<param_map_t>()}
+        });
         while (!working_stack.empty()) {
             auto wo = std::move(working_stack.top());
             auto working_instance = wo.node;

@@ -21,6 +21,7 @@
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "analysis/parameter_solver.hpp"
+#include "analysis/package_solver.hpp"
 #include "data_model/HDL/parameters/components/Replication.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/Cast.hpp"
@@ -1368,7 +1369,7 @@ TEST(parameter_extraction, function_struct_local_return_solves) {
     ASSERT_NE(def_before, "<missing>");
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
-    // Seed exactly as retrieve_package_parameters exports: instance-preserving
+    // Seed exactly as package_solver::retrieve exports: instance-preserving
     // canonical form plus the flat legacy alias for bare pkg::FIELD reads.
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto &[id, val] : pkg_defaults) {
@@ -1450,7 +1451,7 @@ TEST(parameter_extraction, struct_field_downstream_uses) {
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
-    // Seed exactly as retrieve_package_parameters exports: instance-preserving
+    // Seed exactly as package_solver::retrieve exports: instance-preserving
     // canonical form plus the flat legacy alias for bare pkg::FIELD reads.
     std::map<qualified_identifier, resolved_parameter> ctx;
     for (auto &[id, val] : pkg_defaults) {
@@ -1477,7 +1478,7 @@ TEST(parameter_extraction, interrupt_shaped_uses) {
     // Full CVA6 interrupt shape: package enum constant as cast content,
     // replication inside a keyed literal, and a local type whose dimensions
     // depend on a function-produced struct field. Package enum members are
-    // seeded into ctx exactly as retrieve_package_parameters exports them.
+    // seeded into ctx exactly as package_solver::retrieve exports them.
     auto test_pattern = R"(
         package config_pkg;
             typedef struct packed {
@@ -2343,7 +2344,7 @@ TEST(parameter_extraction, function_enum_cast_loop_var_argument) {
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
 
     parameter_solver::propagate_functions(resource, d_store);
-    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameter_statements(), d_store);
+    auto pkg_ctx = package_solver().retrieve(resource->get_parameter_statements(), d_store);
     if (auto overlaid = overlay_unambiguous_scope(pkg_ctx)) pkg_ctx = *overlaid;
     auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), pkg_ctx);
 
@@ -2393,7 +2394,7 @@ endmodule
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
     parameter_solver::propagate_functions(resource, d_store);
-    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameter_statements(), d_store);
+    auto pkg_ctx = package_solver().retrieve(resource->get_parameter_statements(), d_store);
     auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), pkg_ctx);
     EXPECT_EQ(defaults.at(qualified_identifier("V_MIN")).get_integer(), 6);
     EXPECT_EQ(defaults.at(qualified_identifier("V_MAX")).get_integer(), 7);
@@ -2429,7 +2430,7 @@ endmodule
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto resource = std::static_pointer_cast<hdl_resource_statement>(file.get_content()[1]);
     parameter_solver::propagate_functions(resource, d_store);
-    auto pkg_ctx = parameter_solver::retrieve_package_parameters(resource->get_parameter_statements(), d_store);
+    auto pkg_ctx = package_solver().retrieve(resource->get_parameter_statements(), d_store);
     auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), pkg_ctx);
     EXPECT_EQ(defaults.at(qualified_identifier("V_MIN")).get_integer(), 35);
     EXPECT_EQ(defaults.at(qualified_identifier("V_MAX")).get_integer(), 45);

@@ -21,6 +21,7 @@
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "analysis/parameter_solver.hpp"
+#include "analysis/package_solver.hpp"
 #include "data_model/HDL/parameters/components/Replication.hpp"
 #include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/Expression_v2.hpp"
@@ -2689,14 +2690,14 @@ TEST(parameter_processing, diamond_package_solved_once) {
 
     // Direct retrieve through the diamond: pkg_d is reachable via pkg_b and
     // pkg_c; all three solve exactly once per call (single shared
-    // visited-set in retrieve_package_parameters) with correct values.
+    // visited-set in package_solver::retrieve) with correct values.
     std::shared_ptr<hdl_resource_statement> top;
     for (auto &stmt : file.get_content()) {
         auto res = std::dynamic_pointer_cast<hdl_resource_statement>(stmt);
         if (res && res->getName() == "top") top = res;
     }
     ASSERT_NE(top, nullptr);
-    auto solved = parameter_solver::retrieve_package_parameters(top->get_parameter_statements(), d_store);
+    auto solved = package_solver().retrieve(top->get_parameter_statements(), d_store);
     EXPECT_EQ(solved.at(qualified_identifier("pkg_d", "d")).get_integer(), 5);
     EXPECT_EQ(solved.at(qualified_identifier("pkg_b", "b")).get_integer(), 6);
     EXPECT_EQ(solved.at(qualified_identifier("pkg_c", "c")).get_integer(), 7);

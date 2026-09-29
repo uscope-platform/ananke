@@ -33,6 +33,7 @@
 class data_store;
 class hdl_resource_statement;
 class hdl_statement_base;
+class package_solver;
 
 struct pending_parameter_override {
     std::vector<std::string> path;
@@ -91,10 +92,6 @@ public:
     static void propagate_imports(std::shared_ptr<hdl_resource_statement> &resource,
         const std::map<std::string, hdl_function_statement> &imported_functions,
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types);
-    static std::map<qualified_identifier, resolved_parameter> retrieve_package_parameters(
-        const std::vector<std::shared_ptr<HDL_parameter>> &node_parameters,
-        const std::shared_ptr<data_store> &d_store,
-        const std::vector<std::pair<std::string, std::shared_ptr<hdl_resource_statement>>> &explicit_packages = {});
     static void remap_keyed_literals(const std::shared_ptr<Expression_base> &expr,
                               const std::shared_ptr<hdl_type> &type);
     static std::map<qualified_identifier, resolved_parameter> solve_complex_overrides(
@@ -103,6 +100,15 @@ public:
             const std::map<qualified_identifier, resolved_parameter> &node_defaults
         );
     static std::string get_full_path(const std::shared_ptr<hdl_ast_node> &node);
+
+    // Flow-scoped package solver: one instance per elaboration flow, shared
+    // by every instance in it (packages take no instance overrides).
+    // Single-threaded use only.
+    static package_solver & packages();
+    static void reset_packages();
+
+private:
+    static std::shared_ptr<package_solver> pkg_solver_;
 
 private:
     static void resolve_interface_chain(

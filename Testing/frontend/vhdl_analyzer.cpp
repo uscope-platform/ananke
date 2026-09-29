@@ -20,6 +20,7 @@
 #include "frontend/analysis/vhdl/vhdl_analyzer.hpp"
 #include "analysis/loop_solver.hpp"
 #include "analysis/parameter_solver.hpp"
+#include "analysis/package_solver.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/HDL/statement/hdl_statements.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
@@ -1597,7 +1598,7 @@ end top;
 
 TEST(vhdl_analyzer, package_constant_resolution) {
     // End-to-end: `params_pkg.WIDTH` in a generic default resolves through
-    // `parameter_solver::retrieve_package_parameters` once the package resource
+    // `package_solver::retrieve` once the package resource
     // is in the store.
     auto test_pattern = R"(
 package params_pkg is
@@ -1617,7 +1618,7 @@ end top;
 
     auto resources = file.get_content();
     auto &top = resources[1]->as<hdl_resource_statement>();
-    auto pkg_params = parameter_solver::retrieve_package_parameters(top.get_parameter_statements(), d_store);
+    auto pkg_params = package_solver().retrieve(top.get_parameter_statements(), d_store);
     auto it = pkg_params.find(qualified_identifier("params_pkg", "width"));
     ASSERT_NE(it, pkg_params.end());
     ASSERT_EQ(it->second.get_integer().get_value(), 8);

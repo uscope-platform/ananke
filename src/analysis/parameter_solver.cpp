@@ -14,7 +14,19 @@
 //  limitations under the License.
 
 #include "analysis/parameter_solver.hpp"
+#include "analysis/package_solver.hpp"
 #include "crash_context.hpp"
+
+std::shared_ptr<package_solver> parameter_solver::pkg_solver_;
+
+package_solver & parameter_solver::packages() {
+    if (!pkg_solver_) pkg_solver_ = std::make_shared<package_solver>();
+    return *pkg_solver_;
+}
+
+void parameter_solver::reset_packages() {
+    pkg_solver_.reset();
+}
 
 #include "data_model/HDL/parameters/components/token/Identifier_token.hpp"
 #include "data_model/HDL/parameters/components/expression_traversal.hpp"
@@ -308,7 +320,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     propagate_functions(node_spec.value(), d_store);
     propagate_imports(node_spec.value(), imported_functions, imported_types);
 
-    auto solved_parameters = retrieve_package_parameters(retrieve_inputs, d_store);
+    // Flow-scoped package solving via the shared package_solver: every
+    // instance in the flow reuses solved packages.
+    auto solved_parameters = packages().retrieve(retrieve_inputs, d_store);
 
     propagate_types(node_spec.value(), d_store);
     propagate_port_types(node_spec.value(), imported_types, d_store);
@@ -326,7 +340,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     }
     std::map<qualified_identifier, resolved_parameter> import_solved;
     if (!explicit_packages.empty())
-        import_solved = retrieve_package_parameters({}, d_store, explicit_packages);
+        import_solved = packages().retrieve({}, d_store, explicit_packages);
     for (const auto &imp : imports) {
         if (!imp.package) continue;
         const std::vector<std::string> prefix{imp.package_name};
@@ -343,114 +357,6 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
 
     return solved_parameters;
 }
-std::map<qualified_identifier, resolved_parameter> parameter_solver::retrieve_package_parameters(
-    const std::vector<std::shared_ptr<HDL_parameter>> &node_parameters,
-    const std::shared_ptr<data_store> &d_store,
-    const std::vector<std::pair<std::string, std::shared_ptr<hdl_resource_statement>>> &explicit_packages
-) {
-    std::map<qualified_identifier, resolved_parameter> package_parameters;
-    std::set<std::string> resolved_packages;
-
-    // Shared body: solve one package and export its params as pkg::name.
-    // Returns false when the package was already handled (dedup).
-    // Dependency scan shared by the top-level loop below and the sub-package
-    // scan in fetch_package: both feed the same accumulator and visited-set,
-    // so diamonds solve once per top-level call instead of once per nesting
-    // level. Post-order is preserved (sub-packages solve before their users).
-    std::function<void(const std::shared_ptr<HDL_parameter> &)> scan_param;
-    std::function<bool(const std::string &, std::shared_ptr<hdl_resource_statement>)> fetch_package;
-    scan_param = [&](const std::shared_ptr<HDL_parameter> &param) {
-        if (!param) return;
-        auto deps = param->get_dependencies();
-        for (const auto& dep : deps.data) {
-            if (dep.get_package_prefix().empty()) continue;
-            auto pkg_name = dep.get_package_prefix().back();
-            auto package = d_store->get_package_param_owner(pkg_name, dep);
-            if (!package.has_value()) continue;
-            fetch_package(pkg_name, package.value());
-        }
-        // Package functions (p::f()) need their owner package's constants
-        // (e.g. TAB for TAB[i].field reads inside the body) seeded, or the
-        // nested evaluation misses and defaults to 0.
-        for (const auto& fdep : deps.functions) {
-            if (fdep.get_package_prefix().empty()) continue;
-            auto pkg_name = fdep.get_package_prefix().back();
-            auto package = d_store->get_package_function_owner(pkg_name, fdep.get_name());
-            if (!package.has_value()) {
-                auto res = d_store->get_HDL_resource(pkg_name);
-                if (!res.has_value()) continue;
-                package = res.value();
-            }
-            fetch_package(pkg_name, package.value());
-        }
-        // Typedef packages (e.g. config_pkg::cfg_t): the struct's bare
-        // dimension deps (NrMaxRules) live in the typedef owner package.
-        // Solving it here seeds pkg::NrMaxRules so the overlay in
-        // HDL_simple_type::evaluate_type and solve_complex_overrides can
-        // resolve the bare name in its defining context.
-        for (const auto& tdep : deps.types) {
-            if (tdep.get_package_prefix().empty()) continue;
-            auto pkg_name = tdep.get_package_prefix().back();
-            auto package = d_store->get_package_typedef_owner(pkg_name, tdep.get_name());
-            if (!package.has_value()) continue;
-            fetch_package(pkg_name, package.value());
-        }
-    };
-
-    fetch_package = [&](const std::string &pkg_name,
-                        std::shared_ptr<hdl_resource_statement> package) -> bool {
-        if (!resolved_packages.insert(pkg_name).second) return false;
-
-        // 1. FIRST: Scan sub-package dependencies into the shared accumulator
-        for (const auto &sub_param : package->get_parameter_statements())
-            scan_param(sub_param);
-
-        // 2. SECOND: Extract typedef enums from THIS package into the context BEFORE processing its parameters
-        for (const auto &[_, hdl_t] : package->get_typedefs()) {
-            if (hdl_t && hdl_t->is<HDL_enum_type>()) {
-                auto &et = hdl_t->as<HDL_enum_type>();
-                for (const auto &m : et.members) {
-                    if (m.value.has_value()) {
-                        qualified_identifier qid{pkg_name, "", m.name};
-                        package_parameters[qid] = static_cast<hdl_integer>(m.value.value());
-                    }
-                }
-            }
-        }
-        propagate_types(package, d_store);
-        auto pkg_solved = process_parameters(package->get_parameter_statements(), package_parameters);
-
-        for (auto &[pkg_id, pkg_val] : pkg_solved) {
-            // Canonical instance-preserving form (pkg::S.F): the
-            // instance path survives so structured reads resolve.
-            qualified_identifier qid(pkg_id.get_name());
-            qid.set_package_prefix({pkg_name});
-            const auto inst = pkg_id.get_instance();
-            if (!inst.empty()) qid.set_instance_prefix(inst);
-            package_parameters[qid] = pkg_val;
-            // Flat legacy alias for bare pkg::FIELD reads (no struct
-            // root). First-wins: mirrors the old flattening.
-            if (!inst.empty()) {
-                qualified_identifier flat(pkg_name, pkg_id.get_name());
-                if (!package_parameters.contains(flat))
-                    package_parameters[flat] = pkg_val;
-            }
-        }
-        return true;
-    };
-
-    // Explicitly imported packages (e.g. `import pkg::*`) are solved even when
-    // no qualified reference triggers their fetch below: a bare-only use leaves
-    // no package-prefixed dep to discover them by.
-    for (const auto &[pkg_name, package] : explicit_packages) {
-        if (package) fetch_package(pkg_name, package);
-    }
-
-    for (auto &param : node_parameters)
-        scan_param(param);
-    return package_parameters;
-}
-
 void parameter_solver::remap_keyed_literals(const std::shared_ptr<Expression_base> &expr,
     const std::shared_ptr<hdl_type> &type) {
     if (!expr) return;

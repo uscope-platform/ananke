@@ -18,6 +18,7 @@ target_sources(ananke_lib
     analysis/HDL_ast_builder_v2.cpp
     analysis/passes/pass_manager.cpp
     analysis/parameter_solver.cpp
+    analysis/package_solver.cpp
     analysis/passes/processor_detection.cpp
     analysis/passes/port_solution.cpp
     analysis/topological_sorter.cpp
