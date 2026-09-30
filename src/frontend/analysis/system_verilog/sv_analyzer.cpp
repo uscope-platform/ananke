@@ -20,6 +20,8 @@
 
 #include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
 
+#include <BailErrorStrategy.h>
+
 
 std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const std::string &path, const std::string_view &content) {
     last_error.reset();
@@ -113,11 +115,31 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
 
     sv2017 parser(&tok_stream);
 
+    // Two-stage parsing: fast SLL trial with Bail (fail-fast, never silently
+    // wrong), fallback to full LL on ParseCancellationException. Final tree
+    // is identical to pure LL.
     parser.removeErrorListeners();
-    parser.addErrorListener(&error_listener);
+    parser.getInterpreter<antlr4::atn::ParserATNSimulator>()->setPredictionMode(
+        antlr4::atn::PredictionMode::SLL);
+    parser.setErrorHandler(std::make_shared<antlr4::BailErrorStrategy>());
 
-    //parser.getInterpreter<antlr4::atn::ParserATNSimulator>()->setPredictionMode(antlr4::atn::PredictionMode::SLL);
-    antlr4::tree::ParseTree *Tree = parser.source_text();
+    antlr4::tree::ParseTree *Tree = nullptr;
+    bool sll_failed = false;
+    try {
+        Tree = parser.source_text();
+    } catch (antlr4::ParseCancellationException &) {
+        sll_failed = true;
+    }
+
+    if (sll_failed || Tree == nullptr) {
+        parser.reset();
+        parser.removeErrorListeners();
+        parser.addErrorListener(&error_listener);
+        parser.setErrorHandler(std::make_shared<antlr4::DefaultErrorStrategy>());
+        parser.getInterpreter<antlr4::atn::ParserATNSimulator>()->setPredictionMode(
+            antlr4::atn::PredictionMode::LL);
+        Tree = parser.source_text();
+    }
 
     sv_visitor sv_modules_explorer;
     antlr4::tree::ParseTreeWalker::DEFAULT.walk(&sv_modules_explorer, Tree);
