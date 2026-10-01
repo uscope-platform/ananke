@@ -17,6 +17,7 @@
 #include <spdlog/spdlog.h>
 
 #include <cereal/types/polymorphic.hpp>
+#include <type_traits>
 
 // These types are defined entirely in their headers, so their registration
 // translation units contain no referenced symbols and would be dropped by the
@@ -25,44 +26,30 @@ CEREAL_FORCE_DYNAMIC_INIT(HDL_union_type)
 CEREAL_FORCE_DYNAMIC_INIT(Type_ref)
 CEREAL_FORCE_DYNAMIC_INIT(LoopVar_token)
 
-// The store keys files by path, so several files can contribute same-named
-// resources; hits pair each candidate with its source path.
-std::vector<data_store::resource_hit> data_store::find_resources_by_name(
+template<class StmtT>
+std::vector<std::pair<std::shared_ptr<StmtT>, std::string>> data_store::find_by_name(
     const std::string &name, const std::string &arch, bool match_arch) {
-    std::vector<resource_hit> hits;
+    std::vector<std::pair<std::shared_ptr<StmtT>, std::string>> hits;
     for (auto &file: cache | std::views::values) {
         if (!std::holds_alternative<hdl_file>(file.content)) continue;
         for (auto &res: std::get<hdl_file>(file.content).get_content()) {
-            if (!res->is<hdl_resource_statement>()) continue;
-            auto &r = res->as<hdl_resource_statement>();
+            if (!res->is<StmtT>()) continue;
+            auto &r = res->as<StmtT>();
             if (r.getName() != name) continue;
-            if (match_arch && r.get_architecture() != arch) continue;
-            if (!match_arch && !r.get_architecture().empty()) continue;
-            hits.emplace_back(std::static_pointer_cast<hdl_resource_statement>(res), file.path);
+            if constexpr (std::is_same_v<StmtT, hdl_resource_statement>) {
+                if (match_arch && r.get_architecture() != arch) continue;
+                if (!match_arch && !r.get_architecture().empty()) continue;
+            }
+            hits.emplace_back(std::static_pointer_cast<StmtT>(res), file.path);
         }
     }
     return hits;
 }
 
-std::vector<data_store::package_hit> data_store::find_packages_by_name(const std::string &name) {
-    std::vector<package_hit> hits;
-    for (auto &file: cache | std::views::values) {
-        if (!std::holds_alternative<hdl_file>(file.content)) continue;
-        for (auto &res: std::get<hdl_file>(file.content).get_content()) {
-            if (!res->is<hdl_package_statement>()) continue;
-            auto &r = res->as<hdl_package_statement>();
-            if (r.getName() != name) continue;
-            hits.emplace_back(std::static_pointer_cast<hdl_package_statement>(res), file.path);
-        }
-    }
-    return hits;
-}
-
-// Conflict report shared by all pick paths: fires once per resource name
-// per store lifetime, so hot solver loops don't flood the log, while no
-// successful disambiguation ever hides the conflict itself.
-void data_store::report_duplicates(const std::string &name,
-    const std::vector<resource_hit> &hits, const std::string &picked_path) {
+template<class StmtT>
+void data_store::report_dups(const std::string &kind, const std::string &name,
+    const std::vector<std::pair<std::shared_ptr<StmtT>, std::string>> &hits,
+    const std::string &picked_path) {
     if (hits.size() <= 1 || !reported_duplicates.insert(name).second) return;
     std::string paths;
     for (const auto &hit : hits) {
@@ -70,59 +57,16 @@ void data_store::report_duplicates(const std::string &name,
         paths += hit.second.empty() ? "<unknown path>" : hit.second;
     }
     if (picked_path.empty())
-        spdlog::warn("Multiple resources named '{}' found:{}", name, paths);
+        spdlog::warn("Multiple {}s named '{}' found:{}", kind, name, paths);
     else
-        spdlog::warn("Multiple resources named '{}' found:{}\n\tusing {}", name, paths, picked_path);
+        spdlog::warn("Multiple {}s named '{}' found:{}\n\tusing {}", kind, name, paths, picked_path);
 }
 
-void data_store::report_package_duplicates(const std::string &name,
-    const std::vector<package_hit> &hits, const std::string &picked_path) {
-    if (hits.size() <= 1 || !reported_duplicates.insert(name).second) return;
-    std::string paths;
-    for (const auto &hit : hits) {
-        paths += "\n\t";
-        paths += hit.second.empty() ? "<unknown path>" : hit.second;
-    }
-    if (picked_path.empty())
-        spdlog::warn("Multiple packages named '{}' found:{}", name, paths);
-    else
-        spdlog::warn("Multiple packages named '{}' found:{}\n\tusing {}", name, paths, picked_path);
-}
-
-std::vector<data_store::interface_hit> data_store::find_interfaces_by_name(const std::string &name) {
-    std::vector<interface_hit> hits;
-    for (auto &file: cache | std::views::values) {
-        if (!std::holds_alternative<hdl_file>(file.content)) continue;
-        for (auto &res: std::get<hdl_file>(file.content).get_content()) {
-            if (!res->is<hdl_interface_statement>()) continue;
-            auto &r = res->as<hdl_interface_statement>();
-            if (r.getName() != name) continue;
-            hits.emplace_back(std::static_pointer_cast<hdl_interface_statement>(res), file.path);
-        }
-    }
-    return hits;
-}
-
-void data_store::report_interface_duplicates(const std::string &name,
-    const std::vector<interface_hit> &hits, const std::string &picked_path) {
-    if (hits.size() <= 1 || !reported_duplicates.insert(name).second) return;
-    std::string paths;
-    for (const auto &hit : hits) {
-        paths += "\n\t";
-        paths += hit.second.empty() ? "<unknown path>" : hit.second;
-    }
-    if (picked_path.empty())
-        spdlog::warn("Multiple interfaces named '{}' found:{}", name, paths);
-    else
-        spdlog::warn("Multiple interfaces named '{}' found:{}\n\tusing {}", name, paths, picked_path);
-}
-
-// Single-pick policy shared by the get_HDL_resource overloads: unique hits
-// pass through silently, duplicates defer to the deconfliction map (stored
-// paths may be absolute while entries are relative, so match on equality or
-// suffix) and warn when nothing (or nothing matching) is configured.
-std::optional<data_store::resource_hit> data_store::pick_resource(
-    const std::vector<resource_hit> &hits, const std::string &name) {
+template<class StmtT>
+std::optional<std::pair<std::shared_ptr<StmtT>, std::string>> data_store::pick_stmt(
+    const std::string &kind,
+    const std::vector<std::pair<std::shared_ptr<StmtT>, std::string>> &hits,
+    const std::string &name) {
     if (hits.empty()) return std::nullopt;
     if (hits.size() == 1) return hits.front();
     if (auto it = deconfliction.find(name); it != deconfliction.end()) {
@@ -132,61 +76,95 @@ std::optional<data_store::resource_hit> data_store::pick_resource(
                 (stored == wanted || stored.ends_with(wanted) || wanted.ends_with(stored))) {
                 // Explicit pick: configured by the user, so no conflict
                 // warning — just trace the decision.
-                spdlog::trace("Deconflicted resource '{}' → {}", name, hit.second);
+                spdlog::trace("Deconflicted {} '{}' → {}", kind, name, hit.second);
                 return hit;
             }
         }
-        report_duplicates(name, hits, hits.front().second);
+        report_dups<StmtT>(kind, name, hits, hits.front().second);
         spdlog::warn("Deconfliction entry for '{}' ('{}') matches no candidate; using {}",
                      name, it->second, hits.front().second);
         return hits.front();
     }
-    report_duplicates(name, hits, hits.front().second);
+    report_dups<StmtT>(kind, name, hits, hits.front().second);
     return hits.front();
+}
+
+template<class StmtT>
+std::vector<std::shared_ptr<StmtT>> data_store::get_all_impl(const std::string &name) {
+    auto hits = find_by_name<StmtT>(name, "", false);
+    std::vector<std::shared_ptr<StmtT>> out;
+    out.reserve(hits.size());
+    for (auto &[res, path] : hits) out.push_back(std::move(res));
+    return out;
+}
+
+template<class StmtT>
+std::optional<std::shared_ptr<StmtT>> data_store::get_one_impl(
+    const std::string &kind, const std::string &name) {
+    if (auto picked = pick_stmt<StmtT>(kind, find_by_name<StmtT>(name, "", false), name))
+        return picked->first;
+    return std::nullopt;
+}
+
+template<class StmtT>
+std::optional<std::shared_ptr<StmtT>> data_store::get_one_path_impl(
+    const std::string &kind, const std::string &name, std::string &path) {
+    auto picked = pick_stmt<StmtT>(kind, find_by_name<StmtT>(name, "", false), name);
+    if (!picked.has_value()) return std::nullopt;
+    path = picked->second;
+    return picked->first;
+}
+
+// The store keys files by path, so several files can contribute same-named
+// resources; hits pair each candidate with its source path.
+std::vector<data_store::resource_hit> data_store::find_resources_by_name(
+    const std::string &name, const std::string &arch, bool match_arch) {
+    return find_by_name<hdl_resource_statement>(name, arch, match_arch);
+}
+
+std::vector<data_store::package_hit> data_store::find_packages_by_name(const std::string &name) {
+    return find_by_name<hdl_package_statement>(name, "", false);
+}
+
+// Conflict report shared by all pick paths: fires once per resource name
+// per store lifetime, so hot solver loops don't flood the log, while no
+// successful disambiguation ever hides the conflict itself.
+void data_store::report_duplicates(const std::string &name,
+    const std::vector<resource_hit> &hits, const std::string &picked_path) {
+    report_dups<hdl_resource_statement>("resource", name, hits, picked_path);
+}
+
+void data_store::report_package_duplicates(const std::string &name,
+    const std::vector<package_hit> &hits, const std::string &picked_path) {
+    report_dups<hdl_package_statement>("package", name, hits, picked_path);
+}
+
+std::vector<data_store::interface_hit> data_store::find_interfaces_by_name(const std::string &name) {
+    return find_by_name<hdl_interface_statement>(name, "", false);
+}
+
+void data_store::report_interface_duplicates(const std::string &name,
+    const std::vector<interface_hit> &hits, const std::string &picked_path) {
+    report_dups<hdl_interface_statement>("interface", name, hits, picked_path);
+}
+
+// Single-pick policy shared by the get_* lookup overloads: unique hits
+// pass through silently, duplicates defer to the deconfliction map (stored
+// paths may be absolute while entries are relative, so match on equality or
+// suffix) and warn when nothing (or nothing matching) is configured.
+std::optional<data_store::resource_hit> data_store::pick_resource(
+    const std::vector<resource_hit> &hits, const std::string &name) {
+    return pick_stmt<hdl_resource_statement>("resource", hits, name);
 }
 
 std::optional<data_store::package_hit> data_store::pick_package(
     const std::vector<package_hit> &hits, const std::string &name) {
-    if (hits.empty()) return std::nullopt;
-    if (hits.size() == 1) return hits.front();
-    if (auto it = deconfliction.find(name); it != deconfliction.end()) {
-        for (const auto &hit : hits) {
-            const auto &stored = hit.second, &wanted = it->second;
-            if (!stored.empty() && !wanted.empty() &&
-                (stored == wanted || stored.ends_with(wanted) || wanted.ends_with(stored))) {
-                spdlog::trace("Deconflicted package '{}' → {}", name, hit.second);
-                return hit;
-            }
-        }
-        report_package_duplicates(name, hits, hits.front().second);
-        spdlog::warn("Deconfliction entry for '{}' ('{}') matches no candidate; using {}",
-                     name, it->second, hits.front().second);
-        return hits.front();
-    }
-    report_package_duplicates(name, hits, hits.front().second);
-    return hits.front();
+    return pick_stmt<hdl_package_statement>("package", hits, name);
 }
 
 std::optional<data_store::interface_hit> data_store::pick_interface(
     const std::vector<interface_hit> &hits, const std::string &name) {
-    if (hits.empty()) return std::nullopt;
-    if (hits.size() == 1) return hits.front();
-    if (auto it = deconfliction.find(name); it != deconfliction.end()) {
-        for (const auto &hit : hits) {
-            const auto &stored = hit.second, &wanted = it->second;
-            if (!stored.empty() && !wanted.empty() &&
-                (stored == wanted || stored.ends_with(wanted) || wanted.ends_with(stored))) {
-                spdlog::trace("Deconflicted interface '{}' → {}", name, hit.second);
-                return hit;
-            }
-        }
-        report_interface_duplicates(name, hits, hits.front().second);
-        spdlog::warn("Deconfliction entry for '{}' ('{}') matches no candidate; using {}",
-                     name, it->second, hits.front().second);
-        return hits.front();
-    }
-    report_interface_duplicates(name, hits, hits.front().second);
-    return hits.front();
+    return pick_stmt<hdl_interface_statement>("interface", hits, name);
 }
 
 
@@ -236,76 +214,50 @@ std::optional<std::shared_ptr<hdl_package_statement>> data_store::pick_owned_pac
 }
 
 std::vector<std::shared_ptr<hdl_resource_statement>> data_store::get_all_HDL_resources(const std::string& name) {
-    auto hits = find_resources_by_name(name, "", false);
-    std::vector<std::shared_ptr<hdl_resource_statement>> out;
-    out.reserve(hits.size());
-    for (auto &[res, path] : hits) out.push_back(std::move(res));
-    return out;
+    return get_all_impl<hdl_resource_statement>(name);
 }
 
 std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_HDL_resource(const std::string& name) {
-    if (auto picked = pick_resource(find_resources_by_name(name, "", false), name))
-        return picked->first;
-    return std::nullopt;
+    return get_one_impl<hdl_resource_statement>("resource", name);
 }
 
 std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_HDL_resource(const std::string &name,
     const std::string &arch) {
-    if (auto picked = pick_resource(find_resources_by_name(name, arch, true), name))
+    if (auto picked = pick_stmt<hdl_resource_statement>(
+            "resource", find_by_name<hdl_resource_statement>(name, arch, true), name))
         return picked->first;
     return std::nullopt;
 }
 
 std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_HDL_resource(const std::string &name,
     std::string &path) {
-    auto picked = pick_resource(find_resources_by_name(name, "", false), name);
-    if (!picked.has_value()) return std::nullopt;
-    path = picked->second;
-    return picked->first;
+    return get_one_path_impl<hdl_resource_statement>("resource", name, path);
 }
 
 std::optional<std::shared_ptr<hdl_package_statement>> data_store::get_package(const std::string& name) {
-    if (auto picked = pick_package(find_packages_by_name(name), name))
-        return picked->first;
-    return std::nullopt;
+    return get_one_impl<hdl_package_statement>("package", name);
 }
 
 std::optional<std::shared_ptr<hdl_package_statement>> data_store::get_package(const std::string &name,
     std::string &path) {
-    auto picked = pick_package(find_packages_by_name(name), name);
-    if (!picked.has_value()) return std::nullopt;
-    path = picked->second;
-    return picked->first;
+    return get_one_path_impl<hdl_package_statement>("package", name, path);
 }
 
 std::vector<std::shared_ptr<hdl_package_statement>> data_store::get_all_packages(const std::string& name) {
-    auto hits = find_packages_by_name(name);
-    std::vector<std::shared_ptr<hdl_package_statement>> out;
-    out.reserve(hits.size());
-    for (auto &[res, path] : hits) out.push_back(std::move(res));
-    return out;
+    return get_all_impl<hdl_package_statement>(name);
 }
 
 std::optional<std::shared_ptr<hdl_interface_statement>> data_store::get_interface(const std::string& name) {
-    if (auto picked = pick_interface(find_interfaces_by_name(name), name))
-        return picked->first;
-    return std::nullopt;
+    return get_one_impl<hdl_interface_statement>("interface", name);
 }
 
 std::optional<std::shared_ptr<hdl_interface_statement>> data_store::get_interface(const std::string &name,
     std::string &path) {
-    auto picked = pick_interface(find_interfaces_by_name(name), name);
-    if (!picked.has_value()) return std::nullopt;
-    path = picked->second;
-    return picked->first;
+    return get_one_path_impl<hdl_interface_statement>("interface", name, path);
 }
 
 std::vector<std::shared_ptr<hdl_interface_statement>> data_store::get_all_interfaces(const std::string& name) {
-    auto hits = find_interfaces_by_name(name);
-    std::vector<std::shared_ptr<hdl_interface_statement>> out;
-    out.reserve(hits.size());
-    for (auto &[res, path] : hits) out.push_back(std::move(res));
-    return out;
+    return get_all_impl<hdl_interface_statement>(name);
 }
 
 std::shared_ptr<hdl_resource_statement> data_store::interface_view(

@@ -123,6 +123,24 @@ private:
     using resource_hit = std::pair<std::shared_ptr<hdl_resource_statement>, std::string>;
     using package_hit = std::pair<std::shared_ptr<hdl_package_statement>, std::string>;
     using package_predicate = std::function<bool(const std::shared_ptr<hdl_package_statement>&)>;
+    using interface_hit = std::pair<std::shared_ptr<hdl_interface_statement>, std::string>;
+    // Generic lookup cores shared by the resource/package/interface trios:
+    // StmtT is the statement type, kind is the singular log word
+    // ("resource", "package", "interface", pluralized as "{}s" in messages).
+    // Only hdl_resource_statement honors the arch filter.
+    template<class StmtT> using stmt_hit = std::pair<std::shared_ptr<StmtT>, std::string>;
+    template<class StmtT> std::vector<stmt_hit<StmtT>> find_by_name(
+        const std::string &name, const std::string &arch, bool match_arch);
+    template<class StmtT> void report_dups(
+        const std::string &kind, const std::string &name,
+        const std::vector<stmt_hit<StmtT>> &hits, const std::string &picked_path);
+    template<class StmtT> std::optional<stmt_hit<StmtT>> pick_stmt(
+        const std::string &kind, const std::vector<stmt_hit<StmtT>> &hits, const std::string &name);
+    template<class StmtT> std::vector<std::shared_ptr<StmtT>> get_all_impl(const std::string &name);
+    template<class StmtT> std::optional<std::shared_ptr<StmtT>> get_one_impl(
+        const std::string &kind, const std::string &name);
+    template<class StmtT> std::optional<std::shared_ptr<StmtT>> get_one_path_impl(
+        const std::string &kind, const std::string &name, std::string &path);
     std::optional<std::shared_ptr<hdl_package_statement>> pick_owned_package(
         const std::string &name, const std::string &member, const package_predicate &declares);
     void clean_up_caches();
@@ -131,7 +149,6 @@ private:
     std::vector<resource_hit> find_resources_by_name(const std::string &name, const std::string &arch,
                                                      bool match_arch);
     std::vector<package_hit> find_packages_by_name(const std::string &name);
-    using interface_hit = std::pair<std::shared_ptr<hdl_interface_statement>, std::string>;
     std::vector<interface_hit> find_interfaces_by_name(const std::string &name);
     std::optional<interface_hit> pick_interface(const std::vector<interface_hit> &hits, const std::string &name);
     void report_interface_duplicates(const std::string &name, const std::vector<interface_hit> &hits,
