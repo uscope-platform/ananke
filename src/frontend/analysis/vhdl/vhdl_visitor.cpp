@@ -85,7 +85,7 @@ void vhdl_visitor::route_resource_typedef(const std::string &name, const std::sh
 void vhdl_visitor::enterEntity_declaration(mgp_vh::vhdlParser::Entity_declarationContext *ctx) {
     std::string module_name = canon(ctx->identifier()[0]->getText());
     size_t line_number = ctx->getStart()->getLine();
-    modules_factory.new_module(module_name,module, line_number);
+    modules_factory.new_module(module_name, line_number);
     current_entity_name = module_name;
     in_entity_declaration = true;
 }
@@ -627,7 +627,7 @@ void vhdl_visitor::enterArchitecture_body(mgp_vh::vhdlParser::Architecture_bodyC
     std::string arch_name = canon(ctx->identifier(0)->getText());
     current_architecture = entity_name + "::" + arch_name;
     size_t line_number = ctx->getStart()->getLine();
-    modules_factory.new_module(entity_name, module, line_number);
+    modules_factory.new_module(entity_name, line_number);
 }
 
 void vhdl_visitor::enterGeneric_clause(mgp_vh::vhdlParser::Generic_clauseContext *ctx) {

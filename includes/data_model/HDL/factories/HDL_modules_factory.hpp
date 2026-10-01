@@ -26,7 +26,7 @@
 class HDL_modules_factory : protected resources_factory_base<hdl_resource_statement> {
 
 public:
-    void new_module(const std::string &name, const dependency_class &type, unsigned int line_n);
+    void new_module(const std::string &name, unsigned int line_n);
     std::shared_ptr<hdl_resource_statement> get_module();
     void set_language(hdl_language l) { language = l; }
 

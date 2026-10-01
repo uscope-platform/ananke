@@ -21,9 +21,8 @@
 #include "data_model/HDL/types/HDL_external_type.hpp"
 
 
-void HDL_modules_factory::new_module(const std::string &name, const dependency_class &type, unsigned int line_n) {
+void HDL_modules_factory::new_module(const std::string &name, unsigned int line_n) {
     new_basic_resource(name);
-    current_resource.set_type(type);
     current_resource.set_line_n(line_n);
     current_resource.set_language(language);
     function_return_types.clear();

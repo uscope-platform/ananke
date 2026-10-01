@@ -41,7 +41,6 @@ TEST( HDL_resource_test , ser_des_hdl_resource) {
 
     hdl_resource_statement hdl_out;
     hdl_out.set_name("test");
-    hdl_out.set_type(module);
     hdl_out.set_line_n(13);
     std::stringstream os;
     {
@@ -99,7 +98,6 @@ TEST( HDL_resource_test , get_name) {
 
     hdl_resource_statement test_item;
     test_item.set_name("test");
-    test_item.set_type(module);
 
     ASSERT_EQ(test_item.getName(), "test");
 }

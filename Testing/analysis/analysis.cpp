@@ -161,7 +161,6 @@ TEST( analysis_test , sv_module) {
     hdl_resource_statement check_res;
     check_res.set_language(hdl_language::system_verilog);
     check_res.set_name("Decoder");
-    check_res.set_type(module);
     check_res.set_line_n(3);
     check_res.set_ports(test_ports);
 
@@ -238,7 +237,6 @@ TEST( analysis_test , vhdl_module) {
     hdl_resource_statement check_res;
     check_res.set_language(hdl_language::vhdl);
     check_res.set_name("half_adder");
-    check_res.set_type(module);
     check_res.set_line_n(4);
     std::unordered_map<std::string, HDL_port> ports;
     ports["i_bit1"] = {input_port};

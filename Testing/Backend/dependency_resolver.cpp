@@ -28,7 +28,6 @@ protected:
         d_store = std::make_shared<data_store>(true,"/tmp/test_data_store");
         hdl_resource_statement mod_entity;
         mod_entity.set_name("test_module");
-        mod_entity.set_type(module);
 
         auto s1 = std::make_shared<hdl_instance_statement>();
         s1->set_name("inst"); s1->set_type("test_dep"); s1->set_dependency_class(module);
@@ -52,13 +51,11 @@ protected:
 
         hdl_resource_statement expl_dep;
         expl_dep.set_name("expl_dep");
-        expl_dep.set_type(module);
         f.set_content({std::make_shared<hdl_resource_statement>(expl_dep)});
         d_store->store_file({"test/explicit/dep.sv", "file_hash", f});
 
         hdl_resource_statement dep_entity;
         dep_entity.set_name("test_dep");
-        dep_entity.set_type(module);
         f.set_content({std::make_shared<hdl_resource_statement>(dep_entity)});
         d_store->store_file({"test/dep.sv", "file_hash", f});
 

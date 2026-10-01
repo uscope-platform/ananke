@@ -220,7 +220,6 @@ std::shared_ptr<hdl_resource_statement> data_store::interface_view(
     const std::shared_ptr<hdl_interface_statement> &iface) {
     auto view = std::make_shared<hdl_resource_statement>();
     view->set_name(iface->getName());
-    view->set_type(interface);
     view->set_language(iface->get_language());
     view->set_line_n(iface->get_line_n());
     for (auto &[n, t] : iface->get_typedefs()) view->add_typedef(n, t);

@@ -115,7 +115,6 @@ TEST_F(repository_walker , directory_analysis) {
     hdl_resource_statement sv_res;
     sv_res.set_language(hdl_language::system_verilog);
     sv_res.set_name("Decoder");
-    sv_res.set_type(module);
     sv_res.set_ports(test_ports);
     sv_res.set_line_n(2);
     ASSERT_EQ(res, sv_res);
@@ -125,7 +124,6 @@ TEST_F(repository_walker , directory_analysis) {
     hdl_resource_statement vh_res;
     vh_res.set_language(hdl_language::vhdl);
     vh_res.set_name("half_adder");
-    vh_res.set_type(module);
     vh_res.set_line_n(4);
     std::unordered_map<std::string, HDL_port> vh_ports;
     vh_ports["i_bit1"] = {input_port};

@@ -141,7 +141,6 @@ end test_mod;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("test_mod");
-    expected.set_type(module);
     expected.set_line_n(2);
 
     ASSERT_EQ(*res, expected);
@@ -173,7 +172,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     auto inst = make_instance("and1", "andgate");
     std::unordered_map<std::string, std::vector<HDL_net>> inst_ports;
@@ -211,7 +209,6 @@ END RTL;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("half_adder");
-    expected.set_type(module);
     expected.set_line_n(2);
     auto inst = make_instance("and1", "andgate");
     std::unordered_map<std::string, std::vector<HDL_net>> inst_ports;
@@ -272,7 +269,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("half_adder");
-    expected.set_type(module);
     expected.set_line_n(5);
     expected.set_ports(ports);
 
@@ -301,7 +297,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(make_integer_param("n", std::make_shared<Numeric_token>("8")));
 
@@ -328,7 +323,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(make_integer_param("width", expr));
 
@@ -354,7 +348,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(make_integer_param("a", std::make_shared<Numeric_token>("4")));
     expected.add_statement(make_integer_param("b", b_expr));
@@ -376,7 +369,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(make_integer_param("width",
         std::make_shared<Identifier_token>(qualified_identifier("data_width"))));
@@ -446,7 +438,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(make_integer_param("a", std::make_shared<Numeric_token>("8")));
     expected.add_statement(make_integer_param("b", std::make_shared<Numeric_token>("8")));
@@ -508,7 +499,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(make_concat_param("v", {"1", "2", "3"}));
 
@@ -527,7 +517,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(make_concat_param("v", {"7", "8"}));
 
@@ -631,7 +620,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(make_integer_param("v", cast));
 
@@ -871,7 +859,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.set_ports(ports);
 
@@ -897,7 +884,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.set_ports(ports);
 
@@ -926,7 +912,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.set_ports(ports);
 
@@ -951,7 +936,6 @@ end top;
     hdl_resource_statement check_res;
     check_res.set_language(hdl_language::vhdl);
     check_res.set_name("top");
-    check_res.set_type(module);
     check_res.set_line_n(2);
     check_res.add_statement(make_integer_param("width", std::make_shared<Numeric_token>("8")));
     check_res.add_statement(make_typed_param("flag", "boolean",
@@ -991,7 +975,6 @@ end rtl;
     hdl_resource_statement check;
     check.set_language(hdl_language::vhdl);
     check.set_name("top");
-    check.set_type(module);
     check.set_line_n(2);
     check.add_statement(inst);
 
@@ -1023,7 +1006,6 @@ end rtl;
     hdl_resource_statement check;
     check.set_language(hdl_language::vhdl);
     check.set_name("top");
-    check.set_type(module);
     check.set_line_n(2);
     check.add_statement(inst);
 
@@ -1050,7 +1032,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     auto inst = make_instance("u_sub", "sub");
     std::unordered_map<std::string, std::vector<HDL_net>> inst_ports;
@@ -1108,7 +1089,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(inst);
 
@@ -1156,7 +1136,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(loop);
 
@@ -1199,7 +1178,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(conditional);
 
@@ -1231,7 +1209,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(conditional);
 
@@ -1282,7 +1259,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(loop);
 
@@ -1336,7 +1312,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(conditional);
 
@@ -1388,7 +1363,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(conditional);
 
@@ -1440,7 +1414,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(conditional);
 
@@ -1477,7 +1450,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(10);
     expected.add_statement(u_sub);
 
@@ -1519,7 +1491,6 @@ end rtl;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(13);
     expected.add_statement(u_sub);
 
@@ -1594,7 +1565,6 @@ end top;
     hdl_resource_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("top");
-    expected.set_type(module);
     expected.set_line_n(2);
     expected.add_statement(make_integer_param(
         "n", std::make_shared<Identifier_token>(qualified_identifier("params_pkg", "width"))));

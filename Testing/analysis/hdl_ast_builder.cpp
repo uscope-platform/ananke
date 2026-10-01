@@ -560,7 +560,6 @@ TEST( hdl_ast_builder, primitive_classification) {
 
     hdl_resource_statement leaf_mod;
     leaf_mod.set_name("leaf");
-    leaf_mod.set_type(module);
     hdl_file f;
     f.set_content({std::make_shared<hdl_resource_statement>(leaf_mod)});
     d_store->store_file({"/dev/zero/leaf.sv", "file_hash", f});

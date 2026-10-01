@@ -2509,7 +2509,6 @@ endinterface
     hdl_resource_statement mod_check;
     mod_check.set_language(hdl_language::system_verilog);
     mod_check.set_name("lang_mod");
-    mod_check.set_type(module);
     mod_check.set_line_n(7);
     auto *mod = find_sv("lang_mod");
     ASSERT_NE(mod, nullptr);
@@ -2576,7 +2575,6 @@ end lang_ent;
     hdl_resource_statement vent_check;
     vent_check.set_language(hdl_language::vhdl);
     vent_check.set_name("lang_ent");
-    vent_check.set_type(module);
     vent_check.set_line_n(5);
     vent_check.add_statement(make_int_param("w", "8"));
     auto *vent = find_vhdl("lang_ent");

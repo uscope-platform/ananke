@@ -66,9 +66,6 @@ public:
     std::string get_architecture() const { return architecture; }
     const std::string &getName() const { return name; }
 
-    void set_type(dependency_class t) { hdl_dependency_type = t; }
-    dependency_class get_type() { return hdl_dependency_type; }
-
     void set_language(hdl_language l) { language = l; }
     [[nodiscard]] hdl_language get_language() const { return language; }
 
@@ -104,7 +101,7 @@ public:
 
     template<class Archive>
     void serialize(Archive & ar) {
-        ar(name, hdl_dependency_type, port_specs, doc, processor_docs,
+        ar(name, port_specs, doc, processor_docs,
             line_n, typedefs, statements, architecture, language);
     }
 
@@ -112,7 +109,6 @@ private:
     std::string name;
     std::string architecture;
     unsigned int line_n = 0;
-    dependency_class hdl_dependency_type = module;
     hdl_language language = hdl_language::unknown;
     std::unordered_map<std::string, HDL_port> port_specs;
     std::vector<processor_instance> processor_docs;

@@ -17,11 +17,12 @@
 #ifndef ANANKE_HDL_DEFINITIONS_HPP
 #define ANANKE_HDL_DEFINITIONS_HPP
 
+// Classifies instance and AST-node dependencies. Only values actually
+// produced by the frontends are listed: resources themselves are always
+// modules now (packages and interfaces are separate statement types).
 enum dependency_class {
     module=0,
     interface=1,
-    program=2,
-    udp=3,
     memory_init=4,
     package=5,
     primitive=6

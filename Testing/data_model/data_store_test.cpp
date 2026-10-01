@@ -85,7 +85,6 @@ TEST( data_store_test , evict_hdl_entity) {
     auto *store_1 = new data_store(true, "/tmp/test_data_store");
     auto test_entity = std::make_shared<hdl_resource_statement>();
     test_entity->set_name("test");
-    test_entity->set_type(module);
     test_entity->set_line_n(15);
     hdl_file f;
     f.set_content({test_entity});
@@ -131,8 +130,6 @@ TEST( data_store_test , store_resource_vect) {
     auto test_res_2 = std::make_shared<hdl_resource_statement>();
     test_res_1->set_name("test_1");
     test_res_2->set_name("test_2");
-    test_res_1->set_type(module);
-    test_res_2->set_type(module);
     hdl_file f;
     f.set_content({test_res_1,test_res_2});
     store->store_file({
@@ -160,9 +157,7 @@ TEST( data_store_test , store_hdl_vect) {
     auto test_file_1 = std::make_shared<hdl_resource_statement>();
     auto test_file_2 = std::make_shared<hdl_resource_statement>();
     test_file_1->set_name("test_1");
-    test_file_1->set_type(module);
     test_file_2->set_name("test_2");
-    test_file_2->set_type(module);
     hdl_file f;
     f.set_content({test_file_1, test_file_2});
     store->store_file({
@@ -241,7 +236,6 @@ TEST( data_store_test , resource_clean_up) {
 
     auto test_entity = std::make_shared<hdl_resource_statement>();
     test_entity->set_name("test");
-    test_entity->set_type(module);
     test_entity->set_line_n(15);
     hdl_file f;
     f.set_content({test_entity});
@@ -344,7 +338,6 @@ TEST( data_store_test , persistent_cache_schema_round_trip ) {
         data_store store(false, dir);
         auto test_res = std::make_shared<hdl_resource_statement>();
         test_res->set_name("schema_test");
-        test_res->set_type(module);
         hdl_file f;
         f.set_content({test_res});
         store.store_file({stored_path, "test_hash", f});
@@ -386,10 +379,8 @@ TEST( data_store_test , duplicate_resource_name_lists_all) {
     auto *store = new data_store(true, "/tmp/test_data_store");
     auto dup_a = std::make_shared<hdl_resource_statement>();
     dup_a->set_name("dup");
-    dup_a->set_type(module);
     auto dup_b = std::make_shared<hdl_resource_statement>();
     dup_b->set_name("dup");
-    dup_b->set_type(module);
     hdl_file fa;
     fa.set_content({dup_a});
     hdl_file fb;
@@ -418,10 +409,8 @@ TEST( data_store_test , duplicate_resource_deconfliction) {
     auto *store = new data_store(true, "/tmp/test_data_store");
     auto dup_a = std::make_shared<hdl_resource_statement>();
     dup_a->set_name("dup");
-    dup_a->set_type(module);
     auto dup_b = std::make_shared<hdl_resource_statement>();
     dup_b->set_name("dup");
-    dup_b->set_type(module);
     hdl_file fa;
     fa.set_content({dup_a});
     hdl_file fb;
@@ -530,10 +519,8 @@ TEST( data_store_test , explicit_deconfliction_stays_silent) {
     auto *store = new data_store(true, "/tmp/test_data_store");
     auto dup_a = std::make_shared<hdl_resource_statement>();
     dup_a->set_name("dup");
-    dup_a->set_type(module);
     auto dup_b = std::make_shared<hdl_resource_statement>();
     dup_b->set_name("dup");
-    dup_b->set_type(module);
     hdl_file fa;
     fa.set_content({dup_a});
     hdl_file fb;

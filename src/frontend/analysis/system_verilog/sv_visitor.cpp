@@ -167,7 +167,7 @@ void sv_visitor::enterModule_declaration(sv2017::Module_declarationContext *ctx)
     current_declaration_type = "module";
     size_t line_number = ctx->getStart()->getLine();
     auto module_name = ctx->module_header_common()->identifier()->getText();
-    modules_factory.new_module(module_name, module, line_number);
+    modules_factory.new_module(module_name, line_number);
 }
 
 
