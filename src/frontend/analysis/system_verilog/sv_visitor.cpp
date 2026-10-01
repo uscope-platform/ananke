@@ -55,16 +55,19 @@ void sv_visitor::route_resource_statement(const std::shared_ptr<hdl_statement_ba
 
 void sv_visitor::route_resource_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type) {
     if (packages_factory.is_current_valid()) packages_factory.add_typedef(name, type);
+    else if (interfaces_factory.is_current_valid()) interfaces_factory.add_typedef(name, type);
     else modules_factory.add_typedef(name, type);
 }
 
 void sv_visitor::route_resource_struct_def(const std::string &name, const std::shared_ptr<hdl_type> &type) {
     if (packages_factory.is_current_valid()) packages_factory.add_struct_def(name, type);
+    else if (interfaces_factory.is_current_valid()) interfaces_factory.add_struct_def(name, type);
     else modules_factory.add_struct_def(name, type);
 }
 
 void sv_visitor::route_resource_function(const hdl_function_statement &f, const std::string &ret_type_name) {
     if (packages_factory.is_current_valid()) packages_factory.add_function(f, ret_type_name);
+    else if (interfaces_factory.is_current_valid()) interfaces_factory.add_function(f, ret_type_name);
     else if (modules_factory.is_current_valid()) modules_factory.add_function(f, ret_type_name);
 }
 
@@ -207,8 +210,10 @@ void sv_visitor::exitModule_or_interface_or_program_or_udp_instantiation(sv2017:
         conditionals_factory.add_statement(deps_factory.get_dependency());
     } else if(loops_factory.in_loop()){
         loops_factory.add_statement(deps_factory.get_dependency());
-    } else {
+    } else if (modules_factory.is_current_valid()) {
         modules_factory.add_statement(deps_factory.get_dependency());
+    } else if (interfaces_factory.is_current_valid()) {
+        interfaces_factory.add_statement(deps_factory.get_dependency());
     }
 
 }
@@ -1030,7 +1035,7 @@ void sv_visitor::exitParameter_override(sv2017::Parameter_overrideContext *ctx) 
     stmt->set_value(param->get_expression());
     pending_defparam_path.clear();
     pending_defparam_param.clear();
-    modules_factory.add_statement(stmt);
+    route_resource_statement(stmt);
 }
 
 bool sv_visitor::expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
@@ -1042,11 +1047,10 @@ bool sv_visitor::expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
 }
 
 bool sv_visitor::is_package_typedef(const std::string &prefix, const std::string &name) {
+    // Packages are the only owners of package-qualified typedefs: modules and
+    // interfaces never declare `prefix::name`. The old resource branch could
+    // only false-positive on a module/package name collision.
     for (const auto &e : entities) {
-        if (auto res = std::dynamic_pointer_cast<hdl_resource_statement>(e)) {
-            if (res->getName() == prefix && res->get_typedefs().contains(name))
-                return true;
-        }
         if (auto pkg = std::dynamic_pointer_cast<hdl_package_statement>(e)) {
             if (pkg->getName() == prefix && pkg->get_typedefs().contains(name))
                 return true;
@@ -1915,8 +1919,10 @@ void sv_visitor::exitLoop_generate_construct(sv2017::Loop_generate_constructCont
     else if (loops_factory.in_loop())
         // Nested generate loop: back into the restored outer loop body.
         loops_factory.add_body_stmt(finished);
-    else
+    else if (modules_factory.is_current_valid())
         modules_factory.add_statement(finished);
+    else if (interfaces_factory.is_current_valid())
+        interfaces_factory.add_statement(finished);
 }
 
 void sv_visitor::enterGenvar_initialization(sv2017::Genvar_initializationContext *ctx) {
@@ -2004,6 +2010,8 @@ void sv_visitor::exitIf_generate_construct(sv2017::If_generate_constructContext 
         loops_factory.add_statement(ptr);
     else if (modules_factory.is_current_valid())
         modules_factory.add_statement(ptr);
+    else if (interfaces_factory.is_current_valid())
+        interfaces_factory.add_statement(ptr);
 }
 
 void sv_visitor::enterUntyped_function_declaration(sv2017::Untyped_function_declarationContext *ctx) {
@@ -2025,7 +2033,8 @@ void sv_visitor::exitFunction_declaration(sv2017::Function_declarationContext *c
         }
     }
     auto func = f_factory.get_function();
-    if (modules_factory.is_current_valid() || packages_factory.is_current_valid()) {
+    if (modules_factory.is_current_valid() || packages_factory.is_current_valid() ||
+        interfaces_factory.is_current_valid()) {
         route_resource_function(func, ret_type_name);
     } else {
         entities.push_back(std::make_shared<hdl_function_statement>(func));

@@ -74,6 +74,17 @@ public:
     std::optional<std::shared_ptr<hdl_package_statement>> get_package(const std::string& name);
     std::optional<std::shared_ptr<hdl_package_statement>> get_package(const std::string& name, std::string &path);
     std::vector<std::shared_ptr<hdl_package_statement>> get_all_packages(const std::string& name);
+    // Interface lookups: interfaces elaborate like modules (same solver and
+    // builder paths) but are stored as hdl_interface_statement.
+    std::optional<std::shared_ptr<hdl_interface_statement>> get_interface(const std::string& name);
+    std::optional<std::shared_ptr<hdl_interface_statement>> get_interface(const std::string& name, std::string &path);
+    std::vector<std::shared_ptr<hdl_interface_statement>> get_all_interfaces(const std::string& name);
+    // Elaboratable lookup for the shared module/interface paths (builder,
+    // solvers, dependency resolution): modules first, then interfaces as a
+    // transient resource view sharing the underlying objects, so downstream
+    // code keeps working on hdl_resource_statement. Path is set on success.
+    std::optional<std::shared_ptr<hdl_resource_statement>> get_elaboratable(const std::string& name);
+    std::optional<std::shared_ptr<hdl_resource_statement>> get_elaboratable(const std::string& name, std::string &path);
     // Owner lookups: among same-named packages, resolve to the one declaring
     // the wanted member. Explicit deconfliction entries win; a unique owner
     // wins over first-match; otherwise (nobody or several declare it) falls
@@ -110,11 +121,8 @@ public:
     ~data_store();
 private:
     using resource_hit = std::pair<std::shared_ptr<hdl_resource_statement>, std::string>;
-    using resource_predicate = std::function<bool(const std::shared_ptr<hdl_resource_statement>&)>;
     using package_hit = std::pair<std::shared_ptr<hdl_package_statement>, std::string>;
     using package_predicate = std::function<bool(const std::shared_ptr<hdl_package_statement>&)>;
-    std::optional<std::shared_ptr<hdl_resource_statement>> pick_owned_resource(
-        const std::string &name, const std::string &member, const resource_predicate &declares);
     std::optional<std::shared_ptr<hdl_package_statement>> pick_owned_package(
         const std::string &name, const std::string &member, const package_predicate &declares);
     void clean_up_caches();
@@ -123,6 +131,16 @@ private:
     std::vector<resource_hit> find_resources_by_name(const std::string &name, const std::string &arch,
                                                      bool match_arch);
     std::vector<package_hit> find_packages_by_name(const std::string &name);
+    using interface_hit = std::pair<std::shared_ptr<hdl_interface_statement>, std::string>;
+    std::vector<interface_hit> find_interfaces_by_name(const std::string &name);
+    std::optional<interface_hit> pick_interface(const std::vector<interface_hit> &hits, const std::string &name);
+    void report_interface_duplicates(const std::string &name, const std::vector<interface_hit> &hits,
+                           const std::string &picked_path);
+    // Transient shared view of an interface as a resource (same statements,
+    // typedefs and functions; empty ports/docs). Lets the elaboration paths
+    // stay single-typed; mutations land on the shared objects.
+    static std::shared_ptr<hdl_resource_statement> interface_view(
+        const std::shared_ptr<hdl_interface_statement> &iface);
     std::optional<resource_hit> pick_resource(const std::vector<resource_hit> &hits, const std::string &name);
     std::optional<package_hit> pick_package(const std::vector<package_hit> &hits, const std::string &name);
     void report_duplicates(const std::string &name, const std::vector<resource_hit> &hits,

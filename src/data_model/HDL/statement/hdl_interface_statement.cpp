@@ -13,33 +13,27 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "data_model/HDL/statement/hdl_resource_statement.hpp"
-#include "data_model/HDL/types/HDL_simple_type.hpp"
+#include "data_model/HDL/statement/hdl_interface_statement.hpp"
 
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/archives/binary.hpp>
 
-CEREAL_REGISTER_TYPE(hdl_resource_statement)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_resource_statement)
+CEREAL_REGISTER_TYPE(hdl_interface_statement)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_interface_statement)
 
-hdl_resource_statement::hdl_resource_statement() {
-    hdl_dependency_type = module;
+hdl_interface_statement::hdl_interface_statement() {
     name = "";
 }
 
-hdl_resource_statement::hdl_resource_statement(const hdl_resource_statement &c) {
+hdl_interface_statement::hdl_interface_statement(const hdl_interface_statement &c) {
     name = c.name;
     line_n = c.line_n;
-    hdl_dependency_type = c.hdl_dependency_type;
     language = c.language;
-    doc = c.doc;
-    processor_docs = c.processor_docs;
-    port_specs = c.port_specs;
     typedefs = c.typedefs;
     statements = c.statements;
 }
 
-parameter_deps_t hdl_resource_statement::get_dependencies() const {
+parameter_deps_t hdl_interface_statement::get_dependencies() const {
     parameter_deps_t deps;
     merge_body_deps(deps, statements);
     for (const auto &[_, type] : typedefs)
@@ -47,28 +41,25 @@ parameter_deps_t hdl_resource_statement::get_dependencies() const {
     return deps;
 }
 
-bool hdl_resource_statement::equals(const hdl_statement_base& other) const {
-    return *this == static_cast<const hdl_resource_statement&>(other);
+bool hdl_interface_statement::equals(const hdl_statement_base& other) const {
+    return *this == static_cast<const hdl_interface_statement&>(other);
 }
 
-std::string hdl_resource_statement::print() const {
+std::string hdl_interface_statement::print() const {
     return name;
 }
 
-bool hdl_resource_statement::is_empty() {
+bool hdl_interface_statement::is_empty() {
     bool ret = true;
 
     ret &= name.empty();
-    ret &= hdl_dependency_type == module;
-    ret &= processor_docs.empty();
-    ret &= port_specs.empty();
     ret &= statements.empty();
     ret &= typedefs.empty();
 
     return ret;
 }
 
-std::unordered_map<std::string, hdl_function_statement> hdl_resource_statement::get_functions() {
+std::unordered_map<std::string, hdl_function_statement> hdl_interface_statement::get_functions() {
     std::unordered_map<std::string, hdl_function_statement> result;
     for (auto &stmt : statements) {
         auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
@@ -77,12 +68,12 @@ std::unordered_map<std::string, hdl_function_statement> hdl_resource_statement::
     return result;
 }
 
-std::optional<hdl_function_statement> hdl_resource_statement::get_function(const std::string &fname) {
+std::optional<hdl_function_statement> hdl_interface_statement::get_function(const std::string &fname) {
     if (auto f = get_function_shared(fname)) return *f;
     return std::nullopt;
 }
 
-std::shared_ptr<const hdl_function_statement> hdl_resource_statement::get_function_shared(const std::string &fname) const {
+std::shared_ptr<const hdl_function_statement> hdl_interface_statement::get_function_shared(const std::string &fname) const {
     for (const auto &stmt : statements) {
         auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
         if (f && f->get_name() == fname) return f;
@@ -90,19 +81,15 @@ std::shared_ptr<const hdl_function_statement> hdl_resource_statement::get_functi
     return nullptr;
 }
 
-bool operator==(const hdl_resource_statement &lhs, const hdl_resource_statement &rhs) {
+bool operator==(const hdl_interface_statement &lhs, const hdl_interface_statement &rhs) {
     bool ret = true;
 
     ret &= lhs.name == rhs.name;
-    ret &= lhs.architecture == rhs.architecture;
     ret &= lhs.line_n == rhs.line_n;
-    ret &= lhs.hdl_dependency_type == rhs.hdl_dependency_type;
     ret &= lhs.language == rhs.language;
-    ret &= lhs.processor_docs == rhs.processor_docs;
-    ret &= lhs.port_specs == rhs.port_specs;
     ret &= lhs.typedefs == rhs.typedefs;
     if (lhs.statements.size() != rhs.statements.size()) return false;
-    for (int i = 0; i < lhs.statements.size(); i++) {
+    for (size_t i = 0; i < lhs.statements.size(); i++) {
         const auto &l = lhs.statements[i];
         const auto &r = rhs.statements[i];
         ret &= (!l && !r) || (l && r && *l == *r);
@@ -111,13 +98,13 @@ bool operator==(const hdl_resource_statement &lhs, const hdl_resource_statement 
     return ret;
 }
 
-bool operator<(const hdl_resource_statement &lhs, const hdl_resource_statement &rhs) {
+bool operator<(const hdl_interface_statement &lhs, const hdl_interface_statement &rhs) {
     return lhs.name < rhs.name;
 }
 
-void PrintTo(const hdl_resource_statement &res, std::ostream *os) {
+void PrintTo(const hdl_interface_statement &res, std::ostream *os) {
     std::string result = "\n----------------------------------------------------";
-    result += "\nHDL Resource:\n  NAME: " + res.name;
+    result += "\nHDL Interface:\n  NAME: " + res.name;
     result += "\n  LINE: "  + std::to_string(res.line_n) ;
     result += "\n  PARAMETERS: \n";
     for (const auto& item : res.statements) {

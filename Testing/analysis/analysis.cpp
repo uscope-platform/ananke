@@ -222,13 +222,12 @@ TEST( analysis_test , sv_module) {
 
     ASSERT_EQ(resource, check_res);
 
-    resource = res[1]->as<hdl_resource_statement>();
-    check_res = hdl_resource_statement();
-    check_res.set_language(hdl_language::system_verilog);
-    check_res.set_name("test_if");
-    check_res.set_type(interface);
-    check_res.set_line_n(30);
-    ASSERT_EQ(resource, check_res);
+    auto iface = res[1]->as<hdl_interface_statement>();
+    hdl_interface_statement check_if;
+    check_if.set_language(hdl_language::system_verilog);
+    check_if.set_name("test_if");
+    check_if.set_line_n(30);
+    ASSERT_EQ(iface, check_if);
 }
 
 TEST( analysis_test , vhdl_module) {

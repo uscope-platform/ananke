@@ -17,20 +17,29 @@
 #define ANANKE_HDL_INTERFACES_FACTORY_HPP
 
 
-#include "resource_factory_base.hpp"
-#include "data_model/HDL/statement/hdl_resource_statement.hpp"
+#include "data_model/HDL/parameters/HDL_parameter.hpp"
 
-class HDL_interfaces_factory : protected resources_factory_base<hdl_resource_statement>{
+#include "resource_factory_base.hpp"
+#include "data_model/HDL/statement/hdl_interface_statement.hpp"
+
+#include <map>
+
+class HDL_interfaces_factory : protected resources_factory_base<hdl_interface_statement>{
 
 public:
     void new_interface(const std::string &name, unsigned int line_n);
-    std::shared_ptr<hdl_resource_statement> get_interface();
+    std::shared_ptr<hdl_interface_statement> get_interface();
     bool is_current_valid(){return valid_resource;}
     void add_statement(std::shared_ptr<hdl_statement_base> s);
+    void add_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type);
+    void add_struct_def(const std::string & name, const std::shared_ptr<hdl_type> & hdl_struct);
+    void add_function(const hdl_function_statement &f);
+    void add_function(const hdl_function_statement &f, const std::string &return_type_name);
     void set_language(hdl_language l) { language = l; }
 
 private:
     hdl_language language = hdl_language::unknown;
+    std::map<std::string, std::string> function_return_types;
 
 };
 

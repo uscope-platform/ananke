@@ -66,7 +66,7 @@ void parameter_solver::resolve_interface_chain(
     auto is_interface_at = [&](const std::string &name, const std::shared_ptr<hdl_ast_node> &node) -> bool {
         if (!node) return false;
         auto node_type = node->get_type();
-        auto res = d_store->get_HDL_resource(node_type);
+        auto res = d_store->get_elaboratable(node_type);
         if (!res.has_value())return false;
         auto ports = res.value()->get_port_specs();
         return ports.contains(name) && ports.at(name).direction == interface_port;
@@ -232,7 +232,7 @@ void parameter_solver::update_parameters_map(
     for (size_t i = 0; i < node_parameters.size(); ++i) {
         if (node_parameters[i]) node_idx[node_parameters[i]->get_name()] = i;
     }
-    auto resource = d_store->get_HDL_resource(node->get_type());
+    auto resource = d_store->get_elaboratable(node->get_type());
     for (const auto &param : resource.value()->get_parameter_statements()) {
         const auto &p_name = param->get_name();
         auto solved_it = solved_parameters.find(param->get_identifier());
@@ -303,7 +303,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     const std::vector<package_import> &imports,
     const std::map<std::string, hdl_function_statement> &imported_functions,
     const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
-    auto node_spec = d_store->get_HDL_resource(work.node->get_type());
+    auto node_spec = d_store->get_elaboratable(work.node->get_type());
     if (!node_spec.has_value()) {
         spdlog::critical("Definition for module {} not found while solving parameters of instance {}",
             work.node->get_type(), work.node->get_name());
@@ -742,7 +742,7 @@ std::map<std::string, std::shared_ptr<hdl_type>> collect_override_scope_types(
     }
     if (parent_node && d_store && !parent_node->get_type().empty()) {
         std::string parent_path;
-        if (!d_store->get_HDL_resource(parent_node->get_type(), parent_path).has_value()) return scope;
+        if (!d_store->get_elaboratable(parent_node->get_type(), parent_path).has_value()) return scope;
         auto file = d_store->get_file<hdl_file>(parent_path);
         if (!file.has_value()) return scope;
         for (const auto &stmt : file.value().get_content()) {
@@ -1076,7 +1076,7 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
                         progress = true;
                     } else if (d_store) {
                         std::string path;
-                        if (!d_store->get_HDL_resource(resource->getName(), path).has_value())
+                        if (!d_store->get_elaboratable(resource->getName(), path).has_value())
                             d_store->get_package(resource->getName(), path);
                         auto standalone_function = d_store->get_standalone_function(fcn.get_name(), path);
                         if (standalone_function) {
@@ -1107,7 +1107,6 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
 void parameter_solver::propagate_types(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store) {
     auto tmp = std::make_shared<hdl_resource_statement>();
     tmp->set_name(resource->getName());
-    for (auto &[n, t] : resource->get_typedefs()) tmp->add_typedef(n, t);
     for (auto &s : resource->get_statements()) tmp->add_statement(s);
     propagate_types(tmp, d_store);
 }
@@ -1115,7 +1114,6 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_package_statement> &r
 void parameter_solver::propagate_functions(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store) {
     auto tmp = std::make_shared<hdl_resource_statement>();
     tmp->set_name(resource->getName());
-    for (auto &[n, t] : resource->get_typedefs()) tmp->add_typedef(n, t);
     for (auto &s : resource->get_statements()) tmp->add_statement(s);
     propagate_functions(tmp, d_store);
 }
@@ -1152,7 +1150,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     const std::shared_ptr<data_store> &d_store,
     const std::map<qualified_identifier, resolved_parameter> &node_defaults
 ) {
-    auto node_spec = d_store->get_HDL_resource(work.node->get_type());
+    auto node_spec = d_store->get_elaboratable(work.node->get_type());
     if (!node_spec.has_value()) {
         spdlog::critical("Definition for module {} not found while solving parameters of instance {}",
            work.node->get_type(), work.node->get_name());
@@ -1210,7 +1208,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     std::shared_ptr<hdl_resource_statement> parent_resource;
     auto parent_node = work.node->get_parent();
     if (parent_node) {
-        auto parent_spec = d_store->get_HDL_resource(parent_node->get_type());
+        auto parent_spec = d_store->get_elaboratable(parent_node->get_type());
         if (parent_spec.has_value()) {
             parent_resource = parent_spec.value();
             for (const auto &pp : parent_resource->get_parameter_statements()) {

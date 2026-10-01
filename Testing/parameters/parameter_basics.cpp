@@ -1832,7 +1832,7 @@ TEST(parameter_extraction, interface_parameters) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_interface_statement>();
     auto parameters = resource.get_parameter_statements();
 
     std::vector<std::shared_ptr<HDL_parameter>> check_params;

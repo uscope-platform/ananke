@@ -124,15 +124,15 @@ TEST( data_store_test , ser_des_data_File) {
 
 
 
-TEST( data_store_test , store_interface_vect) {
+TEST( data_store_test , store_resource_vect) {
 
     auto *store = new data_store(true, "/tmp/test_data_store");
     auto test_res_1 = std::make_shared<hdl_resource_statement>();
     auto test_res_2 = std::make_shared<hdl_resource_statement>();
     test_res_1->set_name("test_1");
     test_res_2->set_name("test_2");
-    test_res_1->set_type(interface);
-    test_res_2->set_type(interface);
+    test_res_1->set_type(module);
+    test_res_2->set_type(module);
     hdl_file f;
     f.set_content({test_res_1,test_res_2});
     store->store_file({
@@ -344,7 +344,7 @@ TEST( data_store_test , persistent_cache_schema_round_trip ) {
         data_store store(false, dir);
         auto test_res = std::make_shared<hdl_resource_statement>();
         test_res->set_name("schema_test");
-        test_res->set_type(interface);
+        test_res->set_type(module);
         hdl_file f;
         f.set_content({test_res});
         store.store_file({stored_path, "test_hash", f});

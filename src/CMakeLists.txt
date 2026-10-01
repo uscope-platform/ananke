@@ -76,6 +76,7 @@ target_sources(ananke_lib
     data_model/HDL/parameters/components/HDL_function_call.cpp
     data_model/HDL/statement/hdl_resource_statement.cpp
     data_model/HDL/statement/hdl_package_statement.cpp
+    data_model/HDL/statement/hdl_interface_statement.cpp
     data_model/HDL/statement/hdl_function_statement.cpp
     data_model/HDL/statement/hdl_instance_statement.cpp
     data_model/HDL/statement/hdl_import_stmt.cpp

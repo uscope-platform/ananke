@@ -2515,12 +2515,16 @@ endinterface
     ASSERT_NE(mod, nullptr);
     ASSERT_EQ(*mod, mod_check);
 
-    hdl_resource_statement if_check;
+    hdl_interface_statement if_check;
     if_check.set_language(hdl_language::system_verilog);
     if_check.set_name("lang_if");
-    if_check.set_type(interface);
     if_check.set_line_n(9);
-    auto *iface = find_sv("lang_if");
+    hdl_interface_statement *iface = nullptr;
+    for (auto &c : sv_content) {
+        if (!c->is<hdl_interface_statement>()) continue;
+        auto &r = c->as<hdl_interface_statement>();
+        if (r.getName() == "lang_if") iface = &r;
+    }
     ASSERT_NE(iface, nullptr);
     ASSERT_EQ(*iface, if_check);
 

@@ -21,12 +21,18 @@
 
 #include "data_model/HDL/statement/hdl_instance_statement.hpp"
 #include "data_model/HDL/statement/hdl_resource_statement.hpp"
+#include "data_model/HDL/statement/hdl_interface_statement.hpp"
 
 
-TEST(HDL_resource_test, is_interface) {
+TEST(HDL_resource_test, interfaces_are_not_resources) {
+    hdl_interface_statement iface("test_if");
+    ASSERT_TRUE(iface.is<hdl_interface_statement>());
+    ASSERT_FALSE(iface.is<hdl_resource_statement>());
+    ASSERT_FALSE(iface.is_empty());
+
     hdl_resource_statement resource;
-
-    ASSERT_FALSE(resource.is_interface());
+    ASSERT_TRUE(resource.is_empty());
+    ASSERT_FALSE(resource.is<hdl_interface_statement>());
 }
 
 

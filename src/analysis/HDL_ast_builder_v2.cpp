@@ -133,7 +133,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
 
             if(working_instance->get_dependency_class() == module || working_instance->get_dependency_class() == interface ) {
                 std::string res_path;
-                auto res_opt = d_store->get_HDL_resource(type, res_path);
+                auto res_opt = d_store->get_elaboratable(type, res_path);
                 // An instance selecting a specific architecture (`entity foo(rtl)`)
                 // elaborates that architecture's implementation resource.
                 if (res_opt.has_value() && !working_instance->get_architecture().empty()) {
@@ -335,7 +335,7 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
     auto loop_var_name = loop.get_init()->get_name();
 
     std::vector<work_order> orders;
-    auto res_opt = d_store->get_HDL_resource(wo.node->get_type());
+    auto res_opt = d_store->get_elaboratable(wo.node->get_type());
     for (auto &body_stmt : loop.get_body()) {
         for (auto &idx : indices) {
             // Per-iteration elaboration context: same frame as wo, with the

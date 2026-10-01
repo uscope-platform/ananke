@@ -24,7 +24,7 @@ Dependency_resolver_v2::Dependency_resolver_v2(const std::vector<std::shared_ptr
     for(auto &a:AST){
         solve_dep(a);
         std::string res_path;
-        if (d_store->get_HDL_resource(a->get_type(), res_path).has_value())
+        if (d_store->get_elaboratable(a->get_type(), res_path).has_value())
             modules.insert(res_path);
     }
 
@@ -49,7 +49,7 @@ void Dependency_resolver_v2::solve_dep(std::shared_ptr<hdl_ast_node> &i) {
     std::string res_path;
     //TODO: this processing step, going back to the data store to get package and memory init dependencies is a bad leaky abstraction
     // needed because the AST cant represent these constructs for now, it will go away once the AST is made properly polymorphic
-    auto res = d_store->get_HDL_resource(type, res_path);
+    auto res = d_store->get_elaboratable(type, res_path);
     if (res.has_value())
         modules.insert(res_path);
 
@@ -72,7 +72,7 @@ void Dependency_resolver_v2::solve_dep(std::shared_ptr<hdl_ast_node> &i) {
 
     for(auto &dep:i->get_dependencies()){
         std::string dep_path;
-        if (d_store->get_HDL_resource(dep->get_type(), dep_path).has_value())
+        if (d_store->get_elaboratable(dep->get_type(), dep_path).has_value())
             modules.insert(dep_path);
         solve_dep(dep);
     }
