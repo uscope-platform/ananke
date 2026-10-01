@@ -131,8 +131,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                 d_store->is_primitive(type)
             ) continue;
 
-            if(working_instance->get_dependency_class() == module || working_instance->get_dependency_class() == interface ) {
-                std::string res_path;
+            std::string res_path;
                 auto res_opt = d_store->get_elaboratable(type, res_path);
                 // An instance selecting a specific architecture (`entity foo(rtl)`)
                 // elaborates that architecture's implementation resource.
@@ -213,7 +212,6 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                 for (auto &c:child_wo| std::views::reverse) {
                     working_stack.push(std::move(c));
                 }
-            }
         }
     return top;
 }
