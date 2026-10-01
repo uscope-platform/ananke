@@ -18,6 +18,7 @@
 
 #include "frontend/analysis/system_verilog/sv_analyzer.hpp"
 #include "data_model/HDL/statement/hdl_import_stmt.hpp"
+#include "data_model/HDL/statement/hdl_package_statement.hpp"
 
 TEST(typedef_parsing, mixed_packing_array) {
     auto test_pattern = R"(
@@ -64,7 +65,7 @@ TEST(typedef_parsing, basic_packed_struct_definition) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
@@ -99,7 +100,7 @@ TEST(typedef_parsing, basic_unpacked_struct_definition) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
@@ -135,7 +136,7 @@ TEST(typedef_parsing, bits_in_struct_definition) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
@@ -171,7 +172,7 @@ TEST(typedef_parsing, struct_with_unpacked_array_of_packed) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("test_struct"));
@@ -216,7 +217,7 @@ TEST(typedef_parsing, nested_struct_definition) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("inner_struct"));
@@ -269,7 +270,7 @@ TEST(typedef_parsing, inline_nested_struct_definition) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("outer_struct"));
@@ -318,7 +319,7 @@ TEST(typedef_parsing, inline_unpacked_nested_struct) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto structs = resource.get_typedefs();
     EXPECT_TRUE(structs.contains("outer_struct"));
@@ -364,7 +365,7 @@ TEST(typedef_parsing, anonymous_simple_struct) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
 }
 TEST(typedef_parsing, package_import_stmt) {
@@ -407,7 +408,7 @@ TEST(typedef_parsing, typedef_of_typedef_keeps_base_dims) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
     auto typedefs = resource.get_typedefs();
     ASSERT_TRUE(typedefs.contains("arr_t"));
 
@@ -449,7 +450,7 @@ TEST(typedef_parsing, enum_base_type_preserved) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
     auto typedefs = resource.get_typedefs();
     ASSERT_TRUE(typedefs.contains("e_t"));
 

@@ -18,6 +18,7 @@
 #include "frontend/analysis/vhdl/vhdl_analyzer.hpp"
 #include "Backend/Dependency_resolver.hpp"
 #include "data_model/HDL/statement/hdl_instance_statement.hpp"
+#include "data_model/HDL/statement/hdl_package_statement.hpp"
 
 
 
@@ -61,11 +62,10 @@ protected:
         f.set_content({std::make_shared<hdl_resource_statement>(dep_entity)});
         d_store->store_file({"test/dep.sv", "file_hash", f});
 
-        hdl_resource_statement pkg_entity;
+        hdl_package_statement pkg_entity;
         pkg_entity.set_name("test_package");
-        pkg_entity.set_type(package);
 
-        f.set_content({std::make_shared<hdl_resource_statement>(pkg_entity)});
+        f.set_content({std::make_shared<hdl_package_statement>(pkg_entity)});
         d_store->store_file({"test/pkg.sv", "file_hash", f});
     }
 

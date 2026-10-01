@@ -167,7 +167,7 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                         // names; wildcards keep first-match (cross-file merging
                         // belongs to the later ImportScope stage).
                         auto pkg = imp->is_wildcard()
-                            ? d_store->get_HDL_resource(imp->get_package())
+                            ? d_store->get_package(imp->get_package())
                             : d_store->get_package_member_owner(imp->get_package(), imp->get_item());
                         package_import pi;
                         pi.package_name = imp->get_package();

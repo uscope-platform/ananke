@@ -43,7 +43,29 @@ sv_visitor::sv_visitor() {
     params_factory.set_language(hdl_language::system_verilog);
     f_factory.set_language(hdl_language::system_verilog);
     modules_factory.set_language(hdl_language::system_verilog);
+    packages_factory.set_language(hdl_language::system_verilog);
     interfaces_factory.set_language(hdl_language::system_verilog);
+}
+
+void sv_visitor::route_resource_statement(const std::shared_ptr<hdl_statement_base> &s) {
+    if (modules_factory.is_current_valid()) modules_factory.add_statement(s);
+    else if (packages_factory.is_current_valid()) packages_factory.add_statement(s);
+    else if (interfaces_factory.is_current_valid()) interfaces_factory.add_statement(s);
+}
+
+void sv_visitor::route_resource_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type) {
+    if (packages_factory.is_current_valid()) packages_factory.add_typedef(name, type);
+    else modules_factory.add_typedef(name, type);
+}
+
+void sv_visitor::route_resource_struct_def(const std::string &name, const std::shared_ptr<hdl_type> &type) {
+    if (packages_factory.is_current_valid()) packages_factory.add_struct_def(name, type);
+    else modules_factory.add_struct_def(name, type);
+}
+
+void sv_visitor::route_resource_function(const hdl_function_statement &f, const std::string &ret_type_name) {
+    if (packages_factory.is_current_valid()) packages_factory.add_function(f, ret_type_name);
+    else if (modules_factory.is_current_valid()) modules_factory.add_function(f, ret_type_name);
 }
 
 bool sv_visitor::is_known_system_function(const std::string &name) const {
@@ -524,9 +546,9 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
                 if (!base_name.empty() && type_engine.has_type(base_name))
                     base = type_engine.get_type(base_name);
             }
-            modules_factory.add_typedef(name, type_engine.stop_type_declaration(name, base));
+            route_resource_typedef(name, type_engine.stop_type_declaration(name, base));
         } else {
-            modules_factory.add_struct_def(name, type_engine.stop_composite_type_declaration(name, false));
+            route_resource_struct_def(name, type_engine.stop_composite_type_declaration(name, false));
         }
     } else {
         if (ctx->data_type_or_implicit() &&
@@ -554,7 +576,7 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
                 param->set_name(name);
                 param->set_type(pending_anon_struct_type);
                 if (param->get_expression())
-                    modules_factory.add_statement(param);
+                    route_resource_statement(param);
             } else if (dt->KW_ENUM()) {
                 in_anonymous_struct = false;
                 type_engine.stop_composite_type_declaration("", true);
@@ -809,7 +831,7 @@ void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
             stmt->set_name("__init_file__");
             stmt->set_type(p.stem());
             stmt->set_dependency_class(memory_init);
-            modules_factory.add_statement(stmt);
+            route_resource_statement(stmt);
         }
     }
     in_type_argument = false;
@@ -830,11 +852,11 @@ void sv_visitor::enterList_of_arguments(sv2017::List_of_argumentsContext *ctx) {
 void sv_visitor::enterPackage_declaration(sv2017::Package_declarationContext *ctx) {
     size_t line_number = ctx->getStart()->getLine();
     auto package_name = ctx->identifier()[0]->getText();
-    modules_factory.new_module(package_name, package, line_number);
+    packages_factory.new_package(package_name, line_number);
 }
 
 void sv_visitor::exitPackage_declaration(sv2017::Package_declarationContext *ctx) {
-    auto package = modules_factory.get_module();
+    auto package = packages_factory.get_package();
     entities.push_back(package);
 }
 
@@ -865,7 +887,7 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
         stmt->set_name(qi.get_name());
         stmt->set_type(prefix_str);
         stmt->set_dependency_class(package);
-        modules_factory.add_statement(stmt);
+        route_resource_statement(stmt);
     }
 }
 
@@ -881,10 +903,7 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
                 if (dt->struct_union() || dt->KW_ENUM()) {
                     maybe_open_composite_type_default(dt, tas.size() == 1, p);
                     if (pending_composite_type_param == p) {
-                        if (modules_factory.is_current_valid())
-                            modules_factory.add_statement(p);
-                        else if (interfaces_factory.is_current_valid())
-                            interfaces_factory.add_statement(p);
+                        route_resource_statement(p);
                         continue;
                     }
                 }
@@ -901,10 +920,7 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
                     p->set_raw_value(std::make_shared<Type_ref>(qualified_identifier(pscp->getText())));
                 }
             }
-            if (modules_factory.is_current_valid())
-                modules_factory.add_statement(p);
-            else if (interfaces_factory.is_current_valid())
-                interfaces_factory.add_statement(p);
+            route_resource_statement(p);
             if (p->get_type() && p->get_type()->is<HDL_simple_type>()
                 && (p->get_type()->as<HDL_simple_type>().get_signed()
                     || !p->get_type()->as<HDL_simple_type>().get_packed_dimensions().empty()))
@@ -940,10 +956,7 @@ void sv_visitor::enterParameter_port_declaration(sv2017::Parameter_port_declarat
                 if (dt->struct_union() || dt->KW_ENUM()) {
                     maybe_open_composite_type_default(dt, tas.size() == 1, p);
                     if (pending_composite_type_param == p) {
-                        if (modules_factory.is_current_valid())
-                            modules_factory.add_statement(p);
-                        else if (interfaces_factory.is_current_valid())
-                            interfaces_factory.add_statement(p);
+                        route_resource_statement(p);
                         continue;
                     }
                 }
@@ -960,10 +973,7 @@ void sv_visitor::enterParameter_port_declaration(sv2017::Parameter_port_declarat
                     p->set_raw_value(std::make_shared<Type_ref>(qualified_identifier(pscp->getText())));
                 }
             }
-            if (modules_factory.is_current_valid())
-                modules_factory.add_statement(p);
-            else if (interfaces_factory.is_current_valid())
-                interfaces_factory.add_statement(p);
+            route_resource_statement(p);
             if (p->get_type() && p->get_type()->is<HDL_simple_type>()
                 && (p->get_type()->as<HDL_simple_type>().get_signed()
                     || !p->get_type()->as<HDL_simple_type>().get_packed_dimensions().empty()))
@@ -1033,9 +1043,14 @@ bool sv_visitor::expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
 
 bool sv_visitor::is_package_typedef(const std::string &prefix, const std::string &name) {
     for (const auto &e : entities) {
-        auto res = std::dynamic_pointer_cast<hdl_resource_statement>(e);
-        if (res && res->getName() == prefix && res->get_typedefs().contains(name))
-            return true;
+        if (auto res = std::dynamic_pointer_cast<hdl_resource_statement>(e)) {
+            if (res->getName() == prefix && res->get_typedefs().contains(name))
+                return true;
+        }
+        if (auto pkg = std::dynamic_pointer_cast<hdl_package_statement>(e)) {
+            if (pkg->getName() == prefix && pkg->get_typedefs().contains(name))
+                return true;
+        }
     }
     return false;
 }
@@ -1535,11 +1550,7 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
             t = Type_engine::create_primitive_type("implicit");
         }
         param->set_type(t);
-        if(modules_factory.is_current_valid()){
-            modules_factory.add_statement(param);
-        } else if(interfaces_factory.is_current_valid()){
-            interfaces_factory.add_statement(param);
-        }
+        route_resource_statement(param);
     }
 }
 
@@ -1853,10 +1864,7 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
                 if (dt->struct_union() || dt->KW_ENUM()) {
                     maybe_open_composite_type_default(dt, tas.size() == 1, p);
                     if (pending_composite_type_param == p) {
-                        if (modules_factory.is_current_valid())
-                            modules_factory.add_statement(p);
-                        else if (interfaces_factory.is_current_valid())
-                            interfaces_factory.add_statement(p);
+                        route_resource_statement(p);
                         continue;
                     }
                 }
@@ -1873,10 +1881,7 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
                     p->set_raw_value(std::make_shared<Type_ref>(qualified_identifier(pscp->getText())));
                 }
             }
-            if (modules_factory.is_current_valid())
-                modules_factory.add_statement(p);
-            else if (interfaces_factory.is_current_valid())
-                interfaces_factory.add_statement(p);
+            route_resource_statement(p);
             if (p->get_type() && p->get_type()->is<HDL_simple_type>()
                 && (p->get_type()->as<HDL_simple_type>().get_signed()
                     || !p->get_type()->as<HDL_simple_type>().get_packed_dimensions().empty()))
@@ -2020,8 +2025,8 @@ void sv_visitor::exitFunction_declaration(sv2017::Function_declarationContext *c
         }
     }
     auto func = f_factory.get_function();
-    if (modules_factory.is_current_valid()) {
-        modules_factory.add_function(func, ret_type_name);
+    if (modules_factory.is_current_valid() || packages_factory.is_current_valid()) {
+        route_resource_function(func, ret_type_name);
     } else {
         entities.push_back(std::make_shared<hdl_function_statement>(func));
     }

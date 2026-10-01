@@ -166,7 +166,7 @@ TEST(parameter_processing, package_parameters_in_array_init) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto& pkg = resources[0]->as<hdl_resource_statement>();
+    auto& pkg = resources[0]->as<hdl_package_statement>();
     auto& mod = resources[2]->as<hdl_resource_statement>();;
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
@@ -203,7 +203,7 @@ TEST(parameter_processing, struct_member_unresolvable_range_no_crash) {
 
     sv_analyzer analyzer;
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto& pkg = resources[0]->as<hdl_resource_statement>();
+    auto& pkg = resources[0]->as<hdl_package_statement>();
 
     auto solved = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
 
@@ -228,7 +228,7 @@ TEST(parameter_processing, replication_after_cast_in_assignment_pattern) {
 
     sv_analyzer analyzer;
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto& pkg = resources[0]->as<hdl_resource_statement>();
+    auto& pkg = resources[0]->as<hdl_package_statement>();
 
     std::vector<std::shared_ptr<Expression_base>> stack;
     std::shared_ptr<HDL_parameter> c_param;
@@ -279,7 +279,7 @@ TEST(parameter_processing, package_parameters_use) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto& pkg = resources[0]->as<hdl_resource_statement>();;
+    auto& pkg = resources[0]->as<hdl_package_statement>();;
     auto& mod = resources[1]->as<hdl_resource_statement>();;
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
@@ -691,7 +691,7 @@ TEST(parameter_processing, simple_package_in_function_initialization) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
@@ -743,7 +743,7 @@ TEST(parameter_processing, nested_package_in_function_initialization) {
 
 
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
@@ -778,7 +778,7 @@ TEST(parameter_processing, function_in_package_initialization) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto pkg = std::static_pointer_cast<hdl_resource_statement>(resources[0]);
+    auto pkg = std::static_pointer_cast<hdl_package_statement>(resources[0]);
 
 
     parameter_solver::propagate_functions(pkg, nullptr);
@@ -814,7 +814,7 @@ TEST(parameter_processing, package_function_called_from_module) {
     auto file =  analyzer.analyze("", test_pattern).value();
     auto resources = file.get_content();
     d_store->store_file({"/dev/zero", "file_hash", file});
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
     std::shared_ptr<HDL_parameter> param;
@@ -873,8 +873,8 @@ TEST(parameter_processing, package_function_called_from_module_and_typedef) {
     auto file = analyzer.analyze("", test_pattern).value();
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto resources = file.get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
-    auto pkg2 = resources[1]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
+    auto pkg2 = resources[1]->as<hdl_package_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
 
     std::shared_ptr<HDL_parameter> param;
@@ -1194,7 +1194,7 @@ TEST(parameter_processing, override_with_package_parameter) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto pkg = std::static_pointer_cast<hdl_resource_statement>(resources[0]);
+    auto pkg = std::static_pointer_cast<hdl_package_statement>(resources[0]);
     auto dep = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg->get_parameter_statements(),  {});
@@ -1335,7 +1335,7 @@ TEST(parameter_processing, override_package_function) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto pkg = std::static_pointer_cast<hdl_resource_statement>(resources[0]);
+    auto pkg = std::static_pointer_cast<hdl_package_statement>(resources[0]);
     auto dep =  std::static_pointer_cast<hdl_resource_statement>(resources[1]);
 
     parameter_solver::propagate_functions(pkg, nullptr);
@@ -1903,7 +1903,7 @@ endmodule
 
     sv_analyzer analyzer;
     auto file = analyzer.analyze("", test_pattern).value();
-    auto resource = file.get_content()[0]->as<hdl_resource_statement>();
+    auto resource = file.get_content()[0]->as<hdl_package_statement>();
     auto pkg_solved = parameter_solver::process_parameters(
         resource.get_parameter_statements(), {});
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
@@ -2592,7 +2592,7 @@ TEST(parameter_processing, shift_of_clog2_roundtrip) {
 
     sv_analyzer analyzer;
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto& pkg = resources[0]->as<hdl_resource_statement>();
+    auto& pkg = resources[0]->as<hdl_package_statement>();
     auto solved = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     ASSERT_EQ(8, solved.at(qualified_identifier("A")).get_integer());
     ASSERT_EQ(3, solved.at(qualified_identifier("B")).get_integer());

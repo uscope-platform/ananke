@@ -69,22 +69,27 @@ public:
 
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name);
     std::vector<std::shared_ptr<hdl_resource_statement>> get_all_HDL_resources(const std::string& name);
+    // Package lookups: packages are siblings of resources now, stored as
+    // hdl_package_statement in the same hdl_file content.
+    std::optional<std::shared_ptr<hdl_package_statement>> get_package(const std::string& name);
+    std::optional<std::shared_ptr<hdl_package_statement>> get_package(const std::string& name, std::string &path);
+    std::vector<std::shared_ptr<hdl_package_statement>> get_all_packages(const std::string& name);
     // Owner lookups: among same-named packages, resolve to the one declaring
     // the wanted member. Explicit deconfliction entries win; a unique owner
     // wins over first-match; otherwise (nobody or several declare it) falls
     // back to the legacy pick with its warnings, so downstream
     // missing-handling is unchanged. Nullopt only when the package itself
     // has no candidates at all.
-    std::optional<std::shared_ptr<hdl_resource_statement>> get_package_param_owner(
+    std::optional<std::shared_ptr<hdl_package_statement>> get_package_param_owner(
         const std::string& pkg, const qualified_identifier& dep);
-    std::optional<std::shared_ptr<hdl_resource_statement>> get_package_typedef_owner(
+    std::optional<std::shared_ptr<hdl_package_statement>> get_package_typedef_owner(
         const std::string& pkg, const std::string& type_name);
-    std::optional<std::shared_ptr<hdl_resource_statement>> get_package_function_owner(
+    std::optional<std::shared_ptr<hdl_package_statement>> get_package_function_owner(
         const std::string& pkg, const std::string& func_name);
     // Member owner across all categories (param, typedef, function): for
     // selective `import pkg::ITEM`, where the member kind is not known upfront.
     // Same owner policy as the per-kind lookups above.
-    std::optional<std::shared_ptr<hdl_resource_statement>> get_package_member_owner(
+    std::optional<std::shared_ptr<hdl_package_statement>> get_package_member_owner(
         const std::string& pkg, const std::string& member);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, const std::string &arch);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, std::string &path);
@@ -106,15 +111,23 @@ public:
 private:
     using resource_hit = std::pair<std::shared_ptr<hdl_resource_statement>, std::string>;
     using resource_predicate = std::function<bool(const std::shared_ptr<hdl_resource_statement>&)>;
+    using package_hit = std::pair<std::shared_ptr<hdl_package_statement>, std::string>;
+    using package_predicate = std::function<bool(const std::shared_ptr<hdl_package_statement>&)>;
     std::optional<std::shared_ptr<hdl_resource_statement>> pick_owned_resource(
         const std::string &name, const std::string &member, const resource_predicate &declares);
+    std::optional<std::shared_ptr<hdl_package_statement>> pick_owned_package(
+        const std::string &name, const std::string &member, const package_predicate &declares);
     void clean_up_caches();
     void load_cache();
     void store_cache();
     std::vector<resource_hit> find_resources_by_name(const std::string &name, const std::string &arch,
                                                      bool match_arch);
+    std::vector<package_hit> find_packages_by_name(const std::string &name);
     std::optional<resource_hit> pick_resource(const std::vector<resource_hit> &hits, const std::string &name);
+    std::optional<package_hit> pick_package(const std::vector<package_hit> &hits, const std::string &name);
     void report_duplicates(const std::string &name, const std::vector<resource_hit> &hits,
+                           const std::string &picked_path);
+    void report_package_duplicates(const std::string &name, const std::vector<package_hit> &hits,
                            const std::string &picked_path);
 
 

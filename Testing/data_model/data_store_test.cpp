@@ -451,8 +451,8 @@ TEST( data_store_test , duplicate_resource_deconfliction) {
 }
 
 namespace {
-std::shared_ptr<hdl_resource_statement> make_package(const std::string &name) {
-    auto pkg = std::make_shared<hdl_resource_statement>();
+std::shared_ptr<hdl_package_statement> make_package(const std::string &name) {
+    auto pkg = std::make_shared<hdl_package_statement>();
     pkg->set_name(name);
     return pkg;
 }
@@ -476,7 +476,7 @@ struct log_capture {
 };
 
 void store_package(data_store *store, const std::string &path,
-                   const std::shared_ptr<hdl_resource_statement> &pkg) {
+                   const std::shared_ptr<hdl_package_statement> &pkg) {
     hdl_file f;
     f.set_content({pkg});
     store->store_file({path, "hash", f});
@@ -569,7 +569,7 @@ TEST( data_store_test , conflict_reported_despite_resolution) {
         ASSERT_TRUE(owner.has_value());
         EXPECT_EQ(owner.value(), real);
     }
-    EXPECT_EQ(logs.count("Multiple resources named 'test_pkg'"), 1);
+    EXPECT_EQ(logs.count("Multiple packages named 'test_pkg'"), 1);
 
     delete store;
 }

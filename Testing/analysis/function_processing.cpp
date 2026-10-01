@@ -27,6 +27,7 @@
 #include "data_model/HDL/statement/hdl_loop_statement.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "frontend/analysis/system_verilog/type_engine.hpp"
+#include "data_model/HDL/statement/hdl_package_statement.hpp"
 
 
 TEST(function_processing, simple_function_scalar) {
@@ -426,9 +427,8 @@ TEST(function_processing, function_in_package) {
     sv_analyzer analyzer;
 
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
 
-    EXPECT_EQ(pkg.get_type(), package);
     EXPECT_EQ(pkg.getName(), "test_pkg");
     auto functions = pkg.get_functions();
 

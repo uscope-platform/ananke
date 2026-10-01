@@ -27,7 +27,7 @@
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"
 
 class data_store;
-class hdl_resource_statement;
+class hdl_package_statement;
 class HDL_parameter;
 
 // Solves package parameters once per flow and shares the results across all
@@ -38,12 +38,12 @@ class HDL_parameter;
 class package_solver {
 public:
     using export_map = std::map<qualified_identifier, resolved_parameter>;
-    using cache_key = std::pair<std::string, const hdl_resource_statement*>;
+    using cache_key = std::pair<std::string, const hdl_package_statement*>;
 
     std::map<qualified_identifier, resolved_parameter> retrieve(
         const std::vector<std::shared_ptr<HDL_parameter>> &node_parameters,
         const std::shared_ptr<data_store> &d_store,
-        const std::vector<std::pair<std::string, std::shared_ptr<hdl_resource_statement>>> &explicit_packages = {});
+        const std::vector<std::pair<std::string, std::shared_ptr<hdl_package_statement>>> &explicit_packages = {});
 
     void clear() { solved_.clear(); }
     [[nodiscard]] size_t cached_count() const { return solved_.size(); }

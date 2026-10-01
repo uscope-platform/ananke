@@ -31,7 +31,7 @@ TEST( analysis_test , package) {
     sv_analyzer analyzer;
 
     
-    auto resource = analyzer.analyze("", test_file.view()).value() .get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_file.view()).value() .get_content()[0]->as<hdl_package_statement>();
 
     std::vector<std::shared_ptr<HDL_parameter>> check_map;
 

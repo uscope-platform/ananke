@@ -1560,12 +1560,18 @@ package params_pkg is
     constant DEPTH : integer := 4;
 end params_pkg;
 )";
-    auto res = parse_entity(test_pattern, "params_pkg");
+    vhdl_analyzer pkg_analyzer("test.vhd");
+    auto pkg_file = pkg_analyzer.analyze_content(test_pattern, "test.vhd");
+    std::shared_ptr<hdl_package_statement> res;
+    for (auto &c : pkg_file.get_content()) {
+        if (c->is<hdl_package_statement>() && c->as<hdl_package_statement>().getName() == "params_pkg")
+            res = std::make_shared<hdl_package_statement>(c->as<hdl_package_statement>());
+    }
+    ASSERT_NE(res, nullptr);
 
-    hdl_resource_statement expected;
+    hdl_package_statement expected;
     expected.set_language(hdl_language::vhdl);
     expected.set_name("params_pkg");
-    expected.set_type(package);
     expected.set_line_n(2);
     expected.add_statement(make_integer_param("width", std::make_shared<Numeric_token>("8")));
     expected.add_statement(make_integer_param("depth", std::make_shared<Numeric_token>("4")));

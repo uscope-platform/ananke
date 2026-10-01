@@ -649,7 +649,7 @@ TEST(parameter_extraction, int_to_struct_cast) {
 
     sv_analyzer analyzer;
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
-    auto& pkg = resources[0]->as<hdl_resource_statement>();
+    auto& pkg = resources[0]->as<hdl_package_statement>();
     auto solved = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
 
     ASSERT_EQ(0, solved.at(qualified_identifier("TEST_ZERO")).get_integer());
@@ -695,7 +695,7 @@ TEST(parameter_extraction, cross_package_enum_init) {
     auto file = analyzer.analyze("", test_pattern).value();
     auto resources = file.get_content();
     d_store->store_file({"/dev/zero", "file_hash", file});
-    std::shared_ptr<hdl_resource_statement> p_pkg = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
+    std::shared_ptr<hdl_package_statement> p_pkg = std::static_pointer_cast<hdl_package_statement>(resources[1]);
 
     parameter_solver::propagate_types(p_pkg, d_store);
     auto pkg_context = package_solver().retrieve(p_pkg->get_parameter_statements(), d_store);
@@ -735,6 +735,7 @@ endmodule
     d_store->store_file({"/dev/zero", "file_hash", file});
     std::shared_ptr<hdl_resource_statement> mod;
     for (auto &r : resources) {
+        if (!r->is<hdl_resource_statement>()) continue;
         auto res = std::static_pointer_cast<hdl_resource_statement>(r);
         if (res->getName() == "test_mod") mod = res;
     }
@@ -779,9 +780,9 @@ endpackage
     auto resources = file.get_content();
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     d_store->store_file({"/dev/zero", "file_hash", file});
-    std::shared_ptr<hdl_resource_statement> pkg;
+    std::shared_ptr<hdl_package_statement> pkg;
     for (auto &r : resources) {
-        auto res = std::static_pointer_cast<hdl_resource_statement>(r);
+        auto res = std::static_pointer_cast<hdl_package_statement>(r);
         if (res->getName() == "pma_pkg") pkg = res;
     }
     ASSERT_TRUE(pkg);
@@ -840,7 +841,7 @@ endpackage
 )";
 
     sv_analyzer analyzer;
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer().get_value(), 3);
@@ -860,7 +861,7 @@ endpackage
 )";
 
     sv_analyzer analyzer;
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("W")).get_integer().get_value(), 17);
@@ -880,7 +881,7 @@ endpackage
 )";
 
     sv_analyzer analyzer;
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer().get_value(), 0x2245);
@@ -907,7 +908,7 @@ endpackage
 )";
 
     sv_analyzer analyzer;
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer().get_value(), 3);
@@ -921,7 +922,7 @@ endpackage
 )";
 
     sv_analyzer analyzer;
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
     auto typedefs = resource.get_typedefs();
     ASSERT_TRUE(typedefs.contains("arr_t"));

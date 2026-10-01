@@ -67,7 +67,18 @@ vhdl_visitor::vhdl_visitor(std::string p) {
     // the legacy union table: VHDL relies on both tables (e.g. `clog2` only
     // exists in the SV table, `minimum` only in the VHDL one).
     modules_factory.set_language(hdl_language::vhdl);
+    packages_factory.set_language(hdl_language::vhdl);
     params_factory.set_language(hdl_language::vhdl);
+}
+
+void vhdl_visitor::route_resource_statement(const std::shared_ptr<hdl_statement_base> &s) {
+    if (packages_factory.is_current_valid()) packages_factory.add_statement(s);
+    else modules_factory.add_statement(s);
+}
+
+void vhdl_visitor::route_resource_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type) {
+    if (packages_factory.is_current_valid()) packages_factory.add_typedef(name, type);
+    else modules_factory.add_typedef(name, type);
 }
 
 
@@ -727,11 +738,11 @@ void vhdl_visitor::finalize_generic(mgp_vh::vhdlParser::Identifier_listContext *
     if (pending_resolved_type)
         base->set_type(pending_resolved_type);
     pending_resolved_type = nullptr;
-    modules_factory.add_statement(base);
+    route_resource_statement(base);
     for (size_t i = 1; i < ids->identifier().size(); i++) {
         auto clone = std::make_shared<HDL_parameter>(*base);
         clone->set_name(canon(ids->identifier(i)->getText()));
-        modules_factory.add_statement(clone);
+        route_resource_statement(clone);
     }
     if (in_entity_declaration) {
         for (auto *id : ids->identifier())
@@ -985,7 +996,7 @@ void vhdl_visitor::exitType_declaration(mgp_vh::vhdlParser::Type_declarationCont
     if (!in_type_declaration) return;
     auto t = type_engine.finish_type_declaration();
     if (t && !declared_type_name.empty())
-        modules_factory.add_typedef(declared_type_name, t);
+        route_resource_typedef(declared_type_name, t);
     in_type_declaration = false;
     decl_context = vhdl_type_kind::none;
     declared_type_name.clear();
@@ -1041,7 +1052,7 @@ void vhdl_visitor::exitSubtype_declaration(mgp_vh::vhdlParser::Subtype_declarati
     if (!in_subtype_declaration) return;
     if (pending_resolved_type) {
         type_engine.register_type(subtype_decl_name, pending_resolved_type);
-        modules_factory.add_typedef(subtype_decl_name, pending_resolved_type);
+        route_resource_typedef(subtype_decl_name, pending_resolved_type);
     }
     pending_resolved_type = nullptr;
     in_subtype_declaration = false;
@@ -1051,13 +1062,13 @@ void vhdl_visitor::exitSubtype_declaration(mgp_vh::vhdlParser::Subtype_declarati
 void vhdl_visitor::enterPackage_declaration(mgp_vh::vhdlParser::Package_declarationContext *ctx) {
     std::string package_name = canon(ctx->identifier()[0]->getText());
     size_t line_number = ctx->getStart()->getLine();
-    modules_factory.new_module(package_name, package, line_number);
+    packages_factory.new_package(package_name, line_number);
     in_package_declaration = true;
 }
 
 void vhdl_visitor::exitPackage_declaration(mgp_vh::vhdlParser::Package_declarationContext *ctx) {
     if (!in_package_declaration) return;
-    entities.push_back(modules_factory.get_module());
+    entities.push_back(packages_factory.get_package());
     in_package_declaration = false;
 }
 

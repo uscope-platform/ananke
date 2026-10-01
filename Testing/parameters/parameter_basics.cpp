@@ -854,7 +854,7 @@ TEST(parameter_extraction, package_parameters) {
 
     sv_analyzer analyzer;
 
-    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
     auto parameters = resource.get_parameter_statements();
 
     std::vector<std::shared_ptr<HDL_parameter>> check_params;
@@ -1591,7 +1591,7 @@ TEST(parameter_extraction, package_parameters_use) {
 
     auto resources = analyzer.analyze("", test_pattern).value().get_content();
     auto resource = resources[1]->as<hdl_resource_statement>();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto parameters = resource.get_parameter_statements();
 
     std::vector<std::shared_ptr<HDL_parameter>> check_params;

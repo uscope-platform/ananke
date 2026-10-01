@@ -32,6 +32,7 @@
 
 class data_store;
 class hdl_resource_statement;
+class hdl_package_statement;
 class hdl_statement_base;
 class package_solver;
 
@@ -46,7 +47,7 @@ struct pending_parameter_override {
 // Solved package values enter the instance scope unqualified per this filter.
 struct package_import {
     std::string package_name;
-    std::shared_ptr<hdl_resource_statement> package;
+    std::shared_ptr<hdl_package_statement> package;
     bool wildcard = false;
     std::string item;
 };
@@ -86,7 +87,9 @@ public:
         const std::map<std::string, hdl_function_statement> &imported_functions = {},
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types = {});
     static void propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store);
+    static void propagate_functions(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store);
     static void propagate_types(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store);
+    static void propagate_types(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store);
     static void propagate_port_types(std::shared_ptr<hdl_resource_statement> &resource,
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types,
         const std::shared_ptr<data_store> &d_store);

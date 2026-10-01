@@ -60,7 +60,7 @@ void Dependency_resolver_v2::solve_dep(std::shared_ptr<hdl_ast_node> &i) {
             auto dc = inst->get_dependency_class();
             if (dc == package) {
                 std::string pkg_path;
-                if (d_store->get_HDL_resource(inst->get_type(), pkg_path).has_value())
+                if (d_store->get_package(inst->get_type(), pkg_path).has_value())
                     packages.insert(pkg_path);
             } else if (dc == memory_init) {
                 auto df = d_store->get_data_file(inst->get_type());
@@ -79,7 +79,7 @@ void Dependency_resolver_v2::solve_dep(std::shared_ptr<hdl_ast_node> &i) {
 
     for(auto &item:i->get_package_dependencies()){
         std::string pkg_path;
-        if (d_store->get_HDL_resource(item, pkg_path).has_value())
+        if (d_store->get_package(item, pkg_path).has_value())
             packages.insert(pkg_path);
     }
 

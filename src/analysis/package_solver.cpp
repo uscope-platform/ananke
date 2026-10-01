@@ -24,12 +24,12 @@
 
 namespace {
 
-// A package dependency edge: package name plus the owning resource that
+// A package dependency edge: package name plus the owning package that
 // declares the referenced member (duplicate package names may resolve to
 // distinct owners per member).
 struct package_ref {
     std::string name;
-    std::shared_ptr<hdl_resource_statement> owner;
+    std::shared_ptr<hdl_package_statement> owner;
 };
 struct package_ref_less {
     bool operator()(const package_ref &a, const package_ref &b) const {
@@ -61,7 +61,7 @@ std::vector<package_ref> param_package_refs(
         auto pkg_name = fdep.get_package_prefix().back();
         auto package = d_store->get_package_function_owner(pkg_name, fdep.get_name());
         if (!package.has_value()) {
-            auto res = d_store->get_HDL_resource(pkg_name);
+            auto res = d_store->get_package(pkg_name);
             if (!res.has_value()) continue;
             package = res.value();
         }
@@ -99,7 +99,7 @@ void collect_package_closure(
 std::map<qualified_identifier, resolved_parameter> package_solver::retrieve(
     const std::vector<std::shared_ptr<HDL_parameter>> &node_parameters,
     const std::shared_ptr<data_store> &d_store,
-    const std::vector<std::pair<std::string, std::shared_ptr<hdl_resource_statement>>> &explicit_packages
+    const std::vector<std::pair<std::string, std::shared_ptr<hdl_package_statement>>> &explicit_packages
 ) {
     // Each owner's exports are solved once (in dependency-closure context)
     // and shared by every later call: packages take no instance overrides.
@@ -175,8 +175,8 @@ std::map<qualified_identifier, resolved_parameter> package_solver::retrieve(
     // discover them by.
     std::vector<package_ref> order;
     std::set<package_ref, package_ref_less> visited;
-    std::function<void(const std::string &, const std::shared_ptr<hdl_resource_statement> &)> visit;
-    visit = [&](const std::string &pkg_name, const std::shared_ptr<hdl_resource_statement> &package) {
+    std::function<void(const std::string &, const std::shared_ptr<hdl_package_statement> &)> visit;
+    visit = [&](const std::string &pkg_name, const std::shared_ptr<hdl_package_statement> &package) {
         package_ref ref{pkg_name, package};
         if (!visited.insert(ref).second) return;
         std::vector<package_ref> edge_list;

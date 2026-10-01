@@ -1088,6 +1088,18 @@ std::string snapshot_function_body(const std::shared_ptr<hdl_resource_statement>
     }
     return s;
 }
+std::string snapshot_function_body(const std::shared_ptr<hdl_package_statement> &resource, const std::string &fname) {
+    auto def = resource->get_function_shared(fname);
+    if (!def) return "<missing>";
+    std::string s;
+    for (const auto &stmt : def->get_body()) {
+        if (stmt) {
+            s += stmt->print();
+            s += "\n";
+        }
+    }
+    return s;
+}
 }
 
 TEST(parameter_extraction, function_multi_site_no_cross_contamination) {
@@ -1361,11 +1373,11 @@ TEST(parameter_extraction, function_struct_local_return_solves) {
     auto file = analyzer.analyze("", test_pattern).value();
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto resources = file.get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
 
     const std::string def_before = snapshot_function_body(
-        std::static_pointer_cast<hdl_resource_statement>(resources[1]), "build_config");
+        std::static_pointer_cast<hdl_package_statement>(resources[1]), "build_config");
     ASSERT_NE(def_before, "<missing>");
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
@@ -1408,7 +1420,7 @@ TEST(parameter_extraction, function_struct_local_return_solves) {
     // extract_struct_fields, so downstream XLEN reads come back correct.
     EXPECT_EQ(solved.at(sid).get_integer().get_value(), (32LL << 32) | 34);
     EXPECT_EQ(snapshot_function_body(
-        std::static_pointer_cast<hdl_resource_statement>(resources[1]), "build_config"), def_before);
+        std::static_pointer_cast<hdl_package_statement>(resources[1]), "build_config"), def_before);
 }
 
 TEST(parameter_extraction, struct_field_downstream_uses) {
@@ -1447,7 +1459,7 @@ TEST(parameter_extraction, struct_field_downstream_uses) {
     auto file = analyzer.analyze("", test_pattern).value();
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto resources = file.get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
@@ -1519,7 +1531,7 @@ TEST(parameter_extraction, interrupt_shaped_uses) {
     auto file = analyzer.analyze("", test_pattern).value();
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto resources = file.get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[2]);
 
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
@@ -1573,7 +1585,7 @@ TEST(parameter_extraction, wide_struct_member_roundtrip) {
     auto file = analyzer.analyze("", test_pattern).value();
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto resources = file.get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -1624,7 +1636,7 @@ TEST(parameter_extraction, huge_struct_member_roundtrip) {
     auto file = analyzer.analyze("", test_pattern).value();
     d_store->store_file({"/dev/zero", "file_hash", file});
     auto resources = file.get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto mod = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
     auto pkg_defaults = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     std::map<qualified_identifier, resolved_parameter> ctx;
@@ -1676,7 +1688,7 @@ TEST(parameter_extraction, package_localparam_struct_shapes) {
     sv_analyzer analyzer;
     auto file = analyzer.analyze("", test_pattern).value();
     auto resources = file.get_content();
-    auto pkg = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
+    auto pkg = std::static_pointer_cast<hdl_package_statement>(resources[1]);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     d_store->store_file({"/dev/zero", "file_hash", file});
     parameter_solver::propagate_types(pkg, d_store);
@@ -1707,7 +1719,7 @@ TEST(parameter_extraction, cast_in_binary_inside_literal) {
     sv_analyzer analyzer;
     auto file = analyzer.analyze("", test_pattern).value();
     auto resources = file.get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto solved = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("V")).get_integer(), (4LL << 32) | 5);
 }
@@ -1741,7 +1753,7 @@ TEST(parameter_extraction, keyed_struct_literal_member_order) {
     sv_analyzer analyzer;
     auto file = analyzer.analyze("", test_pattern).value();
     auto resources = file.get_content();
-    auto pkg = std::static_pointer_cast<hdl_resource_statement>(resources[1]);
+    auto pkg = std::static_pointer_cast<hdl_package_statement>(resources[1]);
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     d_store->store_file({"/dev/zero", "file_hash", file});
     parameter_solver::propagate_types(pkg, d_store);
@@ -1820,7 +1832,7 @@ TEST(parameter_extraction, cast_scalar_target_widths) {
     sv_analyzer analyzer;
     auto file = analyzer.analyze("", test_pattern).value();
     auto resources = file.get_content();
-    auto pkg = resources[0]->as<hdl_resource_statement>();
+    auto pkg = resources[0]->as<hdl_package_statement>();
     auto solved = parameter_solver::process_parameters(pkg.get_parameter_statements(), {});
     // NOTE: compared in the int64 domain (get_value): hdl_integer operator==
     // is width-relative and would alias e.g. 200 and -56 at 8 bits.
@@ -1955,13 +1967,13 @@ TEST(parameter_extraction, package_function_owner_disambiguates) {
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     d_store->store_file({"/dev/zero", "file_hash", file});
 
-    auto decoy = std::make_shared<hdl_resource_statement>();
+    auto decoy = std::make_shared<hdl_package_statement>();
     decoy->set_name("test_pkg");
     auto other = std::make_shared<HDL_parameter>("OTHER");
     other->set_type(Type_engine::create_primitive_type("integer"));
     decoy->add_statement(other);
 
-    auto real = std::make_shared<hdl_resource_statement>();
+    auto real = std::make_shared<hdl_package_statement>();
     real->set_name("test_pkg");
     hdl_function_statement func;
     func.set_name("buildit");
@@ -2436,7 +2448,7 @@ endmodule
     EXPECT_EQ(defaults.at(qualified_identifier("V_MAX")).get_integer(), 45);
 
     // Declarations record their source language.
-    EXPECT_EQ(std::static_pointer_cast<hdl_resource_statement>(file.get_content()[0])->get_language(),
+    EXPECT_EQ(std::static_pointer_cast<hdl_package_statement>(file.get_content()[0])->get_language(),
               hdl_language::system_verilog);
     EXPECT_EQ(resource->get_language(), hdl_language::system_verilog);
 }
@@ -2464,11 +2476,18 @@ endinterface
         }
         return nullptr;
     };
+    auto find_sv_pkg = [&](const std::string &name) -> hdl_package_statement* {
+        for (auto &c : sv_content) {
+            if (!c->is<hdl_package_statement>()) continue;
+            auto &r = c->as<hdl_package_statement>();
+            if (r.getName() == name) return &r;
+        }
+        return nullptr;
+    };
 
-    hdl_resource_statement pkg_check;
+    hdl_package_statement pkg_check;
     pkg_check.set_language(hdl_language::system_verilog);
     pkg_check.set_name("lang_pkg");
-    pkg_check.set_type(package);
     pkg_check.set_line_n(2);
     hdl_function_statement foo;
     foo.set_language(hdl_language::system_verilog);
@@ -2483,7 +2502,7 @@ endinterface
     ret->set_value(std::make_shared<Expression_v2>(sum));
     foo.add_statement(ret);
     pkg_check.add_function(foo);
-    auto *pkg = find_sv("lang_pkg");
+    auto *pkg = find_sv_pkg("lang_pkg");
     ASSERT_NE(pkg, nullptr);
     ASSERT_EQ(*pkg, pkg_check);
 
@@ -2523,6 +2542,14 @@ end lang_ent;
         }
         return nullptr;
     };
+    auto find_vhdl_pkg = [&](const std::string &name) -> hdl_package_statement* {
+        for (auto &c : vhdl_content) {
+            if (!c->is<hdl_package_statement>()) continue;
+            auto &r = c->as<hdl_package_statement>();
+            if (r.getName() == name) return &r;
+        }
+        return nullptr;
+    };
     auto make_int_param = [](const std::string &name, const std::string &value) {
         auto p = std::make_shared<HDL_parameter>(name);
         auto t = std::make_shared<HDL_simple_type>();
@@ -2533,13 +2560,12 @@ end lang_ent;
         return p;
     };
 
-    hdl_resource_statement vpkg_check;
+    hdl_package_statement vpkg_check;
     vpkg_check.set_language(hdl_language::vhdl);
     vpkg_check.set_name("lang_pkg");
-    vpkg_check.set_type(package);
     vpkg_check.set_line_n(2);
     vpkg_check.add_statement(make_int_param("width", "8"));
-    auto *vpkg = find_vhdl("lang_pkg");
+    auto *vpkg = find_vhdl_pkg("lang_pkg");
     ASSERT_NE(vpkg, nullptr);
     ASSERT_EQ(*vpkg, vpkg_check);
 

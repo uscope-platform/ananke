@@ -25,6 +25,7 @@
 
 #include "data_model/HDL/statement/hdl_instance_statement.hpp"
 #include "data_model/HDL/factories/HDL_modules_factory.hpp"
+#include "data_model/HDL/factories/HDL_packages_factory.hpp"
 #include "data_model/HDL/factories/HDL_instances_factory.hpp"
 #include "data_model/HDL/factories/HDL_parameters_factory.hpp"
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"
@@ -216,6 +217,9 @@ private:
     std::shared_ptr<hdl_type> pending_resolved_type;
 
     HDL_modules_factory modules_factory;
+    HDL_packages_factory packages_factory;
+    void route_resource_statement(const std::shared_ptr<hdl_statement_base> &s);
+    void route_resource_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type);
     HDL_parameters_factory params_factory;
     HDL_instances_factory deps_factory;
     HDL_loops_factory loops_factory;

@@ -25,6 +25,7 @@
 #include "data_model/HDL/statement/hdl_assignment_statement.hpp"
 #include "data_model/HDL/statement/hdl_function_statement.hpp"
 #include "data_model/HDL/statement/hdl_resource_statement.hpp"
+#include "data_model/HDL/statement/hdl_package_statement.hpp"
 #include "data_model/HDL/statement/hdl_conditional_statement.hpp"
 #include "data_model/HDL/statement/hdl_parameter_override_statement.hpp"
 

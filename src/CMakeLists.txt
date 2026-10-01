@@ -45,6 +45,7 @@ target_sources(ananke_lib
     data_model/hdl_file.cpp
     data_model/HDL/factories/HDL_instances_factory.cpp
     data_model/HDL/factories/HDL_modules_factory.cpp
+    data_model/HDL/factories/HDL_packages_factory.cpp
     data_model/HDL/factories/HDL_interfaces_factory.cpp
     data_model/HDL/factories/HDL_loops_factory.cpp
     data_model/HDL/factories/HDL_conditionals_factory.cpp
@@ -74,6 +75,7 @@ target_sources(ananke_lib
     data_model/HDL/parameters/components/token/LoopVar_token.cpp
     data_model/HDL/parameters/components/HDL_function_call.cpp
     data_model/HDL/statement/hdl_resource_statement.cpp
+    data_model/HDL/statement/hdl_package_statement.cpp
     data_model/HDL/statement/hdl_function_statement.cpp
     data_model/HDL/statement/hdl_instance_statement.cpp
     data_model/HDL/statement/hdl_import_stmt.cpp

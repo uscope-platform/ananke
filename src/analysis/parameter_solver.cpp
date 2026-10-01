@@ -334,7 +334,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     // them into the union above would widen the overlay's provider set and leak
     // non-imported members (e.g. selective `import pkg::ITEM` would expose bare
     // `OTHER` via the single-provider alias).
-    std::vector<std::pair<std::string, std::shared_ptr<hdl_resource_statement>>> explicit_packages;
+    std::vector<std::pair<std::string, std::shared_ptr<hdl_package_statement>>> explicit_packages;
     for (const auto &imp : imports) {
         if (imp.package) explicit_packages.emplace_back(imp.package_name, imp.package);
     }
@@ -749,7 +749,7 @@ std::map<std::string, std::shared_ptr<hdl_type>> collect_override_scope_types(
             auto imp = std::dynamic_pointer_cast<hdl_import_stmt>(stmt);
             if (!imp) continue;
             auto pkg = imp->is_wildcard()
-                ? d_store->get_HDL_resource(imp->get_package())
+                ? d_store->get_package(imp->get_package())
                 : d_store->get_package_member_owner(imp->get_package(), imp->get_item());
             if (!pkg.has_value()) continue;
             for (const auto &[name, t] : pkg.value()->get_typedefs()) {
@@ -1006,6 +1006,15 @@ std::shared_ptr<hdl_function_statement> find_function_def(
     }
     return nullptr;
 }
+std::shared_ptr<hdl_function_statement> find_function_def(
+    const std::shared_ptr<hdl_package_statement> &owner, const std::string &fname) {
+    if (!owner) return nullptr;
+    for (const auto &stmt : owner->get_statements()) {
+        auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
+        if (f && f->get_name() == fname) return f;
+    }
+    return nullptr;
+}
 }
 
 void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
@@ -1030,7 +1039,7 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
                     const auto pkg = fcn.get_package_prefix().back();
                     auto res = d_store->get_package_function_owner(pkg, fcn.get_name());
                     if (!res.has_value()) {
-                        if (!d_store->get_HDL_resource(pkg).has_value()) {
+                        if (!d_store->get_package(pkg).has_value()) {
                             spdlog::critical("Definition of package {} not found while propagating functions", pkg);
                             return;
                         }
@@ -1067,7 +1076,8 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
                         progress = true;
                     } else if (d_store) {
                         std::string path;
-                        d_store->get_HDL_resource(resource->getName(), path);
+                        if (!d_store->get_HDL_resource(resource->getName(), path).has_value())
+                            d_store->get_package(resource->getName(), path);
                         auto standalone_function = d_store->get_standalone_function(fcn.get_name(), path);
                         if (standalone_function) {
                             // No stable owner exists for standalone copies, so
@@ -1087,6 +1097,27 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
 
         }
     }
+}
+
+// Package overloads: share underlying param/typedef/function objects via a
+// transient resource view, then reuse the resource propagation logic. The
+// shared_ptrs keep mutations (set_type/propagate_function) on the original
+// package objects; only the container is transient. Path lookups inside
+// already try resources then packages, so standalone resolution works.
+void parameter_solver::propagate_types(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store) {
+    auto tmp = std::make_shared<hdl_resource_statement>();
+    tmp->set_name(resource->getName());
+    for (auto &[n, t] : resource->get_typedefs()) tmp->add_typedef(n, t);
+    for (auto &s : resource->get_statements()) tmp->add_statement(s);
+    propagate_types(tmp, d_store);
+}
+
+void parameter_solver::propagate_functions(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store) {
+    auto tmp = std::make_shared<hdl_resource_statement>();
+    tmp->set_name(resource->getName());
+    for (auto &[n, t] : resource->get_typedefs()) tmp->add_typedef(n, t);
+    for (auto &s : resource->get_statements()) tmp->add_statement(s);
+    propagate_functions(tmp, d_store);
 }
 
 

@@ -44,6 +44,20 @@ std::vector<data_store::resource_hit> data_store::find_resources_by_name(
     return hits;
 }
 
+std::vector<data_store::package_hit> data_store::find_packages_by_name(const std::string &name) {
+    std::vector<package_hit> hits;
+    for (auto &file: cache | std::views::values) {
+        if (!std::holds_alternative<hdl_file>(file.content)) continue;
+        for (auto &res: std::get<hdl_file>(file.content).get_content()) {
+            if (!res->is<hdl_package_statement>()) continue;
+            auto &r = res->as<hdl_package_statement>();
+            if (r.getName() != name) continue;
+            hits.emplace_back(std::static_pointer_cast<hdl_package_statement>(res), file.path);
+        }
+    }
+    return hits;
+}
+
 // Conflict report shared by all pick paths: fires once per resource name
 // per store lifetime, so hot solver loops don't flood the log, while no
 // successful disambiguation ever hides the conflict itself.
@@ -59,6 +73,20 @@ void data_store::report_duplicates(const std::string &name,
         spdlog::warn("Multiple resources named '{}' found:{}", name, paths);
     else
         spdlog::warn("Multiple resources named '{}' found:{}\n\tusing {}", name, paths, picked_path);
+}
+
+void data_store::report_package_duplicates(const std::string &name,
+    const std::vector<package_hit> &hits, const std::string &picked_path) {
+    if (hits.size() <= 1 || !reported_duplicates.insert(name).second) return;
+    std::string paths;
+    for (const auto &hit : hits) {
+        paths += "\n\t";
+        paths += hit.second.empty() ? "<unknown path>" : hit.second;
+    }
+    if (picked_path.empty())
+        spdlog::warn("Multiple packages named '{}' found:{}", name, paths);
+    else
+        spdlog::warn("Multiple packages named '{}' found:{}\n\tusing {}", name, paths, picked_path);
 }
 
 // Single-pick policy shared by the get_HDL_resource overloads: unique hits
@@ -86,6 +114,28 @@ std::optional<data_store::resource_hit> data_store::pick_resource(
         return hits.front();
     }
     report_duplicates(name, hits, hits.front().second);
+    return hits.front();
+}
+
+std::optional<data_store::package_hit> data_store::pick_package(
+    const std::vector<package_hit> &hits, const std::string &name) {
+    if (hits.empty()) return std::nullopt;
+    if (hits.size() == 1) return hits.front();
+    if (auto it = deconfliction.find(name); it != deconfliction.end()) {
+        for (const auto &hit : hits) {
+            const auto &stored = hit.second, &wanted = it->second;
+            if (!stored.empty() && !wanted.empty() &&
+                (stored == wanted || stored.ends_with(wanted) || wanted.ends_with(stored))) {
+                spdlog::trace("Deconflicted package '{}' → {}", name, hit.second);
+                return hit;
+            }
+        }
+        report_package_duplicates(name, hits, hits.front().second);
+        spdlog::warn("Deconfliction entry for '{}' ('{}') matches no candidate; using {}",
+                     name, it->second, hits.front().second);
+        return hits.front();
+    }
+    report_package_duplicates(name, hits, hits.front().second);
     return hits.front();
 }
 
@@ -135,6 +185,29 @@ std::optional<std::shared_ptr<hdl_resource_statement>> data_store::pick_owned_re
     return picked->first;
 }
 
+std::optional<std::shared_ptr<hdl_package_statement>> data_store::pick_owned_package(
+    const std::string &name, const std::string &member, const package_predicate &declares) {
+    auto hits = find_packages_by_name(name);
+    if (hits.empty()) return std::nullopt;
+    if (hits.size() == 1) return hits.front().first;
+    if (!deconfliction.contains(name)) {
+        std::optional<package_hit> owner;
+        for (auto &hit : hits) {
+            if (!declares(hit.first)) continue;
+            if (owner.has_value()) break;
+            owner = hit;
+        }
+        if (owner.has_value()) {
+            report_package_duplicates(name, hits, owner->second);
+            spdlog::info("Resolved '{}' in package '{}' to {}", member, name, owner->second);
+            return owner->first;
+        }
+    }
+    auto picked = pick_package(hits, name);
+    if (!picked.has_value()) return std::nullopt;
+    return picked->first;
+}
+
 std::vector<std::shared_ptr<hdl_resource_statement>> data_store::get_all_HDL_resources(const std::string& name) {
     auto hits = find_resources_by_name(name, "", false);
     std::vector<std::shared_ptr<hdl_resource_statement>> out;
@@ -164,12 +237,34 @@ std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_HDL_resou
     return picked->first;
 }
 
-std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_package_param_owner(
+std::optional<std::shared_ptr<hdl_package_statement>> data_store::get_package(const std::string& name) {
+    if (auto picked = pick_package(find_packages_by_name(name), name))
+        return picked->first;
+    return std::nullopt;
+}
+
+std::optional<std::shared_ptr<hdl_package_statement>> data_store::get_package(const std::string &name,
+    std::string &path) {
+    auto picked = pick_package(find_packages_by_name(name), name);
+    if (!picked.has_value()) return std::nullopt;
+    path = picked->second;
+    return picked->first;
+}
+
+std::vector<std::shared_ptr<hdl_package_statement>> data_store::get_all_packages(const std::string& name) {
+    auto hits = find_packages_by_name(name);
+    std::vector<std::shared_ptr<hdl_package_statement>> out;
+    out.reserve(hits.size());
+    for (auto &[res, path] : hits) out.push_back(std::move(res));
+    return out;
+}
+
+std::optional<std::shared_ptr<hdl_package_statement>> data_store::get_package_param_owner(
     const std::string& pkg, const qualified_identifier& dep) {
     const auto inst = dep.get_instance();
     const std::string member = inst.empty() ? dep.get_name() : inst.front();
-    return pick_owned_resource(pkg, member,
-        [&member](const std::shared_ptr<hdl_resource_statement> &res) {
+    return pick_owned_package(pkg, member,
+        [&member](const std::shared_ptr<hdl_package_statement> &res) {
             for (const auto &p : res->get_parameter_statements()) {
                 if (p->get_name() == member) return true;
             }
@@ -177,26 +272,26 @@ std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_package_p
         });
 }
 
-std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_package_typedef_owner(
+std::optional<std::shared_ptr<hdl_package_statement>> data_store::get_package_typedef_owner(
     const std::string& pkg, const std::string& type_name) {
-    return pick_owned_resource(pkg, type_name,
-        [&type_name](const std::shared_ptr<hdl_resource_statement> &res) {
+    return pick_owned_package(pkg, type_name,
+        [&type_name](const std::shared_ptr<hdl_package_statement> &res) {
             return res->get_typedefs().contains(type_name);
         });
 }
 
-std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_package_function_owner(
+std::optional<std::shared_ptr<hdl_package_statement>> data_store::get_package_function_owner(
     const std::string& pkg, const std::string& func_name) {
-    return pick_owned_resource(pkg, func_name,
-        [&func_name](const std::shared_ptr<hdl_resource_statement> &res) {
+    return pick_owned_package(pkg, func_name,
+        [&func_name](const std::shared_ptr<hdl_package_statement> &res) {
             return res->get_function_shared(func_name) != nullptr;
         });
 }
 
-std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_package_member_owner(
+std::optional<std::shared_ptr<hdl_package_statement>> data_store::get_package_member_owner(
     const std::string& pkg, const std::string& member) {
-    return pick_owned_resource(pkg, member,
-        [&member](const std::shared_ptr<hdl_resource_statement> &res) {
+    return pick_owned_package(pkg, member,
+        [&member](const std::shared_ptr<hdl_package_statement> &res) {
             for (const auto &p : res->get_parameter_statements()) {
                 if (p && p->get_name() == member) return true;
             }
