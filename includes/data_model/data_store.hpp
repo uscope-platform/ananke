@@ -120,10 +120,7 @@ public:
     static std::string get_cache_schema_hash() { return ANANKE_CACHE_SCHEMA_HASH; }
     ~data_store();
 private:
-    using resource_hit = std::pair<std::shared_ptr<hdl_resource_statement>, std::string>;
-    using package_hit = std::pair<std::shared_ptr<hdl_package_statement>, std::string>;
     using package_predicate = std::function<bool(const std::shared_ptr<hdl_package_statement>&)>;
-    using interface_hit = std::pair<std::shared_ptr<hdl_interface_statement>, std::string>;
     // Generic lookup cores shared by the resource/package/interface trios:
     // StmtT is the statement type, kind is the singular log word
     // ("resource", "package", "interface", pluralized as "{}s" in messages).
@@ -146,24 +143,11 @@ private:
     void clean_up_caches();
     void load_cache();
     void store_cache();
-    std::vector<resource_hit> find_resources_by_name(const std::string &name, const std::string &arch,
-                                                     bool match_arch);
-    std::vector<package_hit> find_packages_by_name(const std::string &name);
-    std::vector<interface_hit> find_interfaces_by_name(const std::string &name);
-    std::optional<interface_hit> pick_interface(const std::vector<interface_hit> &hits, const std::string &name);
-    void report_interface_duplicates(const std::string &name, const std::vector<interface_hit> &hits,
-                           const std::string &picked_path);
     // Transient shared view of an interface as a resource (same statements,
     // typedefs and functions; empty ports/docs). Lets the elaboration paths
     // stay single-typed; mutations land on the shared objects.
     static std::shared_ptr<hdl_resource_statement> interface_view(
         const std::shared_ptr<hdl_interface_statement> &iface);
-    std::optional<resource_hit> pick_resource(const std::vector<resource_hit> &hits, const std::string &name);
-    std::optional<package_hit> pick_package(const std::vector<package_hit> &hits, const std::string &name);
-    void report_duplicates(const std::string &name, const std::vector<resource_hit> &hits,
-                           const std::string &picked_path);
-    void report_package_duplicates(const std::string &name, const std::vector<package_hit> &hits,
-                           const std::string &picked_path);
 
 
     std::unordered_map<std::string, cached_item> cache;

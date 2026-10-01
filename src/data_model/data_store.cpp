@@ -115,57 +115,13 @@ std::optional<std::shared_ptr<StmtT>> data_store::get_one_path_impl(
     return picked->first;
 }
 
-// The store keys files by path, so several files can contribute same-named
-// resources; hits pair each candidate with its source path.
-std::vector<data_store::resource_hit> data_store::find_resources_by_name(
-    const std::string &name, const std::string &arch, bool match_arch) {
-    return find_by_name<hdl_resource_statement>(name, arch, match_arch);
-}
-
-std::vector<data_store::package_hit> data_store::find_packages_by_name(const std::string &name) {
-    return find_by_name<hdl_package_statement>(name, "", false);
-}
-
-// Conflict report shared by all pick paths: fires once per resource name
-// per store lifetime, so hot solver loops don't flood the log, while no
-// successful disambiguation ever hides the conflict itself.
-void data_store::report_duplicates(const std::string &name,
-    const std::vector<resource_hit> &hits, const std::string &picked_path) {
-    report_dups<hdl_resource_statement>("resource", name, hits, picked_path);
-}
-
-void data_store::report_package_duplicates(const std::string &name,
-    const std::vector<package_hit> &hits, const std::string &picked_path) {
-    report_dups<hdl_package_statement>("package", name, hits, picked_path);
-}
-
-std::vector<data_store::interface_hit> data_store::find_interfaces_by_name(const std::string &name) {
-    return find_by_name<hdl_interface_statement>(name, "", false);
-}
-
-void data_store::report_interface_duplicates(const std::string &name,
-    const std::vector<interface_hit> &hits, const std::string &picked_path) {
-    report_dups<hdl_interface_statement>("interface", name, hits, picked_path);
-}
-
 // Single-pick policy shared by the get_* lookup overloads: unique hits
 // pass through silently, duplicates defer to the deconfliction map (stored
 // paths may be absolute while entries are relative, so match on equality or
 // suffix) and warn when nothing (or nothing matching) is configured.
-std::optional<data_store::resource_hit> data_store::pick_resource(
-    const std::vector<resource_hit> &hits, const std::string &name) {
-    return pick_stmt<hdl_resource_statement>("resource", hits, name);
-}
-
-std::optional<data_store::package_hit> data_store::pick_package(
-    const std::vector<package_hit> &hits, const std::string &name) {
-    return pick_stmt<hdl_package_statement>("package", hits, name);
-}
-
-std::optional<data_store::interface_hit> data_store::pick_interface(
-    const std::vector<interface_hit> &hits, const std::string &name) {
-    return pick_stmt<hdl_interface_statement>("interface", hits, name);
-}
+// Conflict reports fire once per name per store lifetime, so hot solver
+// loops don't flood the log, while no successful disambiguation ever hides
+// the conflict itself.
 
 
 
@@ -192,23 +148,23 @@ data_store::data_store(bool e, std::string cache_dir_path) {
 // back to the legacy pick with its warnings.
 std::optional<std::shared_ptr<hdl_package_statement>> data_store::pick_owned_package(
     const std::string &name, const std::string &member, const package_predicate &declares) {
-    auto hits = find_packages_by_name(name);
+    auto hits = find_by_name<hdl_package_statement>(name, "", false);
     if (hits.empty()) return std::nullopt;
     if (hits.size() == 1) return hits.front().first;
     if (!deconfliction.contains(name)) {
-        std::optional<package_hit> owner;
+        std::optional<stmt_hit<hdl_package_statement>> owner;
         for (auto &hit : hits) {
             if (!declares(hit.first)) continue;
             if (owner.has_value()) break;
             owner = hit;
         }
         if (owner.has_value()) {
-            report_package_duplicates(name, hits, owner->second);
+            report_dups<hdl_package_statement>("package", name, hits, owner->second);
             spdlog::info("Resolved '{}' in package '{}' to {}", member, name, owner->second);
             return owner->first;
         }
     }
-    auto picked = pick_package(hits, name);
+    auto picked = pick_stmt<hdl_package_statement>("package", hits, name);
     if (!picked.has_value()) return std::nullopt;
     return picked->first;
 }
@@ -279,11 +235,13 @@ std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_elaborata
 
 std::optional<std::shared_ptr<hdl_resource_statement>> data_store::get_elaboratable(
     const std::string& name, std::string &path) {
-    if (auto picked = pick_resource(find_resources_by_name(name, "", false), name)) {
+    if (auto picked = pick_stmt<hdl_resource_statement>(
+            "resource", find_by_name<hdl_resource_statement>(name, "", false), name)) {
         path = picked->second;
         return picked->first;
     }
-    if (auto picked = pick_interface(find_interfaces_by_name(name), name)) {
+    if (auto picked = pick_stmt<hdl_interface_statement>(
+            "interface", find_by_name<hdl_interface_statement>(name, "", false), name)) {
         path = picked->second;
         return interface_view(picked->first);
     }
