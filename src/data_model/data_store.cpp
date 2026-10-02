@@ -216,6 +216,19 @@ std::vector<std::shared_ptr<hdl_interface_statement>> data_store::get_all_interf
     return get_all_impl<hdl_interface_statement>(name);
 }
 
+std::optional<std::shared_ptr<hdl_class_statement>> data_store::get_class(const std::string& name) {
+    return get_one_impl<hdl_class_statement>("class", name);
+}
+
+std::optional<std::shared_ptr<hdl_class_statement>> data_store::get_class(const std::string &name,
+    std::string &path) {
+    return get_one_path_impl<hdl_class_statement>("class", name, path);
+}
+
+std::vector<std::shared_ptr<hdl_class_statement>> data_store::get_all_classes(const std::string& name) {
+    return get_all_impl<hdl_class_statement>(name);
+}
+
 std::shared_ptr<hdl_resource_statement> data_store::interface_view(
     const std::shared_ptr<hdl_interface_statement> &iface) {
     auto view = std::make_shared<hdl_resource_statement>();

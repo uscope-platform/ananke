@@ -27,6 +27,7 @@
 #include "data_model/HDL/statement/hdl_resource_statement.hpp"
 #include "data_model/HDL/statement/hdl_package_statement.hpp"
 #include "data_model/HDL/statement/hdl_interface_statement.hpp"
+#include "data_model/HDL/statement/hdl_class_statement.hpp"
 #include "data_model/HDL/statement/hdl_conditional_statement.hpp"
 #include "data_model/HDL/statement/hdl_parameter_override_statement.hpp"
 

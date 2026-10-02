@@ -25,6 +25,7 @@
 #include "data_model/HDL/factories/HDL_packages_factory.hpp"
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/factories/HDL_interfaces_factory.hpp"
+#include "data_model/HDL/statement/hdl_class_statement.hpp"
 #include "data_model/HDL/factories/HDL_instances_factory.hpp"
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"
 #include "data_model/HDL/factories/HDL_conditionals_factory.hpp"
@@ -65,6 +66,8 @@ public:
 
     void enterClass_declaration(sv2017::Class_declarationContext *ctx) override;
     void exitClass_declaration(sv2017::Class_declarationContext *ctx) override;
+    void enterInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) override;
+    void exitInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) override;
 
     void exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) override;
     void enterList_of_arguments(sv2017::List_of_argumentsContext *ctx) override;
@@ -269,6 +272,9 @@ private:
     // tell a real initializer apart from a stale value at declaration end.
     std::shared_ptr<Expression_base> pending_function_local_init;
     bool in_class = false;
+    // Pending class definitions (name + declaration line), stacked so nested
+    // class declarations each emit their own hdl_class_statement on exit.
+    std::vector<std::pair<std::string, unsigned int>> pending_classes;
     bool had_error = false;
     std::vector<std::shared_ptr<hdl_statement_base>> entities;
     std::vector<std::string> active_genvars;

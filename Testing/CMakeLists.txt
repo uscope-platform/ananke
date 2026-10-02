@@ -21,6 +21,7 @@ set(ANANKE_TESTS
         parameters/type_parameter_extraction.cpp
         parameters/parameter_defparam.cpp
         frontend/sv_preprocessor.cpp
+        frontend/sv_class_tracking.cpp
         frontend/typedef_parsing.cpp
         frontend/source_mapping.cpp
         frontend/repository_walker.cpp

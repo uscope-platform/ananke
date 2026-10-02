@@ -80,6 +80,7 @@ target_sources(ananke_lib
     data_model/HDL/statement/hdl_function_statement.cpp
     data_model/HDL/statement/hdl_instance_statement.cpp
     data_model/HDL/statement/hdl_import_stmt.cpp
+    data_model/HDL/statement/hdl_class_statement.cpp
     data_model/HDL/statement/hdl_loop_statement.cpp
     data_model/HDL/statement/hdl_while_statement.cpp
     data_model/HDL/statement/hdl_repeat_statement.cpp

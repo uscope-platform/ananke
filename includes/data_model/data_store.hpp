@@ -79,6 +79,11 @@ public:
     std::optional<std::shared_ptr<hdl_interface_statement>> get_interface(const std::string& name);
     std::optional<std::shared_ptr<hdl_interface_statement>> get_interface(const std::string& name, std::string &path);
     std::vector<std::shared_ptr<hdl_interface_statement>> get_all_interfaces(const std::string& name);
+    // Class lookups: SystemVerilog classes are tracked as definition-only
+    // hdl_class_statement entities (no elaboration yet).
+    std::optional<std::shared_ptr<hdl_class_statement>> get_class(const std::string& name);
+    std::optional<std::shared_ptr<hdl_class_statement>> get_class(const std::string& name, std::string &path);
+    std::vector<std::shared_ptr<hdl_class_statement>> get_all_classes(const std::string& name);
     // Elaboratable lookup for the shared module/interface paths (builder,
     // solvers, dependency resolution): modules first, then interfaces as a
     // transient resource view sharing the underlying objects, so downstream

@@ -810,10 +810,48 @@ void sv_visitor::exitPrimaryCast(sv2017::PrimaryCastContext *ctx) {
 
 void sv_visitor::enterClass_declaration(sv2017::Class_declarationContext *ctx) {
     in_class = true;
+    std::string name;
+    if (!ctx->identifier().empty() && ctx->identifier(0))
+        name = ctx->identifier(0)->getText();
+    pending_classes.emplace_back(name, ctx->getStart()->getLine());
 }
 
 void sv_visitor::exitClass_declaration(sv2017::Class_declarationContext *ctx) {
-    in_class = false;
+    if (!pending_classes.empty()) {
+        auto [name, line] = pending_classes.back();
+        pending_classes.pop_back();
+        if (!name.empty()) {
+            auto stmt = std::make_shared<hdl_class_statement>();
+            stmt->set_name(name);
+            stmt->set_line_n(line);
+            stmt->set_language(hdl_language::system_verilog);
+            entities.push_back(stmt);
+        }
+    }
+    in_class = !pending_classes.empty();
+}
+
+void sv_visitor::enterInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) {
+    in_class = true;
+    std::string name;
+    if (!ctx->identifier().empty() && ctx->identifier(0))
+        name = ctx->identifier(0)->getText();
+    pending_classes.emplace_back(name, ctx->getStart()->getLine());
+}
+
+void sv_visitor::exitInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) {
+    if (!pending_classes.empty()) {
+        auto [name, line] = pending_classes.back();
+        pending_classes.pop_back();
+        if (!name.empty()) {
+            auto stmt = std::make_shared<hdl_class_statement>();
+            stmt->set_name(name);
+            stmt->set_line_n(line);
+            stmt->set_language(hdl_language::system_verilog);
+            entities.push_back(stmt);
+        }
+    }
+    in_class = !pending_classes.empty();
 }
 
 
