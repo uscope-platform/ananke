@@ -48,25 +48,29 @@ sv_visitor::sv_visitor() {
 }
 
 void sv_visitor::route_resource_statement(const std::shared_ptr<hdl_statement_base> &s) {
-    if (modules_factory.is_current_valid()) modules_factory.add_statement(s);
+    if (classes_factory.is_current_valid()) classes_factory.add_statement(s);
+    else if (modules_factory.is_current_valid()) modules_factory.add_statement(s);
     else if (packages_factory.is_current_valid()) packages_factory.add_statement(s);
     else if (interfaces_factory.is_current_valid()) interfaces_factory.add_statement(s);
 }
 
 void sv_visitor::route_resource_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type) {
-    if (packages_factory.is_current_valid()) packages_factory.add_typedef(name, type);
+    if (classes_factory.is_current_valid()) classes_factory.add_typedef(name, type);
+    else if (packages_factory.is_current_valid()) packages_factory.add_typedef(name, type);
     else if (interfaces_factory.is_current_valid()) interfaces_factory.add_typedef(name, type);
     else modules_factory.add_typedef(name, type);
 }
 
 void sv_visitor::route_resource_struct_def(const std::string &name, const std::shared_ptr<hdl_type> &type) {
-    if (packages_factory.is_current_valid()) packages_factory.add_struct_def(name, type);
+    if (classes_factory.is_current_valid()) classes_factory.add_struct_def(name, type);
+    else if (packages_factory.is_current_valid()) packages_factory.add_struct_def(name, type);
     else if (interfaces_factory.is_current_valid()) interfaces_factory.add_struct_def(name, type);
     else modules_factory.add_struct_def(name, type);
 }
 
 void sv_visitor::route_resource_function(const hdl_function_statement &f, const std::string &ret_type_name) {
-    if (packages_factory.is_current_valid()) packages_factory.add_function(f, ret_type_name);
+    if (classes_factory.is_current_valid()) classes_factory.add_function(f, ret_type_name);
+    else if (packages_factory.is_current_valid()) packages_factory.add_function(f, ret_type_name);
     else if (interfaces_factory.is_current_valid()) interfaces_factory.add_function(f, ret_type_name);
     else if (modules_factory.is_current_valid()) modules_factory.add_function(f, ret_type_name);
 }
@@ -395,6 +399,23 @@ void sv_visitor::capture_enum_base(sv2017::Data_typeContext *dt) {
 }
 
 void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
+    // Class-scope properties (`int x;` directly in a class body) resolve
+    // their type with the same setup/range flow as parameters; the matching
+    // exit files one HDL_parameter per declarator. Typedefs, function locals
+    // and task/constructor bodies are excluded (functions are covered by
+    // f_factory, tasks and constructors by in_method_body, neither of which
+    // activates the function factory).
+    capturing_class_property = false;
+    if (!f_factory.is_active() && in_method_body == 0 && !ctx->type_declaration() &&
+        classes_factory.is_current_valid()) {
+        auto *dtoi = ctx->data_type_or_implicit();
+        auto *dt = dtoi && dtoi->data_type() ? dtoi->data_type() : nullptr;
+        if (dtoi && dt && !dt->struct_union() && !dt->KW_ENUM()) {
+            setup_data_type(dtoi);
+            type_engine.start_range();
+            capturing_class_property = true;
+        }
+    }
     if (f_factory.is_active() && !ctx->type_declaration()) {
         auto dtoi = ctx->data_type_or_implicit();
         auto dt = dtoi && dtoi->data_type() ? dtoi->data_type() : nullptr;
@@ -556,6 +577,31 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
             route_resource_struct_def(name, type_engine.stop_composite_type_declaration(name, false));
         }
     } else {
+        if (capturing_class_property) {
+            // Property default values (e.g. `int x = 5;`) are not captured:
+            // the matching expressions were never routed to a factory, so
+            // only name and resolved type are filed.
+            capturing_class_property = false;
+            auto t = type_engine.finalize_type();
+            if (!t) t = Type_engine::create_primitive_type("implicit");
+            auto var_decls = ctx->list_of_variable_decl_assignments();
+            if (!var_decls || var_decls->variable_decl_assignment().empty()) {
+                spdlog::warn("Malformed class property declaration, skipping declaration");
+                had_error = true;
+                return;
+            }
+            for (auto *decl : var_decls->variable_decl_assignment()) {
+                if (!decl || !decl->identifier()) {
+                    spdlog::warn("Malformed class property declaration, skipping declarator");
+                    had_error = true;
+                    continue;
+                }
+                auto prop = std::make_shared<HDL_parameter>(decl->identifier()->getText());
+                prop->set_type(t);
+                classes_factory.add_property(prop);
+            }
+            return;
+        }
         if (ctx->data_type_or_implicit() &&
             ctx->data_type_or_implicit()->data_type()
         ) {
@@ -809,49 +855,52 @@ void sv_visitor::exitPrimaryCast(sv2017::PrimaryCastContext *ctx) {
 }
 
 void sv_visitor::enterClass_declaration(sv2017::Class_declarationContext *ctx) {
-    in_class = true;
-    std::string name;
-    if (!ctx->identifier().empty() && ctx->identifier(0))
-        name = ctx->identifier(0)->getText();
-    pending_classes.emplace_back(name, ctx->getStart()->getLine());
+    classes_factory.new_class(ctx->identifier(0)->getText(), ctx->getStart()->getLine());
+    // `extends base` / `extends pkg::base`: track the target, stripping any
+    // parameter specialization (`base #(8)`). Interface classes extend
+    // interface types instead, which have no single base — left empty.
+    if (auto *base = ctx->class_type()) {
+        std::string base_name = base->getText();
+        if (auto pos = base_name.find_first_of("#("); pos != std::string::npos)
+            base_name.resize(pos);
+        if (!base_name.empty()) classes_factory.set_base_class(base_name);
+    }
+}
+
+void sv_visitor::file_finished_class(const std::shared_ptr<hdl_class_statement> &cls) {
+    if (classes_factory.is_current_valid()) classes_factory.add_nested_class(cls);
+    else if (modules_factory.is_current_valid()) modules_factory.add_statement(cls);
+    else if (packages_factory.is_current_valid()) packages_factory.add_statement(cls);
+    else if (interfaces_factory.is_current_valid()) interfaces_factory.add_statement(cls);
+    else entities.push_back(cls);
 }
 
 void sv_visitor::exitClass_declaration(sv2017::Class_declarationContext *ctx) {
-    if (!pending_classes.empty()) {
-        auto [name, line] = pending_classes.back();
-        pending_classes.pop_back();
-        if (!name.empty()) {
-            auto stmt = std::make_shared<hdl_class_statement>();
-            stmt->set_name(name);
-            stmt->set_line_n(line);
-            stmt->set_language(hdl_language::system_verilog);
-            entities.push_back(stmt);
-        }
-    }
-    in_class = !pending_classes.empty();
+    file_finished_class(classes_factory.get_class());
 }
 
 void sv_visitor::enterInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) {
-    in_class = true;
-    std::string name;
-    if (!ctx->identifier().empty() && ctx->identifier(0))
-        name = ctx->identifier(0)->getText();
-    pending_classes.emplace_back(name, ctx->getStart()->getLine());
+    classes_factory.new_class(ctx->identifier(0)->getText(), ctx->getStart()->getLine());
 }
 
 void sv_visitor::exitInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) {
-    if (!pending_classes.empty()) {
-        auto [name, line] = pending_classes.back();
-        pending_classes.pop_back();
-        if (!name.empty()) {
-            auto stmt = std::make_shared<hdl_class_statement>();
-            stmt->set_name(name);
-            stmt->set_line_n(line);
-            stmt->set_language(hdl_language::system_verilog);
-            entities.push_back(stmt);
-        }
-    }
-    in_class = !pending_classes.empty();
+    file_finished_class(classes_factory.get_class());
+}
+
+void sv_visitor::enterTask_declaration(sv2017::Task_declarationContext *ctx) {
+    in_method_body++;
+}
+
+void sv_visitor::exitTask_declaration(sv2017::Task_declarationContext *ctx) {
+    if (in_method_body > 0) in_method_body--;
+}
+
+void sv_visitor::enterClass_constructor_declaration(sv2017::Class_constructor_declarationContext *ctx) {
+    in_method_body++;
+}
+
+void sv_visitor::exitClass_constructor_declaration(sv2017::Class_constructor_declarationContext *ctx) {
+    if (in_method_body > 0) in_method_body--;
 }
 
 
@@ -923,6 +972,10 @@ void sv_visitor::exitPackage_or_class_scoped_path(sv2017::Package_or_class_scope
         type_engine.set_type(ctx->getText());
     }
     if(!ctx->DOUBLE_COLON().empty()){
+        // Inside a class the reference is already captured precisely where it
+        // belongs (property type, method body): filing the module-oriented
+        // package edge as well would only duplicate it.
+        if (classes_factory.is_current_valid()) return;
         auto qi = sv_parsing_helpers::parse_qualified_identifier(ctx);
         auto pkg_prefix = qi.get_package_prefix();
         std::string prefix_str = pkg_prefix.empty() ? "" : pkg_prefix.back();
@@ -1585,15 +1638,17 @@ void sv_visitor::exitParam_assignment(sv2017::Param_assignmentContext *ctx) {
         params_factory.start_packed_assignment();
         params_factory.stop_packed_assignment();
     }
-    if (!in_class) {
-        auto param = params_factory.get_parameter();
-        auto t = type_engine.finalize_type();
-        if (!t) {
-            t = Type_engine::create_primitive_type("implicit");
-        }
-        param->set_type(t);
-        route_resource_statement(param);
+    // Class header parameters (`class C #(parameter int N = 4)`) and class
+    // body parameters are filed as properties of the open class; everywhere
+    // else the parameter goes to the enclosing resource as before.
+    auto param = params_factory.get_parameter();
+    auto t = type_engine.finalize_type();
+    if (!t) {
+        t = Type_engine::create_primitive_type("implicit");
     }
+    param->set_type(t);
+    if (classes_factory.is_current_valid()) classes_factory.add_property(param);
+    else route_resource_statement(param);
 }
 
 
@@ -2071,8 +2126,8 @@ void sv_visitor::exitFunction_declaration(sv2017::Function_declarationContext *c
         }
     }
     auto func = f_factory.get_function();
-    if (modules_factory.is_current_valid() || packages_factory.is_current_valid() ||
-        interfaces_factory.is_current_valid()) {
+    if (classes_factory.is_current_valid() || modules_factory.is_current_valid() ||
+        packages_factory.is_current_valid() || interfaces_factory.is_current_valid()) {
         route_resource_function(func, ret_type_name);
     } else {
         entities.push_back(std::make_shared<hdl_function_statement>(func));

@@ -131,7 +131,8 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(unpacked_dimensions, packed_dimensions, type_name);
+        ar(unpacked_dimensions, packed_dimensions, type_name,
+           is_signed, is_real, is_implicit);
     }
 private:
     bool is_signed = false;

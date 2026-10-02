@@ -25,7 +25,7 @@
 #include "data_model/HDL/factories/HDL_packages_factory.hpp"
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/factories/HDL_interfaces_factory.hpp"
-#include "data_model/HDL/statement/hdl_class_statement.hpp"
+#include "data_model/HDL/factories/HDL_classes_factory.hpp"
 #include "data_model/HDL/factories/HDL_instances_factory.hpp"
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"
 #include "data_model/HDL/factories/HDL_conditionals_factory.hpp"
@@ -68,6 +68,13 @@ public:
     void exitClass_declaration(sv2017::Class_declarationContext *ctx) override;
     void enterInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) override;
     void exitInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) override;
+    // Task and constructor bodies never activate the function factory, so
+    // their depth is tracked explicitly to keep their locals out of the
+    // enclosing class property list.
+    void enterTask_declaration(sv2017::Task_declarationContext *ctx) override;
+    void exitTask_declaration(sv2017::Task_declarationContext *ctx) override;
+    void enterClass_constructor_declaration(sv2017::Class_constructor_declarationContext *ctx) override;
+    void exitClass_constructor_declaration(sv2017::Class_constructor_declarationContext *ctx) override;
 
     void exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) override;
     void enterList_of_arguments(sv2017::List_of_argumentsContext *ctx) override;
@@ -271,10 +278,12 @@ private:
     // Assignment value seen when a function-local declaration started; used to
     // tell a real initializer apart from a stale value at declaration end.
     std::shared_ptr<Expression_base> pending_function_local_init;
-    bool in_class = false;
-    // Pending class definitions (name + declaration line), stacked so nested
-    // class declarations each emit their own hdl_class_statement on exit.
-    std::vector<std::pair<std::string, unsigned int>> pending_classes;
+    // Depth of open task/constructor bodies (see above); function bodies are
+    // covered by f_factory instead.
+    int in_method_body = 0;
+    // Set while walking a class-scope property declaration whose type ranging
+    // was opened in enterData_declaration; consumed by the matching exit.
+    bool capturing_class_property = false;
     bool had_error = false;
     std::vector<std::shared_ptr<hdl_statement_base>> entities;
     std::vector<std::string> active_genvars;
@@ -290,13 +299,20 @@ private:
     HDL_modules_factory modules_factory;
     HDL_packages_factory packages_factory;
     // Route a statement/typedef/function to whichever resource is open
-    // (module, package or interface). Packages are siblings of modules now.
+    // (module, package, interface or class — innermost scope wins, so the
+    // class factory is checked first). Packages, interfaces and classes are
+    // siblings of modules now.
     void route_resource_statement(const std::shared_ptr<hdl_statement_base> &s);
     void route_resource_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type);
     void route_resource_struct_def(const std::string &name, const std::shared_ptr<hdl_type> &type);
     void route_resource_function(const hdl_function_statement &f, const std::string &ret_type_name);
+    // File a finished class into its enclosing scope (class, module, package
+    // or interface) so declaration scope is preserved; scope-less classes go
+    // to the top-level entities.
+    void file_finished_class(const std::shared_ptr<hdl_class_statement> &cls);
     std::vector<std::shared_ptr<hdl_import_stmt>> file_imports;
     HDL_interfaces_factory interfaces_factory;
+    HDL_classes_factory classes_factory;
     HDL_instances_factory deps_factory;
     HDL_parameters_factory params_factory;
     HDL_loops_factory loops_factory;

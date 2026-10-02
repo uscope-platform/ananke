@@ -19,6 +19,7 @@
 #include "data_model/HDL/statement/hdl_resource_statement.hpp"
 #include "data_model/HDL/statement/hdl_package_statement.hpp"
 #include "data_model/HDL/statement/hdl_interface_statement.hpp"
+#include "data_model/HDL/statement/hdl_class_statement.hpp"
 
 template<class T>
 void resources_factory_base<T>::new_basic_resource(const std::string &n) {
@@ -59,4 +60,5 @@ T resources_factory_base<T>::get_resource() {
 template class resources_factory_base<hdl_resource_statement>;
 template class resources_factory_base<hdl_package_statement>;
 template class resources_factory_base<hdl_interface_statement>;
+template class resources_factory_base<hdl_class_statement>;
 template class resources_factory_base<HDL_parameter>;

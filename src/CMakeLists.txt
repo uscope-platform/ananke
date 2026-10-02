@@ -47,6 +47,7 @@ target_sources(ananke_lib
     data_model/HDL/factories/HDL_modules_factory.cpp
     data_model/HDL/factories/HDL_packages_factory.cpp
     data_model/HDL/factories/HDL_interfaces_factory.cpp
+    data_model/HDL/factories/HDL_classes_factory.cpp
     data_model/HDL/factories/HDL_loops_factory.cpp
     data_model/HDL/factories/HDL_conditionals_factory.cpp
     data_model/HDL/factories/HDL_parameters_factory.cpp
