@@ -40,11 +40,20 @@
 // need the macro — unrelated files never break on it.
 class macro_table {
 public:
-    struct resolution {
-        enum class status { absent, unique, conflict };
-        status state = status::absent;
+    // One repository definition of a macro, with its call-shape signature.
+    // Simple (non-function) macros accept no arguments.
+    struct candidate_info {
+        std::string path;
+        bool is_function = false;
+        int total_params = 0;
+        int required_params = 0;
+    };
+
+    struct verdict {
+        enum class kind { absent, unique, conflict, mismatch, shadowed };
+        kind state = kind::absent;
         preprocessor::macro_definitions_map::mapped_type definition;
-        std::vector<std::string> definers;
+        std::vector<candidate_info> candidates;
     };
 
     struct injection {
@@ -52,6 +61,7 @@ public:
         std::vector<std::string> resolved;
         std::vector<std::string> unresolvable;
         std::map<std::string, std::vector<std::string>> conflicts;
+        std::map<std::string, std::vector<std::string>> mismatches;
     };
 
     // (Re)places all definitions harvested from one file. Pass 1 seeds from
@@ -59,16 +69,25 @@ public:
     void add_file_definitions(const std::string &path,
                               const preprocessor::macro_definitions_map &defs);
     void remove_file(const std::string &path);
-    [[nodiscard]] resolution resolve(const std::string &name) const;
-    // Injection subset for one file's recorded needs. Names the requesting
-    // file defines itself are never injected: seeding them would invert
-    // include guards (`` `ifndef FOO_SV `` must see FOO_SV undefined) and
-    // would also rewrite intra-file use-before-define order, which fails in
-    // a simulator too. Pass the requesting file's path (empty = no filter).
-    [[nodiscard]] injection build_injection(const std::set<std::string> &needs,
+    // Single-name verdict used by injection building and terminal reporting.
+    // arities holds the observed call-site argument counts (empty = used
+    // without parentheses, no shape information). requester enables
+    // self-exclusion (empty = no filter).
+    [[nodiscard]] verdict judge(const std::string &name,
+                                const std::set<int> &arities,
+                                const std::string &requester = "") const;
+    // Injection subset for one file's recorded needs (name -> observed call
+    // arities). Names the requesting file defines itself are never injected:
+    // seeding them would invert include guards (`` `ifndef FOO_SV `` must see
+    // FOO_SV undefined) and would also rewrite intra-file use-before-define
+    // order, which fails in a simulator too.
+    [[nodiscard]] injection build_injection(const preprocessor::undefined_uses_map &needs,
                                             const std::string &requester = "") const;
     [[nodiscard]] bool empty() const;
     [[nodiscard]] std::set<std::string> names() const;
+    // Human-readable candidate signature for diagnostics, e.g.
+    // "path/to/file (5 params, 3 required)" or "path/to/file (simple)".
+    static std::string describe_candidate(const candidate_info &candidate);
     // Deterministic rendering for fingerprinting (caller hashes it).
     [[nodiscard]] std::string canonical_string() const;
     // Per-name deterministic renderings for cross-run change detection

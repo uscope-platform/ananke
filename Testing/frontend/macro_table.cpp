@@ -14,33 +14,49 @@
 //  limitations under the License.
 
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include "frontend/macro_table.hpp"
 
 using namespace preprocessor;
+using kind = macro_table::verdict::kind;
 
 static macro_definitions_map simple_def(const std::string &name, const std::string &value) {
     return {{name, value}};
 }
 
+static macro_definitions_map function_def(const std::string &name,
+                                          const std::vector<function_macro_argument> &args,
+                                          const std::string &body) {
+    function_macro macro;
+    macro.value = body;
+    macro.arguments = args;
+    return {{name, macro}};
+}
+
+static undefined_uses_map needs(std::initializer_list<std::pair<std::string, std::set<int>>> entries) {
+    undefined_uses_map result;
+    for (const auto &entry : entries) result[entry.first] = entry.second;
+    return result;
+}
+
 TEST(macro_table, absent_name_is_unresolvable) {
     macro_table table;
     table.add_file_definitions("a.sv", simple_def("FOO", "1"));
-    auto injection = table.build_injection({"BAR"});
+    auto injection = table.build_injection(needs({{"BAR", {2}}}));
     EXPECT_TRUE(injection.definitions.empty());
-    ASSERT_EQ(injection.unresolvable.size(), 1u);
-    EXPECT_EQ(injection.unresolvable[0], "BAR");
+    EXPECT_THAT(injection.unresolvable, testing::ElementsAre("BAR"));
     EXPECT_TRUE(injection.conflicts.empty());
+    EXPECT_TRUE(injection.mismatches.empty());
 }
 
 TEST(macro_table, identical_bodies_are_one_definition) {
     macro_table table;
     table.add_file_definitions("a.sv", simple_def("FOO", "1"));
     table.add_file_definitions("b.sv", simple_def("FOO", "1"));
-    auto resolution = table.resolve("FOO");
-    EXPECT_EQ(resolution.state, macro_table::resolution::status::unique);
-    ASSERT_EQ(resolution.definers.size(), 2u);
-    auto injection = table.build_injection({"FOO"}, "c.sv");
+    auto judgement = table.judge("FOO", {}, "c.sv");
+    EXPECT_EQ(judgement.state, kind::unique);
+    auto injection = table.build_injection(needs({{"FOO", {}}}), "c.sv");
     ASSERT_EQ(injection.definitions.size(), 1u);
     EXPECT_EQ(std::get<std::string>(injection.definitions.at("FOO")), "1");
 }
@@ -49,12 +65,12 @@ TEST(macro_table, distinct_bodies_conflict_with_definers) {
     macro_table table;
     table.add_file_definitions("a.sv", simple_def("FOO", "1"));
     table.add_file_definitions("b.sv", simple_def("FOO", "2"));
-    auto resolution = table.resolve("FOO");
-    EXPECT_EQ(resolution.state, macro_table::resolution::status::conflict);
-    auto injection = table.build_injection({"FOO"}, "c.sv");
+    auto judgement = table.judge("FOO", {}, "c.sv");
+    EXPECT_EQ(judgement.state, kind::conflict);
+    auto injection = table.build_injection(needs({{"FOO", {}}}), "c.sv");
     EXPECT_TRUE(injection.definitions.empty());
     ASSERT_EQ(injection.conflicts.size(), 1u);
-    ASSERT_EQ(injection.conflicts.at("FOO").size(), 2u);
+    EXPECT_THAT(injection.conflicts.at("FOO"), testing::ElementsAre("a.sv", "b.sv"));
 }
 
 TEST(macro_table, reparse_replaces_same_file_entry) {
@@ -62,20 +78,21 @@ TEST(macro_table, reparse_replaces_same_file_entry) {
     table.add_file_definitions("a.sv", simple_def("FOO", "1"));
     table.add_file_definitions("a.sv", simple_def("FOO", "2"));
     // Same file redefining across runs is a replacement, not a conflict.
-    auto resolution = table.resolve("FOO");
-    EXPECT_EQ(resolution.state, macro_table::resolution::status::unique);
-    ASSERT_EQ(resolution.definers.size(), 1u);
-    EXPECT_EQ(resolution.definers[0], "a.sv");
+    auto judgement = table.judge("FOO", {}, "c.sv");
+    EXPECT_EQ(judgement.state, kind::unique);
+    ASSERT_EQ(judgement.candidates.size(), 1u);
+    EXPECT_EQ(judgement.candidates[0].path, "a.sv");
 }
 
 TEST(macro_table, self_defined_names_are_never_injected) {
     macro_table table;
     // Include-guard shape: the file defines the very macro it queries.
     table.add_file_definitions("guard.svh", simple_def("GUARD_SV", ""));
-    auto injection = table.build_injection({"GUARD_SV"}, "guard.svh");
+    auto injection = table.build_injection(needs({{"GUARD_SV", {}}}), "guard.svh");
     EXPECT_TRUE(injection.definitions.empty());
     EXPECT_TRUE(injection.unresolvable.empty());
     EXPECT_TRUE(injection.conflicts.empty());
+    EXPECT_TRUE(injection.mismatches.empty());
 }
 
 TEST(macro_table, self_definition_wins_over_other_definers) {
@@ -83,12 +100,79 @@ TEST(macro_table, self_definition_wins_over_other_definers) {
     table.add_file_definitions("self.sv", simple_def("FOO", "1"));
     table.add_file_definitions("other.sv", simple_def("FOO", "2"));
     // Injecting other's body would rewrite this file's own definition order.
-    auto injection = table.build_injection({"FOO"}, "self.sv");
+    auto injection = table.build_injection(needs({{"FOO", {}}}), "self.sv");
     EXPECT_TRUE(injection.definitions.empty());
     // ...while unrelated files still see the conflict loud and clear.
-    auto other = table.build_injection({"FOO"}, "third.sv");
+    auto other = table.build_injection(needs({{"FOO", {}}}), "third.sv");
     EXPECT_TRUE(other.definitions.empty());
     ASSERT_EQ(other.conflicts.size(), 1u);
+}
+
+TEST(macro_table, arity_resolves_only_unambiguous_calls) {
+    macro_table table;
+    // The CVA6 FF shape: 3 params vs 3 params + 2 defaults.
+    table.add_file_definitions("narrow.svh",
+                               function_def("FF", {{"q", "", false}, {"d", "", false}, {"r", "", false}},
+                                            "__q <= __d"));
+    table.add_file_definitions("wide.svh",
+                               function_def("FF",
+                                            {{"q", "", false},
+                                             {"d", "", false},
+                                             {"r", "", false},
+                                             {"c", "clk", true},
+                                             {"a", "rst", true}},
+                                            "__q <= __d"));
+    // 3-arg call: satisfiable by both definitions, so genuinely ambiguous.
+    // Choosing would silently pick behavior: stay loud instead.
+    auto three = table.build_injection(needs({{"FF", {3}}}), "user.sv");
+    EXPECT_TRUE(three.definitions.empty());
+    ASSERT_EQ(three.conflicts.size(), 1u);
+    // Full 5-arg call: only the wide definition accepts it. Unambiguous.
+    auto five = table.build_injection(needs({{"FF", {5}}}), "user.sv");
+    ASSERT_EQ(five.definitions.size(), 1u);
+    EXPECT_EQ(std::get<preprocessor::function_macro>(five.definitions.at("FF")).arguments.size(), 5u);
+    EXPECT_TRUE(five.conflicts.empty());
+}
+
+TEST(macro_table, arity_mismatch_reports_definers) {
+    macro_table table;
+    table.add_file_definitions("narrow.svh",
+                               function_def("FF", {{"q", "", false}, {"d", "", false}, {"r", "", false}},
+                                            "__q <= __d"));
+    // 6-arg call: no definition accepts it.
+    auto judgement = table.judge("FF", {6}, "user.sv");
+    EXPECT_EQ(judgement.state, kind::mismatch);
+    ASSERT_EQ(judgement.candidates.size(), 1u);
+    EXPECT_EQ(judgement.candidates[0].path, "narrow.svh");
+    auto injection = table.build_injection(needs({{"FF", {6}}}), "user.sv");
+    EXPECT_TRUE(injection.definitions.empty());
+    ASSERT_EQ(injection.mismatches.size(), 1u);
+}
+
+TEST(macro_table, bare_use_cannot_disambiguate_by_arity) {
+    macro_table table;
+    table.add_file_definitions("narrow.svh",
+                               function_def("FF", {{"q", "", false}, {"d", "", false}, {"r", "", false}},
+                                            "__q <= __d"));
+    table.add_file_definitions("wide.svh",
+                               function_def("FF",
+                                            {{"q", "", false},
+                                             {"d", "", false},
+                                             {"r", "", false},
+                                             {"c", "clk", true},
+                                             {"a", "rst", true}},
+                                            "__q <= __d"));
+    // No call shape recorded: both stay contenders, honest conflict.
+    auto judgement = table.judge("FF", {}, "user.sv");
+    EXPECT_EQ(judgement.state, kind::conflict);
+}
+
+TEST(macro_table, simple_definition_rejects_call_shaped_use) {
+    macro_table table;
+    table.add_file_definitions("a.sv", simple_def("FOO", "1"));
+    // A call-shaped use can never expand a simple body (fatal in the engine).
+    auto judgement = table.judge("FOO", {2}, "user.sv");
+    EXPECT_EQ(judgement.state, kind::mismatch);
 }
 
 TEST(macro_table, stored_round_trip_simple) {

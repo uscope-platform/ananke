@@ -15,6 +15,7 @@
 
 
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
 #include "frontend/repository_index.hpp"
@@ -204,10 +205,35 @@ TEST(preprocessor, undefined_macro_recorded_without_fatal) {
     preproc.preprocess(test_pattern);
     // Single-file behavior is unchanged (still an error), but the failure is
     // classified as deferrable: no fatal flag, name recorded for quarantine.
+    // Bare use (no parentheses) carries no call-site arity.
     EXPECT_TRUE(preproc.has_error());
     EXPECT_FALSE(preproc.has_fatal_error());
-    ASSERT_EQ(preproc.get_undefined_macros().size(), 1u);
-    EXPECT_EQ(*preproc.get_undefined_macros().begin(), "MISSING_MACRO");
+    const auto &undefined = preproc.get_undefined_macros();
+    ASSERT_EQ(undefined.size(), 1u);
+    ASSERT_TRUE(undefined.contains("MISSING_MACRO"));
+    EXPECT_TRUE(undefined.at("MISSING_MACRO").empty());
+}
+
+TEST(preprocessor, call_site_arities_recorded) {
+    auto test_pattern = R"(
+        module test_module ();
+            parameter A = `TWICE(1, 2);
+            parameter B = `TWICE(3);
+            parameter C = `BARE;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    preproc.preprocess(test_pattern);
+    EXPECT_TRUE(preproc.has_error());
+    const auto &undefined = preproc.get_undefined_macros();
+    ASSERT_EQ(undefined.size(), 2u);
+    ASSERT_TRUE(undefined.contains("TWICE"));
+    EXPECT_THAT(undefined.at("TWICE"), testing::ElementsAre(1, 2));
+    ASSERT_TRUE(undefined.contains("BARE"));
+    EXPECT_TRUE(undefined.at("BARE").empty());
 }
 
 TEST(preprocessor, unknown_conditional_recorded_without_error) {

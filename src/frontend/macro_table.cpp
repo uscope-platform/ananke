@@ -15,17 +15,52 @@
 
 #include "frontend/macro_table.hpp"
 
+#include <spdlog/spdlog.h>
+
 namespace {
+using live_def = preprocessor::macro_definitions_map::mapped_type;
+
 std::string rtrim_copy(const std::string &in) {
     const auto end = in.find_last_not_of(" \t\r\n");
     if (end == std::string::npos) return "";
     return in.substr(0, end + 1);
 }
+
+macro_table::candidate_info measure_candidate(
+    const std::string &path,
+    const live_def &def) {
+    macro_table::candidate_info info;
+    info.path = path;
+    if (std::holds_alternative<preprocessor::function_macro>(def)) {
+        const auto &macro = std::get<preprocessor::function_macro>(def);
+        info.is_function = true;
+        info.total_params = static_cast<int>(macro.arguments.size());
+        for (const auto &arg : macro.arguments) {
+            if (!arg.has_default) ++info.required_params;
+        }
+    }
+    return info;
+}
+
+// A call-shaped use (observed arity k) can only expand a function macro
+// whose parameter list accepts k arguments. Bare uses carry no shape
+// information and never filter.
+bool arity_compatible(const macro_table::candidate_info &candidate,
+                      const std::set<int> &arities) {
+    if (arities.empty() || !candidate.is_function) {
+        return arities.empty();
+    }
+    for (int arity : arities) {
+        if (arity < candidate.required_params || arity > candidate.total_params) return false;
+    }
+    return true;
+}
+
 } // namespace
 
 stored_macro_def macro_to_stored(
     const std::string &name,
-    const preprocessor::macro_definitions_map::mapped_type &def) {
+    const live_def &def) {
     stored_macro_def stored;
     stored.name = name;
     if (std::holds_alternative<std::string>(def)) {
@@ -42,7 +77,7 @@ stored_macro_def macro_to_stored(
     return stored;
 }
 
-preprocessor::macro_definitions_map::mapped_type macro_to_live(const stored_macro_def &stored) {
+live_def macro_to_live(const stored_macro_def &stored) {
     if (!stored.is_function) return stored.value;
     preprocessor::function_macro macro;
     macro.value = stored.value;
@@ -53,7 +88,7 @@ preprocessor::macro_definitions_map::mapped_type macro_to_live(const stored_macr
 }
 
 std::string macro_canonical_body(
-    const preprocessor::macro_definitions_map::mapped_type &def) {
+    const live_def &def) {
     if (std::holds_alternative<std::string>(def)) {
         return "S:" + rtrim_copy(std::get<std::string>(def));
     }
@@ -90,55 +125,104 @@ void macro_table::remove_file(const std::string &path) {
     }
 }
 
-macro_table::resolution macro_table::resolve(const std::string &name) const {
-    resolution result;
+std::string macro_table::describe_candidate(const candidate_info &candidate) {
+    if (!candidate.is_function) return candidate.path + " (simple)";
+    return candidate.path + " (" + std::to_string(candidate.total_params) + " params, " +
+           std::to_string(candidate.required_params) + " required)";
+}
+
+macro_table::verdict macro_table::judge(const std::string &name,
+                                         const std::set<int> &arities,
+                                         const std::string &requester) const {
+    verdict result;
     const auto bodies_it = bodies_.find(name);
     if (bodies_it == bodies_.end()) return result;
     const auto live_it = live_.find(name);
     if (live_it == live_.end() || live_it->second.empty()) return result;
-    std::set<std::string> distinct;
-    for (const auto &[file, body] : bodies_it->second) {
-        (void)file;
-        distinct.insert(body);
+
+    bool self_defined = false;
+    std::vector<std::pair<candidate_info, live_def>> scored;
+    for (const auto &[file, def] : live_it->second) {
+        if (!requester.empty() && file == requester) {
+            self_defined = true;
+            continue;
+        }
+        scored.emplace_back(measure_candidate(file, def), def);
     }
-    for (const auto &[file, ignored] : live_it->second) {
-        (void)ignored;
-        result.definers.push_back(file);
+    if (self_defined) {
+        // The file defines this macro itself: injecting anything would invert
+        // include guards (same guard name copy-pasted across headers is
+        // common) and rewrite use-before-define order. The file evaluates
+        // exactly as written; a use the file cannot satisfy itself is a
+        // use-before-local-define, which no injection can satisfy (forward
+        // references are illegal).
+        result.state = verdict::kind::shadowed;
+        auto self_live = live_it->second.find(requester);
+        if (self_live != live_it->second.end()) {
+            result.candidates.push_back(measure_candidate(requester, self_live->second));
+        }
+        return result;
+    }
+    if (scored.empty()) {
+        return result;
+    }
+    // Hard filter: keep definitions whose parameter lists accept every
+    // observed call-site arity.
+    std::vector<std::pair<candidate_info, live_def>> compatible;
+    for (const auto &entry : scored) {
+        if (arity_compatible(entry.first, arities)) compatible.push_back(entry);
+    }
+    if (compatible.empty()) {
+        result.state = verdict::kind::mismatch;
+        for (const auto &entry : scored) result.candidates.push_back(entry.first);
+        return result;
+    }
+    std::set<std::string> distinct;
+    for (const auto &entry : compatible) {
+        distinct.insert(bodies_it->second.at(entry.first.path));
     }
     if (distinct.size() == 1) {
-        result.state = resolution::status::unique;
-        result.definition = live_it->second.begin()->second;
-    } else {
-        result.state = resolution::status::conflict;
+        result.state = verdict::kind::unique;
+        result.definition = compatible.front().second;
+        result.candidates.push_back(compatible.front().first);
+        return result;
     }
+    // More than one compatible definition with different bodies: genuinely
+    // ambiguous. A 3-argument call against (3/3) and (3/5) is satisfiable by
+    // both, so no pick is honest here — only an arity no other definition
+    // accepts (e.g. the full 5) resolves unambiguously, and that already
+    // reduced to the single-compatible case above.
+    result.state = verdict::kind::conflict;
+    for (const auto &entry : compatible) result.candidates.push_back(entry.first);
     return result;
 }
 
-macro_table::injection macro_table::build_injection(const std::set<std::string> &needs,
+macro_table::injection macro_table::build_injection(const preprocessor::undefined_uses_map &needs,
                                                       const std::string &requester) const {
     injection result;
-    for (const auto &name : needs) {
-        auto resolution = resolve(name);
-        if (!requester.empty()) {
-            bool self_defined = false;
-            for (const auto &definer : resolution.definers) {
-                if (definer == requester) {
-                    self_defined = true;
-                    break;
+    for (const auto &[name, arities] : needs) {
+        auto judgement = judge(name, arities, requester);
+        switch (judgement.state) {
+            case verdict::kind::unique:
+                result.definitions[name] = judgement.definition;
+                result.resolved.push_back(name);
+                break;
+            case verdict::kind::conflict:
+                for (const auto &candidate : judgement.candidates) {
+                    result.conflicts[name].push_back(candidate.path);
                 }
+                break;
+            case verdict::kind::mismatch: {
+                for (const auto &candidate : judgement.candidates) {
+                    result.mismatches[name].push_back(candidate.path);
+                }
+                break;
             }
-            // The file defines this macro itself: injecting it would invert
-            // include guards and rewrite use-before-define order. Leave it
-            // out so the file evaluates exactly as written.
-            if (self_defined) continue;
-        }
-        if (resolution.state == resolution::status::unique) {
-            result.definitions[name] = resolution.definition;
-            result.resolved.push_back(name);
-        } else if (resolution.state == resolution::status::conflict) {
-            result.conflicts[name] = resolution.definers;
-        } else {
-            result.unresolvable.push_back(name);
+            case verdict::kind::absent:
+                result.unresolvable.push_back(name);
+                break;
+            case verdict::kind::shadowed:
+                break;
         }
     }
     return result;

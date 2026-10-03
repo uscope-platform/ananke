@@ -21,6 +21,7 @@
 #include <optional>
 #include <vector>
 #include <unordered_map>
+#include <map>
 #include <set>
 #include <variant>
 #include <algorithm>
@@ -58,6 +59,11 @@ namespace preprocessor {
     using macro_definitions_map =
         std::unordered_map<std::string, std::variant<std::string, function_macro>>;
 
+    // Undefined macro names mapped to the call-site arities observed for
+    // each. An empty set means the macro was used without parentheses, so no
+    // arity information exists (never filter on it).
+    using undefined_uses_map = std::map<std::string, std::set<int>>;
+
     inline bool is_structural_directive(const std::string_view &id) {
         return id == "ifdef" || id == "ifndef" || id == "elsif" ||
                id == "else" || id == "endif" || id == "include" ||
@@ -73,7 +79,7 @@ namespace preprocessor {
             uint64_t &l_n,
             std::string &path,
             std::optional<std::string> &error,
-            std::set<std::string> &undefined_macros,
+            undefined_uses_map &undefined_macros,
             bool &fatal_error
         );
         std::string process_macro(const std::string_view &in);
@@ -98,12 +104,14 @@ namespace preprocessor {
         // so this is deferrable, unlike report_error which is terminal. Only
         // the id is kept; any diagnostic is reconstructed from recorded ids
         // at reporting time, never formatted or stored during the pass.
-        void report_undefined(const std::string &id);
+        // arg_count holds the call-site arity when the use had parentheses
+        // (std::nullopt for bare uses, which carry no arity information).
+        void report_undefined(const std::string &id, std::optional<int> arg_count);
         std::string &path;
         uint64_t &line_number;
         macro_definitions_map &definitions;
         std::optional<std::string> &error;
-        std::set<std::string> &undefined_macros;
+        undefined_uses_map &undefined_macros;
         bool &fatal_error;
     };
 }

@@ -60,7 +60,7 @@ namespace preprocessor {
         uint64_t &l_n,
         std::string &p,
         std::optional<std::string> &e,
-        std::set<std::string> &u,
+        undefined_uses_map &u,
         bool &f) : definitions(d), line_number(l_n), path(p), error(e), undefined_macros(u), fatal_error(f)
     {
     }
@@ -71,8 +71,12 @@ namespace preprocessor {
         fatal_error = true;
     }
 
-    void macro_processor::report_undefined(const std::string &id) {
-        undefined_macros.insert(id);
+    void macro_processor::report_undefined(const std::string &id, std::optional<int> arg_count) {
+        if (arg_count.has_value()) {
+            undefined_macros[id].insert(arg_count.value());
+        } else {
+            undefined_macros.try_emplace(id);
+        }
     }
 
     std::string macro_processor::process_macro(const std::string_view &in) {
@@ -108,7 +112,12 @@ namespace preprocessor {
                             remaining = rest_of_line;
                             continue;
                         }
-                        report_undefined(id);
+                        // Record and strip: the file quarantines, but
+                        // collecting every unknown (with its call-site arity)
+                        // in one pass lets the fixpoint converge instead of
+                        // learning one macro per round. Output is discarded
+                        // with the file.
+                        report_undefined(id, static_cast<int>(args.size()));
                         remaining = rest_of_line;
                         continue;
                     }
@@ -380,7 +389,8 @@ namespace preprocessor {
                     warn_stripped_once(id, path);
                     return "";
                 }
-                report_undefined(id);
+                // Bare use (no parentheses): no arity information to record.
+                report_undefined(id, std::nullopt);
                 return std::string(identifier);
             }
             auto def = definitions.at(id);

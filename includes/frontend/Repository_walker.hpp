@@ -55,7 +55,7 @@ struct file_analysis_context {
     // Cache hit: content unchanged, cache entry stands as-is. Harvested is
     // empty (nothing re-parsed); must not disturb the macro table.
     bool cache_skipped = false;
-    std::set<std::string> undefined_macros;
+    preprocessor::undefined_uses_map undefined_macros;
     std::set<std::string> unknown_conditionals;
     preprocessor::macro_definitions_map harvested;
 };
@@ -138,7 +138,7 @@ private:
     static constexpr int max_macro_passes = 8;
 
     struct quarantine_entry {
-        std::set<std::string> undefined_macros;
+        preprocessor::undefined_uses_map undefined_macros;
         std::set<std::string> unknown_conditionals;
         std::string hash;
     };

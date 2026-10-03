@@ -61,7 +61,7 @@ namespace preprocessor {
         // has_fatal_error() distinguishes terminal failures (syntax-adjacent
         // preprocessor errors) from deferrable unknown-macro failures.
         [[nodiscard]] bool has_fatal_error() const {return fatal_error;}
-        [[nodiscard]] const std::set<std::string>& get_undefined_macros() const {return undefined_macros;}
+        [[nodiscard]] const undefined_uses_map& get_undefined_macros() const {return undefined_macros;}
         [[nodiscard]] const std::set<std::string>& get_unknown_conditionals() const {return unknown_conditionals;}
         // Definitions this file (transitively through its includes) explicitly
         // `define'd. Seeded base/global entries are excluded unless locally
@@ -95,7 +95,7 @@ namespace preprocessor {
         definitions_map definitions;
         definitions_map base_definitions;
         std::set<std::string> locally_defined;
-        std::set<std::string> undefined_macros;
+        undefined_uses_map undefined_macros;
         std::set<std::string> unknown_conditionals;
         bool fatal_error = false;
         std::set<std::string> global_defines;

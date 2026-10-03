@@ -37,7 +37,8 @@ namespace preprocessor {
         if (error.has_value()) return error.value();
         if (deferred_error.empty() && !undefined_macros.empty()) {
             std::string names;
-            for (const auto &id : undefined_macros) {
+            for (const auto &[id, ignored] : undefined_macros) {
+                (void)ignored;
                 if (!names.empty()) names += ", ";
                 names += id;
             }

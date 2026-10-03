@@ -138,9 +138,13 @@ void Repository_walker::collect_analysis_results() {
                 continue;
             }
             if (ctx.quarantined) {
+                // Accumulate needs across passes (merging call-site arities
+                // per macro): each attempt only observes the unknowns visible
+                // past previously injected ones.
                 auto &entry = quarantine_[ctx.path];
-                entry.undefined_macros.insert(ctx.undefined_macros.begin(),
-                                              ctx.undefined_macros.end());
+                for (const auto &[name, arities] : ctx.undefined_macros) {
+                    entry.undefined_macros[name].insert(arities.begin(), arities.end());
+                }
                 entry.unknown_conditionals.insert(ctx.unknown_conditionals.begin(),
                                                   ctx.unknown_conditionals.end());
                 entry.hash = ctx.hash;
@@ -261,8 +265,13 @@ void Repository_walker::run_macro_fixpoint() {
         const size_t quarantine_before = quarantine_.size();
         std::vector<std::pair<std::filesystem::path, preprocessor::macro_definitions_map>> work;
         for (const auto &[path, entry] : quarantine_) {
-            std::set<std::string> needs(entry.undefined_macros.begin(), entry.undefined_macros.end());
-            needs.insert(entry.unknown_conditionals.begin(), entry.unknown_conditionals.end());
+            preprocessor::undefined_uses_map needs;
+            for (const auto &[name, arities] : entry.undefined_macros) {
+                needs[name].insert(arities.begin(), arities.end());
+            }
+            for (const auto &name : entry.unknown_conditionals) {
+                needs.try_emplace(name);
+            }
             auto injection = macro_table_.build_injection(needs, path);
             auto last = last_injections_.find(path);
             if (last != last_injections_.end() && last->second == injection.definitions) continue;
@@ -299,9 +308,9 @@ void Repository_walker::validation_sweep() {
         bool drift = false;
         if (auto cit = parsed_consumed_.find(path); cit != parsed_consumed_.end()) {
             for (const auto &[name, body] : cit->second) {
-                auto resolution = macro_table_.resolve(name);
-                if (resolution.state != macro_table::resolution::status::unique ||
-                    macro_canonical_body(resolution.definition) != body) {
+                auto judgement = macro_table_.judge(name, {}, path);
+                if (judgement.state != macro_table::verdict::kind::unique ||
+                    macro_canonical_body(judgement.definition) != body) {
                     drift = true;
                     break;
                 }
@@ -312,7 +321,9 @@ void Repository_walker::validation_sweep() {
             // something new: same self-exclusion as injection (a file's own
             // include guards must never flip its branches).
             if (auto uit = parsed_unknowns_.find(path); uit != parsed_unknowns_.end()) {
-                auto probe = macro_table_.build_injection(uit->second, path);
+                preprocessor::undefined_uses_map probe_needs;
+                for (const auto &name : uit->second) probe_needs.try_emplace(name);
+                auto probe = macro_table_.build_injection(probe_needs, path);
                 if (!probe.definitions.empty()) drift = true;
             }
         }
@@ -322,14 +333,16 @@ void Repository_walker::validation_sweep() {
         spdlog::trace("Revalidating {}: repository macros changed under it", file.string());
         d_store->evict_file(file.string());
         last_injections_.erase(file.string());
-        std::set<std::string> needs;
+        // Seeds carry no arities; the re-parse records fresh call shapes and
+        // the following fixpoint round applies arity preference again.
+        preprocessor::undefined_uses_map needs;
         if (auto uit = parsed_unknowns_.find(file.string()); uit != parsed_unknowns_.end()) {
-            needs.insert(uit->second.begin(), uit->second.end());
+            for (const auto &name : uit->second) needs.try_emplace(name);
         }
         if (auto cit = parsed_consumed_.find(file.string()); cit != parsed_consumed_.end()) {
             for (const auto &[name, ignored] : cit->second) {
                 (void)ignored;
-                needs.insert(name);
+                needs.try_emplace(name);
             }
         }
         auto injection = macro_table_.build_injection(needs, file.string());
@@ -370,10 +383,11 @@ void Repository_walker::invalidate_stale_macros() {
         }
         if (!stale) continue;
         spdlog::trace("Invalidating {}: a consumed macro changed", path);
-        const auto deps_snapshot = deps;
+        preprocessor::undefined_uses_map seed_needs;
+        for (const auto &dep : deps) seed_needs.try_emplace(dep);
         d_store->evict_file(path);
         last_injections_.erase(path);
-        auto injection = macro_table_.build_injection({deps_snapshot.begin(), deps_snapshot.end()}, path);
+        auto injection = macro_table_.build_injection(seed_needs, path);
         if (working_threads == 2 * max_threads) collect_analysis_results();
         last_injections_[path] = injection.definitions;
         analyze_file_with_injection(file, injection.definitions);
@@ -384,35 +398,60 @@ void Repository_walker::invalidate_stale_macros() {
 
 void Repository_walker::report_quarantine_errors() {
     for (const auto &[path, entry] : quarantine_) {
-        // Blocker-first: names that are absent or conflicted doom the file
-        // regardless of the rest; resolvable names held back by those
-        // blockers are collateral and reported only when nothing else blocks.
+        // Blocker-first: absent, mismatched, conflicting and shadowed names
+        // doom the file regardless of the rest; resolvable names held back
+        // by those blockers are collateral, reported only when nothing else
+        // blocks.
         bool blocked = false;
-        for (const auto &name : entry.undefined_macros) {
-            auto resolution = macro_table_.resolve(name);
-            if (resolution.state == macro_table::resolution::status::conflict) {
+        for (const auto &[name, arities] : entry.undefined_macros) {
+            auto judgement = macro_table_.judge(name, arities, path);
+            using kind = macro_table::verdict::kind;
+            if (judgement.state == kind::conflict) {
                 blocked = true;
                 std::string definers;
-                for (size_t i = 0; i < resolution.definers.size(); ++i) {
-                    if (i != 0) definers += ", ";
-                    definers += resolution.definers[i];
+                for (const auto &candidate : judgement.candidates) {
+                    if (!definers.empty()) definers += ", ";
+                    definers += candidate.path;
                 }
                 spdlog::error("Error analyzing {}: macro {} has conflicting definitions in: {}",
                               path, name, definers);
-            } else if (resolution.state == macro_table::resolution::status::absent) {
+            } else if (judgement.state == kind::mismatch) {
+                blocked = true;
+                std::string observed;
+                for (int arity : arities) {
+                    if (!observed.empty()) observed += ", ";
+                    observed += std::to_string(arity);
+                }
+                std::string definers;
+                for (const auto &candidate : judgement.candidates) {
+                    if (!definers.empty()) definers += ", ";
+                    definers += macro_table::describe_candidate(candidate);
+                }
+                spdlog::error("Error analyzing {}: macro {} called with {} argument(s) in file {}, "
+                              "but no repository definition accepts that (defined in: {})",
+                              path, name, observed, path, definers);
+            } else if (judgement.state == kind::absent) {
                 blocked = true;
                 spdlog::error("Error analyzing {}: macro {} is not defined in the repository "
                               "(used here but defined in no analyzed file)",
                               path, name);
+            } else if (judgement.state == kind::shadowed) {
+                blocked = true;
+                spdlog::error("Error analyzing {}: macro {} is used before its definition "
+                              "in the same file",
+                              path, name);
             }
         }
         if (!blocked) {
-            for (const auto &name : entry.undefined_macros) {
-                auto resolution = macro_table_.resolve(name);
-                if (resolution.state == macro_table::resolution::status::unique) {
+            for (const auto &[name, arities] : entry.undefined_macros) {
+                (void)arities;
+                auto judgement = macro_table_.judge(name, arities, path);
+                if (judgement.state == macro_table::verdict::kind::unique &&
+                    !judgement.candidates.empty()) {
                     spdlog::error("Error analyzing {}: macro {} defined in {} could not be resolved "
                                   "within {} fixpoint passes",
-                                  path, name, resolution.definers.front(), max_macro_passes);
+                                  path, name, judgement.candidates.front().path,
+                                  max_macro_passes);
                 }
             }
         }
