@@ -21,6 +21,7 @@
 #include <optional>
 #include <vector>
 #include <unordered_map>
+#include <set>
 #include <variant>
 #include <algorithm>
 #include <ctre.hpp>
@@ -54,15 +55,26 @@ namespace preprocessor {
 
     };
 
+    using macro_definitions_map =
+        std::unordered_map<std::string, std::variant<std::string, function_macro>>;
+
+    inline bool is_structural_directive(const std::string_view &id) {
+        return id == "ifdef" || id == "ifndef" || id == "elsif" ||
+               id == "else" || id == "endif" || id == "include" ||
+               id == "define" || id == "undef" || id == "undefineall";
+    }
+
     static constexpr auto identifier_pattern = ctre::search<R"(`([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()?)">;
 
     class macro_processor {
     public:
         macro_processor(
-            std::unordered_map<std::string, std::variant<std::string, function_macro>> &d,
+            macro_definitions_map &d,
             uint64_t &l_n,
             std::string &path,
-            std::optional<std::string> &error
+            std::optional<std::string> &error,
+            std::set<std::string> &undefined_macros,
+            bool &fatal_error
         );
         std::string process_macro(const std::string_view &in);
         static std::pair<std::vector<std::string_view>, std::string_view> get_call_arguments(const std::string_view &in);
@@ -81,10 +93,18 @@ namespace preprocessor {
 
     private:
         void report_error(const std::string &msg);
+        // Records an order-dependent unknown: the file may still parse once
+        // the macro is learned from the rest of the repository (quarantine),
+        // so this is deferrable, unlike report_error which is terminal. Only
+        // the id is kept; any diagnostic is reconstructed from recorded ids
+        // at reporting time, never formatted or stored during the pass.
+        void report_undefined(const std::string &id);
         std::string &path;
         uint64_t &line_number;
-        std::unordered_map<std::string, std::variant<std::string, function_macro>> &definitions;
+        macro_definitions_map &definitions;
         std::optional<std::string> &error;
+        std::set<std::string> &undefined_macros;
+        bool &fatal_error;
     };
 }
 #endif //ANANKE_MACRO_PROCESSOR_HPP

@@ -191,6 +191,216 @@ TEST(preprocessor, uvm_function_macro_stripped_without_error) {
     EXPECT_FALSE(preproc.has_error());
 }
 
+TEST(preprocessor, undefined_macro_recorded_without_fatal) {
+    auto test_pattern = R"(
+        module test_module ();
+            parameter TEST_PARAM = `MISSING_MACRO;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    preproc.preprocess(test_pattern);
+    // Single-file behavior is unchanged (still an error), but the failure is
+    // classified as deferrable: no fatal flag, name recorded for quarantine.
+    EXPECT_TRUE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+    ASSERT_EQ(preproc.get_undefined_macros().size(), 1u);
+    EXPECT_EQ(*preproc.get_undefined_macros().begin(), "MISSING_MACRO");
+}
+
+TEST(preprocessor, unknown_conditional_recorded_without_error) {
+    auto test_pattern = R"(
+        module test_module ();
+        `ifdef SOME_ABSENT_FLAG
+            parameter TEST_PARAM = 3;
+        `else
+            parameter TEST_PARAM = 5;
+        `endif
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    ASSERT_EQ(preproc.get_unknown_conditionals().size(), 1u);
+    EXPECT_EQ(*preproc.get_unknown_conditionals().begin(), "SOME_ABSENT_FLAG");
+}
+
+TEST(preprocessor, injected_base_resolves_order_dependent_macro) {
+    auto test_pattern = R"(
+        module test_module ();
+            parameter TEST_PARAM = `SHARED_WIDTH;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    preproc.set_base_definitions({{"SHARED_WIDTH", std::string("8")}});
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            parameter TEST_PARAM = 8;
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_TRUE(preproc.get_undefined_macros().empty());
+}
+
+TEST(preprocessor, local_define_shadows_injected_base) {
+    auto test_pattern = R"(
+        `define SHARED_WIDTH 16
+        module test_module ();
+            parameter TEST_PARAM = `SHARED_WIDTH;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    preproc.set_base_definitions({{"SHARED_WIDTH", std::string("8")}});
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            parameter TEST_PARAM = 16;
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+}
+
+TEST(preprocessor, harvested_definitions_exposed) {
+    auto test_pattern = R"(
+        `define LOCAL_CONST 42
+        module test_module ();
+            parameter TEST_PARAM = `LOCAL_CONST;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    preproc.preprocess(test_pattern);
+    EXPECT_FALSE(preproc.has_error());
+    const auto harvested = preproc.get_harvested_definitions();
+    ASSERT_TRUE(harvested.contains("LOCAL_CONST"));
+    ASSERT_TRUE(std::holds_alternative<std::string>(harvested.at("LOCAL_CONST")));
+    EXPECT_EQ(std::get<std::string>(harvested.at("LOCAL_CONST")), "42");
+}
+
+TEST(preprocessor, injected_base_not_harvested) {
+    auto test_pattern = R"(
+        `define LOCAL_CONST 42
+        module test_module ();
+            parameter A = `LOCAL_CONST;
+            parameter B = `SHARED_WIDTH;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    preproc.set_base_definitions({{"SHARED_WIDTH", std::string("8")}});
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            parameter A = 42;
+            parameter B = 8;
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    // Only what the file itself defined may contribute to the table:
+    // re-attributing SHARED_WIDTH here would defeat self-exclusion.
+    const auto harvested = preproc.get_harvested_definitions();
+    EXPECT_TRUE(harvested.contains("LOCAL_CONST"));
+    EXPECT_FALSE(harvested.contains("SHARED_WIDTH"));
+}
+
+TEST(preprocessor, include_via_macro_body_inlined) {
+    std::ofstream ofs("/tmp/embed_inc.svh");
+    ofs << "`define FROM_INC 7\n";
+    ofs.close();
+
+    auto test_pattern = R"(
+        `define INC_FILE `include "/tmp/embed_inc.svh"
+        `INC_FILE
+        module test_module ();
+            parameter TEST_PARAM = `FROM_INC;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    std::filesystem::remove("/tmp/embed_inc.svh");
+    auto check_string = R"(
+
+        module test_module ();
+            parameter TEST_PARAM = 7;
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_EQ(preproc.get_includes().size(), 1u);
+}
+
+TEST(preprocessor, define_in_macro_body_evaluated) {
+    auto test_pattern = R"(
+        `define OUTER `define INNER 99
+        `OUTER
+        module test_module ();
+            parameter TEST_PARAM = `INNER;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+
+        module test_module ();
+            parameter TEST_PARAM = 99;
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+}
+
+TEST(preprocessor, structural_names_never_recorded_undefined) {
+    auto test_pattern = R"(
+        `define VEC_INC(f) `ifdef GUARD_ENABLED `include f `endif
+        `VEC_INC("whatever.svh")
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = "\n        \n\n        module test_module ();\n"
+                        "            parameter TEST_PARAM = 5;\n"
+                        "        endmodule\n    ";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_TRUE(preproc.get_undefined_macros().empty());
+}
+
 TEST(preprocessor, uvm_simple_macro_stripped_without_error) {
     auto test_pattern = R"(
         class my_cfg extends uvm_object;

@@ -32,6 +32,7 @@
 #include "DataFile.hpp"
 #include "hdl_file.hpp"
 #include "include_dependency.hpp"
+#include "macro_definition.hpp"
 #include "cache_schema_hash.hpp"
 
 
@@ -51,8 +52,14 @@ public:
         std::string hash;
         source_content content;
         std::vector<include_dependency> includes;
+        // Harvested preprocessor macros (order-dependent repository macros).
+        // Persisted so cache-skipped files still contribute to the macro
+        // table, and macro dependents can be invalidated across runs.
+        std::vector<stored_macro_def> macro_definitions;
+        // Repository macro names this file's parse consumed via injection.
+        std::vector<std::string> macro_dependencies;
         template<class Archive> void serialize(Archive & ar) {
-            ar(path, hash, content, includes);  // cereal supports variant natively
+            ar(path, hash, content, includes, macro_definitions, macro_dependencies);
         }
     };
 
@@ -114,6 +121,15 @@ public:
     std::optional<Constraints> get_constraint(const std::string& name);
     std::optional<hdl_function_statement> get_standalone_function(const std::string &name, const std::string &source_path);
     std::optional<std::vector<include_dependency>> get_includes(const std::string &name) const;
+    // Repository macro table support (compilation-order macros): per-file
+    // harvested definitions for table seeding, per-file consumed macro names
+    // for cross-run invalidation, and the persisted table fingerprint used to
+    // detect inter-run macro changes.
+    std::unordered_map<std::string, std::vector<stored_macro_def>> get_all_macro_definitions() const;
+    std::vector<std::string> get_macro_dependencies(const std::string &name) const;
+    std::vector<std::string> get_files_with_macro_dependencies() const;
+    [[nodiscard]] std::string get_macro_table_fingerprint() const { return macro_table_fingerprint; }
+    void set_macro_table_fingerprint(const std::string &fp) { macro_table_fingerprint = fp; }
     // OLD IF
 
     void remove_stale_info(const std::filesystem::path& p);
@@ -156,6 +172,7 @@ private:
 
 
     std::unordered_map<std::string, cached_item> cache;
+    std::string macro_table_fingerprint;
     std::unordered_map<std::string, std::string> deconfliction;
     std::set<std::string> reported_duplicates;
     bool ephemeral;

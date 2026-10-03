@@ -2108,7 +2108,15 @@ void sv_visitor::exitIf_generate_construct(sv2017::If_generate_constructContext 
 }
 
 void sv_visitor::enterUntyped_function_declaration(sv2017::Untyped_function_declarationContext *ctx) {
-    auto name = ctx->task_and_function_declaration_common()->identifier()[0]->getText();
+    // Error-recovered trees may lack the declaration common block (e.g.
+    // template placeholder garbage): never dereference blindly.
+    auto common = ctx->task_and_function_declaration_common();
+    if (!common || common->identifier().empty() || !common->identifier()[0]) {
+        spdlog::warn("Malformed function declaration, skipping file");
+        had_error = true;
+        return;
+    }
+    auto name = common->identifier()[0]->getText();
     f_factory.set_name(name);
 }
 

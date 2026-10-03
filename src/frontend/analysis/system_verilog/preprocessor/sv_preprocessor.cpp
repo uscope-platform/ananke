@@ -25,10 +25,42 @@ namespace preprocessor {
     void sv_preprocessor::report_error(const std::string &msg) {
         spdlog::error(msg);
         if (!error) error = msg;
+        fatal_error = true;
+    }
+
+    void sv_preprocessor::record_unknown_conditional(const std::string_view &name) {
+        auto trimmed = macro_processor::trim(name);
+        if (!trimmed.empty()) unknown_conditionals.emplace(trimmed);
+    }
+
+    const std::string& sv_preprocessor::get_error() const {
+        if (error.has_value()) return error.value();
+        if (deferred_error.empty() && !undefined_macros.empty()) {
+            std::string names;
+            for (const auto &id : undefined_macros) {
+                if (!names.empty()) names += ", ";
+                names += id;
+            }
+            deferred_error =
+                fmt::format("Undefined macro(s) {} in file {}", names, path);
+        }
+        return deferred_error;
     }
 
     std::string sv_preprocessor::preprocess(const std::string_view &file_content, unsigned int initial_output_line) {
-        macro_processor macro_engine(definitions , line_number, path, error);
+        // Seed order: repository base < global defines < file-local `defines.
+        // Seeding happens only at the top-level entry: recursive include
+        // processing shares this instance and must keep accumulated defines.
+        definitions = base_definitions;
+        locally_defined.clear();
+        undefined_macros.clear();
+        unknown_conditionals.clear();
+        deferred_error.clear();
+        return preprocess_body(file_content, initial_output_line);
+    }
+
+    std::string sv_preprocessor::preprocess_body(const std::string_view &file_content, unsigned int initial_output_line) {
+        macro_processor macro_engine(definitions , line_number, path, error, undefined_macros, fatal_error);
 
         install_global_defines();
         auto flat_source= flatten_source(file_content);
@@ -41,7 +73,11 @@ namespace preprocessor {
         line_number = 1;
 
         while (std::getline(iss, line)) {
-            if (error) break;
+            // Only fatal errors abort the scan: order-dependent unknowns only
+            // record ids (quarantine), so scanning continues and one pass
+            // collects every unknown and harvests every definition. Output
+            // is discarded with the file.
+            if (fatal_error) break;
             std::string_view trimmed_line = macro_processor::ltrim(line);
 
             bool skipped_directive = trimmed_line.starts_with("`resetall")
@@ -84,7 +120,7 @@ namespace preprocessor {
                         if (!f_opt.has_value()) {
                             report_error(fmt::format("Could not open include file: {}", path));
                         } else {
-                            auto content = preprocess(f_opt->view(), output_line_n);
+                            auto content = preprocess_body(f_opt->view(), output_line_n);
                             if (!error) out << content + '\n';
                         }
 
@@ -95,14 +131,17 @@ namespace preprocessor {
                     }
                 }
             } else if (trimmed_line.starts_with("`ifdef")) {
-                auto condition = parse_one_arg_directive(trimmed_line, 6);
-                c_solver.start_loop(definitions.contains(std::string(condition)));
+                auto condition = std::string(macro_processor::trim(parse_one_arg_directive(trimmed_line, 6)));
+                if (!definitions.contains(condition)) record_unknown_conditional(condition);
+                c_solver.start_loop(definitions.contains(condition));
             } else if (trimmed_line.starts_with("`ifndef")) {
-                auto condition = parse_one_arg_directive(trimmed_line, 7);
-                c_solver.start_loop(!definitions.contains(std::string(condition)));
+                auto condition = std::string(macro_processor::trim(parse_one_arg_directive(trimmed_line, 7)));
+                if (!definitions.contains(condition)) record_unknown_conditional(condition);
+                c_solver.start_loop(!definitions.contains(condition));
             } else if (trimmed_line.starts_with("`elsif")) {
-                auto condition = parse_one_arg_directive(trimmed_line, 6);
-                c_solver.advance_elseif(definitions.contains(std::string(condition)));
+                auto condition = std::string(macro_processor::trim(parse_one_arg_directive(trimmed_line, 6)));
+                if (!definitions.contains(condition)) record_unknown_conditional(condition);
+                c_solver.advance_elseif(definitions.contains(condition));
             } else if (trimmed_line.starts_with("`else")) {
                 c_solver.advance_else();
             } else if (trimmed_line.starts_with("`endif")) {
@@ -231,6 +270,14 @@ namespace preprocessor {
         return replacement;
     }
 
+    macro_definitions_map sv_preprocessor::get_harvested_definitions() const {
+        macro_definitions_map harvested;
+        for (const auto &[name, def] : definitions) {
+            if (locally_defined.contains(name)) harvested[name] = def;
+        }
+        return harvested;
+    }
+
     void sv_preprocessor::parse_definition(const std::string_view &sv, int prefix_length) {
         auto trimmed_view = sv.substr(prefix_length);
         trimmed_view = trimmed_view.substr(trimmed_view.find_first_not_of("\t "));
@@ -238,6 +285,7 @@ namespace preprocessor {
         auto identifier = trimmed_view.substr(0, id_last);
         if (id_last == std::string_view::npos) {
             definitions[std::string(identifier)] = "";
+            locally_defined.insert(std::string(identifier));
             return;
         }
         auto remaining_view = trimmed_view.substr(id_last+1);
@@ -248,9 +296,11 @@ namespace preprocessor {
                 return;
             }
             definitions[std::string(identifier)] = macro.value();
+            locally_defined.insert(std::string(identifier));
         } else {
             auto value = remaining_view.substr(remaining_view.find_first_not_of("\t "));
             definitions[std::string(identifier)] =  std::string{value};
+            locally_defined.insert(std::string(identifier));
         }
 
     }
@@ -397,6 +447,87 @@ namespace preprocessor {
         return result;
     }
 
+    std::string sv_preprocessor::evaluate_embedded_directives(const std::string &text) {
+        if (text.find('`') == std::string::npos) return text;
+        // Fast path: nothing line-leading to evaluate.
+        bool candidate = false;
+        {
+            std::istringstream scan(text);
+            std::string scan_line;
+            while (std::getline(scan, scan_line)) {
+                auto trimmed = macro_processor::ltrim(scan_line);
+                if (trimmed.starts_with("`define") || trimmed.starts_with("`undef") ||
+                    trimmed.starts_with("`include")) {
+                    candidate = true;
+                    break;
+                }
+            }
+        }
+        if (!candidate) return text;
+
+        std::vector<std::string> out_lines;
+        std::istringstream iss(text);
+        std::string line;
+        while (std::getline(iss, line)) {
+            // Deliberately no error break: map operations below are pure, so
+            // every harvestable definition is collected even when the same
+            // line also carries an unknown (the file quarantines regardless).
+            auto trimmed = macro_processor::ltrim(line);
+            if (trimmed.starts_with("`define") && c_solver.is_active()) {
+                parse_definition(trimmed, 7);
+                out_lines.emplace_back("");
+            } else if (trimmed.starts_with("`undef") && c_solver.is_active()) {
+                definitions.erase(std::string(parse_one_arg_directive(trimmed, 6)));
+                out_lines.emplace_back("");
+            } else if (trimmed.starts_with("`include") && c_solver.is_active()) {
+                auto included_file = parse_include_path(trimmed);
+                if (!included_file.has_value()) {
+                    // Quoted-missing already warned, angle-missing errored.
+                    continue;
+                }
+                includes.insert(included_file.value());
+                if (included_file.value().path == path ||
+                    active_includes.contains(included_file.value().path)) {
+                    report_error(fmt::format("Recursive include detected for file {} in file {}",
+                                             included_file.value().path, path));
+                    continue;
+                }
+                auto saved_path = path;
+                auto saved_line = line_number;
+                path = included_file.value().path;
+                active_includes.insert(path);
+                source_map.close_range(output_line_n);
+                auto f_opt = mm_file::try_open(path);
+                if (!f_opt.has_value()) {
+                    report_error(fmt::format("Could not open include file: {}", path));
+                } else {
+                    // Shared instance: included defines join this file's scope.
+                    auto content = preprocess_body(f_opt->view(), output_line_n);
+                    if (!error) {
+                        std::istringstream spliced(content);
+                        std::string spliced_line;
+                        while (std::getline(spliced, spliced_line)) {
+                            out_lines.push_back(spliced_line);
+                        }
+                    }
+                }
+                active_includes.erase(path);
+                line_number = saved_line;
+                path = saved_path;
+                source_map.open_range(output_line_n, path);
+            } else {
+                out_lines.push_back(line);
+            }
+        }
+        std::string result;
+        for (size_t i = 0; i < out_lines.size(); ++i) {
+            if (i != 0) result.push_back('\n');
+            result.append(out_lines[i]);
+        }
+        if (!text.empty() && text.back() == '\n') result.push_back('\n');
+        return result;
+    }
+
     std::string sv_preprocessor::post_process_macro_expansion(const std::string &text) {
         std::string output_line = text;
         if (output_line.contains("`ifdef") || output_line.contains("`ifndef") ||
@@ -451,17 +582,29 @@ namespace preprocessor {
             nested_preproc.repo_idx = repo_idx;
             nested_preproc.path = path;
 
-            // Evaluate the conditional branches cleanly using the existing rules
-            output_line = nested_preproc.preprocess(formatted, output_line_n) + '\n';
+            // Evaluate the conditional branches cleanly using the existing rules.
+            // Body directly: definitions were pre-populated above and must
+            // not be re-seeded (the seeding entry would wipe them).
+            output_line = nested_preproc.preprocess_body(formatted, output_line_n) + '\n';
+            // Propagate order-dependent unknowns: a macro hidden inside an
+            // embedded conditional is just as quarantine-worthy.
+            undefined_macros.insert(nested_preproc.undefined_macros.begin(),
+                                    nested_preproc.undefined_macros.end());
+            unknown_conditionals.insert(nested_preproc.unknown_conditionals.begin(),
+                                        nested_preproc.unknown_conditionals.end());
             if (nested_preproc.has_error()) {
                 spdlog::error(nested_preproc.get_error());
                 if (!error) error = nested_preproc.get_error();
+                if (nested_preproc.has_fatal_error()) fatal_error = true;
                 return "";
             }
 
             definitions = nested_preproc.definitions;
+            locally_defined.insert(nested_preproc.locally_defined.begin(),
+                                   nested_preproc.locally_defined.end());
             includes.insert(nested_preproc.includes.begin(), nested_preproc.includes.end());
         }
+        output_line = evaluate_embedded_directives(output_line);
         if (output_line.contains("/*")) {
             std::string stripped;
             stripped.reserve(output_line.size());

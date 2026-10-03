@@ -364,6 +364,27 @@ std::optional<std::vector<include_dependency>> data_store::get_includes(const st
     return cache.at(name).includes;
 }
 
+std::unordered_map<std::string, std::vector<stored_macro_def>> data_store::get_all_macro_definitions() const {
+    std::unordered_map<std::string, std::vector<stored_macro_def>> result;
+    for (const auto &[path, file] : cache) {
+        if (!file.macro_definitions.empty()) result[path] = file.macro_definitions;
+    }
+    return result;
+}
+
+std::vector<std::string> data_store::get_macro_dependencies(const std::string &name) const {
+    if (!cache.contains(name)) return {};
+    return cache.at(name).macro_dependencies;
+}
+
+std::vector<std::string> data_store::get_files_with_macro_dependencies() const {
+    std::vector<std::string> result;
+    for (const auto &[path, file] : cache) {
+        if (!file.macro_dependencies.empty()) result.push_back(path);
+    }
+    return result;
+}
+
 
 
 
@@ -396,9 +417,18 @@ void data_store::load_cache() {
             return;
         }
         archive_in(cache);
+        // Fingerprint entry postdates older archives; absence means
+        // "unknown previous table", which conservatively forces macro
+        // dependent revalidation downstream.
+        try {
+            archive_in(macro_table_fingerprint);
+        } catch (const std::exception &) {
+            macro_table_fingerprint.clear();
+        }
     } catch (const std::exception &e) {
         spdlog::warn("Could not load cache file {} ({}), starting with an empty cache", unified_cache, e.what());
         cache.clear();
+        macro_table_fingerprint.clear();
     }
 }
 
@@ -413,7 +443,7 @@ void data_store::store_cache() {
             return;
         }
         cereal::BinaryOutputArchive archive_out(os);
-        archive_out(get_cache_schema_hash(), cache);
+        archive_out(get_cache_schema_hash(), cache, macro_table_fingerprint);
     } catch (const std::exception &e) {
         spdlog::error("Could not save cache file {}: {}", unified_cache, e.what());
     }

@@ -58,6 +58,11 @@ void Repository_walker::analyze_dir() {
         previous_hashes[file.string()] = d_store->get_hash(file.string());
     }
 
+    // Seed the compilation-order macro table from persisted per-file entries
+    // (cache-skipped files contribute without being re-parsed).
+    seed_macro_table();
+    table_at_seed_ = macro_table_.rendered_by_name();
+
     for (auto &file: scanned_files) {
         if(working_threads == 2*max_threads){
            this->collect_analysis_results();
@@ -65,9 +70,34 @@ void Repository_walker::analyze_dir() {
         analyze_file(file);
     }
     this->collect_analysis_results();
+    run_macro_fixpoint();
 
     // Re-parse cache-hit files whose (transitive) includes changed.
     invalidate_stale_includes();
+    run_macro_fixpoint();
+
+    // Re-parse cache-skipped macro consumers whose macros changed meaning.
+    invalidate_stale_macros();
+    run_macro_fixpoint();
+
+    // Revalidate branch decisions taken with partial knowledge.
+    validation_sweep();
+    run_macro_fixpoint();
+
+    report_quarantine_errors();
+    d_store->set_macro_table_fingerprint(macro_table_fingerprint());
+}
+
+void Repository_walker::seed_macro_table() {
+    for (const auto &[path, defs] : d_store->get_all_macro_definitions()) {
+        preprocessor::macro_definitions_map live;
+        for (const auto &stored : defs) live[stored.name] = macro_to_live(stored);
+        macro_table_.add_file_definitions(path, live);
+    }
+}
+
+std::string Repository_walker::macro_table_fingerprint() const {
+    return hash_file(macro_table_.canonical_string()).value_or("");
 }
 
 /// Scan the repository once, building the repository index (basename -> paths) and the list of
@@ -99,12 +129,73 @@ void Repository_walker::scan_repository() {
 
 void Repository_walker::collect_analysis_results() {
     pool.wait_for_tasks();
+
+    for (auto &f : hdl_futures) {
+        try {
+            auto ctx = f.get();
+            if (ctx.cache_skipped) {
+                if (!ctx.path.empty()) file_hashes[ctx.path] = ctx.hash;
+                continue;
+            }
+            if (ctx.quarantined) {
+                auto &entry = quarantine_[ctx.path];
+                entry.undefined_macros.insert(ctx.undefined_macros.begin(),
+                                              ctx.undefined_macros.end());
+                entry.unknown_conditionals.insert(ctx.unknown_conditionals.begin(),
+                                                  ctx.unknown_conditionals.end());
+                entry.hash = ctx.hash;
+                macro_table_.add_file_definitions(ctx.path, ctx.harvested);
+                const size_t pending =
+                    entry.undefined_macros.size() + entry.unknown_conditionals.size();
+                spdlog::trace("Deferring {}: {} order-dependent macro(s) unresolved",
+                              ctx.path, pending);
+                continue;
+            }
+            if (!ctx.path.empty()) {
+                // Uniform rule: every analyzed file replaces its own table
+                // entry (possibly empty), so stale bodies can never linger.
+                macro_table_.add_file_definitions(ctx.path, ctx.harvested);
+                quarantine_.erase(ctx.path);
+                last_injections_.erase(ctx.path);
+            }
+            if (ctx.resource) {
+                file_hashes[ctx.path] = ctx.hash;
+                // Macro deps = injected names consumed here plus names that
+                // were queried-unknown at parse time (branch-flip detection).
+                std::set<std::string> needs(ctx.unknown_conditionals.begin(),
+                                            ctx.unknown_conditionals.end());
+                std::map<std::string, std::string> consumed;
+                if (auto pit = pending_injections_.find(ctx.path); pit != pending_injections_.end()) {
+                    for (const auto &[name, def] : pit->second) {
+                        needs.insert(name);
+                        consumed[name] = macro_canonical_body(def);
+                    }
+                    pending_injections_.erase(pit);
+                }
+                parsed_unknowns_[ctx.path] = ctx.unknown_conditionals;
+                parsed_consumed_[ctx.path] = std::move(consumed);
+                freshly_parsed_.insert(ctx.path);
+                std::vector<stored_macro_def> stored_defs;
+                for (const auto &[name, def] : ctx.harvested) {
+                    stored_defs.push_back(macro_to_stored(name, def));
+                }
+                std::vector<std::string> deps(needs.begin(), needs.end());
+                d_store->store_file({ctx.path, ctx.hash, ctx.resource.value(),
+                                     ctx.includes, stored_defs, deps});
+            }
+        } catch (const std::exception &e) {
+            spdlog::error("Error analyzing a file: {}", e.what());
+        } catch (...) {
+            spdlog::error("Unknown error while analyzing a file");
+        }
+    }
+    hdl_futures.clear();
     auto store = [this](auto &futures) {
         for(auto &f : futures) {
             try {
-                auto [path, file_hash, resource, includes] = f.get();
-                if (!path.empty()) file_hashes[path] = file_hash;
-                if (resource) d_store->store_file({path, file_hash, resource.value(), includes});
+                auto ctx = f.get();
+                if (!ctx.path.empty()) file_hashes[ctx.path] = ctx.hash;
+                if (ctx.resource) d_store->store_file({ctx.path, ctx.hash, ctx.resource.value(), ctx.includes});
             } catch (const std::exception &e) {
                 spdlog::error("Error analyzing a file: {}", e.what());
             } catch (...) {
@@ -113,7 +204,6 @@ void Repository_walker::collect_analysis_results() {
         }
         futures.clear();
     };
-    store(hdl_futures);
     store(scripts_futures);
     store(constraints_futures);
     store(data_futures);
@@ -150,6 +240,183 @@ void Repository_walker::invalidate_stale_includes() {
         analyze_file(file);
     }
     if (!stale.empty()) this->collect_analysis_results();
+}
+
+/// Bounded fixpoint over quarantined files: each round re-submits every file
+/// whose injection changed since its last attempt (the table only gains
+/// entries from other files' harvests, so identical injections would repeat
+/// the identical outcome). Termination is structural: attempts are
+/// deduplicated by injection content and rounds are capped.
+void Repository_walker::run_macro_fixpoint() {
+    // Operates on the whole repo at once: pass 1 (the caller) always spans
+    // every scanned file, so by the time this runs the table holds complete
+    // knowledge and one round resolves everything resolvable. Further rounds
+    // only serve revelation chains (an injected macro's expansion revealing
+    // the next unknown).
+    const size_t initial = quarantine_.size();
+    if (initial == 0) return;
+    int pass = 0;
+    while (!quarantine_.empty() && pass < max_macro_passes) {
+        const std::string table_before = macro_table_.canonical_string();
+        const size_t quarantine_before = quarantine_.size();
+        std::vector<std::pair<std::filesystem::path, preprocessor::macro_definitions_map>> work;
+        for (const auto &[path, entry] : quarantine_) {
+            std::set<std::string> needs(entry.undefined_macros.begin(), entry.undefined_macros.end());
+            needs.insert(entry.unknown_conditionals.begin(), entry.unknown_conditionals.end());
+            auto injection = macro_table_.build_injection(needs, path);
+            auto last = last_injections_.find(path);
+            if (last != last_injections_.end() && last->second == injection.definitions) continue;
+            work.emplace_back(std::filesystem::path(path), injection.definitions);
+        }
+        if (work.empty()) break;
+        for (auto &[file, injected] : work) {
+            if (working_threads == 2 * max_threads) collect_analysis_results();
+            last_injections_[file.string()] = injected;
+            analyze_file_with_injection(file, injected);
+        }
+        collect_analysis_results();
+        ++pass;
+        // Stall: nothing left quarantine and the table learned nothing new
+        // (e.g. staggered definers settled). Further passes would repeat
+        // identical attempts.
+        if (quarantine_.size() == quarantine_before &&
+            macro_table_.canonical_string() == table_before) {
+            break;
+        }
+    }
+    spdlog::trace("Macro fixpoint: {} quarantined repo-wide, {} remaining after {} pass(es)",
+                  initial, quarantine_.size(), pass);
+}
+
+/// Revalidate parses whose branch decisions were taken with partial
+/// knowledge: a consumed macro body that no longer matches the final table,
+/// or a recorded-unknown conditional that is now a known macro, means the
+/// file must be re-parsed with current knowledge.
+void Repository_walker::validation_sweep() {
+    if (macro_table_.empty()) return;
+    std::vector<std::filesystem::path> drifted;
+    for (const auto &path : freshly_parsed_) {
+        bool drift = false;
+        if (auto cit = parsed_consumed_.find(path); cit != parsed_consumed_.end()) {
+            for (const auto &[name, body] : cit->second) {
+                auto resolution = macro_table_.resolve(name);
+                if (resolution.state != macro_table::resolution::status::unique ||
+                    macro_canonical_body(resolution.definition) != body) {
+                    drift = true;
+                    break;
+                }
+            }
+        }
+        if (!drift) {
+            // Unknown conditionals only matter when the re-parse would see
+            // something new: same self-exclusion as injection (a file's own
+            // include guards must never flip its branches).
+            if (auto uit = parsed_unknowns_.find(path); uit != parsed_unknowns_.end()) {
+                auto probe = macro_table_.build_injection(uit->second, path);
+                if (!probe.definitions.empty()) drift = true;
+            }
+        }
+        if (drift) drifted.emplace_back(path);
+    }
+    for (auto &file : drifted) {
+        spdlog::trace("Revalidating {}: repository macros changed under it", file.string());
+        d_store->evict_file(file.string());
+        last_injections_.erase(file.string());
+        std::set<std::string> needs;
+        if (auto uit = parsed_unknowns_.find(file.string()); uit != parsed_unknowns_.end()) {
+            needs.insert(uit->second.begin(), uit->second.end());
+        }
+        if (auto cit = parsed_consumed_.find(file.string()); cit != parsed_consumed_.end()) {
+            for (const auto &[name, ignored] : cit->second) {
+                (void)ignored;
+                needs.insert(name);
+            }
+        }
+        auto injection = macro_table_.build_injection(needs, file.string());
+        if (working_threads == 2 * max_threads) collect_analysis_results();
+        last_injections_[file.string()] = injection.definitions;
+        analyze_file_with_injection(file, injection.definitions);
+    }
+    if (!drifted.empty()) collect_analysis_results();
+}
+
+/// Re-parse cache-skipped macro consumers whose macros changed meaning since
+/// their parse: a consumed or queried-unknown name that was added, removed,
+/// or redefined invalidates the stored parse.
+void Repository_walker::invalidate_stale_macros() {
+    const auto current = macro_table_.rendered_by_name();
+    std::set<std::string> changed;
+    for (const auto &[name, rendered] : current) {
+        auto it = table_at_seed_.find(name);
+        if (it == table_at_seed_.end() || it->second != rendered) changed.insert(name);
+    }
+    for (const auto &[name, ignored] : table_at_seed_) {
+        (void)ignored;
+        if (!current.contains(name)) changed.insert(name);
+    }
+    if (changed.empty()) return;
+    bool submitted = false;
+    for (auto &file : scanned_files) {
+        if (!file_is_verilog(file)) continue;
+        const std::string path = file.string();
+        if (freshly_parsed_.contains(path)) continue;
+        const auto deps = d_store->get_macro_dependencies(path);
+        bool stale = false;
+        for (const auto &dep : deps) {
+            if (changed.contains(dep)) {
+                stale = true;
+                break;
+            }
+        }
+        if (!stale) continue;
+        spdlog::trace("Invalidating {}: a consumed macro changed", path);
+        const auto deps_snapshot = deps;
+        d_store->evict_file(path);
+        last_injections_.erase(path);
+        auto injection = macro_table_.build_injection({deps_snapshot.begin(), deps_snapshot.end()}, path);
+        if (working_threads == 2 * max_threads) collect_analysis_results();
+        last_injections_[path] = injection.definitions;
+        analyze_file_with_injection(file, injection.definitions);
+        submitted = true;
+    }
+    if (submitted) collect_analysis_results();
+}
+
+void Repository_walker::report_quarantine_errors() {
+    for (const auto &[path, entry] : quarantine_) {
+        // Blocker-first: names that are absent or conflicted doom the file
+        // regardless of the rest; resolvable names held back by those
+        // blockers are collateral and reported only when nothing else blocks.
+        bool blocked = false;
+        for (const auto &name : entry.undefined_macros) {
+            auto resolution = macro_table_.resolve(name);
+            if (resolution.state == macro_table::resolution::status::conflict) {
+                blocked = true;
+                std::string definers;
+                for (size_t i = 0; i < resolution.definers.size(); ++i) {
+                    if (i != 0) definers += ", ";
+                    definers += resolution.definers[i];
+                }
+                spdlog::error("Error analyzing {}: macro {} has conflicting definitions in: {}",
+                              path, name, definers);
+            } else if (resolution.state == macro_table::resolution::status::absent) {
+                blocked = true;
+                spdlog::error("Error analyzing {}: macro {} is not defined in the repository "
+                              "(used here but defined in no analyzed file)",
+                              path, name);
+            }
+        }
+        if (!blocked) {
+            for (const auto &name : entry.undefined_macros) {
+                auto resolution = macro_table_.resolve(name);
+                if (resolution.state == macro_table::resolution::status::unique) {
+                    spdlog::error("Error analyzing {}: macro {} defined in {} could not be resolved "
+                                  "within {} fixpoint passes",
+                                  path, name, resolution.definers.front(), max_macro_passes);
+                }
+            }
+        }
+    }
 }
 
 
@@ -218,7 +485,7 @@ void Repository_walker::analyze_file(std::filesystem::path &file) {
     spdlog::trace("Analizing file: {}", file.string());
     if(file_is_verilog(file)){
         auto old_hash = d_store->get_hash(file);
-        hdl_futures.push_back(pool.submit(analyze_verilog, file, default_includes, default_defines, old_hash, repository_index_p));
+        hdl_futures.push_back(pool.submit(analyze_verilog, file, default_includes, default_defines, old_hash, repository_index_p, preprocessor::macro_definitions_map{}));
         working_threads++;
     } else if(file_is_script(file)){
         std::set<std::string> includes;
@@ -241,6 +508,17 @@ void Repository_walker::analyze_file(std::filesystem::path &file) {
         working_threads++;
     }
 
+}
+
+void Repository_walker::analyze_file_with_injection(std::filesystem::path &file,
+                                                    const preprocessor::macro_definitions_map &injected) {
+    if (!file_is_verilog(file)) return;
+    spdlog::trace("Analizing file: {}", file.string());
+    auto old_hash = d_store->get_hash(file);
+    pending_injections_[file.string()] = injected;
+    hdl_futures.push_back(pool.submit(analyze_verilog, file, default_includes, default_defines,
+                                      old_hash, repository_index_p, injected));
+    working_threads++;
 }
 
 /// Check if the target file appertains to the verilog language family
@@ -283,11 +561,14 @@ bool Repository_walker::file_is_data(const std::filesystem::path &file) {
 
 /// Analyze the target verilog-type file to extract declared and used instantiated design elements
 /// \param file Target file
+/// \param injected Repository-learned macro definitions seeding this parse
+///        (compilation-order macros; file-local and global defines win over it)
 file_analysis_context<hdl_file> analyze_verilog(
     const std::filesystem::path &file,
     std::set<std::string> i_d, std::set<std::string> defines,
     const std::string &old_hash,
-    const std::shared_ptr<repository_index> &idx
+    const std::shared_ptr<repository_index> &idx,
+    const preprocessor::macro_definitions_map &injected
 ) {
     spdlog::trace("PARSING: {}", file.c_str());
     try {
@@ -304,19 +585,44 @@ file_analysis_context<hdl_file> analyze_verilog(
         }
         std::string hash = hash_opt.value();
         if (old_hash == hash) {
-            return {file.string(), hash, std::nullopt};
+            file_analysis_context<hdl_file> skipped;
+            skipped.path = file.string();
+            skipped.hash = hash;
+            skipped.cache_skipped = true;
+            return skipped;
         }
         sv_analyzer file_processor;
         file_processor.set_include_directories(i_d);
         file_processor.set_defines(defines);
         file_processor.set_repository_index(idx);
+        file_processor.set_injected_definitions(injected);
         auto analysis = file_processor.analyze(file, f_opt->view());
+        // Uniform harvest carrier: every analyzed file reports the
+        // definitions its preprocessing collected (partial on abort), so the
+        // collector can keep the macro table in sync unconditionally.
+        file_analysis_context<hdl_file> ctx;
+        ctx.path = file.string();
+        ctx.hash = hash;
+        ctx.undefined_macros = file_processor.get_undefined_macros();
+        ctx.unknown_conditionals = file_processor.get_unknown_conditionals();
+        ctx.harvested = file_processor.get_harvested_definitions();
         if (!analysis.has_value()) {
+            // Quarantine instead of erroring when the ONLY thing missing is
+            // repository-learnable: undefined macros and/or conditionals
+            // queried while unknown. Anything fatal (bad includes, syntax,
+            // macro misuse) errors out immediately, as before.
+            if (!file_processor.has_fatal_error() &&
+                (!ctx.undefined_macros.empty() || !ctx.unknown_conditionals.empty())) {
+                ctx.quarantined = true;
+                return ctx;
+            }
             spdlog::error("Error analyzing {}: {}", file.string(), file_processor.get_error());
-            return {};
+            return ctx;
         }
         auto includes = file_processor.get_includes();
-        return {file.string(), hash, analysis.value(), {includes.begin(), includes.end()}};
+        ctx.resource = analysis.value();
+        ctx.includes = {includes.begin(), includes.end()};
+        return ctx;
     } catch (const std::exception &err) {
         spdlog::error("Error analyzing {}: {}", file.string(), err.what());
         return {};

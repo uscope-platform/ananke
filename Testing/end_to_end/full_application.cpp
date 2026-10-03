@@ -473,11 +473,14 @@ std::string setup_auto_discovery_repo() {
     return e2e_settings_path;
 }
 
-// Expected synth.tcl for the auto-discovery repository: `discovered` toggles
-// whether the top source and its discovered include directory are present.
-std::string auto_disc_synth_script(const std::string &base, bool discovered) {
-    std::string sources = discovered ? "\t" + base + "/rtl/top.sv\n" : "";
-    std::string inc_dirs = discovered ? "\t" + base + "/Common\n" : "";
+// Expected synth.tcl for the auto-discovery repository: `with_sources`
+// toggles the top source, `with_inc_dirs` the discovered include directory.
+// They differ when the macro table resolves the header macro even though the
+// include itself stayed unresolved (discovery off): sources present,
+// inc_dirs empty.
+std::string auto_disc_synth_script(const std::string &base, bool with_sources, bool with_inc_dirs) {
+    std::string sources = with_sources ? "\t" + base + "/rtl/top.sv\n" : "";
+    std::string inc_dirs = with_inc_dirs ? "\t" + base + "/Common\n" : "";
     return "set outputDir ./project_output\n"
            "file mkdir $outputDir\n"
            "cd $outputDir\n"
@@ -532,7 +535,7 @@ TEST( end_to_end , include_auto_discovery) {
     // The unique header must have been auto-discovered: the top module parses
     // (its BUS_WIDTH macro resolves) and its directory is emitted as an include
     // path for the toolchain.
-    EXPECT_EQ(result, auto_disc_synth_script(repo, true));
+    EXPECT_EQ(result, auto_disc_synth_script(repo, true, true));
 
     std::filesystem::current_path(wd);
     e2e_clean_settings();
@@ -565,7 +568,12 @@ TEST( end_to_end , include_auto_discovery_disabled) {
     // With the toggle off the walker never builds the index, the include stays
     // unresolved, the macro is undefined and the top module is not analyzed:
     // the synthesis sources and include dirs are empty.
-    EXPECT_EQ(result, auto_disc_synth_script(repo, false));
+    // With the toggle off the walker never builds the index, so the include
+    // stays unresolved and no include directory is emitted. The macro itself
+    // is still learned from the repository macro table (defs.svh parses
+    // standalone), so the top module IS analyzed: sources present, inc_dirs
+    // empty.
+    EXPECT_EQ(result, auto_disc_synth_script(repo, true, false));
 
     std::filesystem::current_path(wd);
     e2e_clean_settings();
@@ -592,7 +600,7 @@ TEST( end_to_end , include_auto_discovery_cached) {
         ASSERT_FALSE(uut.build_flow().has_value());
     }
 
-    std::string expected = auto_disc_synth_script(repo, true);
+    std::string expected = auto_disc_synth_script(repo, true, true);
 
     // Second run: nothing changed, everything is a cache hit (no re-parse).
     ananke uut(opts);
@@ -635,7 +643,7 @@ TEST( end_to_end , include_auto_discovery_invalidation) {
         std::ifstream ifs("synth.tcl");
         std::stringstream ss;
         ss << ifs.rdbuf();
-        EXPECT_EQ(ss.str(), auto_disc_synth_script(repo, true));
+        EXPECT_EQ(ss.str(), auto_disc_synth_script(repo, true, true));
     }
 
     // Break the header: BUS_WIDTH becomes undefined, so the top module can no
@@ -653,7 +661,7 @@ TEST( end_to_end , include_auto_discovery_invalidation) {
     std::ifstream ifs("synth.tcl");
     std::stringstream ss;
     ss << ifs.rdbuf();
-    EXPECT_EQ(ss.str(), auto_disc_synth_script(repo, false));
+    EXPECT_EQ(ss.str(), auto_disc_synth_script(repo, false, false));
 
     std::filesystem::current_path(wd);
     e2e_clean_settings();

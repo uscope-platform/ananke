@@ -123,6 +123,7 @@ target_sources(ananke_lib
     frontend/analysis/system_verilog/sv_analyzer.cpp
     frontend/Repository_walker.cpp
     frontend/repository_index.cpp
+    frontend/macro_table.cpp
     frontend/analysis/vhdl/vhdl_analyzer.cpp
     frontend/analysis/system_verilog/documentation_analyzer.cpp
     frontend/analysis/vhdl/vhdl_visitor.cpp

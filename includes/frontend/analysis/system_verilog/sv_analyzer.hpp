@@ -43,17 +43,28 @@ public:
     void set_include_directories(const std::set<std::string> &i_d){include_directories = i_d;}
     void set_repository_index(const std::shared_ptr<repository_index> &idx){repo_idx = idx;}
     void set_defines(const std::set<std::string> &d){defines = d;}
+    void set_injected_definitions(const preprocessor::macro_definitions_map &m){injected = m;}
     std::set<include_dependency> get_includes() {return includes;}
     [[nodiscard]] bool has_error() const {return last_error.has_value();}
     [[nodiscard]] const std::string& get_error() const {return last_error.value();}
+    [[nodiscard]] bool has_fatal_error() const {return fatal_error;}
+    [[nodiscard]] const std::set<std::string>& get_undefined_macros() const {return undefined_macros;}
+    [[nodiscard]] const std::set<std::string>& get_unknown_conditionals() const {return unknown_conditionals;}
+    [[nodiscard]] const preprocessor::macro_definitions_map& get_harvested_definitions() const {return harvested;}
 private:
 
     hdl_file process_hdl(const std::string &path, const std::string &preprocessed_content);
+    void capture_preprocessor_state(preprocessor::sv_preprocessor &preproc);
     std::set<std::string> include_directories;
     std::set<std::string> defines;
+    preprocessor::macro_definitions_map injected;
     std::shared_ptr<repository_index> repo_idx;
     std::set<include_dependency> includes;
     std::optional<std::string> last_error;
+    bool fatal_error = false;
+    std::set<std::string> undefined_macros;
+    std::set<std::string> unknown_conditionals;
+    preprocessor::macro_definitions_map harvested;
 };
 
 

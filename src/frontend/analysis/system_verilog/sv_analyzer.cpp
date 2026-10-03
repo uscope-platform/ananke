@@ -23,36 +23,54 @@
 #include <BailErrorStrategy.h>
 
 
+void sv_analyzer::capture_preprocessor_state(preprocessor::sv_preprocessor &preproc) {
+    includes = preproc.get_includes();
+    fatal_error = preproc.has_fatal_error();
+    undefined_macros = preproc.get_undefined_macros();
+    unknown_conditionals = preproc.get_unknown_conditionals();
+    harvested = preproc.get_harvested_definitions();
+}
+
 std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const std::string &path, const std::string_view &content) {
     last_error.reset();
     includes.clear();
+    fatal_error = false;
+    undefined_macros.clear();
+    unknown_conditionals.clear();
+    harvested.clear();
     preprocessor::sv_preprocessor preproc;
     preproc.set_path(path);
     preproc.set_include_directories(include_directories);
     preproc.set_defines(defines);
+    preproc.set_base_definitions(injected);
     if (repo_idx) preproc.set_repository_index(repo_idx);
     auto processed_content = preproc.preprocess(content);
     if (preproc.has_error()) last_error = preproc.get_error();
-    includes = preproc.get_includes();
+    capture_preprocessor_state(preproc);
     auto documentation_comments = preproc.get_documentation_comments();
     return {processed_content, documentation_comments};
 }
 
-
 std::optional<hdl_file> sv_analyzer::analyze(const std::string &path, const std::string_view &file_content) {
     last_error.reset();
     includes.clear();
+    fatal_error = false;
+    undefined_macros.clear();
+    unknown_conditionals.clear();
+    harvested.clear();
     preprocessor::sv_preprocessor preproc;
     preproc.set_path(path);
     preproc.set_include_directories(include_directories);
     preproc.set_defines(defines);
+    preproc.set_base_definitions(injected);
     if (repo_idx) preproc.set_repository_index(repo_idx);
     auto processed_content = preproc.preprocess(file_content);
     if (preproc.has_error()) {
         last_error = preproc.get_error();
+        capture_preprocessor_state(preproc);
         return std::nullopt;
     }
-    includes = preproc.get_includes();
+    capture_preprocessor_state(preproc);
     auto documentation_comments = preproc.get_documentation_comments();
     auto sources_map = preproc.get_source_map();
 

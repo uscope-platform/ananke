@@ -16,16 +16,35 @@
 
 #include "frontend/analysis/system_verilog/preprocessor/macro_processor.hpp"
 #include <spdlog/spdlog.h>
+#include <mutex>
 
 static constexpr size_t MAX_MACRO_EXPANSION_SIZE = 64 * 1024 * 1024;
 static constexpr int MAX_NONCONVERGING_PASSES = 16;
 
+namespace {
+std::mutex stripped_warn_mutex;
+bool uvm_warned = false;
+bool ovm_warned = false;
+}
+
 namespace preprocessor {
     // UVM/OVM macros come from the external simulator library (uvm_macros.svh),
-    // which is normally not part of the analyzed repository. Failing the whole
-    // file on them makes sim builds unusable, so they are stripped with a
-    // warning instead of raising a fatal error. Strict checking is kept for
-    // every other macro (typos, missing `defines, ...).
+    // which is normally not part of the analyzed repository
+    // The warning fires once per macro name per process: on UVM-heavy trees
+    // every instance would otherwise format and emit a log line.
+    static void warn_stripped_once(const std::string &id, const std::string &path) {
+        const char first =
+            static_cast<char>(std::tolower(static_cast<unsigned char>(id[0])));
+        const char *family = (first == 'u') ? "UVM" : "OVM";
+        std::lock_guard<std::mutex> lock(stripped_warn_mutex);
+        bool &already_warned = (first == 'u') ? uvm_warned : ovm_warned;
+        if (!already_warned) {
+            already_warned = true;
+            spdlog::warn("Stripping undefined {} macros ({} library not vendored; "
+                         "further {} macros stripped silently, e.g. {} in file {})",
+                         family, family, family, id, path);
+        }
+    }
     static bool is_external_methodology_macro(const std::string &id) {
         if (id.size() < 4) return false;
         char c0 = static_cast<char>(std::tolower(static_cast<unsigned char>(id[0])));
@@ -37,16 +56,23 @@ namespace preprocessor {
     }
 
     macro_processor::macro_processor(
-    std::unordered_map<std::string, std::variant<std::string, function_macro>> &d,
+    macro_definitions_map &d,
         uint64_t &l_n,
         std::string &p,
-        std::optional<std::string> &e) : definitions(d), line_number(l_n), path(p), error(e)
+        std::optional<std::string> &e,
+        std::set<std::string> &u,
+        bool &f) : definitions(d), line_number(l_n), path(p), error(e), undefined_macros(u), fatal_error(f)
     {
     }
 
     void macro_processor::report_error(const std::string &msg) {
         spdlog::error(msg);
         if (!error) error = msg;
+        fatal_error = true;
+    }
+
+    void macro_processor::report_undefined(const std::string &id) {
+        undefined_macros.insert(id);
     }
 
     std::string macro_processor::process_macro(const std::string_view &in) {
@@ -70,15 +96,21 @@ namespace preprocessor {
                     auto id = std::string(trim(id_view));
                     size_t start_pos = (match.data() + match.size()) - remaining.data();
                     auto args_text = remaining.substr(start_pos);
+                    if (is_structural_directive(id)) {
+                        result.append(match.view());
+                        remaining = args_text;
+                        continue;
+                    }
                     auto [args, rest_of_line] = get_call_arguments(args_text);
                     if (!definitions.contains(id)) {
                         if (is_external_methodology_macro(id)) {
-                            spdlog::warn("Stripping undefined external macro {} in file {} (UVM/OVM library not vendored)", id, path);
+                            warn_stripped_once(id, path);
                             remaining = rest_of_line;
                             continue;
                         }
-                        report_error(fmt::format("Attempted to use undefined macro {} in file {}", id, path));
-                        return "";
+                        report_undefined(id);
+                        remaining = rest_of_line;
+                        continue;
                     }
                     auto macro = definitions.at(id);
                     if (std::holds_alternative<std::string>(macro)) {
@@ -339,17 +371,16 @@ namespace preprocessor {
             replacement = std::to_string(line_number);
         } else {
             // Prevent embedded structural directives from being evaluated as substitution macros
-            if (purged_identifier == "ifdef" || purged_identifier == "ifndef" ||
-                purged_identifier == "else"  || purged_identifier == "elsif"  || purged_identifier == "endif") {
+            if (is_structural_directive(purged_identifier)) {
                 return std::string(identifier);
             }
             auto id = std::string(purged_identifier);
             if (!definitions.contains(id)) {
                 if (is_external_methodology_macro(id)) {
-                    spdlog::warn("Stripping undefined external macro {} at {}:{} (UVM/OVM library not vendored)", id, path, line_number);
+                    warn_stripped_once(id, path);
                     return "";
                 }
-                report_error(fmt::format("{}:{} MACRO {} is not defined", path, line_number, id));
+                report_undefined(id);
                 return std::string(identifier);
             }
             auto def = definitions.at(id);
