@@ -21,6 +21,21 @@ static constexpr size_t MAX_MACRO_EXPANSION_SIZE = 64 * 1024 * 1024;
 static constexpr int MAX_NONCONVERGING_PASSES = 16;
 
 namespace preprocessor {
+    // UVM/OVM macros come from the external simulator library (uvm_macros.svh),
+    // which is normally not part of the analyzed repository. Failing the whole
+    // file on them makes sim builds unusable, so they are stripped with a
+    // warning instead of raising a fatal error. Strict checking is kept for
+    // every other macro (typos, missing `defines, ...).
+    static bool is_external_methodology_macro(const std::string &id) {
+        if (id.size() < 4) return false;
+        char c0 = static_cast<char>(std::tolower(static_cast<unsigned char>(id[0])));
+        char c1 = static_cast<char>(std::tolower(static_cast<unsigned char>(id[1])));
+        char c2 = static_cast<char>(std::tolower(static_cast<unsigned char>(id[2])));
+        if (c0 != 'u' && c0 != 'o') return false;
+        if (c1 != 'v' || c2 != 'm') return false;
+        return id[3] == '_';
+    }
+
     macro_processor::macro_processor(
     std::unordered_map<std::string, std::variant<std::string, function_macro>> &d,
         uint64_t &l_n,
@@ -57,6 +72,11 @@ namespace preprocessor {
                     auto args_text = remaining.substr(start_pos);
                     auto [args, rest_of_line] = get_call_arguments(args_text);
                     if (!definitions.contains(id)) {
+                        if (is_external_methodology_macro(id)) {
+                            spdlog::warn("Stripping undefined external macro {} in file {} (UVM/OVM library not vendored)", id, path);
+                            remaining = rest_of_line;
+                            continue;
+                        }
                         report_error(fmt::format("Attempted to use undefined macro {} in file {}", id, path));
                         return "";
                     }
@@ -325,6 +345,10 @@ namespace preprocessor {
             }
             auto id = std::string(purged_identifier);
             if (!definitions.contains(id)) {
+                if (is_external_methodology_macro(id)) {
+                    spdlog::warn("Stripping undefined external macro {} at {}:{} (UVM/OVM library not vendored)", id, path, line_number);
+                    return "";
+                }
                 report_error(fmt::format("{}:{} MACRO {} is not defined", path, line_number, id));
                 return std::string(identifier);
             }

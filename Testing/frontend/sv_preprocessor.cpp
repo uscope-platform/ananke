@@ -165,6 +165,56 @@ TEST(preprocessor, undef) {
     EXPECT_TRUE(preproc.has_error());
 }
 
+TEST(preprocessor, uvm_function_macro_stripped_without_error) {
+    auto test_pattern = R"(
+        class my_test extends uvm_test;
+            `uvm_component_utils(my_test)
+            function void build_phase(uvm_phase phase);
+                `uvm_info("TEST", "hello", UVM_LOW)
+            endfunction
+        endclass
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        class my_test extends uvm_test;
+            
+            function void build_phase(uvm_phase phase);
+                
+            endfunction
+        endclass
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+}
+
+TEST(preprocessor, uvm_simple_macro_stripped_without_error) {
+    auto test_pattern = R"(
+        class my_cfg extends uvm_object;
+            `uvm_object_utils_begin(my_cfg)
+                `uvm_field_int(my_field, UVM_DEFAULT)
+            `uvm_object_utils_end
+        endclass
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        class my_cfg extends uvm_object;
+            
+                
+            
+        endclass
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+}
+
 TEST(preprocessor, global_defines) {
     auto test_pattern = R"(
         module test_module ();
