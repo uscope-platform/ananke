@@ -117,7 +117,9 @@ TEST( hdl_ast_builder, spi_ast_build) {
             if(f.path().extension() == ".v" || f.path().extension() == ".sv"){
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
-                analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
+                parse_options analyzer_opts;
+                analyzer_opts.include_directories = {std::string(prefix) + "Components/Common"};
+                analyzer.set_options(analyzer_opts);
 
                 auto resources = analyzer.analyze("", test_file.view()).value();
                 d_store->store_file({f.path(), "file_hash", resources});

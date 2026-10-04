@@ -25,6 +25,7 @@
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/include_dependency.hpp"
+#include "data_model/parse_options.hpp"
 
 #include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
 #include "frontend/repository_index.hpp"
@@ -40,9 +41,8 @@ class sv_analyzer {
 public:
     std::pair<std::string, std::vector<std::string>> preprocess(const std::string &path, const std::string_view &file_content);
     std::optional<hdl_file> analyze(const std::string &path, const std::string_view &file_content);
-    void set_include_directories(const std::set<std::string> &i_d){include_directories = i_d;}
+    void set_options(const parse_options &o){opts_ = o;}
     void set_repository_index(const std::shared_ptr<repository_index> &idx){repo_idx = idx;}
-    void set_defines(const std::set<std::string> &d){defines = d;}
     void set_injected_definitions(const preprocessor::macro_definitions_map &m){injected = m;}
     std::set<include_dependency> get_includes() {return includes;}
     [[nodiscard]] bool has_error() const {return last_error.has_value();}
@@ -55,8 +55,7 @@ private:
 
     hdl_file process_hdl(const std::string &path, const std::string &preprocessed_content);
     void capture_preprocessor_state(preprocessor::sv_preprocessor &preproc);
-    std::set<std::string> include_directories;
-    std::set<std::string> defines;
+    parse_options opts_;
     preprocessor::macro_definitions_map injected;
     std::shared_ptr<repository_index> repo_idx;
     std::set<include_dependency> includes;

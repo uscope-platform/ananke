@@ -61,7 +61,8 @@ namespace preprocessor {
     }
 
     std::string sv_preprocessor::preprocess_body(const std::string_view &file_content, unsigned int initial_output_line) {
-        macro_processor macro_engine(definitions , line_number, path, error, undefined_macros, fatal_error);
+        macro_processor macro_engine(definitions , line_number, path, error, undefined_macros, fatal_error,
+                                       opts_);
 
         install_global_defines();
         auto flat_source= flatten_source(file_content);
@@ -177,7 +178,7 @@ namespace preprocessor {
 
 
     void sv_preprocessor::install_global_defines() {
-        for (const auto &d: global_defines) {
+        for (const auto &d: opts_.defines) {
             auto eq = d.find('=');
             if (eq == std::string::npos) {
                 definitions[d] = "1";
@@ -204,7 +205,7 @@ namespace preprocessor {
             if (std::filesystem::exists(rel_path)) {
                 full_path = rel_path;
             } else {
-                for (std::filesystem::path dir: include_directories) {
+                for (std::filesystem::path dir: opts_.include_directories) {
                     auto tmp_path = std::string(dir/name);
                     if (std::filesystem::exists(tmp_path)) full_path = tmp_path;
                 }
@@ -218,7 +219,7 @@ namespace preprocessor {
             return include_dependency{full_path, include_resolution::regular};
         } else {
             auto filename = std::string(line.substr(start_identifier+1, line.find_first_of('>')- start_identifier-1));
-            for (std::filesystem::path dir: include_directories) {
+            for (std::filesystem::path dir: opts_.include_directories) {
                 auto full_path = dir/ filename;
                 if (std::filesystem::exists(full_path)) return include_dependency{full_path.string(), include_resolution::regular};
             }
@@ -579,7 +580,7 @@ namespace preprocessor {
             // 4. Instantiate a nested preprocessor step with pre-populated definitions
             sv_preprocessor nested_preproc;
             nested_preproc.definitions = definitions;
-            nested_preproc.include_directories = include_directories;
+            nested_preproc.opts_ = opts_;
             nested_preproc.repo_idx = repo_idx;
             nested_preproc.path = path;
 

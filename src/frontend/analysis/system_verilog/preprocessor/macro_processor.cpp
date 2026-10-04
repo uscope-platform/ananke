@@ -61,7 +61,9 @@ namespace preprocessor {
         std::string &p,
         std::optional<std::string> &e,
         undefined_uses_map &u,
-        bool &f) : definitions(d), line_number(l_n), path(p), error(e), undefined_macros(u), fatal_error(f)
+        bool &f,
+        const parse_options &o) : definitions(d), line_number(l_n), path(p), error(e), undefined_macros(u),
+                                  fatal_error(f), opts(o)
     {
     }
 
@@ -107,7 +109,7 @@ namespace preprocessor {
                     }
                     auto [args, rest_of_line] = get_call_arguments(args_text);
                     if (!definitions.contains(id)) {
-                        if (is_external_methodology_macro(id)) {
+                        if (opts.strip_uvm_macros && is_external_methodology_macro(id)) {
                             warn_stripped_once(id, path);
                             // Stripped UVM/OVM calls typically stand in for a
                             // statement (e.g. `else `uvm_error(...)). Expanding
@@ -399,7 +401,7 @@ namespace preprocessor {
             }
             auto id = std::string(purged_identifier);
             if (!definitions.contains(id)) {
-                if (is_external_methodology_macro(id)) {
+                if (opts.strip_uvm_macros && is_external_methodology_macro(id)) {
                     warn_stripped_once(id, path);
                     return "";
                 }

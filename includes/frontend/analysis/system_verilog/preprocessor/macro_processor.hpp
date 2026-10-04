@@ -29,6 +29,7 @@
 #include <utility>
 #include <memory>
 #include <fmt/format.h>
+#include "data_model/parse_options.hpp"
 
 namespace preprocessor {
     struct function_macro_argument {
@@ -80,7 +81,8 @@ namespace preprocessor {
             std::string &path,
             std::optional<std::string> &error,
             undefined_uses_map &undefined_macros,
-            bool &fatal_error
+            bool &fatal_error,
+            const parse_options &opts
         );
         std::string process_macro(const std::string_view &in);
         static std::pair<std::vector<std::string_view>, std::string_view> get_call_arguments(const std::string_view &in);
@@ -113,6 +115,7 @@ namespace preprocessor {
         std::optional<std::string> &error;
         undefined_uses_map &undefined_macros;
         bool &fatal_error;
+        const parse_options &opts;
     };
 }
 #endif //ANANKE_MACRO_PROCESSOR_HPP

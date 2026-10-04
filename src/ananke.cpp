@@ -81,9 +81,7 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
                     std::cout << "Target: " << target << " not readable" << std::endl;
                     return std::unexpected(51);
                 }
-                auto includes = s_store->get_default_includes();;
-                analyzer.set_include_directories(includes);
-                analyzer.set_defines(s_store->get_defines());
+                analyzer.set_options(s_store->get_parse_options());
                 auto analysis_result = analyzer.analyze(target, f_opt->view());
                 if (!analysis_result.has_value()) {
                     std::cout << "Error parsing target: " << target << ": " << analyzer.get_error() << std::endl;

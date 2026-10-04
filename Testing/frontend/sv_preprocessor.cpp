@@ -178,6 +178,9 @@ TEST(preprocessor, uvm_function_macro_stripped_without_error) {
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
+    parse_options strip_opts;
+    strip_opts.strip_uvm_macros = true;
+    preproc.set_options(strip_opts);
 
     auto result = preproc.preprocess(test_pattern);
     auto check_string = R"(
@@ -438,6 +441,9 @@ TEST(preprocessor, uvm_simple_macro_stripped_without_error) {
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
+    parse_options strip_opts;
+    strip_opts.strip_uvm_macros = true;
+    preproc.set_options(strip_opts);
     auto result = preproc.preprocess(test_pattern);
     auto check_string = R"(
         class my_cfg extends uvm_object;
@@ -448,6 +454,48 @@ TEST(preprocessor, uvm_simple_macro_stripped_without_error) {
     )";
     EXPECT_EQ(result, check_string);
     EXPECT_FALSE(preproc.has_error());
+}
+
+TEST(preprocessor, uvm_macros_not_stripped_by_default) {
+    auto test_pattern = R"(
+        class my_test extends uvm_test;
+            `uvm_component_utils(my_test)
+            `uvm_new
+        endclass
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    preproc.preprocess(test_pattern);
+    // Default off: UVM macros are ordinary unknowns (deferrable, recorded).
+    EXPECT_TRUE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+    const auto &undefined = preproc.get_undefined_macros();
+    ASSERT_EQ(undefined.size(), 2u);
+    ASSERT_TRUE(undefined.contains("uvm_component_utils"));
+    EXPECT_THAT(undefined.at("uvm_component_utils"), testing::ElementsAre(1));
+    ASSERT_TRUE(undefined.contains("uvm_new"));
+    EXPECT_TRUE(undefined.at("uvm_new").empty());
+}
+
+TEST(preprocessor, uvm_stripping_opt_in_covers_both_paths) {
+    auto test_pattern = R"(
+        class my_test extends uvm_test;
+            `uvm_component_utils(my_test)
+            `uvm_new
+        endclass
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    parse_options strip_opts;
+    strip_opts.strip_uvm_macros = true;
+    preproc.set_options(strip_opts);
+
+    preproc.preprocess(test_pattern);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_TRUE(preproc.get_undefined_macros().empty());
 }
 
 TEST(preprocessor, global_defines) {
@@ -463,7 +511,9 @@ TEST(preprocessor, global_defines) {
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
-    preproc.set_defines({"KINTEX7", "BOARD_ID=42"});
+    parse_options defines_opts;
+    defines_opts.defines = {"KINTEX7", "BOARD_ID=42"};
+    preproc.set_options(defines_opts);
 
     auto result = preproc.preprocess(test_pattern);
     auto check_string = R"(
@@ -1497,7 +1547,9 @@ TEST(preprocessor, absolute_include) {
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/test/file.sv");
-    preproc.set_include_directories({"/tmp"});
+    parse_options incdir_opts;
+    incdir_opts.include_directories = {"/tmp"};
+    preproc.set_options(incdir_opts);
     auto result = preproc.preprocess(test_pattern);
     std::filesystem::remove("/tmp/include_test.svh");
     auto check_string = R"(
@@ -1917,6 +1969,9 @@ endmodule
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/file.sv");
+    parse_options strip_opts;
+    strip_opts.strip_uvm_macros = true;
+    preproc.set_options(strip_opts);
 
     auto result = preproc.preprocess(test_pattern);
     auto check_string = R"(

@@ -27,12 +27,18 @@
 #include <spdlog/spdlog.h>
 #include <iostream>
 
+#include "data_model/parse_options.hpp"
+
 struct settings_profile {
     std::filesystem::path hdl_store;
     std::set<std::string> includes;
     std::set<std::string> excludes;
     std::set<std::string> defines;
     bool include_auto_discovery = true;
+    // Strip undefined UVM/OVM methodology macros instead of erroring on them.
+    // Off by default: strict mode treats them like any other undefined macro
+    // (quarantine, then terminal error if nothing in the repo defines them).
+    bool strip_uvm_macros = false;
 };
 
 class settings_store {
@@ -46,6 +52,8 @@ public:
     std::set<std::string> get_excluded_paths();
     std::set<std::string> get_defines();
     bool get_include_auto_discovery();
+    bool get_strip_uvm_macros();
+    parse_options get_parse_options();
     void flush();
     ~settings_store();
 private:

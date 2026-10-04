@@ -33,6 +33,7 @@
 #include "frontend/repository_index.hpp"
 #include "data_model/include_dependency.hpp"
 #include "data_model/mm_file.hpp"
+#include "data_model/parse_options.hpp"
 
 namespace preprocessor {
     class sv_preprocessor {
@@ -41,10 +42,9 @@ namespace preprocessor {
         std::string preprocess(const std::string_view &file_content) {return  preprocess(file_content, 1);}
         std::string preprocess(const std::string_view &file_content, unsigned int initial_output_line);
         std::string flatten_source(const std::string_view &file_content);
-        void set_include_directories(const std::set<std::string> &i_d){include_directories = i_d;}
+        void set_options(const parse_options &o) {opts_ = o;}
         void set_repository_index(const std::shared_ptr<repository_index> &idx){repo_idx = idx;}
         void set_path(const std::string &s){path = s;}
-        void set_defines(const std::set<std::string> &d) {global_defines = d;}
         // Base definitions learned from the rest of the repository
         // (compilation-order macros). Installed underneath global defines
         // and file-local `defines: file-local > global > base.
@@ -98,7 +98,7 @@ namespace preprocessor {
         undefined_uses_map undefined_macros;
         std::set<std::string> unknown_conditionals;
         bool fatal_error = false;
-        std::set<std::string> global_defines;
+        parse_options opts_;
         std::vector<std::string> documentation_comments;
         std::string path;
         std::optional<std::string> error;

@@ -92,6 +92,18 @@ bool settings_store::get_include_auto_discovery() {
     return profiles[selected_profile].include_auto_discovery;
 }
 
+bool settings_store::get_strip_uvm_macros() {
+    return profiles[selected_profile].strip_uvm_macros;
+}
+
+parse_options settings_store::get_parse_options() {
+    parse_options opts;
+    opts.include_directories = get_default_includes();
+    opts.defines = get_defines();
+    opts.strip_uvm_macros = get_strip_uvm_macros();
+    return opts;
+}
+
 settings_store::~settings_store() {
     if(!ephemeral){
         flush();
@@ -120,6 +132,8 @@ void settings_store::load_settings(const std::string  &settings_file) {
                 profiles[key].defines = value["defines"];
             if (value.contains("include_auto_discovery"))
                 profiles[key].include_auto_discovery = value["include_auto_discovery"];
+            if (value.contains("strip_uvm_macros"))
+                profiles[key].strip_uvm_macros = value["strip_uvm_macros"];
         }
     }
     if (settings.contains("amd_vivado_path"))
@@ -144,6 +158,7 @@ void settings_store::flush() {
             settings["profiles"][key]["default_includes"] = profile.includes;
             settings["profiles"][key]["defines"] = profile.defines;
             settings["profiles"][key]["include_auto_discovery"] = profile.include_auto_discovery;
+            settings["profiles"][key]["strip_uvm_macros"] = profile.strip_uvm_macros;
         }
         for (auto &[tool_name, path]: tool_paths) {
             settings[tool_name + "_path"] = path;

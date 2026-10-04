@@ -40,8 +40,7 @@ std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const s
     harvested.clear();
     preprocessor::sv_preprocessor preproc;
     preproc.set_path(path);
-    preproc.set_include_directories(include_directories);
-    preproc.set_defines(defines);
+    preproc.set_options(opts_);
     preproc.set_base_definitions(injected);
     if (repo_idx) preproc.set_repository_index(repo_idx);
     auto processed_content = preproc.preprocess(content);
@@ -60,8 +59,7 @@ std::optional<hdl_file> sv_analyzer::analyze(const std::string &path, const std:
     harvested.clear();
     preprocessor::sv_preprocessor preproc;
     preproc.set_path(path);
-    preproc.set_include_directories(include_directories);
-    preproc.set_defines(defines);
+    preproc.set_options(opts_);
     preproc.set_base_definitions(injected);
     if (repo_idx) preproc.set_repository_index(repo_idx);
     auto processed_content = preproc.preprocess(file_content);

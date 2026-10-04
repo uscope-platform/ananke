@@ -34,8 +34,7 @@ void Repository_walker::construct_walker(std::shared_ptr<settings_store> s, std:
     d_store = std::move(d);
     excluded_directories = std::move(ex);
     target_repository = s_store->get_hdl_store();
-    default_includes = s_store->get_default_includes();
-    default_defines = s_store->get_defines();
+    parse_opts_ = s_store->get_parse_options();
     if (s_store->get_include_auto_discovery()) {
         repository_index_p = std::make_shared<repository_index>();
     }
@@ -524,7 +523,7 @@ void Repository_walker::analyze_file(std::filesystem::path &file) {
     spdlog::trace("Analizing file: {}", file.string());
     if(file_is_verilog(file)){
         auto old_hash = d_store->get_hash(file);
-        hdl_futures.push_back(pool.submit(analyze_verilog, file, default_includes, default_defines, old_hash, repository_index_p, preprocessor::macro_definitions_map{}));
+        hdl_futures.push_back(pool.submit(analyze_verilog, file, parse_opts_, old_hash, repository_index_p, preprocessor::macro_definitions_map{}));
         working_threads++;
     } else if(file_is_script(file)){
         std::set<std::string> includes;
@@ -533,7 +532,7 @@ void Repository_walker::analyze_file(std::filesystem::path &file) {
         working_threads++;
     } else if(file_is_vhdl(file)){
         auto old_hash = d_store->get_hash(file);
-        hdl_futures.push_back(pool.submit(analyze_vhdl, file, default_includes, old_hash));
+        hdl_futures.push_back(pool.submit(analyze_vhdl, file, parse_opts_.include_directories, old_hash));
         working_threads++;
     } else if(file_is_constraint(file)){
         std::set<std::string> includes;
@@ -555,7 +554,7 @@ void Repository_walker::analyze_file_with_injection(std::filesystem::path &file,
     spdlog::trace("Analizing file: {}", file.string());
     auto old_hash = d_store->get_hash(file);
     pending_injections_[file.string()] = injected;
-    hdl_futures.push_back(pool.submit(analyze_verilog, file, default_includes, default_defines,
+    hdl_futures.push_back(pool.submit(analyze_verilog, file, parse_opts_,
                                       old_hash, repository_index_p, injected));
     working_threads++;
 }
@@ -602,9 +601,10 @@ bool Repository_walker::file_is_data(const std::filesystem::path &file) {
 /// \param file Target file
 /// \param injected Repository-learned macro definitions seeding this parse
 ///        (compilation-order macros; file-local and global defines win over it)
+/// \param strip_uvm Strip undefined UVM/OVM macros (opt-in, off by default)
 file_analysis_context<hdl_file> analyze_verilog(
     const std::filesystem::path &file,
-    std::set<std::string> i_d, std::set<std::string> defines,
+    const parse_options &opts,
     const std::string &old_hash,
     const std::shared_ptr<repository_index> &idx,
     const preprocessor::macro_definitions_map &injected
@@ -631,8 +631,7 @@ file_analysis_context<hdl_file> analyze_verilog(
             return skipped;
         }
         sv_analyzer file_processor;
-        file_processor.set_include_directories(i_d);
-        file_processor.set_defines(defines);
+        file_processor.set_options(opts);
         file_processor.set_repository_index(idx);
         file_processor.set_injected_definitions(injected);
         auto analysis = file_processor.analyze(file, f_opt->view());

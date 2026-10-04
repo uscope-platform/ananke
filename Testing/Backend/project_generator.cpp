@@ -70,7 +70,9 @@ TEST(xilinx_project_gen, simple_gen){
             if(f.path().extension() == ".v" || f.path().extension() == ".sv" || f.path().extension() == ".svh"){
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
-                analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
+                parse_options analyzer_opts;
+                analyzer_opts.include_directories = {std::string(prefix) + "Components/Common"};
+                analyzer.set_options(analyzer_opts);
                 auto res = analyzer.analyze(f.path(), test_file.view()).value();
                 d_store->store_file({f.path(), "file_hash", res});
             }
@@ -168,7 +170,9 @@ TEST( xilinx_project_gen, sim_script) {
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
 
-                analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
+                parse_options analyzer_opts;
+                analyzer_opts.include_directories = {std::string(prefix) + "Components/Common"};
+                analyzer.set_options(analyzer_opts);
                 auto res = analyzer.analyze(f.path(), test_file.view()).value();
                 d_store->store_file({f.path(), "file_hash", res});
             }
@@ -236,7 +240,9 @@ TEST( xilinx_project_gen, fpga_synth_script) {
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
 
-                analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
+                parse_options analyzer_opts;
+                analyzer_opts.include_directories = {std::string(prefix) + "Components/Common"};
+                analyzer.set_options(analyzer_opts);
                 auto res = analyzer.analyze(f.path(), test_file.view()).value();
                 d_store->store_file({f.path(), "file_hash", res});
             }
@@ -314,7 +320,9 @@ TEST( xilinx_project_gen, soc_synth_script) {
                 auto test_file = mm_file(f.path());
                 sv_analyzer analyzer;
 
-                analyzer.set_include_directories({std::string(prefix) + "Components/Common"});
+                parse_options analyzer_opts;
+                analyzer_opts.include_directories = {std::string(prefix) + "Components/Common"};
+                analyzer.set_options(analyzer_opts);
                 auto res = analyzer.analyze(f.path(), test_file.view()).value();
                 d_store->store_file({f.path(), "file_hash", res});
             }

@@ -60,7 +60,7 @@ struct file_analysis_context {
     preprocessor::macro_definitions_map harvested;
 };
 
-static file_analysis_context<hdl_file> analyze_verilog(const std::filesystem::path &file, std::set<std::string> i_d, std::set<std::string> defines, const std::string &old_hash, const std::shared_ptr<repository_index> &idx, const preprocessor::macro_definitions_map &injected = {});
+static file_analysis_context<hdl_file> analyze_verilog(const std::filesystem::path &file, const parse_options &opts, const std::string &old_hash, const std::shared_ptr<repository_index> &idx, const preprocessor::macro_definitions_map &injected);
 static file_analysis_context<hdl_file> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
 static file_analysis_context<Script>  analyze_script(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
 static file_analysis_context<DataFile>  analyze_data(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
@@ -129,8 +129,7 @@ private:
 
     thread_pool pool;
     int working_threads = 0;
-    std::set<std::string> default_includes;
-    std::set<std::string> default_defines;
+    parse_options parse_opts_;
 
     // Bounded fixpoint: chains and mutual macro dependencies converge in a
     // few rounds (riscv-dv shape needs 2); the progress rule below guarantees
