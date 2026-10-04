@@ -530,7 +530,7 @@ delay_value:
     | TIME_LITERAL
     | KW_1STEP
     | real_number
-    | ps_identifier
+    | ( package_scope )? hierarchical_identifier
 ;
 delay_control:
     HASH ( LPAREN mintypmax_expression RPAREN
@@ -1849,8 +1849,8 @@ untyped_function_declaration:
     task_and_function_declaration_common
     ;
 
-task_prototype: KW_TASK identifier ( LPAREN tf_port_list RPAREN )?;
-function_prototype: KW_FUNCTION data_type_or_void identifier ( LPAREN tf_port_list RPAREN )?;
+task_prototype: KW_TASK ( lifetime )? identifier ( LPAREN tf_port_list RPAREN )?;
+function_prototype: KW_FUNCTION ( lifetime )? data_type_or_void identifier ( LPAREN tf_port_list RPAREN )?;
 dpi_import_export:
  ( KW_IMPORT STRING_LITERAL ( ( dpi_function_import_property )? ( ( C_IDENTIFIER
                                                                   | ESCAPED_IDENTIFIER

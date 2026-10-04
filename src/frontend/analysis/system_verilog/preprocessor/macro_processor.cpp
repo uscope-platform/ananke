@@ -109,6 +109,20 @@ namespace preprocessor {
                     if (!definitions.contains(id)) {
                         if (is_external_methodology_macro(id)) {
                             warn_stripped_once(id, path);
+                            // Stripped UVM/OVM calls typically stand in for a
+                            // statement (e.g. `else `uvm_error(...)). Expanding
+                            // to empty leaves a dangling `else` and collapses
+                            // the newlines inside the multi-line call, shifting
+                            // all downstream diagnostics. Emit a null statement
+                            // and preserve the consumed newlines instead.
+                            size_t newlines = 0;
+                            if (rest_of_line.data() != nullptr) {
+                                for (auto it = match.begin(); it != rest_of_line.begin(); ++it) {
+                                    if (*it == '\n') ++newlines;
+                                }
+                            }
+                            result.append(";");
+                            result.append(newlines, '\n');
                             remaining = rest_of_line;
                             continue;
                         }

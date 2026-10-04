@@ -2779,7 +2779,8 @@ public:
     antlr4::tree::TerminalNode *TIME_LITERAL();
     antlr4::tree::TerminalNode *KW_1STEP();
     Real_numberContext *real_number();
-    Ps_identifierContext *ps_identifier();
+    Hierarchical_identifierContext *hierarchical_identifier();
+    Package_scopeContext *package_scope();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -9589,6 +9590,7 @@ public:
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *KW_TASK();
     IdentifierContext *identifier();
+    LifetimeContext *lifetime();
     antlr4::tree::TerminalNode *LPAREN();
     Tf_port_listContext *tf_port_list();
     antlr4::tree::TerminalNode *RPAREN();
@@ -9609,6 +9611,7 @@ public:
     antlr4::tree::TerminalNode *KW_FUNCTION();
     Data_type_or_voidContext *data_type_or_void();
     IdentifierContext *identifier();
+    LifetimeContext *lifetime();
     antlr4::tree::TerminalNode *LPAREN();
     Tf_port_listContext *tf_port_list();
     antlr4::tree::TerminalNode *RPAREN();
