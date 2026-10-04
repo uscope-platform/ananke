@@ -1902,3 +1902,34 @@ TEST(preprocessor, include_auto_discovery_angle) {
     )";
     EXPECT_EQ(result, check_string);
 }
+
+TEST(preprocessor, stripped_multiline_macro_keeps_else_valid) {
+    auto test_pattern = R"(
+module m;
+  initial begin
+    if (a)
+      x = 1;
+    else
+      `uvm_error(a,
+                 b)
+  end
+endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_FALSE(preproc.has_error());
+
+    EXPECT_THAT(result, testing::ContainsRegex("else\\s*;"))
+        << "stripped macro left dangling `else`:\n"
+        << result;
+
+    auto count_nl = [](const std::string &s) {
+        return static_cast<size_t>(std::count(s.begin(), s.end(), '\n'));
+    };
+    EXPECT_EQ(count_nl(result), count_nl(test_pattern))
+        << "stripped multi-line macro collapsed lines:\n"
+        << result;
+}
