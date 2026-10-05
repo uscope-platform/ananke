@@ -1387,6 +1387,9 @@ public:
   virtual void enterFunction_prototype(sv2017::Function_prototypeContext *ctx) = 0;
   virtual void exitFunction_prototype(sv2017::Function_prototypeContext *ctx) = 0;
 
+  virtual void enterDpi_function_prototype(sv2017::Dpi_function_prototypeContext *ctx) = 0;
+  virtual void exitDpi_function_prototype(sv2017::Dpi_function_prototypeContext *ctx) = 0;
+
   virtual void enterDpi_import_export(sv2017::Dpi_import_exportContext *ctx) = 0;
   virtual void exitDpi_import_export(sv2017::Dpi_import_exportContext *ctx) = 0;
 

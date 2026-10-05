@@ -517,4 +517,21 @@ TEST(analysis_test, ref_named_instance) {
     EXPECT_EQ(inst->get_type(), "sub_mod");
 }
 
+TEST(analysis_test, dpi_import_implicit_return) {
+    // DPI imports may omit the return type. This is technically illegal but people do it in the wild and the big 3
+    // Accept it so i must not choke on it
+    auto test_pattern = R"(
+        package test_pkg;
+            import "DPI-C" function my_dpi_fn(input string filename);
+            import "DPI-C" context function my_ctx_fn(input longint address, inout byte buffer[]);
+        endpackage
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+}
+
+
 

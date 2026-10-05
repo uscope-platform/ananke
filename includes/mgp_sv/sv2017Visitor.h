@@ -934,6 +934,8 @@ public:
 
     virtual std::any visitFunction_prototype(sv2017::Function_prototypeContext *context) = 0;
 
+    virtual std::any visitDpi_function_prototype(sv2017::Dpi_function_prototypeContext *context) = 0;
+
     virtual std::any visitDpi_import_export(sv2017::Dpi_import_exportContext *context) = 0;
 
     virtual std::any visitDpi_function_import_property(sv2017::Dpi_function_import_propertyContext *context) = 0;

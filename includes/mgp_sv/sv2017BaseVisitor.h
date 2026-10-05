@@ -1845,6 +1845,10 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitDpi_function_prototype(sv2017::Dpi_function_prototypeContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitDpi_import_export(sv2017::Dpi_import_exportContext *ctx) override {
     return visitChildren(ctx);
   }

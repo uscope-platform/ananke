@@ -1852,10 +1852,11 @@ untyped_function_declaration:
 
 task_prototype: KW_TASK ( lifetime )? identifier ( LPAREN tf_port_list RPAREN )?;
 function_prototype: KW_FUNCTION ( lifetime )? data_type_or_void identifier ( LPAREN tf_port_list RPAREN )?;
+dpi_function_prototype: KW_FUNCTION ( lifetime )? ( function_data_type_or_implicit )? identifier ( LPAREN tf_port_list RPAREN )?;
 dpi_import_export:
  ( KW_IMPORT STRING_LITERAL ( ( dpi_function_import_property )? ( ( C_IDENTIFIER
                                                                   | ESCAPED_IDENTIFIER
-                                                                  ) ASSIGN )? function_prototype
+                                                                  ) ASSIGN )? dpi_function_prototype
                               | ( dpi_task_import_property )? ( ( C_IDENTIFIER
                                                               | ESCAPED_IDENTIFIER
                                                               ) ASSIGN )? task_prototype
