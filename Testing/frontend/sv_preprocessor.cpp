@@ -127,6 +127,27 @@ TEST(preprocessor, simple_define_with_tabs) {
 }
 
 
+TEST(preprocessor, valueless_define_with_trailing_whitespace) {
+    // Regression: valueless defines with trailing spaces/tabs used to
+    // throw string_view::substr (remaining_view.substr(npos)) and crash.
+    std::string test_pattern =
+        "`define FOO   \n"
+        "`define BAR\t\n"
+        "module test_module ();\n"
+        "endmodule\n";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    std::string check_string =
+        "module test_module ();\n"
+        "endmodule";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+}
+
+
 TEST(preprocessor, multiple_defines) {
     auto test_pattern = R"(
         `define a 12

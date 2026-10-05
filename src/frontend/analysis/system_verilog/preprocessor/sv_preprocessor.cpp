@@ -282,7 +282,12 @@ namespace preprocessor {
 
     void sv_preprocessor::parse_definition(const std::string_view &sv, int prefix_length) {
         auto trimmed_view = sv.substr(prefix_length);
-        trimmed_view = trimmed_view.substr(trimmed_view.find_first_not_of("\t "));
+        auto first = trimmed_view.find_first_not_of("\t ");
+        if (first == std::string_view::npos) {
+            report_error(fmt::format("Malformed `define without identifier at line {} in file: {}", line_number, path));
+            return;
+        }
+        trimmed_view = trimmed_view.substr(first);
         auto id_last = trimmed_view.find_first_of("\t (");
         auto identifier = trimmed_view.substr(0, id_last);
         if (id_last == std::string_view::npos) {
@@ -300,8 +305,11 @@ namespace preprocessor {
             definitions[std::string(identifier)] = macro.value();
             locally_defined.insert(std::string(identifier));
         } else {
-            auto value = remaining_view.substr(remaining_view.find_first_not_of("\t "));
-            definitions[std::string(identifier)] =  std::string{value};
+            auto value_first = remaining_view.find_first_not_of("\t ");
+            std::string value = (value_first == std::string_view::npos)
+                ? ""
+                : std::string{remaining_view.substr(value_first)};
+            definitions[std::string(identifier)] = value;
             locally_defined.insert(std::string(identifier));
         }
 
