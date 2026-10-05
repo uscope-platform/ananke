@@ -52,6 +52,7 @@ std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const s
 
 std::optional<hdl_file> sv_analyzer::analyze(const std::string &path, const std::string_view &file_content) {
     last_error.reset();
+    syntax_errors = false;
     includes.clear();
     fatal_error = false;
     undefined_macros.clear();
@@ -124,10 +125,11 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
     sv2017Lexer lexer(&antlr_istream);
     antlr4::CommonTokenStream tok_stream(&lexer);
 
-    tok_stream.fill();
-
     SvParserErrorListener error_listener;
     error_listener.file_path = path;
+    lexer.addErrorListener(&error_listener);
+
+    tok_stream.fill();
 
     sv2017 parser(&tok_stream);
 
@@ -156,6 +158,7 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
             antlr4::atn::PredictionMode::LL);
         Tree = parser.source_text();
     }
+    syntax_errors = error_listener.has_errors;
 
     sv_visitor sv_modules_explorer;
     antlr4::tree::ParseTreeWalker::DEFAULT.walk(&sv_modules_explorer, Tree);
@@ -173,6 +176,7 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
 
 void SvParserErrorListener::syntaxError(antlr4::Recognizer *recognizer, antlr4::Token *offendingSymbol, size_t line,
                                         size_t charPositionInLine, const std::string &msg, std::exception_ptr e) {
+    has_errors = true;
     // 1. Standardized compiler-style error header (file:line:column: error: message)
     std::cerr << this->file_path << ":" << line << ":" << (charPositionInLine + 1) << ": error: " << msg << "\n";
 

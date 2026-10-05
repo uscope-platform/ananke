@@ -51,6 +51,9 @@ public:
     [[nodiscard]] const preprocessor::undefined_uses_map& get_undefined_macros() const {return undefined_macros;}
     [[nodiscard]] const std::set<std::string>& get_unknown_conditionals() const {return unknown_conditionals;}
     [[nodiscard]] const preprocessor::macro_definitions_map& get_harvested_definitions() const {return harvested;}
+    // Whether lexing or parsing reported any syntax error (listener latch).
+    // Independent from has_error(): recovered files still analyze.
+    [[nodiscard]] bool has_syntax_errors() const {return syntax_errors;}
 private:
 
     hdl_file process_hdl(const std::string &path, const std::string &preprocessed_content);
@@ -64,12 +67,14 @@ private:
     preprocessor::undefined_uses_map undefined_macros;
     std::set<std::string> unknown_conditionals;
     preprocessor::macro_definitions_map harvested;
+    bool syntax_errors = false;
 };
 
 
 class SvParserErrorListener : public antlr4::BaseErrorListener {
 public:
     std::string file_path;
+    bool has_errors = false;
     void syntaxError(antlr4::Recognizer *recognizer, antlr4::Token * offendingSymbol, size_t line, size_t charPositionInLine,
                      const std::string &msg, std::exception_ptr e) override;
 };

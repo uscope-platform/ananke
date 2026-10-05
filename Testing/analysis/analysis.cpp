@@ -451,6 +451,19 @@ TEST(analysis_test, generate_for_loop) {
     ASSERT_NE(loop, nullptr);
     ASSERT_EQ(*loop, expected);
 }
+TEST(analysis_test, string_unlisted_escape_sequences) {
+    auto test_pattern = R"(
+        module test_mod ();
+            string separator = "\.(";
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    EXPECT_EQ(resource.getName(), "test_mod");
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+}
+
 TEST(analysis_test, visitor_malformed_input_no_crash) {
     sv_analyzer analyzer;
 

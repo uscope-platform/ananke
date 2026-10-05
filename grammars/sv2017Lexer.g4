@@ -486,13 +486,11 @@ fragment Z_DIGIT:
 fragment DBLQUOTE: '"';
 fragment UNDERSCORE: '_';
 fragment ANY_ASCII_CHARACTERS:
- ~["\\\r\n]
-  | '\\\n'
-  | '\\\r\n'
-  | '\\' [abefnrtv$@luLEQU\\"%]
-  | '\\' [0-9] [0-9]? [0-9]?
-  | '\\' 'x' [0-9A-Fa-f] [0-9A-Fa-f]?
- ;
+  ~["\\\r\n]
+   | '\\\n'
+   | '\\\r\n'
+   | '\\' ~[\r\n]
+  ;
 fragment ANY_PRINTABLE_ASCII_CHARACTER_EXCEPT_WHITE_SPACE: '\u0021'..'\u007E';
 
 
