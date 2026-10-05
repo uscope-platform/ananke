@@ -491,3 +491,30 @@ TEST(analysis_test, visitor_malformed_input_no_crash) {
     (void)analyzer.analyze("", "module top; function void f(); {a, b} = 1; endfunction endmodule");
     (void)analyzer.analyze("", "module top; function void f(); if (x) a = ; endfunction endmodule");
 }
+
+TEST(analysis_test, ref_named_instance) {
+    // `ref` is a reserved keyword but is used as an instance name in places so i must not choke on it
+    auto test_pattern = R"(
+        module test_mod (
+            input logic x
+        );
+            sub_mod ref (
+                .a (x)
+            );
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+
+    const auto& stmts = resource.get_statements();
+    ASSERT_EQ(stmts.size(), 1);
+
+    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(stmts[0]);
+    ASSERT_NE(inst, nullptr);
+    EXPECT_EQ(inst->get_name(), "ref");
+    EXPECT_EQ(inst->get_type(), "sub_mod");
+}
+
+

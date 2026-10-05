@@ -97,8 +97,8 @@ public:
     DECR = 351, DIST_WEIGHT_ASSIGN = 352, OVERLAPPING_IMPL = 353, NONOVERLAPPING_IMPL = 354, 
     IMPLIES = 355, IMPLIES_P = 356, IMPLIES_N = 357, PATH_FULL = 358, HASH_MINUS_HASH = 359, 
     HASH_EQ_HASH = 360, AT = 361, DOUBLE_AT = 362, HASH = 363, DOUBLE_HASH = 364, 
-    TRIPLE_AND = 365, ONE_LINE_COMMENT = 366, DOCUMENTATION_COMMENT = 367, 
-    BLOCK_COMMENT = 368, WHITE_SPACE = 369, LEVEL_SYMBOL = 370, EDGE_SYMBOL = 371
+    TRIPLE_AND = 365, ONE_LINE_COMMENT = 366, BLOCK_COMMENT = 367, WHITE_SPACE = 368, 
+    LEVEL_SYMBOL = 369, EDGE_SYMBOL = 370
   };
 
   enum {
@@ -958,6 +958,7 @@ public:
     antlr4::tree::TerminalNode *KW_TYPE_OPTION();
     antlr4::tree::TerminalNode *KW_OPTION();
     antlr4::tree::TerminalNode *KW_STD();
+    antlr4::tree::TerminalNode *KW_REF();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;

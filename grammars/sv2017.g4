@@ -54,6 +54,7 @@ identifier:
     | KW_TYPE_OPTION
     | KW_OPTION
     | KW_STD
+    | KW_REF
 ;
 integer_type:
     integer_vector_type
