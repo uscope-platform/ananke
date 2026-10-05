@@ -75,13 +75,24 @@ endif()
 # Persistent cache schema fingerprint.
 # The on-disk cache (data_store::unified_cache) embeds the parsed HDL data
 # model; whenever any source that defines that model changes, the archive
-# format may change. We derive the cache version from a hash of those sources
-# so the cache invalidates automatically (no manual version bumps) and only
-# when serialization-relevant code changes.
+# format may change. Correctness also depends on frontend analysis semantics
+# (what gets harvested and extracted into the cache), so those sources
+# version the cache as well. We derive the cache version from a hash of
+# those sources so the cache invalidates automatically (no manual version
+# bumps) and only when format- or semantics-relevant code changes.
 # ---------------------------------------------------------------------------
 file(GLOB_RECURSE CACHE_SCHEMA_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/includes/data_model/*"
     "${CMAKE_SOURCE_DIR}/src/data_model/*"
+    "${CMAKE_SOURCE_DIR}/includes/frontend/analysis/*"
+    "${CMAKE_SOURCE_DIR}/src/frontend/analysis/*"
+    "${CMAKE_SOURCE_DIR}/includes/frontend/macro_table.hpp"
+    "${CMAKE_SOURCE_DIR}/src/frontend/macro_table.cpp"
+    "${CMAKE_SOURCE_DIR}/includes/frontend/Repository_walker.hpp"
+    "${CMAKE_SOURCE_DIR}/src/frontend/Repository_walker.cpp"
+    "${CMAKE_SOURCE_DIR}/includes/frontend/repository_index.hpp"
+    "${CMAKE_SOURCE_DIR}/src/frontend/repository_index.cpp"
+    "${CMAKE_SOURCE_DIR}/includes/mgp_sv/*"
 )
 
 set(CACHE_SCHEMA_HASH_HEADER "${CMAKE_BINARY_DIR}/generated/cache_schema_hash.hpp")

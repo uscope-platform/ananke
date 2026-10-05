@@ -14,10 +14,13 @@
 #  limitations under the License.
 
 # Computes a fingerprint of the sources that define the on-disk data cache
-# format and writes it into a header. The fingerprint is what versions the
-# persistent cache: whenever any serialized data-model source changes the
-# archive format may change, so the fingerprint changes and the cache is
-# invalidated automatically. No manual version numbers are involved.
+# format and the frontend analysis semantics that fill it, and writes it
+# into a header. The fingerprint is what versions the persistent cache:
+# whenever any serialized data-model source changes the archive format may
+# change, and whenever any harvest/extract semantics source changes the
+# persisted per-file entries may change, so in both cases the fingerprint
+# changes and the cache is invalidated automatically. No manual version
+# numbers are involved.
 #
 # Usage:
 #   cmake -DSCHEMA_ROOT="<repository root>"
@@ -31,6 +34,15 @@ endif()
 file(GLOB_RECURSE SCHEMA_SOURCES
     "${SCHEMA_ROOT}/includes/data_model/*"
     "${SCHEMA_ROOT}/src/data_model/*"
+    "${SCHEMA_ROOT}/includes/frontend/analysis/*"
+    "${SCHEMA_ROOT}/src/frontend/analysis/*"
+    "${SCHEMA_ROOT}/includes/frontend/macro_table.hpp"
+    "${SCHEMA_ROOT}/src/frontend/macro_table.cpp"
+    "${SCHEMA_ROOT}/includes/frontend/Repository_walker.hpp"
+    "${SCHEMA_ROOT}/src/frontend/Repository_walker.cpp"
+    "${SCHEMA_ROOT}/includes/frontend/repository_index.hpp"
+    "${SCHEMA_ROOT}/src/frontend/repository_index.cpp"
+    "${SCHEMA_ROOT}/includes/mgp_sv/*"
 )
 list(SORT SCHEMA_SOURCES)
 
