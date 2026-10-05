@@ -2050,8 +2050,8 @@ class_constructor_declaration:
       ( statement_or_null )*
       KW_ENDFUNCTION ( COLON KW_NEW )?;
 class_property:
- KW_CONST ( class_item_qualifier )* data_type identifier ( ASSIGN constant_expression )? SEMI
-  | ( property_qualifier )* data_declaration
+  KW_CONST ( class_item_qualifier )* data_type identifier ( ASSIGN ( constant_expression | class_new ) )? SEMI
+   | ( property_qualifier )* data_declaration
 ;
 class_method:
  KW_PURE KW_VIRTUAL ( class_item_qualifier )* method_prototype SEMI

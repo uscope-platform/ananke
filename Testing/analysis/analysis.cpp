@@ -464,6 +464,20 @@ TEST(analysis_test, string_unlisted_escape_sequences) {
     EXPECT_FALSE(analyzer.has_syntax_errors());
 }
 
+TEST(analysis_test, const_property_new_initializer) {
+    auto test_pattern = R"(
+        class test_class;
+            const local test_class events = new("events");
+            const int COUNT = 5;
+        endclass
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+}
+
 TEST(analysis_test, visitor_malformed_input_no_crash) {
     sv_analyzer analyzer;
 

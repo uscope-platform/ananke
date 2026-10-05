@@ -10495,6 +10495,7 @@ public:
     Class_item_qualifierContext* class_item_qualifier(size_t i);
     antlr4::tree::TerminalNode *ASSIGN();
     Constant_expressionContext *constant_expression();
+    Class_newContext *class_new();
     Data_declarationContext *data_declaration();
     std::vector<Property_qualifierContext *> property_qualifier();
     Property_qualifierContext* property_qualifier(size_t i);
