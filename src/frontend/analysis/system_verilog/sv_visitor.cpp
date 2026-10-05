@@ -86,12 +86,17 @@ bool sv_visitor::is_known_system_function(const std::string &name) const {
         // Common procedural system tasks that may appear in parse contexts
         "display", "displayb", "displayh", "displayo",
         "write", "writeb", "writeh", "writeo",
+        "strobe", "strobeb", "strobeh", "strobeo",
         "monitor", "monitorb", "monitorh", "monitoro", "monitoroff", "monitoron",
+        // String-formatting tasks (IEEE 1800-2017 21.3, $sformatf siblings)
+        "sformat", "swrite", "swriteb", "swriteh", "swriteo", "psprintf",
         "finish", "stop", "fatal", "error", "warning", "info",
         "time", "realtime", "stime", "printtimescale",
         "readmemh", "readmemb",
         "fopen", "fclose", "fdisplay", "fdisplayb", "fdisplayh", "fdisplayo",
-        "fwrite", "fwriteb", "fwriteh", "fwriteo", "fmonitor",
+        "fwrite", "fwriteb", "fwriteh", "fwriteo",
+        "fstrobe", "fstrobeb", "fstrobeh", "fstrobeo",
+        "fmonitor", "fmonitorb", "fmonitorh", "fmonitoro",
         "fscanf", "fread", "fseek", "ftell", "fflush", "feof", "ferror", "rewind",
         "fgetc", "fgets", "ungetc", "fputc", "fputs", "sscanf",
         "system", "value$plusargs", "test$plusargs",

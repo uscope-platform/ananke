@@ -29,6 +29,28 @@
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/statement/hdl_package_statement.hpp"
 
+#include <spdlog/sinks/ostream_sink.h>
+
+namespace {
+// Captures spdlog output for the duration of the guard's lifetime.
+struct log_capture {
+    std::ostringstream stream;
+    std::shared_ptr<spdlog::sinks::ostream_sink_mt> sink =
+        std::make_shared<spdlog::sinks::ostream_sink_mt>(stream);
+    log_capture() { spdlog::default_logger()->sinks().push_back(sink); }
+    ~log_capture() {
+        auto &sinks = spdlog::default_logger()->sinks();
+        sinks.erase(std::remove(sinks.begin(), sinks.end(), sink), sinks.end());
+    }
+    size_t count(const std::string &needle) const {
+        size_t n = 0, pos = 0;
+        const auto &s = stream.str();
+        while ((pos = s.find(needle, pos)) != std::string::npos) { ++n; pos += needle.size(); }
+        return n;
+    }
+};
+}
+
 
 TEST(function_processing, simple_function_scalar) {
     auto test_pattern = R"(
@@ -664,6 +686,88 @@ TEST(function_processing, repro_system_task_in_function_body) {
     EXPECT_EQ(check_f, result);
 }
 
+TEST(function_processing, repro_swrite_in_function_body) {
+    // Repro for the UVM parse spam (`Unknown system function $swrite ...`):
+    // `$swrite(msg, ...)` (uvm_comparer.svh) is a procedural task call in a
+    // function body, not a parameter expression.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function void check(string name, int lhs, int rhs);
+                string msg;
+                $swrite(msg, "%s: lhs=%0d rhs=%0d", name, lhs, rhs);
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    log_capture logs;
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    EXPECT_EQ(logs.count("Unknown system function $swrite"), 0u);
+
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("check"));
+    auto result = functions["check"];
+
+    hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
+    check_f.set_name("check");
+    check_f.add_argument("name");
+    check_f.add_argument("lhs");
+    check_f.add_argument("rhs");
+
+    auto lv = std::make_shared<HDL_parameter>("msg");
+    lv->set_type(Type_engine::create_primitive_type("string"));
+    check_f.add_local_variable(lv);
+
+    EXPECT_EQ(check_f, result);
+}
+
+TEST(function_processing, repro_sformat_in_function_body) {
+    // Repro for the UVM parse spam (`Unknown system function $sformat ...`):
+    // `$sformat(convert2string, ...)` (uvm_vreg.svh) is a procedural task
+    // call in a function body, not a parameter expression.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function string convert2string(string prefix);
+                string image;
+                $sformat(image, "%sBlock %s", prefix, "foo");
+                return image;
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    log_capture logs;
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    EXPECT_EQ(logs.count("Unknown system function $sformat"), 0u);
+
+    auto functions = resource.get_functions();
+
+    ASSERT_TRUE(functions.contains("convert2string"));
+    auto result = functions["convert2string"];
+
+    hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
+    check_f.set_name("convert2string");
+    check_f.add_argument("prefix");
+
+    auto lv = std::make_shared<HDL_parameter>("image");
+    lv->set_type(Type_engine::create_primitive_type("string"));
+    check_f.add_local_variable(lv);
+
+    auto s_ret = std::make_shared<hdl_assignment_statement>();
+    s_ret->set_target("convert2string");
+    s_ret->set_value(std::make_shared<Identifier_token>(qualified_identifier("image")));
+    check_f.add_statement(s_ret);
+
+    EXPECT_EQ(check_f, result);
+}
+
 TEST(function_processing, repro_relational_in_function_body) {
     // Repro for KNOWN_ISSUES.md #2: a relational in a non-first statement
     // loses its operator and rhs (`if(a > 32)` -> `if(a)`).
@@ -1112,5 +1216,7 @@ TEST(function_processing, return_statement_in_function) {
 
     EXPECT_EQ(check_f, result);
 }
+
+
 
 
