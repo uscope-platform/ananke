@@ -2293,7 +2293,28 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
     if(f_factory.is_active()) {
         auto hier = ctx->package_or_class_scoped_hier_id_with_select();
         if (!hier || !hier->package_or_class_scoped_path()) {
-            spdlog::warn("Unsupported lvalue in function body, skipping file");
+            // Graceful degradation: the grammar accepts concatenation,
+            // assignment-pattern and streaming-concatenation lvalues, but the
+            // write path only models hierarchical identifiers. Warn once per
+            // file (UVM pack macros expand to the same streaming target
+            // several times) and drop the file via had_error as before.
+            const size_t line = ctx->getStart() ? ctx->getStart()->getLine() : 0;
+            if (!unsupported_lvalue_warned) {
+                unsupported_lvalue_warned = true;
+                std::string text = ctx->getText();
+                if (text.size() > 120) text = text.substr(0, 120) + "...";
+                const std::string where =
+                    current_file.empty() ? "<unknown file>" : current_file;
+                if (ctx->streaming_concatenation() != nullptr) {
+                    spdlog::warn("Streaming-concatenation lvalue '{}' at {}:{}, "
+                                 "dropping file (bit-pack write semantics not modeled; "
+                                 "known UVM do_pack pattern)",
+                                 text, where, line);
+                } else {
+                    spdlog::warn("Unsupported lvalue '{}' at {}:{}, dropping file",
+                                 text, where, line);
+                }
+            }
             had_error = true;
             return;
         }

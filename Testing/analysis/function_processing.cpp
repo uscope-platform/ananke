@@ -956,6 +956,27 @@ TEST(function_processing, streaming_in_function) {
     EXPECT_EQ(check_f, result);
 }
 
+// Streaming concatenation as an assignment *target* (e.g. UVM do_pack
+// bodies: `{ << bit { mem } } = v;`) has no bit-scatter write semantics in
+// the evaluator, so the file is gracefully dropped with a warning instead
+// of crashing or silently producing a partial function body.
+TEST(function_processing, streaming_lvalue_drops_file) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            logic [31:0] mem;
+            function integer do_pack(input integer v);
+                { << bit { mem } } = v;
+                do_pack = 0;
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
+}
+
 TEST(function_processing, anonymous_struct_local_in_function) {
     auto test_pattern = R"(
         module test_mod #(

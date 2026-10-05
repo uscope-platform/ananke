@@ -56,6 +56,7 @@ public:
     void enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) override;
     bool is_known_system_function(const std::string &name) const;
     [[nodiscard]] bool is_error() const { return had_error; }
+    void set_file(const std::string &p) { current_file = p; }
 
     void enterCast_separator(sv2017::Cast_separatorContext *ctx) override;
     void enterPrimaryCast2(sv2017::PrimaryCast2Context *ctx) override;
@@ -285,6 +286,13 @@ private:
     // was opened in enterData_declaration; consumed by the matching exit.
     bool capturing_class_property = false;
     bool had_error = false;
+    // Source path for diagnostics (set by sv_analyzer::process_hdl; empty in
+    // unit tests that drive the visitor directly).
+    std::string current_file;
+    // Unsupported-lvalue warning fires once per file: UVM pack macros expand
+    // to the same streaming-concatenation target several times per file.
+    // had_error is still set on every occurrence; only the log is deduped.
+    bool unsupported_lvalue_warned = false;
     std::vector<std::shared_ptr<hdl_statement_base>> entities;
     std::vector<std::string> active_genvars;
     std::shared_ptr<Expression_base> make_loop_aware_value(const std::string &text);
