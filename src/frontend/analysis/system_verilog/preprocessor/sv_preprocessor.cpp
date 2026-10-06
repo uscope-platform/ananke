@@ -21,6 +21,25 @@
 
 namespace preprocessor {
 
+// Position of the first `//` outside a string literal, or npos. A naive
+// find("//") truncates lines like
+//   $sformatf("csrr x%0d, 0x%0x // MSTATUS", tp, status)
+// mid-string, leaving an unterminated literal and a lexer cascade downstream.
+static std::string::size_type find_line_comment(const std::string &line) {
+    bool in_string = false;
+    for (size_t i = 0; i < line.size(); ++i) {
+        char c = line[i];
+        if (in_string) {
+            if (c == '\\' && i + 1 < line.size()) { ++i; continue; }
+            if (c == '"') in_string = false;
+        } else {
+            if (c == '"') in_string = true;
+            else if (c == '/' && i + 1 < line.size() && line[i + 1] == '/') return i;
+        }
+    }
+    return std::string::npos;
+}
+
 
     void sv_preprocessor::report_error(const std::string &msg) {
         spdlog::error(msg);
@@ -94,9 +113,9 @@ namespace preprocessor {
             || trimmed_line.starts_with("`begin_keywords")
             || trimmed_line.starts_with("`line");
             std::string uncommented_line = line;
-            if (line.contains("//")) {
-                uncommented_line = line.substr(0, line.find("//"));
-                auto comment = line.substr(line.find("//"));
+            if (auto comment_pos = find_line_comment(line); comment_pos != std::string::npos) {
+                uncommented_line = line.substr(0, comment_pos);
+                auto comment = line.substr(comment_pos);
                 if (comment.contains("pragma translate_off")) disable_preprocessor = true;
                 if (comment.contains("pragma translate_on")) disable_preprocessor = false;
             }
@@ -662,8 +681,8 @@ namespace preprocessor {
 
             // Strip single-line comments from the lookahead segment before combining
             std::string uncommented_next = next_line;
-            if (next_line.contains("//")) {
-                uncommented_next = next_line.substr(0, next_line.find("//"));
+            if (auto comment_pos = find_line_comment(next_line); comment_pos != std::string::npos) {
+                uncommented_next = next_line.substr(0, comment_pos);
             }
 
             accumulated += "\n" + uncommented_next;

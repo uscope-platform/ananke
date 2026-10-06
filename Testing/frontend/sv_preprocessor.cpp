@@ -560,6 +560,24 @@ TEST(preprocessor, line_comment_elimination) {
     EXPECT_EQ(check_string, res);
 }
 
+TEST(preprocessor, line_comment_inside_string_preserved) {
+    // riscv_page_table_list.sv:278 reduced: `//` inside a string literal is
+    // string content, not a comment. Naive find("//") truncation leaves an
+    // unterminated string and a lexer cascade downstream.
+    auto test_pattern = R"(
+        instr.push_back($sformatf("csrr x%0d, 0x%0x // MSTATUS", tp, status)); // trailing comment
+        str = "http://example.com/x";
+        msg = "escaped \" // not a comment";
+    )";
+
+    sv_preprocessor proc;
+    auto res = proc.preprocess(test_pattern);
+    EXPECT_THAT(res, testing::HasSubstr("\"csrr x%0d, 0x%0x // MSTATUS\""));
+    EXPECT_THAT(res, testing::HasSubstr("\"http://example.com/x\""));
+    EXPECT_THAT(res, testing::HasSubstr("\"escaped \\\" // not a comment\""));
+    EXPECT_THAT(res, testing::Not(testing::HasSubstr("trailing comment")));
+}
+
 TEST(preprocessor, comment_continuation_elimination) {
     auto test_pattern = R"(
         // This is a comment \
