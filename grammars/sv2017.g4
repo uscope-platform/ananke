@@ -1464,7 +1464,7 @@ constraint_expression:
 uniqueness_constraint:
  KW_UNIQUE LBRACE open_range_list RBRACE;
 constraint_set:
- LBRACE ( constraint_expression )* RBRACE
+ LBRACE ( constraint_block_item )* RBRACE
   | constraint_expression
 ;
 randomize_call:

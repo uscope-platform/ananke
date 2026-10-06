@@ -1220,3 +1220,45 @@ TEST(function_processing, return_statement_in_function) {
 
 
 
+
+TEST(function_processing, foreach_with_indexed_array) {
+    // Reduced from riscv_pmp_cfg.sv: `foreach (pmp_cfg[i])` with an explicit
+    // loop variable must parse, both as a procedural statement and inside a
+    // constraint block (the actual failing shape: the constraint-foreach
+    // alternative ate `[i]` as a primary index and then demanded another
+    // `[` at `)`).
+    auto test_pattern = R"(
+        module test_mod;
+            int pmp_cfg[16];
+            initial begin
+                foreach (pmp_cfg[i]) begin
+                    pmp_cfg[i] = i;
+                end
+            end
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+}
+
+TEST(function_processing, foreach_with_indexed_array_in_constraint) {
+    auto test_pattern = R"(
+        class test_class;
+            int pmp_cfg[16];
+            constraint xwr_c {
+                foreach (pmp_cfg[i]) {
+                    solve pmp_cfg[i] before pmp_cfg[i];
+                    !(pmp_cfg[i] && !pmp_cfg[i]);
+                }
+            }
+        endclass
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+}
