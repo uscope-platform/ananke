@@ -2041,3 +2041,20 @@ TEST(preprocessor, covergroup_token_paste_preserves_space) {
     EXPECT_THAT(result, testing::HasSubstr("covergroup fmul_d_cg"));
     EXPECT_THAT(result, testing::Not(testing::HasSubstr("covergroupfmul_d_cg")));
 }
+
+TEST(preprocessor, covergroup_token_paste_with_keyword_name) {
+    // Same idiom with an instruction name that is lexically a keyword
+    // (riscv-dv XOR/OR/AND/XNOR covergroups). The name+suffix paste must
+    // still fuse: `covergroup xor_cg`, not `covergroup xor _cg`.
+    auto test_pattern = R"(
+        `define INSTR_CG_BEGIN(INSTR_NAME) covergroup ``INSTR_NAME``_cg with function sample(int instr);
+        `INSTR_CG_BEGIN(xor)
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("covergroup xor_cg"));
+    EXPECT_THAT(result, testing::Not(testing::HasSubstr("covergroup xor _cg")));
+}

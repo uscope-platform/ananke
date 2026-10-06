@@ -384,12 +384,16 @@ namespace preprocessor {
         }
 
         std::vector<std::string> expanded_tokens;
+        std::vector<char> expanded_from_arg;
         expanded_tokens.reserve(tokens.size());
+        expanded_from_arg.reserve(tokens.size());
         for (const auto &t: tokens) {
             if (arguments_map.contains(t)) {
                 expanded_tokens.push_back(arguments_map[t]);
+                expanded_from_arg.push_back(1);
             } else {
                 expanded_tokens.emplace_back(t);
+                expanded_from_arg.push_back(0);
             }
         }
 
@@ -403,8 +407,14 @@ namespace preprocessor {
 
             if (expanded_tokens[i] == "``") {
                 // Peek at the identifier tail on the left and the head on the
-                // right: pasting a keyword with an identifier would destroy
-                // the keyword, so keep a separating space in that case.
+                // right. Pasting is meant to build one identifier from
+                // fragments, but the `covergroup ``NAME``_cg` idiom puts a
+                // paste between a keyword and a macro argument
+                // (`covergroup ``fmul_d`), which would destroy the keyword.
+                // Commercial simulators tolerate that idiom, so keep a
+                // separating space only there: pastes onto a literal suffix
+                // (`xor``_cg`) still fuse, even when the argument is
+                // lexically a keyword, since that is the intended name.
                 std::string_view left_word;
                 {
                     size_t end = result.size();
@@ -413,16 +423,17 @@ namespace preprocessor {
                     while (start > 0 && is_id_char(result[start - 1])) --start;
                     left_word = std::string_view(result.data() + start, end - start);
                 }
-                std::string_view right_tok;
-                for (size_t j = i + 1; j < expanded_tokens.size(); ++j) {
-                    const auto& tok = expanded_tokens[j];
-                    if (tok.find_first_not_of(" \t") == std::string::npos) continue;
-                    right_tok = std::string_view(tok);
-                    break;
+                size_t next_idx = i + 1;
+                while (next_idx < expanded_tokens.size() &&
+                       expanded_tokens[next_idx].find_first_not_of(" \t") == std::string::npos) {
+                    ++next_idx;
                 }
+                std::string_view right_tok;
+                if (next_idx < expanded_tokens.size()) right_tok = std::string_view(expanded_tokens[next_idx]);
                 size_t right_pos = right_tok.find_first_not_of(" \t");
                 bool keyword_paste = !left_word.empty() && right_pos != std::string_view::npos &&
-                    is_sv_keyword(left_word) && is_id_char(right_tok[right_pos]);
+                    is_sv_keyword(left_word) && is_id_char(right_tok[right_pos]) &&
+                    expanded_from_arg[next_idx];
 
                 // Trim trailing whitespace from the result accumulated so far
                 while (!result.empty() && (result.back() == ' ' || result.back() == '\t')) {
