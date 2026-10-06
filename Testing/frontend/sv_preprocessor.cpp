@@ -2009,3 +2009,17 @@ endmodule
     EXPECT_EQ(result, check_string);
     EXPECT_FALSE(preproc.has_error());
 }
+
+TEST(preprocessor, covergroup_token_paste_preserves_space) {
+    auto test_pattern = R"(
+        `define INSTR_CG_BEGIN(INSTR_NAME) covergroup ``INSTR_NAME``_cg with function sample(int instr);
+        `INSTR_CG_BEGIN(fmul_d)
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("covergroup fmul_d_cg"));
+    EXPECT_THAT(result, testing::Not(testing::HasSubstr("covergroupfmul_d_cg")));
+}

@@ -17,6 +17,7 @@
 #include "frontend/analysis/system_verilog/preprocessor/macro_processor.hpp"
 #include <spdlog/spdlog.h>
 #include <mutex>
+#include <unordered_set>
 
 static constexpr size_t MAX_MACRO_EXPANSION_SIZE = 64 * 1024 * 1024;
 static constexpr int MAX_NONCONVERGING_PASSES = 16;
@@ -25,6 +26,58 @@ namespace {
 std::mutex stripped_warn_mutex;
 bool uvm_warned = false;
 bool ovm_warned = false;
+
+// SystemVerilog keywords (from sv2017Lexer.g4). Fusing a keyword with an
+// identifier via `` (e.g. `covergroup ``NAME``_cg` as found in riscv-dv/cva6)
+// would destroy the keyword, which no correct expansion intends. Commercial
+// simulators tolerate that idiom, so preserve a separating space instead of
+// pasting when the left side is a keyword and the right side is an identifier.
+bool is_sv_keyword(const std::string_view &word) {
+    static const std::unordered_set<std::string_view> keywords = {
+        "accept_on", "alias", "always", "always_comb", "always_ff", "always_latch",
+        "and", "assert", "assign", "assume", "automatic", "before", "begin", "bind",
+        "bins", "binsof", "bit", "break", "buf", "bufif0", "bufif1", "byte", "case",
+        "casex", "casez", "cell", "chandle", "checker", "class", "clocking", "cmos",
+        "config", "const", "constraint", "context", "continue", "cover", "covergroup",
+        "coverpoint", "cross", "deassign", "default", "defparam", "design", "disable",
+        "dist", "do", "edge", "else", "end", "endcase", "endchecker", "endclass",
+        "endclocking", "endconfig", "endfunction", "endgenerate", "endgroup",
+        "endinterface", "endmodule", "endpackage", "endprimitive", "endprogram",
+        "endproperty", "endsequence", "endspecify", "endtable", "endtask", "enum",
+        "event", "eventually", "expect", "export", "extends", "extern", "final",
+        "first_match", "for", "force", "foreach", "forever", "fork", "forkjoin",
+        "function", "generate", "genvar", "global", "highz0", "highz1", "if", "iff",
+        "ifnone", "ignore_bins", "illegal_bins", "implements", "implies", "import",
+        "incdir", "include", "initial", "inout", "input", "inside", "instance", "int",
+        "integer", "interconnect", "interface", "intersect", "join", "join_any",
+        "join_none", "large", "let", "liblist", "library", "local", "localparam",
+        "logic", "longint", "macromodule", "matches", "medium", "modport", "module",
+        "nand", "negedge", "nettype", "new", "nexttime", "nmos", "nor",
+        "noshowcancelled", "not", "notif0", "notif1", "null", "option", "or",
+        "output", "package", "packed", "parameter", "pmos", "posedge", "primitive",
+        "priority", "program", "property", "protected", "pull0", "pull1", "pulldown",
+        "pullup", "pulsestyle_ondetect", "pulsestyle_onevent", "pure", "rand",
+        "randc", "randcase", "randomize", "randsequence", "rcmos", "real", "realtime",
+        "ref", "reg", "reject_on", "release", "repeat", "restrict", "return", "rnmos",
+        "rpmos", "rtran", "rtranif0", "rtranif1", "s_always", "s_eventually",
+        "s_nexttime", "s_until", "s_until_with", "sample", "scalared", "sequence",
+        "shortint", "shortreal", "showcancelled", "signed", "small", "soft", "solve",
+        "specify", "specparam", "static", "std", "string", "strong", "strong0",
+        "strong1", "struct", "super", "supply0", "supply1", "sync_accept_on",
+        "sync_reject_on", "table", "tagged", "task", "this", "throughout", "time",
+        "timeprecision", "timeunit", "tran", "tranif0", "tranif1", "tri", "tri0",
+        "tri1", "triand", "trior", "trireg", "type", "type_option", "typedef",
+        "union", "unique", "unique0", "unsigned", "until", "until_with", "untyped",
+        "use", "uwire", "var", "vectored", "virtual", "void", "wait", "wait_order",
+        "wand", "weak", "weak0", "weak1", "while", "wildcard", "wire", "with",
+        "within", "wor", "xnor", "xor"
+    };
+    return keywords.contains(word);
+}
+
+bool is_id_char(char c) {
+    return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '$';
+}
 }
 
 namespace preprocessor {
@@ -349,6 +402,28 @@ namespace preprocessor {
             }
 
             if (expanded_tokens[i] == "``") {
+                // Peek at the identifier tail on the left and the head on the
+                // right: pasting a keyword with an identifier would destroy
+                // the keyword, so keep a separating space in that case.
+                std::string_view left_word;
+                {
+                    size_t end = result.size();
+                    while (end > 0 && (result[end - 1] == ' ' || result[end - 1] == '\t')) --end;
+                    size_t start = end;
+                    while (start > 0 && is_id_char(result[start - 1])) --start;
+                    left_word = std::string_view(result.data() + start, end - start);
+                }
+                std::string_view right_tok;
+                for (size_t j = i + 1; j < expanded_tokens.size(); ++j) {
+                    const auto& tok = expanded_tokens[j];
+                    if (tok.find_first_not_of(" \t") == std::string::npos) continue;
+                    right_tok = std::string_view(tok);
+                    break;
+                }
+                size_t right_pos = right_tok.find_first_not_of(" \t");
+                bool keyword_paste = !left_word.empty() && right_pos != std::string_view::npos &&
+                    is_sv_keyword(left_word) && is_id_char(right_tok[right_pos]);
+
                 // Trim trailing whitespace from the result accumulated so far
                 while (!result.empty() && (result.back() == ' ' || result.back() == '\t')) {
                     result.pop_back();
@@ -363,6 +438,8 @@ namespace preprocessor {
                         break;
                     }
                 }
+
+                if (keyword_paste) result.push_back(' ');
             } else {
 
                 std::string token_to_append = expanded_tokens[i];
