@@ -139,6 +139,7 @@ namespace preprocessor {
         std::string result;
         std::string working = std::string(in);
         std::string prev_working;
+        result.reserve(working.size());
         int nesting_counter = 0;
         size_t previous_size = 0;
         int nonconverging_passes = 0;
@@ -221,7 +222,12 @@ namespace preprocessor {
             // further passes repeat forever. Stop at once instead of burning
             // all remaining passes and feeding non-converged text (with
             // surviving directives) downstream.
-            if (result == working || result == prev_working) break;
+            // NOTE: the 2-cycle path must return the newest state (result),
+            // while every other exit returns working (which the rotation
+            // below keeps pointing at the latest text). Returning working
+            // here would hand back the previous cycle state.
+            if (result == prev_working) return result;
+            if (result == working) break;
             // A self-multiplying recursive macro keeps growing every pass and
             // never converges; a legitimate expansion (e.g. UVM field utils)
             // converges within a couple of passes. Detect sustained growth early
@@ -236,12 +242,16 @@ namespace preprocessor {
                 return "";
             }
             previous_size = result.size();
-            prev_working = std::move(working);
-            working = result;
+            // Rotate buffers instead of copying: working takes the new text,
+            // prev_working takes last pass's input (for the fixed-point
+            // check above), result keeps a reusable scratch buffer that
+            // clear() at the loop top preserves the capacity of.
+            prev_working.swap(working);
+            working.swap(result);
             nesting_counter++;
         }
 
-        return result;
+        return working;
     }
 
 
@@ -391,13 +401,17 @@ namespace preprocessor {
             tokens.push_back(body.substr(current_token_start));
         }
 
-        std::vector<std::string> expanded_tokens;
+        // Views only: arg values live in arguments_map (no inserts after
+        // this point, so references are stable), other tokens view the macro
+        // body. Avoids one std::string copy per token per macro call.
+        std::vector<std::string_view> expanded_tokens;
         std::vector<char> expanded_from_arg;
         expanded_tokens.reserve(tokens.size());
         expanded_from_arg.reserve(tokens.size());
         for (const auto &t: tokens) {
-            if (arguments_map.contains(t)) {
-                expanded_tokens.push_back(arguments_map[t]);
+            auto arg_it = arguments_map.find(t);
+            if (arg_it != arguments_map.end()) {
+                expanded_tokens.emplace_back(arg_it->second);
                 expanded_from_arg.push_back(1);
             } else {
                 expanded_tokens.emplace_back(t);
@@ -406,10 +420,22 @@ namespace preprocessor {
         }
 
         std::string result;
+        result.reserve(body.size() + 32);
+        // Running quote parity of `result`. The old code ran
+        // std::count(result.begin(), result.end(), '"') per token (O(n^2)
+        // on long expansions); counting '"' bytes of each appended piece
+        // yields the same total since appends never remove quotes (the ``
+        // branch only trims spaces/tabs).
+        size_t result_quote_count = 0;
+        auto append_counted = [&](std::string_view s) {
+            for (char c : s) if (c == '"') ++result_quote_count;
+            result.append(s);
+        };
         for (size_t i = 0; i < expanded_tokens.size(); ++i) {
             // Evaluates the isolated stringification token sequence back into standard quotes
             if (expanded_tokens[i] == "`\"") {
                 result.push_back('"');
+                ++result_quote_count;
                 continue;
             }
 
@@ -433,11 +459,11 @@ namespace preprocessor {
                 }
                 size_t next_idx = i + 1;
                 while (next_idx < expanded_tokens.size() &&
-                       expanded_tokens[next_idx].find_first_not_of(" \t") == std::string::npos) {
+                        expanded_tokens[next_idx].find_first_not_of(" \t") == std::string_view::npos) {
                     ++next_idx;
                 }
                 std::string_view right_tok;
-                if (next_idx < expanded_tokens.size()) right_tok = std::string_view(expanded_tokens[next_idx]);
+                if (next_idx < expanded_tokens.size()) right_tok = expanded_tokens[next_idx];
                 size_t right_pos = right_tok.find_first_not_of(" \t");
                 bool keyword_paste = !left_word.empty() && right_pos != std::string_view::npos &&
                     is_sv_keyword(left_word) && is_id_char(right_tok[right_pos]) &&
@@ -461,20 +487,27 @@ namespace preprocessor {
                 if (keyword_paste) result.push_back(' ');
             } else {
 
-                std::string token_to_append = expanded_tokens[i];
+                const std::string_view token_to_append = expanded_tokens[i];
 
-                size_t quote_count = std::count(result.begin(), result.end(), '"');
-                bool currently_in_string = (quote_count % 2 != 0);
+                bool currently_in_string = (result_quote_count % 2 != 0);
 
-                if (currently_in_string) {
-                    for (char &c : token_to_append) {
+                if (!currently_in_string ||
+                    (token_to_append.find('\n') == std::string_view::npos &&
+                     token_to_append.find('\r') == std::string_view::npos)) {
+                    append_counted(token_to_append);
+                } else {
+                    // Flatten newlines into spaces inside string literals.
+                    // Only materialize a copy when the token actually
+                    // contains a newline (rare); the common case appends
+                    // the view directly.
+                    std::string flattened(token_to_append);
+                    for (char &c : flattened) {
                         if (c == '\n' || c == '\r') {
                             c = ' '; // Flatten the newline into a harmless space inside the string literal
                         }
                     }
+                    append_counted(flattened);
                 }
-
-                result.append(token_to_append);
             }
         }
         return result;

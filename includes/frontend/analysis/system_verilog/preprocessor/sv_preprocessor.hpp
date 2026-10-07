@@ -64,11 +64,13 @@ namespace preprocessor {
         [[nodiscard]] bool has_fatal_error() const {return fatal_error;}
         [[nodiscard]] const undefined_uses_map& get_undefined_macros() const {return undefined_macros;}
         [[nodiscard]] const std::set<std::string>& get_unknown_conditionals() const {return unknown_conditionals;}
-        // Definitions this file (transitively through its includes) explicitly
-        // `define'd. Seeded base/global entries are excluded unless locally
-        // redefined: otherwise every consumer would re-attribute repository
-        // macros to itself, defeating self-exclusion and fabricating
-        // definers. Partial if preprocessing aborted early.
+        // Definitions this file textually `define'd (includes excluded).
+        // Seeded base/global entries are excluded unless locally redefined:
+        // otherwise every consumer would re-attribute repository macros to
+        // itself, defeating self-exclusion and fabricating definers (every
+        // transitive includer used to claim library macros as its own,
+        // turning 2-way conflicts into dozens of paths). Partial if
+        // preprocessing aborted early.
         [[nodiscard]] macro_definitions_map get_harvested_definitions() const;
     private:
         // Evaluates line-leading directives (`define/`undef/`include) left
@@ -96,6 +98,10 @@ namespace preprocessor {
         definitions_map definitions;
         definitions_map base_definitions;
         std::set<std::string> locally_defined;
+        // Normalized path of the top-level file being preprocessed. Include
+        // processing mutates `path`, but only `define`s seen while
+        // `path == top_path` count as this file's harvest (see above).
+        std::string top_path;
         undefined_uses_map undefined_macros;
         std::set<std::string> unknown_conditionals;
         bool fatal_error = false;
@@ -122,6 +128,12 @@ namespace preprocessor {
         source_mapper source_map;
         unsigned int output_line_n = 0;
         bool disable_preprocessor = false;
+        // Per-instance resolution cache: repeated includes of the same
+        // header (common in UVM trees) skip the exists() probe loop.
+        // Key: style + requesting dir + name. Only successes are cached;
+        // misses keep their per-occurrence warn/error so diagnostics are
+        // unchanged. FS state is stable for the instance lifetime.
+        std::unordered_map<std::string, std::optional<include_dependency>> include_resolution_cache;
         static constexpr auto identifier_pattern = ctre::search<R"(`([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()*)">;
     };
 }

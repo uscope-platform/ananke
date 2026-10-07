@@ -114,6 +114,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         // processing shares this instance and must keep accumulated defines.
         definitions = base_definitions;
         locally_defined.clear();
+        top_path = path;
         undefined_macros.clear();
         unknown_conditionals.clear();
         deferred_error.clear();
@@ -156,11 +157,15 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             || trimmed_line.starts_with("`begin_keywords")
             || trimmed_line.starts_with("`line");
             std::string uncommented_line = line;
-            if (auto comment_pos = find_line_comment(line); comment_pos != std::string::npos) {
-                uncommented_line = line.substr(0, comment_pos);
-                auto comment = line.substr(comment_pos);
-                if (comment.contains("pragma translate_off")) disable_preprocessor = true;
-                if (comment.contains("pragma translate_on")) disable_preprocessor = false;
+            // Gate the string-aware comment scan on a raw '/' hit first:
+            // most code lines have no slash at all, and find('/') is memchr.
+            if (line.find('/') != std::string::npos) {
+                if (auto comment_pos = find_line_comment(line); comment_pos != std::string::npos) {
+                    uncommented_line = line.substr(0, comment_pos);
+                    std::string_view comment(line.data() + comment_pos, line.size() - comment_pos);
+                    if (comment.contains("pragma translate_off")) disable_preprocessor = true;
+                    if (comment.contains("pragma translate_on")) disable_preprocessor = false;
+                }
             }
             if (disable_preprocessor) uncommented_line = "";
 
@@ -191,7 +196,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                         } else {
                             include_depth_guard depth_guard;
                             auto content = preprocess_body(f_opt->view(), output_line_n);
-                            if (!error) out << content + '\n';
+                            if (!error) { out << content; out.put('\n'); }
                             release_include_file(path);
                         }
 
@@ -269,39 +274,80 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             auto end_identifier = line.substr(start_identifier+1).find_first_of('"');
             auto name = line.substr(start_identifier+1, end_identifier);
             if (name.starts_with('/')) return include_dependency{normalize_include_path(std::string(name)), include_resolution::regular};
+            const std::string parent_dir = std::filesystem::path(path).parent_path().string();
+            std::string cache_key;
+            cache_key.reserve(2 + parent_dir.size() + name.size());
+            cache_key.append("q:");
+            cache_key.append(parent_dir);
+            cache_key.push_back('\0');
+            cache_key.append(name);
+            if (auto hit = include_resolution_cache.find(cache_key); hit != include_resolution_cache.end()) {
+                return hit->second;
+            }
             std::string full_path;
-            auto rel_path = std::string(std::filesystem::path(path).parent_path()/name);
+            auto rel_path = std::string(std::filesystem::path(parent_dir)/name);
             if (std::filesystem::exists(rel_path)) {
                 full_path = rel_path;
             } else {
                 for (std::filesystem::path dir: opts_.include_directories) {
                     auto tmp_path = std::string(dir/name);
-                    if (std::filesystem::exists(tmp_path)) full_path = tmp_path;
+                    if (std::filesystem::exists(tmp_path)) { full_path = tmp_path; break; }
                 }
             }
+            std::optional<include_dependency> resolved;
             if (full_path.empty()) {
                 auto discovered = resolve_include(std::string(name), true);
                 if (discovered.has_value()) {
                     discovered->path = normalize_include_path(discovered->path);
-                    return discovered.value();
+                    resolved = discovered.value();
+                    include_resolution_cache.emplace(std::move(cache_key), resolved);
+                } else {
+                    // Not cached: keep per-occurrence warn/line info exact.
+                    spdlog::warn("include file not found: {} at line {} in file: {}", std::string(name), line_number, path);
+                    resolved = std::optional<include_dependency>{};
                 }
-                spdlog::warn("include file not found: {} at line {} in file: {}", std::string(name), line_number, path);
-                return {};
+            } else {
+                resolved = include_dependency{normalize_include_path(full_path), include_resolution::regular};
+                include_resolution_cache.emplace(std::move(cache_key), resolved);
             }
-            return include_dependency{normalize_include_path(full_path), include_resolution::regular};
+            return resolved;
         } else {
             auto filename = std::string(line.substr(start_identifier+1, line.find_first_of('>')- start_identifier-1));
+            std::string cache_key;
+            cache_key.reserve(2 + filename.size());
+            cache_key.append("a:");
+            cache_key.append(filename);
+            if (auto hit = include_resolution_cache.find(cache_key); hit != include_resolution_cache.end()) {
+                return hit->second;
+            }
+            std::optional<include_dependency> resolved;
+            bool found = false;
+            std::string full_path;
             for (std::filesystem::path dir: opts_.include_directories) {
-                auto full_path = dir/ filename;
-                if (std::filesystem::exists(full_path)) return include_dependency{normalize_include_path(full_path.string()), include_resolution::regular};
+                auto candidate = dir / filename;
+                if (std::filesystem::exists(candidate)) {
+                    full_path = candidate.string();
+                    found = true;
+                    break;
+                }
             }
-            auto discovered = resolve_include(filename, false);
-            if (discovered.has_value()) {
-                discovered->path = normalize_include_path(discovered->path);
-                return discovered.value();
+            if (!found) {
+                auto discovered = resolve_include(filename, false);
+                if (discovered.has_value()) {
+                    discovered->path = normalize_include_path(discovered->path);
+                    resolved = discovered.value();
+                    include_resolution_cache.emplace(std::move(cache_key), resolved);
+                } else {
+                    // Not cached: report_error is fatal (aborts the scan),
+                    // so caching it would be pointless anyway.
+                    report_error(fmt::format("included file not found: {}", filename));
+                    resolved = std::nullopt;
+                }
+            } else {
+                resolved = include_dependency{normalize_include_path(full_path), include_resolution::regular};
+                include_resolution_cache.emplace(std::move(cache_key), resolved);
             }
-            report_error(fmt::format("included file not found: {}", filename));
-            return std::nullopt;
+            return resolved;
         }
     }
 
@@ -365,9 +411,14 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         trimmed_view = trimmed_view.substr(first);
         auto id_last = trimmed_view.find_first_of("\t (");
         auto identifier = trimmed_view.substr(0, id_last);
+        // Textual-only harvest: defines reached through `include bodies
+        // still enter `definitions` (this file's parse needs them) but are
+        // not attributed to this file; the included file harvests them when
+        // it is scanned itself as a top-level file.
+        const bool lineal = (path == top_path);
         if (id_last == std::string_view::npos) {
             definitions[std::string(identifier)] = "";
-            locally_defined.insert(std::string(identifier));
+            if (lineal) locally_defined.insert(std::string(identifier));
             return;
         }
         auto remaining_view = trimmed_view.substr(id_last+1);
@@ -378,14 +429,14 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 return;
             }
             definitions[std::string(identifier)] = macro.value();
-            locally_defined.insert(std::string(identifier));
+            if (lineal) locally_defined.insert(std::string(identifier));
         } else {
             auto value_first = remaining_view.find_first_not_of("\t ");
             std::string value = (value_first == std::string_view::npos)
                 ? ""
                 : std::string{remaining_view.substr(value_first)};
             definitions[std::string(identifier)] = value;
-            locally_defined.insert(std::string(identifier));
+            if (lineal) locally_defined.insert(std::string(identifier));
         }
 
     }
@@ -532,38 +583,74 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         return result;
     }
 
-    std::string sv_preprocessor::evaluate_embedded_directives(const std::string &text) {
-        if (text.find('`') == std::string::npos) return text;
-        // Fast path: nothing line-leading to evaluate.
-        bool candidate = false;
-        {
-            std::istringstream scan(text);
-            std::string scan_line;
-            while (std::getline(scan, scan_line)) {
-                auto trimmed = macro_processor::ltrim(scan_line);
-                if (trimmed.starts_with("`define") || trimmed.starts_with("`undef") ||
-                    trimmed.starts_with("`include")) {
-                    candidate = true;
-                    break;
+    // Single-pass line-leading directive scan over a string_view, no streams.
+    // Returns true if any line (after ltrim) starts with `define/`undef/`include.
+    static bool has_line_leading_directive(std::string_view text) {
+        size_t pos = 0;
+        const size_t n = text.size();
+        while (pos < n) {
+            size_t eol = text.find('\n', pos);
+            std::string_view line = (eol == std::string_view::npos)
+                ? text.substr(pos) : text.substr(pos, eol - pos);
+            // ltrim spaces/tabs only (matches macro_processor::ltrim).
+            size_t s = line.find_first_not_of(" \t");
+            if (s != std::string_view::npos) {
+                std::string_view t = line.substr(s);
+                if (t.starts_with("`define") || t.starts_with("`undef") ||
+                    t.starts_with("`include")) {
+                    return true;
                 }
             }
+            if (eol == std::string_view::npos) break;
+            pos = eol + 1;
         }
-        if (!candidate) return text;
+        return false;
+    }
 
-        std::vector<std::string> out_lines;
-        std::istringstream iss(text);
-        std::string line;
-        while (std::getline(iss, line)) {
+    std::string sv_preprocessor::evaluate_embedded_directives(const std::string &text) {
+        if (text.find('`') == std::string::npos) return text;
+        // Fast path: nothing line-leading to evaluate (single manual scan,
+        // no istringstream allocation per expanded line).
+        if (!has_line_leading_directive(text)) return text;
+
+        std::string result;
+        result.reserve(text.size());
+        bool first_out = true;
+        auto emit_line = [&](std::string_view l) {
+            if (!first_out) result.push_back('\n');
+            first_out = false;
+            result.append(l);
+        };
+        size_t pos = 0;
+        const size_t n = text.size();
+        auto next_line_view = [&](std::string_view &out) -> bool {
+            if (pos > n) return false;
+            if (pos == n) return false;
+            size_t eol = text.find('\n', pos);
+            if (eol == std::string::npos) {
+                out = std::string_view(text.data() + pos, n - pos);
+                pos = n + 1;
+            } else {
+                out = std::string_view(text.data() + pos, eol - pos);
+                pos = eol + 1;
+            }
+            return true;
+        };
+        std::string_view line_view;
+        // NOTE: lines needing parse_definition/parse_include_path are
+        // materialized to std::string only on that path; pass-through lines
+        // are appended as views (no per-line std::string + vector entry).
+        while (next_line_view(line_view)) {
             // Deliberately no error break: map operations below are pure, so
             // every harvestable definition is collected even when the same
             // line also carries an unknown (the file quarantines regardless).
-            auto trimmed = macro_processor::ltrim(line);
+            auto trimmed = macro_processor::ltrim(line_view);
             if (trimmed.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed, 7);
-                out_lines.emplace_back("");
+                emit_line("");
             } else if (trimmed.starts_with("`undef") && c_solver.is_active()) {
                 definitions.erase(std::string(parse_one_arg_directive(trimmed, 6)));
-                out_lines.emplace_back("");
+                emit_line("");
             } else if (trimmed.starts_with("`include") && c_solver.is_active()) {
                 auto included_file = parse_include_path(trimmed);
                 if (!included_file.has_value()) {
@@ -596,10 +683,18 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                     // Shared instance: included defines join this file's scope.
                     auto content = preprocess_body(f_opt->view(), output_line_n);
                     if (!error) {
-                        std::istringstream spliced(content);
-                        std::string spliced_line;
-                        while (std::getline(spliced, spliced_line)) {
-                            out_lines.push_back(spliced_line);
+                        // Same getline-drop-trailing-newline semantics as
+                        // before, without an istringstream per include.
+                        size_t cpos = 0;
+                        const size_t cn = content.size();
+                        while (cpos < cn) {
+                            size_t ceol = content.find('\n', cpos);
+                            if (ceol == std::string::npos) {
+                                emit_line(std::string_view(content.data() + cpos, cn - cpos));
+                                break;
+                            }
+                            emit_line(std::string_view(content.data() + cpos, ceol - cpos));
+                            cpos = ceol + 1;
                         }
                     }
                     release_include_file(path);
@@ -609,31 +704,72 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 path = saved_path;
                 source_map.open_range(output_line_n, path);
             } else {
-                out_lines.push_back(line);
+                emit_line(line_view);
             }
-        }
-        std::string result;
-        for (size_t i = 0; i < out_lines.size(); ++i) {
-            if (i != 0) result.push_back('\n');
-            result.append(out_lines[i]);
         }
         if (!text.empty() && text.back() == '\n') result.push_back('\n');
         return result;
     }
 
-    std::string sv_preprocessor::post_process_macro_expansion(const std::string &text) {
-        std::string output_line = text;
-        if (output_line.contains("`ifdef") || output_line.contains("`ifndef") ||
-        output_line.contains("`elsif") || output_line.contains("`else") ||
-        output_line.contains("`endif")) {
+    // Single-scan check for embedded conditionals. The old code ran five
+    // separate contains() scans per expanded line; most expanded lines
+    // contain a backtick but no conditional, so one pass over backticks wins.
+    static bool has_embedded_conditional(std::string_view text) {
+        size_t pos = text.find('`');
+        while (pos != std::string_view::npos) {
+            std::string_view sub = text.substr(pos);
+            if (sub.starts_with("`ifdef") || sub.starts_with("`ifndef") ||
+                sub.starts_with("`elsif") || sub.starts_with("`else") ||
+                sub.starts_with("`endif")) {
+                return true;
+            }
+            pos = text.find('`', pos + 1);
+        }
+        return false;
+    }
 
+    std::string sv_preprocessor::post_process_macro_expansion(const std::string &text) {
+        // Fast path: plain code needs no conditional re-evaluation. The
+        // evaluate_embedded_directives() call below early-returns on
+        // backtick-less text anyway, so skip it and only pay for the
+        // block-comment strip when "/*" is actually present.
+        if (!has_embedded_conditional(text)) {
+            // NOTE: embedded `define/`undef/`include still need evaluation
+            // here (they arrive without any conditional); only skip the call
+            // when there is no backtick at all.
+            std::string output_line =
+                (text.find('`') == std::string::npos)
+                ? text : evaluate_embedded_directives(text);
+            if (output_line.find("/*") == std::string::npos) return output_line;
+            // Fall through to shared block-comment stripping.
+            std::string stripped;
+            stripped.reserve(output_line.size());
+            size_t pos = 0;
+            while (pos < output_line.size()) {
+                if (pos + 1 < output_line.size() && output_line[pos] == '/' && output_line[pos + 1] == '*') {
+                    size_t end_pos = output_line.find("*/", pos + 2);
+                    if (end_pos != std::string::npos) {
+                        pos = end_pos + 2;
+                    } else {
+                        pos = output_line.size(); // Malformed/unclosed comment case
+                    }
+                } else {
+                    stripped.push_back(output_line[pos]);
+                    pos++;
+                }
+            }
+            return stripped;
+        }
+        std::string output_line = text;
+        {
             // 3. Format the line to isolate embedded directives onto their own separate lines
             std::string formatted;
+            formatted.reserve(output_line.size() + 16);
             size_t i = 0;
             while (i < output_line.size()) {
                 if (output_line[i] == '`') {
                     std::string_view sub = std::string_view(output_line).substr(i);
-                    std::string directive = "";
+                    std::string_view directive;
                     size_t dir_len = 0;
                     bool has_arg = false;
 
@@ -655,7 +791,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                                 formatted.push_back(output_line[i]);
                                 i++;
                             }
-                            while (i < output_line.size() && (std::isalnum(output_line[i]) || output_line[i] == '_' || output_line[i] == '$')) {
+                            while (i < output_line.size() && (std::isalnum(static_cast<unsigned char>(output_line[i])) || output_line[i] == '_' || output_line[i] == '$')) {
                                 formatted.push_back(output_line[i]);
                                 i++;
                             }
@@ -689,6 +825,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             nested_preproc.opts_ = opts_;
             nested_preproc.repo_idx = repo_idx;
             nested_preproc.path = path;
+            nested_preproc.top_path = top_path;
             // Share the ancestor include chain: a cycle routed through
             // macro-generated includes would otherwise see a fresh,
             // empty guard set at every nesting level and recurse forever.
@@ -741,24 +878,32 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         }
         return output_line;
     }
+    // Paren delta of one chunk, tracking string state across chunks. The old
+    // code rescanned the whole accumulated string per extra line (O(n^2) on
+    // long UVM macro calls); this keeps a running balance instead.
+    // NOTE: in_string intentionally persists across lines: an unterminated
+    // quote keeps parens quoted until the closing quote, matching the old
+    // per-rescan behavior where a quote opened on an earlier line toggles the
+    // same single in_string flag for the rest of the accumulated text.
+    static int paren_balance_delta(std::string_view chunk, bool &in_string) {
+        int balance = 0;
+        for (size_t i = 0; i < chunk.size(); ++i) {
+            if (chunk[i] == '"' && (i == 0 || chunk[i-1] != '\\')) {
+                in_string = !in_string;
+            }
+            if (!in_string) {
+                if (chunk[i] == '(') balance++;
+                if (chunk[i] == ')') balance--;
+            }
+        }
+        return balance;
+    }
+
     std::string sv_preprocessor::gather_multi_line_macro(const std::string &first_line, std::istringstream &iss) {
         std::string accumulated = first_line;
 
-        // Lambda to evaluate unescaped structural parenthesis balance
-        auto count_paren_balance = [](const std::string &str) {
-            int balance = 0;
-            bool in_string = false;
-            for (size_t i = 0; i < str.size(); ++i) {
-                if (str[i] == '"' && (i == 0 || str[i-1] != '\\')) {
-                    in_string = !in_string;
-                }
-                if (!in_string) {
-                    if (str[i] == '(') balance++;
-                    if (str[i] == ')') balance--;
-                }
-            }
-            return balance;
-        };
+        bool in_string = false;
+        int balance = paren_balance_delta(first_line, in_string);
 
         std::string next_line;
         // A lookahead line starting with a structural directive terminates
@@ -766,7 +911,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         // text that post_process splits apart again, recreating the nesting
         // input at every level (unbounded self-similar recursion on fragments
         // like `if (` + kept macro with `ifndef on following lines).
-        auto is_directive_line = [](const std::string &ln) {
+        auto is_directive_line = [](std::string_view ln) {
             auto t = macro_processor::ltrim(ln);
             if (t.size() < 2 || t[0] != '`') return false;
             size_t i = 1;
@@ -774,24 +919,27 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                                     t[i] == '_' || t[i] == '$')) ++i;
             return is_structural_directive(t.substr(1, i - 1));
         };
-        // Continue pulling raw lines from the stream as long as parentheses are unbalanced
-        while (count_paren_balance(accumulated) > 0) {
+        // Continue pulling raw lines from the stream as long as parentheses are unbalanced.
+        // balance is tracked incrementally (not rescanned from scratch per line).
+        while (balance > 0) {
             auto pos = iss.tellg();
             if (!std::getline(iss, next_line)) break;
 
             // Strip single-line comments from the lookahead segment before combining
-            std::string uncommented_next = next_line;
+            std::string_view next_view = next_line;
             if (auto comment_pos = find_line_comment(next_line); comment_pos != std::string::npos) {
-                uncommented_next = next_line.substr(0, comment_pos);
+                next_view = std::string_view(next_line.data(), comment_pos);
             }
-            if (is_directive_line(uncommented_next)) {
+            if (is_directive_line(next_view)) {
                 iss.seekg(pos);
                 break;
             }
 
             line_number++; // Crucial: Keeps the preprocessor line tracking 1:1 with the file
 
-            accumulated += "\n" + uncommented_next;
+            balance += paren_balance_delta(next_view, in_string);
+            accumulated.push_back('\n');
+            accumulated.append(next_view);
         }
 
         return accumulated;

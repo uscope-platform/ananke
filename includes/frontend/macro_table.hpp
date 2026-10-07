@@ -31,13 +31,13 @@
 // required (this is how riscv-dv's dv_defines.svh reaches corev-dv fragments
 // through manifest.f ordering). Since this tool analyzes files independently,
 // the table re-learns those macros from the repository itself: every file
-// contributes its harvested definitions (even quarantined ones, partially),
+// contributes its textual definitions (even quarantined ones, partially),
 // and quarantined files are re-parsed with the resolved entries injected.
 //
 // Conflict policy: byte-identical bodies from several files are one logical
-// definition (shared headers included in many places). Distinct bodies for
-// one name are a genuine conflict and only surface in files that actually
-// need the macro — unrelated files never break on it.
+// definition (same macro textually defined in mirrored headers). Distinct
+// bodies for one name are a genuine conflict and only surface in files
+// that actually need the macro — unrelated files never break on it.
 class macro_table {
 public:
     // One repository definition of a macro, with its call-shape signature.
@@ -90,6 +90,9 @@ public:
     static std::string describe_candidate(const candidate_info &candidate);
     // Deterministic rendering for fingerprinting (caller hashes it).
     [[nodiscard]] std::string canonical_string() const;
+    // Canonical bodies per defining file for one macro (empty when absent).
+    // Used to group conflict definers by distinct body.
+    [[nodiscard]] std::map<std::string, std::string> bodies_for(const std::string &name) const;
     // Per-name deterministic renderings for cross-run change detection
     // (compare strings across runs; hash the whole canonical_string for
     // the table fingerprint).

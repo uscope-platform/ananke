@@ -241,6 +241,11 @@ std::set<std::string> macro_table::names() const {
     return result;
 }
 
+std::map<std::string, std::string> macro_table::bodies_for(const std::string &name) const {
+    if (auto it = bodies_.find(name); it != bodies_.end()) return it->second;
+    return {};
+}
+
 std::string macro_table::canonical_string() const {
     std::string out;
     for (const auto &[name, per_file] : bodies_) {

@@ -407,10 +407,33 @@ void Repository_walker::report_quarantine_errors() {
             using kind = macro_table::verdict::kind;
             if (judgement.state == kind::conflict) {
                 blocked = true;
+                // Group definers by distinct body and show one example path
+                // per body: with textual-only harvest each body normally has
+                // a single true definer, so this lists the genuine
+                // alternatives instead of every re-attributor.
+                std::map<std::string, std::vector<std::string>> by_body;
+                for (const auto &[def_path, body] : macro_table_.bodies_for(name)) {
+                    bool wanted = false;
+                    for (const auto &candidate : judgement.candidates) {
+                        if (candidate.path == def_path) { wanted = true; break; }
+                    }
+                    if (wanted) by_body[body].push_back(def_path);
+                }
                 std::string definers;
-                for (const auto &candidate : judgement.candidates) {
-                    if (!definers.empty()) definers += ", ";
-                    definers += candidate.path;
+                if (by_body.empty()) {
+                    for (const auto &candidate : judgement.candidates) {
+                        if (!definers.empty()) definers += ", ";
+                        definers += candidate.path;
+                    }
+                } else {
+                    for (const auto &[body, paths] : by_body) {
+                        (void)body;
+                        if (!definers.empty()) definers += ", ";
+                        definers += paths.front();
+                        if (paths.size() > 1) {
+                            definers += " (+" + std::to_string(paths.size() - 1) + " same-body)";
+                        }
+                    }
                 }
                 spdlog::error("Error analyzing {}: macro {} has conflicting definitions in: {}",
                               path, name, definers);
