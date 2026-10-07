@@ -903,10 +903,18 @@ property_case_item:
  ) property_expr SEMI;
 /****************************************** ids and selects ***********************************************************/
 bit_select: LSQUARE_BR expression RSQUARE_BR;
-identifier_with_bit_select: identifier ( bit_select )*;
+// NOTE: the (bit_select) loops below are deliberately reluctant (*?).
+// In `foreach (arr[i])` the trailing bracket is the loop_variables list,
+// but a greedy loop lets SLL consume it as a bit_select and then die on the
+// missing second bracket (mismatched input ')' expecting '[' -> SLL bail ->
+// whole file reparsed in LL). LL explores both orders and picks the loopvars
+// reading; reluctance makes SLL resolve the tie the same way. Everywhere else
+// the early-exit path dies (the caller cannot accept a stray '['), so trees
+// are unchanged: verified byte-identical on UVM + stress inputs.
+identifier_with_bit_select: identifier ( bit_select )*?;
 // '::' separated then '.' separated
 package_or_class_scoped_hier_id_with_select:
-    package_or_class_scoped_path ( bit_select )*
+    package_or_class_scoped_path ( bit_select )*?
     ( DOT identifier_with_bit_select )*
     ( LSQUARE_BR expression ( operator_plus_minus )? COLON expression RSQUARE_BR )?;
 
@@ -1456,7 +1464,16 @@ constraint_expression:
         | ( KW_SOFT )? expression_or_dist
         | uniqueness_constraint
         ) SEMI
-    | ( KW_FOREACH LPAREN primary LSQUARE_BR loop_variables
+    // NOTE: the hier_id header MUST stay first. On `foreach (arr[i])` both it
+    // and the primary header below match; ambiguity resolves to the lowest
+    // alternative in SLL and LL alike, so both modes take the hier reading
+    // (whose reluctant bit_select loops are SLL-clean, see above). The primary
+    // header remains as fallback for exotic arrays (e.g. `foreach (f(x)[i])`).
+    // Swapping the order reintroduces the SLL bail (mismatched input ')'
+    // expecting '[') on every indexed constraint-foreach in UVM.
+    | ( KW_FOREACH LPAREN package_or_class_scoped_hier_id_with_select LSQUARE_BR loop_variables
+        RSQUARE_BR RPAREN
+        | KW_FOREACH LPAREN primary LSQUARE_BR loop_variables
         RSQUARE_BR RPAREN
         | expression ARROW
         ) constraint_set

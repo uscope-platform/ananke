@@ -7543,6 +7543,7 @@ public:
     Expression_or_distContext *expression_or_dist();
     Uniqueness_constraintContext *uniqueness_constraint();
     antlr4::tree::TerminalNode *KW_FOREACH();
+    Package_or_class_scoped_hier_id_with_selectContext *package_or_class_scoped_hier_id_with_select();
     antlr4::tree::TerminalNode *LSQUARE_BR();
     Loop_variablesContext *loop_variables();
     antlr4::tree::TerminalNode *RSQUARE_BR();
