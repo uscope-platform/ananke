@@ -58,6 +58,10 @@ struct file_analysis_context {
     preprocessor::undefined_uses_map undefined_macros;
     std::set<std::string> unknown_conditionals;
     preprocessor::macro_definitions_map harvested;
+    // Analyzer's failure text for the attempt (macro summary or parse
+    // failure). Surfaced by the quarantine report when macros converged
+    // but the file still fails.
+    std::string error_detail;
 };
 
 static file_analysis_context<hdl_file> analyze_verilog(const std::filesystem::path &file, const parse_options &opts, const std::string &old_hash, const std::shared_ptr<repository_index> &idx, const preprocessor::macro_definitions_map &injected);
@@ -140,6 +144,15 @@ private:
         preprocessor::undefined_uses_map undefined_macros;
         std::set<std::string> unknown_conditionals;
         std::string hash;
+        // Latest attempt's state (overwrite, not merge): the accumulated
+        // maps above mix stale resolved names with current misses (each
+        // pass only sees unknowns past previously injected ones), so
+        // reporting must use the final state while injection keeps the
+        // union. last_error carries the analyzer's failure reason for
+        // attempts where macros had already converged.
+        preprocessor::undefined_uses_map last_undefined;
+        std::set<std::string> last_unknowns;
+        std::string last_error;
     };
 
     macro_table macro_table_;

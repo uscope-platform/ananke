@@ -246,6 +246,29 @@ std::map<std::string, std::string> macro_table::bodies_for(const std::string &na
     return {};
 }
 
+std::vector<std::string> macro_table::representative_definers(
+    const std::string &name, const std::vector<candidate_info> &candidates) const {
+    std::map<std::string, std::vector<std::string>> by_body;
+    const auto per_file = bodies_for(name);
+    for (const auto &candidate : candidates) {
+        if (auto it = per_file.find(candidate.path); it != per_file.end()) {
+            by_body[it->second].push_back(candidate.path);
+        } else {
+            by_body[""].push_back(candidate.path);
+        }
+    }
+    std::vector<std::string> out;
+    for (const auto &[body, paths] : by_body) {
+        (void)body;
+        std::string entry = paths.front();
+        if (paths.size() > 1) {
+            entry += " (+" + std::to_string(paths.size() - 1) + " same-body)";
+        }
+        out.push_back(entry);
+    }
+    return out;
+}
+
 std::string macro_table::canonical_string() const {
     std::string out;
     for (const auto &[name, per_file] : bodies_) {

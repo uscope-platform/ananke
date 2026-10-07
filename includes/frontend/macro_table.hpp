@@ -93,6 +93,12 @@ public:
     // Canonical bodies per defining file for one macro (empty when absent).
     // Used to group conflict definers by distinct body.
     [[nodiscard]] std::map<std::string, std::string> bodies_for(const std::string &name) const;
+    // One example path per distinct body among the given candidates
+    // (each entry optionally annotated with its same-body count). Turns an
+    // N-file re-attribution of a 2-way conflict into the 2 genuine
+    // alternatives.
+    [[nodiscard]] std::vector<std::string> representative_definers(
+        const std::string &name, const std::vector<candidate_info> &candidates) const;
     // Per-name deterministic renderings for cross-run change detection
     // (compare strings across runs; hash the whole canonical_string for
     // the table fingerprint).

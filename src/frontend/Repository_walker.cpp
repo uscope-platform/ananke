@@ -147,6 +147,9 @@ void Repository_walker::collect_analysis_results() {
                 entry.unknown_conditionals.insert(ctx.unknown_conditionals.begin(),
                                                   ctx.unknown_conditionals.end());
                 entry.hash = ctx.hash;
+                entry.last_undefined = ctx.undefined_macros;
+                entry.last_unknowns = ctx.unknown_conditionals;
+                entry.last_error = ctx.error_detail;
                 macro_table_.add_file_definitions(ctx.path, ctx.harvested);
                 const size_t pending =
                     entry.undefined_macros.size() + entry.unknown_conditionals.size();
@@ -397,42 +400,30 @@ void Repository_walker::invalidate_stale_macros() {
 
 void Repository_walker::report_quarantine_errors() {
     for (const auto &[path, entry] : quarantine_) {
+        // Report the final attempt's misses, not the accumulated union:
+        // every pass only sees unknowns past previously injected ones, so
+        // the union mixes long-resolved names with current ones and would
+        // blame macros that already expanded fine. Injection still uses the
+        // union (per-macro arity merging); reporting uses final state.
         // Blocker-first: absent, mismatched, conflicting and shadowed names
         // doom the file regardless of the rest; resolvable names held back
         // by those blockers are collateral, reported only when nothing else
         // blocks.
         bool blocked = false;
-        for (const auto &[name, arities] : entry.undefined_macros) {
+        for (const auto &[name, arities] : entry.last_undefined) {
             auto judgement = macro_table_.judge(name, arities, path);
             using kind = macro_table::verdict::kind;
             if (judgement.state == kind::conflict) {
                 blocked = true;
-                // Group definers by distinct body and show one example path
-                // per body: with textual-only harvest each body normally has
-                // a single true definer, so this lists the genuine
-                // alternatives instead of every re-attributor.
-                std::map<std::string, std::vector<std::string>> by_body;
-                for (const auto &[def_path, body] : macro_table_.bodies_for(name)) {
-                    bool wanted = false;
-                    for (const auto &candidate : judgement.candidates) {
-                        if (candidate.path == def_path) { wanted = true; break; }
-                    }
-                    if (wanted) by_body[body].push_back(def_path);
-                }
                 std::string definers;
-                if (by_body.empty()) {
+                for (const auto &rep : macro_table_.representative_definers(name, judgement.candidates)) {
+                    if (!definers.empty()) definers += ", ";
+                    definers += rep;
+                }
+                if (definers.empty()) {
                     for (const auto &candidate : judgement.candidates) {
                         if (!definers.empty()) definers += ", ";
                         definers += candidate.path;
-                    }
-                } else {
-                    for (const auto &[body, paths] : by_body) {
-                        (void)body;
-                        if (!definers.empty()) definers += ", ";
-                        definers += paths.front();
-                        if (paths.size() > 1) {
-                            definers += " (+" + std::to_string(paths.size() - 1) + " same-body)";
-                        }
                     }
                 }
                 spdlog::error("Error analyzing {}: macro {} has conflicting definitions in: {}",
@@ -465,15 +456,39 @@ void Repository_walker::report_quarantine_errors() {
             }
         }
         if (!blocked) {
-            for (const auto &[name, arities] : entry.undefined_macros) {
-                (void)arities;
-                auto judgement = macro_table_.judge(name, arities, path);
-                if (judgement.state == macro_table::verdict::kind::unique &&
-                    !judgement.candidates.empty()) {
-                    spdlog::error("Error analyzing {}: macro {} defined in {} could not be resolved "
-                                  "within {} fixpoint passes",
-                                  path, name, judgement.candidates.front().path,
-                                  max_macro_passes);
+            if (!entry.last_undefined.empty()) {
+                for (const auto &[name, arities] : entry.last_undefined) {
+                    (void)arities;
+                    auto judgement = macro_table_.judge(name, arities, path);
+                    if (judgement.state == macro_table::verdict::kind::unique &&
+                        !judgement.candidates.empty()) {
+                        spdlog::error("Error analyzing {}: macro {} defined in {} could not be resolved "
+                                      "within {} fixpoint passes",
+                                      path, name, judgement.candidates.front().path,
+                                      max_macro_passes);
+                    }
+                }
+            } else {
+                // Macros converged but the file still fails: the fixpoint
+                // cannot help (e.g. an unsupported construct in the expanded
+                // text). Report the analyzer's own failure reason instead of
+                // macro blame, plus any conditionals that never resolved.
+                std::string unknowns;
+                for (const auto &n : entry.last_unknowns) {
+                    auto j = macro_table_.judge(n, {}, path);
+                    if (j.state != macro_table::verdict::kind::absent) continue;
+                    if (!unknowns.empty()) unknowns += ", ";
+                    unknowns += n;
+                }
+                if (entry.last_error.empty() && unknowns.empty()) continue;
+                if (unknowns.empty()) {
+                    spdlog::error("Error analyzing {}: {}", path, entry.last_error);
+                } else if (entry.last_error.empty()) {
+                    spdlog::error("Error analyzing {}: preprocessor conditionals never resolved: {}",
+                                  path, unknowns);
+                } else {
+                    spdlog::error("Error analyzing {}: {} (unresolved preprocessor conditionals: {})",
+                                  path, entry.last_error, unknowns);
                 }
             }
         }
@@ -675,6 +690,7 @@ file_analysis_context<hdl_file> analyze_verilog(
             if (!file_processor.has_fatal_error() &&
                 (!ctx.undefined_macros.empty() || !ctx.unknown_conditionals.empty())) {
                 ctx.quarantined = true;
+                if (file_processor.has_error()) ctx.error_detail = file_processor.get_error();
                 return ctx;
             }
             spdlog::error("Error analyzing {}: {}", file.string(), file_processor.get_error());

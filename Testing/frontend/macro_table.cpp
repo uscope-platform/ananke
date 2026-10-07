@@ -200,3 +200,36 @@ TEST(macro_table, stored_round_trip_function) {
     EXPECT_EQ(std::get<preprocessor::function_macro>(live), macro);
     EXPECT_EQ(macro_canonical_body(def), macro_canonical_body(live));
 }
+
+TEST(macro_table, conflict_representatives_group_by_body) {
+    // Simulates transitive re-attribution: many files claiming the same
+    // two bodies (e.g. UVM library vs project shim harvested by every
+    // includer). Reporting must show the 2 genuine alternatives, not all
+    // re-attributors.
+    macro_table table;
+    table.add_file_definitions("uvm_message_defines.svh", simple_def("MSG", "real_body"));
+    table.add_file_definitions("pkg_a.sv", simple_def("MSG", "real_body"));
+    table.add_file_definitions("pkg_b.sv", simple_def("MSG", "real_body"));
+    table.add_file_definitions("custom_macros.svh", simple_def("MSG", "shim_body"));
+    table.add_file_definitions("pkg_c.sv", simple_def("MSG", "shim_body"));
+    auto judgement = table.judge("MSG", {}, "user.sv");
+    ASSERT_EQ(judgement.state, kind::conflict);
+    auto reps = table.representative_definers("MSG", judgement.candidates);
+    ASSERT_EQ(reps.size(), 2u);
+    // One representative per distinct body; same-body extras annotated.
+    bool real_shown = false, shim_shown = false;
+    for (const auto &rep : reps) {
+        if (rep.find("uvm_message_defines.svh") != std::string::npos ||
+            rep.find("pkg_a.sv") != std::string::npos ||
+            rep.find("pkg_b.sv") != std::string::npos) {
+            real_shown = true;
+            EXPECT_TRUE(rep.find("same-body") != std::string::npos);
+        }
+        if (rep.find("custom_macros.svh") != std::string::npos ||
+            rep.find("pkg_c.sv") != std::string::npos) {
+            shim_shown = true;
+        }
+    }
+    EXPECT_TRUE(real_shown);
+    EXPECT_TRUE(shim_shown);
+}
