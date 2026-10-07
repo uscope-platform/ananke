@@ -138,6 +138,7 @@ namespace preprocessor {
         if (!in.contains('`')) return std::string(in);
         std::string result;
         std::string working = std::string(in);
+        std::string prev_working;
         int nesting_counter = 0;
         size_t previous_size = 0;
         int nonconverging_passes = 0;
@@ -215,6 +216,12 @@ namespace preprocessor {
                 return "";
             }
             expansion_needed = result.contains('`');
+            // Fixed point or 2-cycle (e.g. kept undefined uses, A->B->A):
+            // expansion is a deterministic function of text+definitions, so
+            // further passes repeat forever. Stop at once instead of burning
+            // all remaining passes and feeding non-converged text (with
+            // surviving directives) downstream.
+            if (result == working || result == prev_working) break;
             // A self-multiplying recursive macro keeps growing every pass and
             // never converges; a legitimate expansion (e.g. UVM field utils)
             // converges within a couple of passes. Detect sustained growth early
@@ -229,6 +236,7 @@ namespace preprocessor {
                 return "";
             }
             previous_size = result.size();
+            prev_working = std::move(working);
             working = result;
             nesting_counter++;
         }

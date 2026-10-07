@@ -2058,3 +2058,107 @@ TEST(preprocessor, covergroup_token_paste_with_keyword_name) {
     EXPECT_THAT(result, testing::HasSubstr("covergroup xor_cg"));
     EXPECT_THAT(result, testing::Not(testing::HasSubstr("covergroup xor _cg")));
 }
+
+TEST(preprocessor, recursive_include_different_spelling) {
+    // Same file reached through different path spellings must still trip the
+    // recursion guard instead of recursing until stack exhaustion
+    // (EXC_BAD_ACCESS on the guard page, deep stack).
+    std::filesystem::create_directories("/tmp/ananke_rec_test");
+    {
+        std::ofstream ofs("/tmp/ananke_rec_test/main.sv");
+        ofs << "`include \"a.svh\"\nmodule m;\nendmodule\n";
+    }
+    {
+        std::ofstream ofs("/tmp/ananke_rec_test/a.svh");
+        ofs << "`include \"./main.sv\"\n";
+    }
+
+    auto test_pattern = R"(
+        `include "a.svh"
+        module test_module ();
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/ananke_rec_test/main.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    std::filesystem::remove_all("/tmp/ananke_rec_test");
+
+    EXPECT_TRUE(preproc.has_error());
+}
+
+TEST(preprocessor, deep_acyclic_include_chain_capped) {
+    // A deep *acyclic* include chain defeats cycle guards by construction;
+    // it must still degrade to a clean diagnostic instead of smashing the
+    // stack. 300 chained files, each including the next.
+    constexpr int kChain = 300;
+    std::filesystem::create_directories("/tmp/ananke_deep_test");
+    for (int i = 0; i < kChain; ++i) {
+        std::ofstream ofs("/tmp/ananke_deep_test/f" + std::to_string(i) + ".svh");
+        ofs << "`include \"f" << (i + 1) << ".svh\"\n";
+    }
+    {
+        std::ofstream ofs("/tmp/ananke_deep_test/f" + std::to_string(kChain) + ".svh");
+        ofs << "// leaf\n";
+    }
+
+    auto test_pattern = R"(
+        `include "f0.svh"
+        module test_module ();
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/ananke_deep_test/main.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    std::filesystem::remove_all("/tmp/ananke_deep_test");
+
+    EXPECT_TRUE(preproc.has_error());
+    EXPECT_TRUE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, oscillating_macros_terminate) {
+    // A->B->A ping-pong never grows, so the growth-based non-convergence
+    // detector never fires; expansion must still stop (fixed-point repeat)
+    // instead of burning all passes and feeding non-converged text downstream.
+    auto test_pattern = R"(
+        `define PING_A `PING_B
+        `define PING_B `PING_A
+        module test_module ();
+            wire a = `PING_A;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("`PING_A"));
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, gather_stops_at_directive_lines) {
+    // Unbalanced parens + kept bare macro must not swallow following
+    // directive lines: swallowing re-assembles exactly the text that
+    // post_process splits apart again, nesting identically at every level
+    // (unbounded self-similar recursion on UVM field-macro shapes like
+    // `if (` + kept macro with `ifndef on following lines).
+    auto test_pattern = R"(
+        module m;
+            if ( `uvm_file
+            `ifndef X
+            marker_xyz
+            `endif
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("marker_xyz"));
+    EXPECT_THAT(result, testing::Not(testing::HasSubstr("ifndef")));
+    EXPECT_FALSE(preproc.has_fatal_error());
+}

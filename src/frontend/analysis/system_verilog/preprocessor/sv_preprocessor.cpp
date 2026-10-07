@@ -21,6 +21,12 @@
 
 namespace preprocessor {
 
+// Nesting depth shared across instances on a thread (separate objects nest).
+// Defined here so both include sites and the conditional path observe it.
+namespace {
+thread_local int pp_depth = 0;
+}
+
 // Position of the first `//` outside a string literal, or npos. A naive
 // find("//") truncates lines like
 //   $sformatf("csrr x%0d, 0x%0x // MSTATUS", tp, status)
@@ -40,6 +46,41 @@ static std::string::size_type find_line_comment(const std::string &line) {
     return std::string::npos;
 }
 
+// Include nesting depth is orthogonal to the cycle guards below: guards catch
+// repeats, but a deep *acyclic* chain (machine-generated file lists) would
+// still smash the stack with no diagnostic. Same backstop pattern as the
+// conditional-nesting cap.
+namespace {
+thread_local int include_nesting_depth = 0;
+struct include_depth_guard {
+    include_depth_guard() { ++include_nesting_depth; }
+    ~include_depth_guard() { --include_nesting_depth; }
+};
+}  // namespace
+static constexpr int MAX_INCLUDE_DEPTH = 256;
+
+    std::string sv_preprocessor::normalize_include_path(const std::string &p) {
+        return std::filesystem::path(p).lexically_normal().string();
+    }
+
+    static std::optional<std::pair<uint64_t, uint64_t>> file_identity(const std::string &p) {
+        struct stat st{};
+        if (::stat(p.c_str(), &st) != 0) return std::nullopt;
+        return std::make_pair(static_cast<uint64_t>(st.st_dev), static_cast<uint64_t>(st.st_ino));
+    }
+
+    bool sv_preprocessor::claim_include_file(const std::string &p) {
+        auto id = file_identity(p);
+        if (!id.has_value()) return false;
+        if (active_inodes.contains(id.value())) return true;
+        active_inodes.insert(id.value());
+        return false;
+    }
+
+    void sv_preprocessor::release_include_file(const std::string &p) {
+        auto id = file_identity(p);
+        if (id.has_value()) active_inodes.erase(id.value());
+    }
 
     void sv_preprocessor::report_error(const std::string &msg) {
         spdlog::error(msg);
@@ -76,6 +117,8 @@ static std::string::size_type find_line_comment(const std::string &line) {
         undefined_macros.clear();
         unknown_conditionals.clear();
         deferred_error.clear();
+        active_inodes.clear();
+        claim_include_file(path);
         return preprocess_body(file_content, initial_output_line);
     }
 
@@ -140,9 +183,16 @@ static std::string::size_type find_line_comment(const std::string &line) {
                         auto f_opt = mm_file::try_open(path);
                         if (!f_opt.has_value()) {
                             report_error(fmt::format("Could not open include file: {}", path));
+                        } else if (claim_include_file(path)) {
+                            report_error(fmt::format("Recursive include detected for file {} in file {}", path, saved_path));
+                        } else if (include_nesting_depth >= MAX_INCLUDE_DEPTH) {
+                            report_error(fmt::format("Maximum include depth ({}) exceeded including file {} in file {}",
+                                                     MAX_INCLUDE_DEPTH, path, saved_path));
                         } else {
+                            include_depth_guard depth_guard;
                             auto content = preprocess_body(f_opt->view(), output_line_n);
                             if (!error) out << content + '\n';
+                            release_include_file(path);
                         }
 
                         active_includes.erase(path);
@@ -218,7 +268,7 @@ static std::string::size_type find_line_comment(const std::string &line) {
         }else if (line[start_identifier] == '\"') {
             auto end_identifier = line.substr(start_identifier+1).find_first_of('"');
             auto name = line.substr(start_identifier+1, end_identifier);
-            if (name.starts_with('/')) return include_dependency{std::string(name), include_resolution::regular};
+            if (name.starts_with('/')) return include_dependency{normalize_include_path(std::string(name)), include_resolution::regular};
             std::string full_path;
             auto rel_path = std::string(std::filesystem::path(path).parent_path()/name);
             if (std::filesystem::exists(rel_path)) {
@@ -231,19 +281,25 @@ static std::string::size_type find_line_comment(const std::string &line) {
             }
             if (full_path.empty()) {
                 auto discovered = resolve_include(std::string(name), true);
-                if (discovered.has_value()) return discovered.value();
+                if (discovered.has_value()) {
+                    discovered->path = normalize_include_path(discovered->path);
+                    return discovered.value();
+                }
                 spdlog::warn("include file not found: {} at line {} in file: {}", std::string(name), line_number, path);
                 return {};
             }
-            return include_dependency{full_path, include_resolution::regular};
+            return include_dependency{normalize_include_path(full_path), include_resolution::regular};
         } else {
             auto filename = std::string(line.substr(start_identifier+1, line.find_first_of('>')- start_identifier-1));
             for (std::filesystem::path dir: opts_.include_directories) {
                 auto full_path = dir/ filename;
-                if (std::filesystem::exists(full_path)) return include_dependency{full_path.string(), include_resolution::regular};
+                if (std::filesystem::exists(full_path)) return include_dependency{normalize_include_path(full_path.string()), include_resolution::regular};
             }
             auto discovered = resolve_include(filename, false);
-            if (discovered.has_value()) return discovered.value();
+            if (discovered.has_value()) {
+                discovered->path = normalize_include_path(discovered->path);
+                return discovered.value();
+            }
             report_error(fmt::format("included file not found: {}", filename));
             return std::nullopt;
         }
@@ -529,7 +585,14 @@ static std::string::size_type find_line_comment(const std::string &line) {
                 auto f_opt = mm_file::try_open(path);
                 if (!f_opt.has_value()) {
                     report_error(fmt::format("Could not open include file: {}", path));
+                } else if (claim_include_file(path)) {
+                    report_error(fmt::format("Recursive include detected for file {} in file {}",
+                                             path, saved_path));
+                } else if (include_nesting_depth >= MAX_INCLUDE_DEPTH) {
+                    report_error(fmt::format("Maximum include depth ({}) exceeded including file {} in file {}",
+                                             MAX_INCLUDE_DEPTH, path, saved_path));
                 } else {
+                    include_depth_guard depth_guard;
                     // Shared instance: included defines join this file's scope.
                     auto content = preprocess_body(f_opt->view(), output_line_n);
                     if (!error) {
@@ -539,6 +602,7 @@ static std::string::size_type find_line_comment(const std::string &line) {
                             out_lines.push_back(spliced_line);
                         }
                     }
+                    release_include_file(path);
                 }
                 active_includes.erase(path);
                 line_number = saved_line;
@@ -605,11 +669,31 @@ static std::string::size_type find_line_comment(const std::string &line) {
             }
 
             // 4. Instantiate a nested preprocessor step with pre-populated definitions
+            // Depth backstop: every guard so far assumes well-formed input, but
+            // a missed cycle route must degrade to a clean diagnostic, never a
+            // stack-smashing unbounded recursion. 32 nested conditional layers
+            // via macro expansion exceeds anything real code produces.
+            struct pp_depth_guard { ~pp_depth_guard() { --pp_depth; } } pp_depth_guard_instance;
+            (void)pp_depth_guard_instance;
+            static constexpr int MAX_NESTED_PREPROCESS_DEPTH = 32;
+            ++pp_depth;
+            if (pp_depth > MAX_NESTED_PREPROCESS_DEPTH) {
+                report_error(fmt::format("Nested conditional expansion exceeded maximum depth ({}) in file {}",
+                                         MAX_NESTED_PREPROCESS_DEPTH, path));
+                spdlog::error("Nesting trigger in file {} (depth {}): {:.300}",
+                              path, pp_depth, formatted);
+                return "";
+            }
             sv_preprocessor nested_preproc;
             nested_preproc.definitions = definitions;
             nested_preproc.opts_ = opts_;
             nested_preproc.repo_idx = repo_idx;
             nested_preproc.path = path;
+            // Share the ancestor include chain: a cycle routed through
+            // macro-generated includes would otherwise see a fresh,
+            // empty guard set at every nesting level and recurse forever.
+            nested_preproc.active_includes = active_includes;
+            nested_preproc.active_inodes = active_inodes;
 
             // Evaluate the conditional branches cleanly using the existing rules.
             // Body directly: definitions were pre-populated above and must
@@ -622,7 +706,9 @@ static std::string::size_type find_line_comment(const std::string &line) {
             unknown_conditionals.insert(nested_preproc.unknown_conditionals.begin(),
                                         nested_preproc.unknown_conditionals.end());
             if (nested_preproc.has_error()) {
-                spdlog::error(nested_preproc.get_error());
+                // No per-level logging here: the originating level already
+                // logged via report_error; echoing at every unwind level
+                // turns one trip into dozens of identical lines.
                 if (!error) error = nested_preproc.get_error();
                 if (nested_preproc.has_fatal_error()) fatal_error = true;
                 return "";
@@ -675,15 +761,35 @@ static std::string::size_type find_line_comment(const std::string &line) {
         };
 
         std::string next_line;
+        // A lookahead line starting with a structural directive terminates
+        // gathering (left for the main loop): swallowing it would re-assemble
+        // text that post_process splits apart again, recreating the nesting
+        // input at every level (unbounded self-similar recursion on fragments
+        // like `if (` + kept macro with `ifndef on following lines).
+        auto is_directive_line = [](const std::string &ln) {
+            auto t = macro_processor::ltrim(ln);
+            if (t.size() < 2 || t[0] != '`') return false;
+            size_t i = 1;
+            while (i < t.size() && (std::isalnum(static_cast<unsigned char>(t[i])) ||
+                                    t[i] == '_' || t[i] == '$')) ++i;
+            return is_structural_directive(t.substr(1, i - 1));
+        };
         // Continue pulling raw lines from the stream as long as parentheses are unbalanced
-        while (count_paren_balance(accumulated) > 0 && std::getline(iss, next_line)) {
-            line_number++; // Crucial: Keeps the preprocessor line tracking 1:1 with the file
+        while (count_paren_balance(accumulated) > 0) {
+            auto pos = iss.tellg();
+            if (!std::getline(iss, next_line)) break;
 
             // Strip single-line comments from the lookahead segment before combining
             std::string uncommented_next = next_line;
             if (auto comment_pos = find_line_comment(next_line); comment_pos != std::string::npos) {
                 uncommented_next = next_line.substr(0, comment_pos);
             }
+            if (is_directive_line(uncommented_next)) {
+                iss.seekg(pos);
+                break;
+            }
+
+            line_number++; // Crucial: Keeps the preprocessor line tracking 1:1 with the file
 
             accumulated += "\n" + uncommented_next;
         }

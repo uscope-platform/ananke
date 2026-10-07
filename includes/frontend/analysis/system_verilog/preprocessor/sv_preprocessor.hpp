@@ -17,6 +17,7 @@
 #define ANANKE_SV_PREPROCESSOR_HPP
 
 #include <ctre.hpp>
+#include <cstdint>
 #include <filesystem>
 #include <vector>
 #include <fstream>
@@ -44,7 +45,7 @@ namespace preprocessor {
         std::string flatten_source(const std::string_view &file_content);
         void set_options(const parse_options &o) {opts_ = o;}
         void set_repository_index(const std::shared_ptr<repository_index> &idx){repo_idx = idx;}
-        void set_path(const std::string &s){path = s;}
+        void set_path(const std::string &s){path = normalize_include_path(s);}
         // Base definitions learned from the rest of the repository
         // (compilation-order macros). Installed underneath global defines
         // and file-local `defines: file-local > global > base.
@@ -106,6 +107,14 @@ namespace preprocessor {
         // get_error): the pass itself keeps ids only, never message text.
         mutable std::string deferred_error;
         std::set<std::string> active_includes;
+        // Spelling-proof recursion guard: normalized strings defeat `./` and
+        // `a/../` aliases, but symlinks, case-insensitive matches, and
+        // hardlinks can still spell one file many ways. (dev, ino) cannot.
+        std::set<std::pair<uint64_t, uint64_t>> active_inodes;
+        static std::string normalize_include_path(const std::string &p);
+        // Claims the file for processing; true when it is already active.
+        bool claim_include_file(const std::string &p);
+        void release_include_file(const std::string &p);
         conditional_solver c_solver;
         std::set<std::string> include_directories;
         std::shared_ptr<repository_index> repo_idx;
