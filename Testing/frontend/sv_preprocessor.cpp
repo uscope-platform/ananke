@@ -2035,6 +2035,44 @@ TEST(preprocessor, include_auto_discovery_ambiguous) {
     EXPECT_TRUE(preproc.has_error());
 }
 
+TEST(preprocessor, include_auto_discovery_ambiguous_skips_cleanly) {
+    std::filesystem::create_directories("/tmp/ananke_disc_test/a");
+    std::filesystem::create_directories("/tmp/ananke_disc_test/b");
+    std::ofstream ofs("/tmp/ananke_disc_test/a/interfaces.svh");
+    ofs << "`define A 5\n";
+    ofs.close();
+    ofs = std::ofstream("/tmp/ananke_disc_test/b/interfaces.svh");
+    ofs << "`define A 6\n";
+    ofs.close();
+
+    auto idx = std::make_shared<repository_index>();
+    idx->add_file("/tmp/ananke_disc_test/a/interfaces.svh");
+    idx->add_file("/tmp/ananke_disc_test/b/interfaces.svh");
+
+    auto test_pattern = R"(
+        `include "interfaces.svh"
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/ananke_disc_test/file.sv");
+    preproc.set_repository_index(idx);
+
+    auto result = preproc.preprocess(test_pattern);
+    std::filesystem::remove_all("/tmp/ananke_disc_test");
+
+    auto check_string = R"(
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
 TEST(preprocessor, include_auto_discovery_angle) {
     std::filesystem::create_directories("/tmp/ananke_disc_test/Common");
     std::ofstream ofs("/tmp/ananke_disc_test/Common/interfaces.svh");

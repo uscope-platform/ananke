@@ -296,13 +296,24 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             }
             std::optional<include_dependency> resolved;
             if (full_path.empty()) {
-                auto discovered = resolve_include(std::string(name), true);
-                if (discovered.has_value()) {
-                    discovered->path = normalize_include_path(discovered->path);
-                    resolved = discovered.value();
+                auto discovered = resolve_include(std::string(name));
+                if (discovered.resolved.has_value()) {
+                    discovered.resolved->path = normalize_include_path(discovered.resolved->path);
+                    resolved = discovered.resolved.value();
                     include_resolution_cache.emplace(std::move(cache_key), resolved);
-                } else {
+                } else if (!discovered.candidates.empty()) {
+                    // Ambiguous: report the candidates, not "not found".
+                    // Skipped without failing the parse (quoted include).
                     // Not cached: keep per-occurrence warn/line info exact.
+                    std::string candidate_dirs;
+                    for (auto &c : discovered.candidates) {
+                        candidate_dirs += "\n    " + c.parent_path().string();
+                    }
+                    spdlog::warn("include file {} is ambiguous ({} candidates), skipping include "
+                                 "at line {} in file: {}{}", std::string(name),
+                                 discovered.candidates.size(), line_number, path, candidate_dirs);
+                    resolved = std::optional<include_dependency>{};
+                } else {
                     spdlog::warn("include file not found: {} at line {} in file: {}", std::string(name), line_number, path);
                     resolved = std::optional<include_dependency>{};
                 }
@@ -332,11 +343,19 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 }
             }
             if (!found) {
-                auto discovered = resolve_include(filename, false);
-                if (discovered.has_value()) {
-                    discovered->path = normalize_include_path(discovered->path);
-                    resolved = discovered.value();
+                auto discovered = resolve_include(filename);
+                if (discovered.resolved.has_value()) {
+                    discovered.resolved->path = normalize_include_path(discovered.resolved->path);
+                    resolved = discovered.resolved.value();
                     include_resolution_cache.emplace(std::move(cache_key), resolved);
+                } else if (!discovered.candidates.empty()) {
+                    std::string candidate_dirs;
+                    for (auto &c : discovered.candidates) {
+                        candidate_dirs += "\n    " + c.parent_path().string();
+                    }
+                    report_error(fmt::format("included file {} is ambiguous, candidates found in:{}",
+                                             filename, candidate_dirs));
+                    resolved = std::nullopt;
                 } else {
                     // Not cached: report_error is fatal (aborts the scan),
                     // so caching it would be pointless anyway.
@@ -351,24 +370,15 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         }
     }
 
-    std::optional<include_dependency> sv_preprocessor::resolve_include(const std::string &name, bool quoted) {
-        if (!repo_idx) return std::nullopt;
-        auto candidates = repo_idx->lookup(name);
-        if (candidates.size() == 1) {
-            return include_dependency{candidates[0].string(), include_resolution::auto_discovered};
+    sv_preprocessor::include_lookup sv_preprocessor::resolve_include(const std::string &name) {
+        include_lookup result;
+        if (!repo_idx) return result;
+        result.candidates = repo_idx->lookup(name);
+        if (result.candidates.size() == 1) {
+            result.resolved = include_dependency{result.candidates[0].string(),
+                                                 include_resolution::auto_discovered};
         }
-        if (candidates.size() > 1) {
-            std::string candidate_dirs;
-            for (auto &c: candidates) {
-                candidate_dirs += "\n    " + c.parent_path().string();
-            }
-            if (quoted) {
-                spdlog::warn("include file {} is ambiguous, candidates found in:{}", name, candidate_dirs);
-            } else {
-                report_error(fmt::format("included file {} is ambiguous, candidates found in:{}", name, candidate_dirs));
-            }
-        }
-        return std::nullopt;
+        return result;
     }
 
     std::string sv_preprocessor::get_define_replacement(const std::string_view &identifier) {

@@ -89,7 +89,15 @@ namespace preprocessor {
         std::string gather_multi_line_macro(const std::string &first_line, std::istringstream &iss);
         using definitions_map = macro_definitions_map;
         std::optional<include_dependency> parse_include_path(const std::string_view &v);
-        std::optional<include_dependency> resolve_include(const std::string &name, bool quoted);
+        // Repository-index lookup outcome: exactly one candidate resolves,
+        // several stay ambiguous (caller reports once, accurately), none
+        // means missing. Diagnostics live with the caller so each outcome
+        // is reported exactly once.
+        struct include_lookup {
+            std::optional<include_dependency> resolved;
+            std::vector<std::filesystem::path> candidates;
+        };
+        include_lookup resolve_include(const std::string &name);
         std::string get_define_replacement(const std::string_view &v);
         void parse_definition(const std::string_view &sv, int prefix_length);
         void install_global_defines();
