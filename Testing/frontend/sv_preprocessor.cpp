@@ -1470,6 +1470,49 @@ TEST(preprocessor, nested_macros_with_arguments) {
 }
 
 
+TEST(preprocessor, empty_parens_passes_empty_actual) {
+    auto test_pattern = R"(
+        `define CALL(ID) beat(ID)
+        module test_module ();
+            parameter TEST_PARAM = `CALL();
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            parameter TEST_PARAM = beat();
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_TRUE(preproc.get_undefined_macros().empty());
+}
+
+
+TEST(preprocessor, empty_parens_strict_errors) {
+    auto test_pattern = R"(
+        `define CALL(ID) beat(ID)
+        module test_module ();
+            parameter TEST_PARAM = `CALL();
+        endmodule
+    )";
+
+    parse_options opts;
+    opts.strict = true;
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    preproc.set_options(opts);
+
+    preproc.preprocess(test_pattern);
+    EXPECT_TRUE(preproc.has_error());
+    EXPECT_TRUE(preproc.has_fatal_error());
+}
+
+
 TEST(preprocessor, self_nested_macro) {
     auto test_pattern = R"(
         `define TOP(a,b) a + b

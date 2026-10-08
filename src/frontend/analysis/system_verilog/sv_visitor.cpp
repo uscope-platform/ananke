@@ -2381,7 +2381,7 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
     if(f_factory.is_active()) {
         auto hier = ctx->package_or_class_scoped_hier_id_with_select();
         if (!hier || !hier->package_or_class_scoped_path()) {
-            if (handle_streaming_lvalue(ctx)) return;
+            if (!opts_.strict && handle_streaming_lvalue(ctx)) return;
             // Graceful degradation: the grammar accepts concatenation,
             // assignment-pattern and streaming-concatenation lvalues, but the
             // write path only models hierarchical identifiers. Warn once per

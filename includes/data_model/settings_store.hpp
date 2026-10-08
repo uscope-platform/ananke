@@ -19,6 +19,7 @@
 
 #include <filesystem>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -39,6 +40,9 @@ struct settings_profile {
     // Off by default: strict mode treats them like any other undefined macro
     // (quarantine, then terminal error if nothing in the repo defines them).
     bool strip_uvm_macros = false;
+    // Strict mode (see parse_options): reject non-compliant syntax instead
+    // of applying the lenient workarounds. Off by default.
+    bool strict = false;
 };
 
 class settings_store {
@@ -53,6 +57,10 @@ public:
     std::set<std::string> get_defines();
     bool get_include_auto_discovery();
     bool get_strip_uvm_macros();
+    bool get_strict();
+    // CLI runtime override for strict mode (e.g. --strict): applies to this
+    // invocation only and is never persisted by flush().
+    void set_strict_override(bool strict);
     parse_options get_parse_options();
     void flush();
     ~settings_store();
@@ -63,6 +71,7 @@ private:
     std::map<std::string, settings_profile> profiles;
     std::map<std::string, std::filesystem::path> tool_paths;
     std::string selected_profile;
+    std::optional<bool> strict_override;
 
     bool ephemeral;
     std::string store_path;

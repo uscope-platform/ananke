@@ -52,6 +52,7 @@ int main(int argc, char *argv[]){
     app.add_flag("--clear-cache",opts.clear_cache, "Clear HDL cache");
     app.add_flag("--wait_profiler", opts.wait_profiler, "Wait for the profiler to be ready before executing");
     app.add_flag("--trace", opts.trace, "Enable extended internal state tracing");
+    app.add_flag("--strict", opts.strict, "Reject non-compliant syntax instead of applying lenient workarounds");
     app.add_option("--cache_dir", opts.cache_dir, "Specify a non-default repository cache file");
     app.add_flag("--no_open", opts.no_open, "Do not open the generated project");
     app.add_flag("--makefile_only", opts.makefile_only, "Only generate the setup script and not the project");

@@ -1349,3 +1349,24 @@ TEST(function_processing, streaming_lvalue_in_foreach_body_kept) {
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(logs.count("dropping file"), 0u);
 }
+
+TEST(function_processing, streaming_lvalue_strict_drops) {
+    auto test_pattern = R"(
+        module test_mod();
+            logic [31:0] mem;
+            logic [31:0] v;
+            function integer do_pack();
+                { << bit { mem } } = v;
+                do_pack = 0;
+            endfunction
+        endmodule
+    )";
+
+    parse_options opts;
+    opts.strict = true;
+
+    sv_analyzer analyzer;
+    analyzer.set_options(opts);
+
+    EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
+}

@@ -29,6 +29,7 @@ ananke::ananke(const CLI_opt &options) {
     }
 
     s_store = std::make_shared<settings_store>(false, opts.cache_dir, opts.profile);
+    s_store->set_strict_override(opts.strict);
 
     t1 = std::chrono::high_resolution_clock::now();
 }

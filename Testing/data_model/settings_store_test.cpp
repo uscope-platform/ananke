@@ -135,3 +135,74 @@ TEST(settings_store, defines_loaded_and_persisted) {
 
     std::filesystem::remove_all(store_settings_path);
 }
+
+TEST(settings_store, strict_default_off) {
+    std::filesystem::create_directories(store_settings_path);
+    std::ofstream ofs(store_settings_file);
+    ofs << "{\"profiles\": {\"test_profile\": {\"hdl_store\":\"/tmp/repo\"}}}";
+    ofs.flush();
+    ofs.close();
+
+    settings_store s(false, store_settings_path, "test_profile");
+    EXPECT_FALSE(s.get_strict());
+    EXPECT_FALSE(s.get_parse_options().strict);
+
+    std::filesystem::remove_all(store_settings_path);
+}
+
+TEST(settings_store, strict_explicit_on) {
+    std::filesystem::create_directories(store_settings_path);
+    std::ofstream ofs(store_settings_file);
+    ofs << "{\"profiles\": {\"test_profile\": {\"hdl_store\":\"/tmp/repo\","
+           "\"strict\":true}}}";
+    ofs.flush();
+    ofs.close();
+
+    settings_store s(false, store_settings_path, "test_profile");
+    EXPECT_TRUE(s.get_strict());
+    EXPECT_TRUE(s.get_parse_options().strict);
+
+    std::filesystem::remove_all(store_settings_path);
+}
+
+TEST(settings_store, strict_persisted) {
+    std::filesystem::create_directories(store_settings_path);
+    std::ofstream ofs(store_settings_file);
+    ofs << "{\"profiles\": {\"test_profile\": {\"hdl_store\":\"/tmp/repo\","
+           "\"strict\":true}}}";
+    ofs.flush();
+    ofs.close();
+
+    {
+        settings_store s(false, store_settings_path, "test_profile");
+        EXPECT_TRUE(s.get_strict());
+        s.flush();
+    }
+
+    settings_store s2(false, store_settings_path, "test_profile");
+    EXPECT_TRUE(s2.get_strict());
+
+    std::filesystem::remove_all(store_settings_path);
+}
+
+TEST(settings_store, strict_override_not_persisted) {
+    std::filesystem::create_directories(store_settings_path);
+    std::ofstream ofs(store_settings_file);
+    ofs << "{\"profiles\": {\"test_profile\": {\"hdl_store\":\"/tmp/repo\"}}}";
+    ofs.flush();
+    ofs.close();
+
+    {
+        settings_store s(false, store_settings_path, "test_profile");
+        EXPECT_FALSE(s.get_strict());
+        s.set_strict_override(true);
+        EXPECT_TRUE(s.get_strict());
+        EXPECT_TRUE(s.get_parse_options().strict);
+        s.flush();
+    }
+
+    settings_store s2(false, store_settings_path, "test_profile");
+    EXPECT_FALSE(s2.get_strict());
+
+    std::filesystem::remove_all(store_settings_path);
+}

@@ -32,6 +32,7 @@
 #include "data_model/HDL/factories/HDL_functions_factory.hpp"
 
 #include "data_model/HDL/parameters/components/Parameter_components.hpp"
+#include "data_model/parse_options.hpp"
 
 #include <utility>
 #include <vector>
@@ -57,6 +58,7 @@ public:
     bool is_known_system_function(const std::string &name) const;
     [[nodiscard]] bool is_error() const { return had_error; }
     void set_file(const std::string &p) { current_file = p; }
+    void set_options(const parse_options &o) { opts_ = o; }
 
     void enterCast_separator(sv2017::Cast_separatorContext *ctx) override;
     void enterPrimaryCast2(sv2017::PrimaryCast2Context *ctx) override;
@@ -289,6 +291,9 @@ private:
     // was opened in enterData_declaration; consumed by the matching exit.
     bool capturing_class_property = false;
     bool had_error = false;
+    // Parse options (strict mode disables the lenient workarounds); unit
+    // tests that drive the visitor directly keep the default lenient set.
+    parse_options opts_;
     // Source path for diagnostics (set by sv_analyzer::process_hdl; empty in
     // unit tests that drive the visitor directly).
     std::string current_file;

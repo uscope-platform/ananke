@@ -162,6 +162,7 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
 
     sv_visitor sv_modules_explorer;
     sv_modules_explorer.set_file(path);
+    sv_modules_explorer.set_options(opts_);
     antlr4::tree::ParseTreeWalker::DEFAULT.walk(&sv_modules_explorer, Tree);
     if (sv_modules_explorer.is_error()) {
         last_error = "Unsupported construct while parsing " + path;

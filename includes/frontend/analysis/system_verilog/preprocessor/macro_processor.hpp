@@ -85,7 +85,11 @@ namespace preprocessor {
             const parse_options &opts
         );
         std::string process_macro(const std::string_view &in);
-        static std::pair<std::vector<std::string_view>, std::string_view> get_call_arguments(const std::string_view &in);
+        // Splits a call's actual list (text after the opening paren) from
+        // the rest of the line. With empty_is_one_empty, `()` yields one
+        // empty actual (lenient call semantics); otherwise it yields none
+        // (formal-list parsing for definitions, strict call checking).
+        static std::pair<std::vector<std::string_view>, std::string_view> get_call_arguments(const std::string_view &in, bool empty_is_one_empty = false);
         std::optional<std::string> replace_function_macro(
             const std::vector<std::string_view> &args,
             const function_macro &macro

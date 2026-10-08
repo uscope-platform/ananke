@@ -162,7 +162,7 @@ namespace preprocessor {
                         remaining = args_text;
                         continue;
                     }
-                    auto [args, rest_of_line] = get_call_arguments(args_text);
+                    auto [args, rest_of_line] = get_call_arguments(args_text, !opts.strict);
                     if (!definitions.contains(id)) {
                         if (opts.strip_uvm_macros && is_external_methodology_macro(id)) {
                             warn_stripped_once(id, path);
@@ -255,7 +255,7 @@ namespace preprocessor {
     }
 
 
-    std::pair<std::vector<std::string_view>, std::string_view> macro_processor::get_call_arguments(const std::string_view &in) {
+    std::pair<std::vector<std::string_view>, std::string_view> macro_processor::get_call_arguments(const std::string_view &in, bool empty_is_one_empty) {
         std::vector<std::string_view> arguments;
         int nesting_level = 0;
         int args_last = 0;
@@ -279,6 +279,16 @@ namespace preprocessor {
         }
         in_string_literal = false;
         auto raw_arguments = in.substr(0, args_last);
+        // `f()` supplies one empty actual (commercial tools agree; the
+        // empty formal then expands to nothing, and a trailing comma in
+        // the resulting call means "use default"). Without this, empty
+        // parens read as zero actuals and error out below. Gated on
+        // lenient mode: strict rejects it via the required-count check in
+        // replace_function_macro.
+        if (empty_is_one_empty && trim(raw_arguments).empty()) {
+            auto value = in.substr(args_last + 1);
+            return {{{}}, value};
+        }
         int current_arg_start = 0;
         for (int i = 0; i< raw_arguments.size(); i++) {
             const auto c = raw_arguments[i];
@@ -334,16 +344,19 @@ namespace preprocessor {
 
     std::optional<std::string> macro_processor::replace_function_macro(const std::vector<std::string_view> &args, const function_macro &macro) {
         std::unordered_map<std::string_view, std::string> arguments_map;
-        bool full_default = true;
+        int required = 0;
         for (int i = 0; i<macro.arguments.size(); i++) {
-            full_default &= macro.arguments[i].has_default;
+            if (!macro.arguments[i].has_default) ++required;
             if (i >= args.size() || args[i].empty()) {
                 arguments_map[macro.arguments[i].name] = macro.arguments[i].default_value;
             } else {
                 arguments_map[macro.arguments[i].name] = std::string(args[i]);
             }
         }
-        if (args.empty() && !full_default) {
+        // `f()` supplies one (empty) actual, so a single-formal macro
+        // expands while `ADD()` for two required formals still errors,
+        // matching commercial tools.
+        if (static_cast<int>(args.size()) < required) {
             return std::nullopt;
         }
 

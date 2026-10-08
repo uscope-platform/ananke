@@ -67,6 +67,7 @@ class ananke {
         bool measure_runtime = true;
         bool no_cache = false;
         bool trace = false;
+        bool strict = false;
         bool no_open = false;
         bool clear_cache = false;
         bool refresh_cache = false;

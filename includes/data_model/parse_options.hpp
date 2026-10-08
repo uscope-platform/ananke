@@ -26,6 +26,13 @@ struct parse_options {
     std::set<std::string> include_directories;
     std::set<std::string> defines;
     bool strip_uvm_macros = false;
+    // Strict mode: reject out-of-spec code that lenient mode tolerates to
+    // get real-world trees (UVM-heavy ones in particular) through the
+    // analyzer. Every LRM deviation must consult this flag so strict stays
+    // a single switch: no new tolerated construct without a strict gate.
+    // Currently gated: empty-parens macro calls (`f()` for a 1-formal
+    // macro) and streaming-concatenation lvalue approximation.
+    bool strict = false;
 };
 
 #endif //ANANKE_PARSE_OPTIONS_HPP
