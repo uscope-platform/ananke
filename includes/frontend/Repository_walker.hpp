@@ -97,8 +97,7 @@ private:
     // revalidates branch decisions taken with partial knowledge, revalidates
     // cache-skipped macro consumers across runs, and errors out leftovers.
     void seed_macro_table();
-    void run_macro_fixpoint();
-    void validation_sweep();
+    void run_macro_fixpoint();    void validation_sweep();
     void invalidate_stale_macros();
     void report_quarantine_errors();
     std::string macro_table_fingerprint() const;
@@ -113,6 +112,7 @@ private:
     // TODO: Make excluded directories dynamic with a mechanism similar to .gitignore
 
     FRIEND_TEST(repository_walker , file_type_handling);
+    FRIEND_TEST(repository_walker, quarantine_report_grouping);
 
     std::set<std::string> excluded_directories;
     std::set<std::string> excluding_extensions = {".xpr"};
@@ -173,6 +173,11 @@ private:
     std::map<std::string, std::string> table_at_seed_;
     void analyze_file_with_injection(std::filesystem::path &file,
                                      const preprocessor::macro_definitions_map &injected);
+    // One log line per distinct quarantine problem (shared by all files
+    // hitting it), for the report above. Static for unit testing.
+    static std::vector<std::string> build_quarantine_report(
+        const macro_table &table,
+        const std::map<std::string, quarantine_entry> &quarantine);
 };
 
 

@@ -394,8 +394,19 @@ void Repository_walker::invalidate_stale_macros() {
     if (submitted) collect_analysis_results();
 }
 
-void Repository_walker::report_quarantine_errors() {
-    for (const auto &[path, entry] : quarantine_) {
+std::vector<std::string> Repository_walker::build_quarantine_report(
+    const macro_table &table,
+    const std::map<std::string, quarantine_entry> &quarantine) {
+    // One line per distinct problem (not per file): the same conflict
+    // repeats for every consumer (270 files x 3 UVM-vs-shim macros), which
+    // buries real information in a wall of identical lines.
+    std::map<std::string, std::pair<std::string, std::vector<std::string>>> groups;
+    auto add = [&](std::string key, std::string message, const std::string &path) {
+        auto &slot = groups[std::move(key)];
+        if (slot.second.empty()) slot.first = std::move(message);
+        slot.second.push_back(path);
+    };
+    for (const auto &[path, entry] : quarantine) {
         // Report the final attempt's misses, not the accumulated union:
         // every pass only sees unknowns past previously injected ones, so
         // the union mixes long-resolved names with current ones and would
@@ -407,12 +418,12 @@ void Repository_walker::report_quarantine_errors() {
         // blocks.
         bool blocked = false;
         for (const auto &[name, arities] : entry.last_undefined) {
-            auto judgement = macro_table_.judge(name, arities, path);
+            auto judgement = table.judge(name, arities, path);
             using kind = macro_table::verdict::kind;
             if (judgement.state == kind::conflict) {
                 blocked = true;
                 std::string definers;
-                for (const auto &rep : macro_table_.representative_definers(name, judgement.candidates)) {
+                for (const auto &rep : table.representative_definers(name, judgement.candidates)) {
                     if (!definers.empty()) definers += ", ";
                     definers += rep;
                 }
@@ -422,8 +433,8 @@ void Repository_walker::report_quarantine_errors() {
                         definers += candidate.path;
                     }
                 }
-                spdlog::error("Error analyzing {}: macro {} has conflicting definitions in: {}",
-                              path, name, definers);
+                add("conflict|" + name + "|" + definers,
+                    "macro " + name + " has conflicting definitions in: " + definers, path);
             } else if (judgement.state == kind::mismatch) {
                 blocked = true;
                 std::string observed;
@@ -436,32 +447,31 @@ void Repository_walker::report_quarantine_errors() {
                     if (!definers.empty()) definers += ", ";
                     definers += macro_table::describe_candidate(candidate);
                 }
-                spdlog::error("Error analyzing {}: macro {} called with {} argument(s) in file {}, "
-                              "but no repository definition accepts that (defined in: {})",
-                              path, name, observed, path, definers);
+                add("mismatch|" + name + "|" + observed + "|" + definers,
+                    "macro " + name + " called with " + observed + " argument(s), "
+                    "but no repository definition accepts that (defined in: " + definers + ")", path);
             } else if (judgement.state == kind::absent) {
                 blocked = true;
-                spdlog::error("Error analyzing {}: macro {} is not defined in the repository "
-                              "(used here but defined in no analyzed file)",
-                              path, name);
+                add("absent|" + name,
+                    "macro " + name + " is not defined in the repository "
+                    "(defined in no analyzed file)", path);
             } else if (judgement.state == kind::shadowed) {
                 blocked = true;
-                spdlog::error("Error analyzing {}: macro {} is used before its definition "
-                              "in the same file",
-                              path, name);
+                add("shadowed|" + name,
+                    "macro " + name + " is used before its definition in the same file", path);
             }
         }
         if (!blocked) {
             if (!entry.last_undefined.empty()) {
                 for (const auto &[name, arities] : entry.last_undefined) {
                     (void)arities;
-                    auto judgement = macro_table_.judge(name, arities, path);
+                    auto judgement = table.judge(name, arities, path);
                     if (judgement.state == macro_table::verdict::kind::unique &&
                         !judgement.candidates.empty()) {
-                        spdlog::error("Error analyzing {}: macro {} defined in {} could not be resolved "
-                                      "within {} fixpoint passes",
-                                      path, name, judgement.candidates.front().path,
-                                      max_macro_passes);
+                        add("unique|" + name + "|" + judgement.candidates.front().path,
+                            "macro " + name + " defined in " + judgement.candidates.front().path +
+                            " could not be resolved within " + std::to_string(max_macro_passes) +
+                            " fixpoint passes", path);
                     }
                 }
             } else {
@@ -471,23 +481,45 @@ void Repository_walker::report_quarantine_errors() {
                 // macro blame, plus any conditionals that never resolved.
                 std::string unknowns;
                 for (const auto &n : entry.last_unknowns) {
-                    auto j = macro_table_.judge(n, {}, path);
+                    auto j = table.judge(n, {}, path);
                     if (j.state != macro_table::verdict::kind::absent) continue;
                     if (!unknowns.empty()) unknowns += ", ";
                     unknowns += n;
                 }
                 if (entry.last_error.empty() && unknowns.empty()) continue;
+                std::string message;
                 if (unknowns.empty()) {
-                    spdlog::error("Error analyzing {}: {}", path, entry.last_error);
+                    message = entry.last_error;
                 } else if (entry.last_error.empty()) {
-                    spdlog::error("Error analyzing {}: preprocessor conditionals never resolved: {}",
-                                  path, unknowns);
+                    message = "preprocessor conditionals never resolved: " + unknowns;
                 } else {
-                    spdlog::error("Error analyzing {}: {} (unresolved preprocessor conditionals: {})",
-                                  path, entry.last_error, unknowns);
+                    message = entry.last_error + " (unresolved preprocessor conditionals: " + unknowns + ")";
                 }
+                add("converged|" + message, message, path);
             }
         }
+    }
+    std::vector<std::string> lines;
+    for (auto &[key, group] : groups) {
+        (void)key;
+        const auto &paths = group.second;
+        std::string sample;
+        for (size_t i = 0; i < paths.size() && i < 3; ++i) {
+            if (!sample.empty()) sample += ", ";
+            sample += paths[i];
+        }
+        if (paths.size() > 3) sample += ", and " + std::to_string(paths.size() - 3) + " more";
+        const std::string head = paths.size() == 1 ? "Error analyzing 1 file ["
+                                                   : "Error analyzing " + std::to_string(paths.size()) +
+                                                     " files [";
+        lines.push_back(head + sample + "]: " + group.first);
+    }
+    return lines;
+}
+
+void Repository_walker::report_quarantine_errors() {
+    for (const auto &line : build_quarantine_report(macro_table_, quarantine_)) {
+        spdlog::error("{}", line);
     }
 }
 

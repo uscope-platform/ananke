@@ -153,6 +153,30 @@ TEST_F(repository_walker , mkignore_exclusion) {
 }
 
 
+TEST_F(repository_walker , quarantine_report_grouping) {
+    macro_table table;
+    table.add_file_definitions("a.sv", {{"FATAL", std::string("1")}});
+    table.add_file_definitions("b.sv", {{"FATAL", std::string("2")}});
+    table.add_file_definitions("defs.svh", {{"SOLO", std::string("1")}});
+
+    std::map<std::string, Repository_walker::quarantine_entry> quarantine;
+    for (const auto *f : {"u1.sv", "u2.sv", "u3.sv", "u4.sv"}) {
+        Repository_walker::quarantine_entry entry;
+        entry.last_undefined["FATAL"] = {};
+        quarantine[f] = entry;
+    }
+    Repository_walker::quarantine_entry solo;
+    solo.last_undefined["SOLO"] = {};
+    quarantine["solo.sv"] = solo;
+
+    auto lines = Repository_walker::build_quarantine_report(table, quarantine);
+    ASSERT_EQ(lines.size(), 2u);
+    EXPECT_EQ(lines[0], "Error analyzing 4 files [u1.sv, u2.sv, u3.sv, and 1 more]: "
+                        "macro FATAL has conflicting definitions in: a.sv, b.sv");
+    EXPECT_EQ(lines[1], "Error analyzing 1 file [solo.sv]: "
+                        "macro SOLO defined in defs.svh could not be resolved within 16 fixpoint passes");
+}
+
 TEST_F(repository_walker , file_type_handling) {
 
     //VERILOG
