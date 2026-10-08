@@ -1065,9 +1065,7 @@ TEST(function_processing, streaming_in_function) {
 // the evaluator, so the file is gracefully dropped with a warning instead
 // of crashing or silently producing a partial function body.
 TEST(function_processing, streaming_lvalue_unpack_kept) {
-    // UVM do_pack/do_unpack shape: `{<<bit{mem}} = v`. The bit-slicing
-    // write is approximated as `mem = v` (dependency-sound) instead of
-    // dropping the whole file.
+    // UVM do_pack/do_unpack shape: `{<<bit{mem}} = v`.
     auto test_pattern = R"(
         module test_mod #(
         )();
@@ -1107,8 +1105,6 @@ TEST(function_processing, streaming_lvalue_unpack_kept) {
 }
 
 TEST(function_processing, streaming_lvalue_multi_member_approximated) {
-    // Multi-member unpack has no single target: approximate with the first
-    // member (keeps the RHS read edge) and warn, still keeping the file.
     auto test_pattern = R"(
         module test_mod #(
         )();
@@ -1332,10 +1328,7 @@ TEST(function_processing, foreach_with_indexed_array_in_constraint) {
 }
 
 TEST(function_processing, streaming_lvalue_in_foreach_body_kept) {
-    // UVM array-field macros expand unpacks inside foreach bodies. Foreach
-    // bodies never reach body phase (no phase handler), but a streaming
-    // lvalue under a foreach loop is necessarily in its body (headers
-    // declare no assignments), so the file must still be kept.
+    // UVM array-field macros expand unpacks inside foreach bodies.
     auto test_pattern = R"(
         module test_mod();
             logic [31:0] arr[4];

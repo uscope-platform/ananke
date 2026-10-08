@@ -379,12 +379,9 @@ TEST(preprocessor, injected_base_not_harvested) {
 }
 
 TEST(preprocessor, included_header_macros_not_harvested_by_includer) {
-    // Transitive harvest used to re-attribute library macros to every
-    // includer (70-path conflicts for one 2-way UVM-vs-shim clash).
-    // Only textual defines may be harvested; the header harvests its own
-    // macros when scanned itself.
     std::ofstream ofs("/tmp/harvest_hdr.svh");
-    ofs << "`define HDR_MACRO 5\n";
+
+    ofs<< "`define HDR_MACRO 5\n";
     ofs.close();
 
     auto test_pattern = R"(
@@ -400,8 +397,14 @@ TEST(preprocessor, included_header_macros_not_harvested_by_includer) {
 
     auto result = preproc.preprocess(test_pattern);
     std::filesystem::remove("/tmp/harvest_hdr.svh");
-    EXPECT_FALSE(preproc.has_error());
-    EXPECT_TRUE(result.contains("5 + 6"));
+    auto check_string = R"(
+
+        module test_module ();
+            parameter TEST_PARAM = 5 + 6;
+        endmodule
+    )";
+
+    EXPECT_EQ(result, check_string);
     const auto harvested = preproc.get_harvested_definitions();
     EXPECT_TRUE(harvested.contains("OWN_MACRO"));
     EXPECT_FALSE(harvested.contains("HDR_MACRO"));
