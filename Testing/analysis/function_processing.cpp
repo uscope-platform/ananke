@@ -1064,21 +1064,89 @@ TEST(function_processing, streaming_in_function) {
 // bodies: `{ << bit { mem } } = v;`) has no bit-scatter write semantics in
 // the evaluator, so the file is gracefully dropped with a warning instead
 // of crashing or silently producing a partial function body.
-TEST(function_processing, streaming_lvalue_drops_file) {
+TEST(function_processing, streaming_lvalue_unpack_kept) {
+    // UVM do_pack/do_unpack shape: `{<<bit{mem}} = v`. The bit-slicing
+    // write is approximated as `mem = v` (dependency-sound) instead of
+    // dropping the whole file.
     auto test_pattern = R"(
         module test_mod #(
         )();
             logic [31:0] mem;
-            function integer do_pack(input integer v);
+            logic [31:0] v;
+            function integer do_pack();
                 { << bit { mem } } = v;
                 do_pack = 0;
             endfunction
         endmodule
     )";
 
+    log_capture logs;
     sv_analyzer analyzer;
 
-    EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    EXPECT_EQ(logs.count("dropping file"), 0u);
+
+    auto functions = resource.get_functions();
+    ASSERT_TRUE(functions.contains("do_pack"));
+
+    hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
+    check_f.set_name("do_pack");
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("mem");
+    stmt->set_value(std::make_shared<Identifier_token>(qualified_identifier("v")));
+    check_f.add_statement(stmt);
+
+    auto ret = std::make_shared<hdl_assignment_statement>();
+    ret->set_target("do_pack");
+    ret->set_value(std::make_shared<Numeric_token>("0"));
+    check_f.add_statement(ret);
+
+    EXPECT_EQ(check_f, functions["do_pack"]);
+}
+
+TEST(function_processing, streaming_lvalue_multi_member_approximated) {
+    // Multi-member unpack has no single target: approximate with the first
+    // member (keeps the RHS read edge) and warn, still keeping the file.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            logic [31:0] a;
+            logic [31:0] b;
+            logic [63:0] v;
+            function integer do_pack();
+                { << bit { a, b } } = v;
+                do_pack = 0;
+            endfunction
+        endmodule
+    )";
+
+    log_capture logs;
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    EXPECT_EQ(logs.count("dropping file"), 0u);
+    EXPECT_EQ(logs.count("approximating as assignment"), 1u);
+
+    auto functions = resource.get_functions();
+    ASSERT_TRUE(functions.contains("do_pack"));
+
+    hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
+    check_f.set_name("do_pack");
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_target("a");
+    stmt->set_value(std::make_shared<Identifier_token>(qualified_identifier("v")));
+    check_f.add_statement(stmt);
+
+    auto ret = std::make_shared<hdl_assignment_statement>();
+    ret->set_target("do_pack");
+    ret->set_value(std::make_shared<Numeric_token>("0"));
+    check_f.add_statement(ret);
+
+    EXPECT_EQ(check_f, functions["do_pack"]);
 }
 
 TEST(function_processing, anonymous_struct_local_in_function) {
@@ -1261,4 +1329,30 @@ TEST(function_processing, foreach_with_indexed_array_in_constraint) {
     auto result = analyzer.analyze("", test_pattern);
     ASSERT_TRUE(result.has_value());
     EXPECT_FALSE(analyzer.has_syntax_errors());
+}
+
+TEST(function_processing, streaming_lvalue_in_foreach_body_kept) {
+    // UVM array-field macros expand unpacks inside foreach bodies. Foreach
+    // bodies never reach body phase (no phase handler), but a streaming
+    // lvalue under a foreach loop is necessarily in its body (headers
+    // declare no assignments), so the file must still be kept.
+    auto test_pattern = R"(
+        module test_mod();
+            logic [31:0] arr[4];
+            logic [31:0] v;
+            function void do_pack();
+                foreach (arr[i]) begin
+                    bit __array[];
+                    { << bit { __array}} = v;
+                    arr[i] = __array[0];
+                end
+            endfunction
+        endmodule
+    )";
+
+    log_capture logs;
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(logs.count("dropping file"), 0u);
 }

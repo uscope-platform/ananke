@@ -234,6 +234,9 @@ public:
 
     void enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) override;
     void exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) override;
+    // Streaming-unpack lvalue approximation (see .cpp). True when the
+    // statement was given a plain-member target and parsing may continue.
+    bool handle_streaming_lvalue(sv2017::Variable_lvalueContext *ctx);
 
     void exitGenvar_iteration(sv2017::Genvar_iterationContext *ctx) override;
 

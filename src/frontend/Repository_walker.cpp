@@ -263,8 +263,6 @@ void Repository_walker::run_macro_fixpoint() {
     if (initial == 0) return;
     int pass = 0;
     while (!quarantine_.empty() && pass < max_macro_passes) {
-        const std::string table_before = macro_table_.canonical_string();
-        const size_t quarantine_before = quarantine_.size();
         std::vector<std::pair<std::filesystem::path, preprocessor::macro_definitions_map>> work;
         for (const auto &[path, entry] : quarantine_) {
             preprocessor::undefined_uses_map needs;
@@ -279,6 +277,11 @@ void Repository_walker::run_macro_fixpoint() {
             if (last != last_injections_.end() && last->second == injection.definitions) continue;
             work.emplace_back(std::filesystem::path(path), injection.definitions);
         }
+        // No file's injection changed: further passes would repeat identical
+        // attempts. This is the only early exit: table/quarantine-size
+        // stability must NOT stop the loop, since revelation chains keep
+        // quarantine size and table contents static while newly revealed
+        // macros change injections every round.
         if (work.empty()) break;
         for (auto &[file, injected] : work) {
             if (working_threads == 2 * max_threads) collect_analysis_results();
@@ -287,13 +290,6 @@ void Repository_walker::run_macro_fixpoint() {
         }
         collect_analysis_results();
         ++pass;
-        // Stall: nothing left quarantine and the table learned nothing new
-        // (e.g. staggered definers settled). Further passes would repeat
-        // identical attempts.
-        if (quarantine_.size() == quarantine_before &&
-            macro_table_.canonical_string() == table_before) {
-            break;
-        }
     }
     spdlog::trace("Macro fixpoint: {} quarantined repo-wide, {} remaining after {} pass(es)",
                   initial, quarantine_.size(), pass);

@@ -136,16 +136,16 @@ private:
     parse_options parse_opts_;
 
     // Bounded fixpoint: chains and mutual macro dependencies converge in a
-    // few rounds (riscv-dv shape needs 2); the progress rule below guarantees
-    // termination regardless of the cap.
-    static constexpr int max_macro_passes = 8;
+    // few rounds (riscv-dv shape needs 2, deep UVM helper chains ~10); the
+    // injection-dedup rule above guarantees termination regardless of the cap.
+    static constexpr int max_macro_passes = 16;
 
     struct quarantine_entry {
         preprocessor::undefined_uses_map undefined_macros;
         std::set<std::string> unknown_conditionals;
         std::string hash;
         // Latest attempt's state (overwrite, not merge): the accumulated
-        // maps above mix stale resolved names with current misses (each
+        // maps above mix stale resolved names with current ones (each
         // pass only sees unknowns past previously injected ones), so
         // reporting must use the final state while injection keeps the
         // union. last_error carries the analyzer's failure reason for

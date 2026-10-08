@@ -2294,10 +2294,94 @@ void sv_visitor::exitJump_statement(sv2017::Jump_statementContext *ctx) {
     }
 }
 
+// Streaming-concatenation unpack target (`{<<bit{A[, B...]}} = X`): the
+// bit-slicing write semantics are not modeled, but for dependency purposes
+// every member is written and the whole RHS is read. Approximating with an
+// assignment to the first plain-identifier member keeps those edges (the
+// known UVM do_pack/do_unpack single-member shape is exact up to slicing)
+// instead of dropping the file. Returns true when handled; exotic shapes
+// (no plain member, loop headers) fall through to the drop path.
+bool sv_visitor::handle_streaming_lvalue(sv2017::Variable_lvalueContext *ctx) {
+    auto streaming = ctx->streaming_concatenation();
+    if (streaming == nullptr) return false;
+    // A streaming lvalue under a foreach loop is necessarily in its body
+    // (foreach headers declare no assignments). This matters because
+    // foreach bodies never reach body phase (no phase handler), so the
+    // generic header check below would misfire on them (UVM array-field
+    // macros expand unpacks inside foreach bodies).
+    bool under_foreach = false;
+    for (auto *p = ctx->parent; p != nullptr; p = p->parent) {
+        if (auto *loop = dynamic_cast<sv2017::Loop_statementContext *>(p)) {
+            under_foreach = (loop->KW_FOREACH() != nullptr);
+            break;
+        }
+    }
+    if (!under_foreach && loops_factory.in_loop() && !loops_factory.in_body()) return false;
+    auto inner = streaming->stream_concatenation();
+    if (inner == nullptr || inner->stream_expression().empty()) return false;
+    auto is_plain_dotted_id = [](const std::string &text) {
+        if (text.empty()) return false;
+        auto is_start = [](char c) {
+            return std::isalpha(static_cast<unsigned char>(c)) || c == '_' || c == '$';
+        };
+        auto is_part = [](char c) {
+            return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '$';
+        };
+        size_t i = 0;
+        if (!is_start(text[i])) return false;
+        ++i;
+        while (i < text.size() && is_part(text[i])) ++i;
+        while (i < text.size()) {
+            if (text[i] != '.' || ++i >= text.size() || !is_start(text[i])) return false;
+            ++i;
+            while (i < text.size() && is_part(text[i])) ++i;
+        }
+        return true;
+    };
+    std::string first;
+    for (auto *member : inner->stream_expression()) {
+        if (member == nullptr || member->expression() == nullptr) return false;
+        // A `with` range selects part of the member; the identifier is
+        // still the written object, so it stays a usable target.
+        std::string text = member->expression()->getText();
+        if (first.empty()) {
+            if (!is_plain_dotted_id(text)) return false;
+            first = text;
+        }
+    }
+    if (!is_plain_dotted_id(first)) return false;
+    if (inner->stream_expression().size() > 1 && !unsupported_lvalue_warned) {
+        unsupported_lvalue_warned = true;
+        const std::string where =
+            current_file.empty() ? "<unknown file>" : current_file;
+        spdlog::warn("Multi-member streaming-concatenation lvalue at {}:{}, "
+                     "approximating as assignment to '{}'",
+                     where, ctx->getStart() ? ctx->getStart()->getLine() : 0, first);
+    }
+    // Same target construction as the hierarchical path: instance prefix is
+    // all-but-last segment, name is last.
+    std::vector<std::string> segments;
+    size_t pos = 0;
+    while (true) {
+        auto dot = first.find('.', pos);
+        segments.push_back(first.substr(pos, dot == std::string::npos ? dot : dot - pos));
+        if (dot == std::string::npos) break;
+        pos = dot + 1;
+    }
+    qualified_identifier target_qi(segments.back());
+    if (segments.size() > 1) {
+        std::vector<std::string> inst(segments.begin(), segments.end() - 1);
+        target_qi.set_instance_prefix(inst);
+    }
+    f_factory.start_assignment(target_qi);
+    return true;
+}
+
 void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
     if(f_factory.is_active()) {
         auto hier = ctx->package_or_class_scoped_hier_id_with_select();
         if (!hier || !hier->package_or_class_scoped_path()) {
+            if (handle_streaming_lvalue(ctx)) return;
             // Graceful degradation: the grammar accepts concatenation,
             // assignment-pattern and streaming-concatenation lvalues, but the
             // write path only models hierarchical identifiers. Warn once per
