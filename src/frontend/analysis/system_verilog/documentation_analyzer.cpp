@@ -49,19 +49,39 @@ documentation_analyzer::documentation_analyzer(const std::vector<std::string> &c
 
 void documentation_analyzer::process_documentation() {
     std::vector<nlohmann::json> documentation_comments;
+    // At most one warning per file: ordinary prose doc-comments (UVM
+    // headers are full of them) may contain braces but are never
+    // annotations, so they skip silently below; only plausible
+    // annotations that fail to parse deserve a (single) diagnostic.
+    bool warned_once = false;
+    auto warn_once = [&](const std::string &detail) {
+        if (warned_once) return;
+        warned_once = true;
+        spdlog::warn("Skipping malformed documentation comment(s) in file: {} ({})",
+                     path, detail);
+    };
 
     for(auto &content:raw_documentation_comments){
-        if (!(content.contains('{') && content.contains('}'))) continue;
+        // Annotations are JSON objects dispatched on their "type" member
+        // (see analyze_documentation_object); prose never carries that
+        // marker, so this prefilter silences the brace-containing
+        // prose comments that used to warn once per comment.
+        if (content.find("\"type\"") == std::string::npos) continue;
+        // Annotations may be preceded by prose: parse from the first
+        // brace instead of requiring the comment to start with JSON
+        // (trailing content after the value was and is tolerated).
+        auto brace = content.find('{');
+        if (brace == std::string::npos) continue;
         nlohmann::json obj;
-        std::istringstream ss(content);
+        std::istringstream ss(content.substr(brace));
         try {
             ss >> obj;
         } catch (nlohmann::json::parse_error& e) {
-            spdlog::warn("A malformed json string was found while parsing documentation comments in file: {}, skipping comment", path);
+            warn_once(e.what());
             continue;
         }
         if (!obj.is_object()) {
-            spdlog::warn("A documentation comment in file {} is not a json object, skipping comment", path);
+            warn_once("not a JSON object");
             continue;
         }
 

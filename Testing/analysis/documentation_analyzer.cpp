@@ -290,3 +290,54 @@ TEST( documentation_analyzer , processor_doc) {
 
     ASSERT_EQ(check_map, results);
 }
+
+TEST( documentation_analyzer , prose_with_braces) {
+
+
+    std::vector<std::string> test_pattern = {
+        " Some prose { with braces } and (parens), see Section 3.2 ",
+        " Another one, e.g. { default: 0 } inside code samples ",
+        " covergroup example { coverpoint x { bins a = {1}; } } ",
+    };
+
+    documentation_analyzer doc(test_pattern);
+    doc.process_documentation();
+
+    ASSERT_TRUE(doc.get_modules_documentation().empty());
+    ASSERT_TRUE(doc.get_processors_documentation().empty());
+}
+
+TEST( documentation_analyzer , prose_prefixed_annotation) {
+
+
+    std::vector<std::string> test_pattern = {
+        " Register map for the peripheral below: { \"name\": \"Dec\", \"type\": \"peripheral\", \"registers\": [] } trailing words ",
+    };
+
+    documentation_analyzer doc(test_pattern);
+    doc.process_documentation();
+    std::unordered_map<std::string, module_documentation> results = doc.get_modules_documentation();
+
+    module_documentation check_doc;
+    check_doc.set_name("Dec");
+
+    std::unordered_map<std::string, module_documentation> check_map;
+    check_map["Dec"] = check_doc;
+
+    ASSERT_EQ(check_map, results);
+}
+
+TEST( documentation_analyzer , malformed_annotation) {
+
+
+    std::vector<std::string> test_pattern = {
+        " { \"name\": \"A\", \"type\": ",
+        " { \"name\": \"B\", \"type\": ",
+    };
+
+    documentation_analyzer doc(test_pattern);
+    doc.process_documentation();
+    std::unordered_map<std::string, module_documentation> results = doc.get_modules_documentation();
+
+    ASSERT_TRUE(results.empty());
+}
