@@ -71,6 +71,10 @@ void Repository_walker::analyze_dir() {
     this->collect_analysis_results();
     run_macro_fixpoint();
 
+    // Hash consumed index-only headers before include-change detection, so
+    // `.h` edits invalidate their (cache-hit) consumers like any other
+    // include change.
+    refresh_include_header_hashes();
     // Re-parse cache-hit files whose (transitive) includes changed.
     invalidate_stale_includes();
     run_macro_fixpoint();
@@ -101,7 +105,10 @@ std::string Repository_walker::macro_table_fingerprint() const {
 
 /// Scan the repository once, building the repository index (basename -> paths) and the list of
 /// files to be analyzed. The same exclusion rules used by the analysis phase are applied, so
-/// the scan and the parse operate on the exact same file set.
+/// the scan and the parse operate on the exact same file set, except for
+/// index-only SV include headers (`.h`, see file_is_sv_include_header) which
+/// are added to the repository index for `` `include `` auto-discovery but
+/// never parsed as top-level files.
 void Repository_walker::scan_repository() {
     std::error_code ec;
     const std::filesystem::recursive_directory_iterator end;
@@ -117,6 +124,13 @@ void Repository_walker::scan_repository() {
             if(file_is_verilog(path)){
                 if (repository_index_p) repository_index_p->add_file(path);
                 scanned_files.push_back(path);
+            } else if(file_is_sv_include_header(path)){
+                // Index-only: `.h` files are findable via repository_index for
+                // `` `include "foo.h" `` auto-discovery, but are never parsed
+                // as top-level HDL. This keeps C headers elsewhere in the repo
+                // at zero cost; a C header actually `` `include ``d from SV is
+                // user error and follows the normal inline+parse error path.
+                if (repository_index_p) repository_index_p->add_file(path);
             } else if(file_is_vhdl(path) || file_is_script(path) || file_is_constraint(path) || file_is_data(path)){
                 scanned_files.push_back(path);
             }
@@ -215,6 +229,41 @@ void Repository_walker::collect_analysis_results() {
     store(data_futures);
 
     working_threads =0;
+}
+
+/// Hash the bytes of every consumed index-only `.h` header (no parsing) and
+/// expose the results through previous_hashes/file_hashes, so the existing
+/// invalidate_stale_includes() comparison notices header edits and deletions.
+/// The fresh map is persisted for the next run; headers nothing consumes
+/// anymore are dropped. A header that cannot be read hashes as "" (deleted:
+/// mismatches any previous real hash once, then settles).
+void Repository_walker::refresh_include_header_hashes() {
+    const auto persisted = d_store->get_include_file_hashes();
+    std::set<std::string> headers;
+    for (auto &file : scanned_files) {
+        if (!file_is_verilog(file)) continue;
+        auto includes = d_store->get_includes(file.string());
+        if (!includes.has_value()) continue;
+        for (auto &inc : includes.value()) {
+            if (std::filesystem::path(inc.path).extension() != ".h") continue;
+            headers.insert(inc.path);
+        }
+    }
+    std::unordered_map<std::string, std::string> fresh;
+    fresh.reserve(headers.size());
+    for (auto &header : headers) {
+        std::string hash;
+        if (auto f_opt = mm_file::try_open(header)) {
+            if (auto hash_opt = hash_file(f_opt->view())) hash = hash_opt.value();
+        }
+        fresh[header] = hash;
+        file_hashes[header] = hash;
+        if (!previous_hashes.contains(header)) {
+            auto prev = persisted.find(header);
+            previous_hashes[header] = (prev != persisted.end()) ? prev->second : "";
+        }
+    }
+    d_store->set_include_file_hashes(std::move(fresh));
 }
 
 /// After the main analysis pass, evict and re-parse any file that was served
@@ -631,6 +680,15 @@ void Repository_walker::analyze_file_with_injection(std::filesystem::path &file,
 bool Repository_walker::file_is_verilog(const std::filesystem::path &file) {
     std::string extension = file.extension();
     return extension == ".svh" || extension == ".sv" || extension == ".vh" || extension == ".v";
+}
+
+/// Check if the target file is an SV include header that should be indexed
+/// for `` `include `` auto-discovery but never parsed as top-level HDL.
+/// \param file Target file
+/// \return True if the file is an index-only SV include header (`.h`)
+bool Repository_walker::file_is_sv_include_header(const std::filesystem::path &file) {
+    std::string extension = file.extension();
+    return extension == ".h";
 }
 
 /// Check if the target file appertains to the vhdl language family

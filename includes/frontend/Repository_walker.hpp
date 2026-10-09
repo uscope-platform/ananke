@@ -92,6 +92,11 @@ private:
     void analyze_file(std::filesystem::path& dir);
     void collect_analysis_results();
     void invalidate_stale_includes();
+    // Content-hash tracking for consumed index-only `.h` headers (see
+    // file_is_sv_include_header): hashes bytes without parsing, seeds
+    // previous_hashes/file_hashes so invalidate_stale_includes() notices
+    // header edits, and persists the result in the data store.
+    void refresh_include_header_hashes();
     // Compilation-order macro fixpoint (see macro_table.hpp): seeds the table
     // from persisted entries, drains the quarantine with injected re-parses,
     // revalidates branch decisions taken with partial knowledge, revalidates
@@ -105,6 +110,7 @@ private:
     // File type discrimination methods
     // TODO: use these to make file associations dynamic a la vscode
     static bool file_is_verilog(const std::filesystem::path &file);
+    static bool file_is_sv_include_header(const std::filesystem::path &file);
     static bool file_is_vhdl(const std::filesystem::path &file);
     static bool file_is_script(const std::filesystem::path &file);
     static bool file_is_constraint(const std::filesystem::path &file);

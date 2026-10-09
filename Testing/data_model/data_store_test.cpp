@@ -578,8 +578,26 @@ TEST( data_store_test , package_owner_ambiguous_falls_back) {
     delete store;
 }
 
-TEST( data_store_test , store_cache_never_throws ) {
-    // Point store_path at an existing regular file so directory creation fails;
+TEST( data_store_test , include_file_hashes_round_trip ) {
+    // Index-only `.h` header hashes must survive a cache flush/reload, so
+    // include-change invalidation works across runs.
+    auto dir = "/tmp/ananke_ds_hhash";
+    std::filesystem::create_directories(dir);
+    {
+        data_store store(false, dir);
+        store.set_include_file_hashes({{"/some/defs.h", "aa:bb"}, {"/other/g.h", "cc"}});
+    }
+    {
+        data_store store(false, dir);
+        const auto &m = store.get_include_file_hashes();
+        ASSERT_EQ(m.size(), 2u);
+        EXPECT_EQ(m.at("/some/defs.h"), "aa:bb");
+        EXPECT_EQ(m.at("/other/g.h"), "cc");
+    }
+    std::filesystem::remove_all(dir);
+}
+
+TEST( data_store_test , store_cache_never_throws ) {    // Point store_path at an existing regular file so directory creation fails;
     // the constructor and the destructor's store_cache must not throw.
     std::filesystem::create_directories("/tmp/ananke_ds_nodir");
     {

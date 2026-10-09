@@ -25,6 +25,8 @@
 
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/memory.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/unordered_map.hpp>
 #include <utility>
 
 #include "Script.hpp"
@@ -130,6 +132,17 @@ public:
     std::vector<std::string> get_files_with_macro_dependencies() const;
     [[nodiscard]] std::string get_macro_table_fingerprint() const { return macro_table_fingerprint; }
     void set_macro_table_fingerprint(const std::string &fp) { macro_table_fingerprint = fp; }
+    // Content hashes of index-only SV include headers (`.h`, see
+    // Repository_walker::file_is_sv_include_header). These files are never
+    // parsed as top-level HDL, so they have no cache entry of their own; the
+    // map lets include-change invalidation notice their edits. Persisted
+    // alongside the cache.
+    [[nodiscard]] const std::unordered_map<std::string, std::string> &get_include_file_hashes() const {
+        return include_file_hashes;
+    }
+    void set_include_file_hashes(std::unordered_map<std::string, std::string> h) {
+        include_file_hashes = std::move(h);
+    }
     // OLD IF
 
     void remove_stale_info(const std::filesystem::path& p);
@@ -173,6 +186,8 @@ private:
 
     std::unordered_map<std::string, cached_item> cache;
     std::string macro_table_fingerprint;
+    // See get_include_file_hashes: byte hashes of consumed `.h` headers.
+    std::unordered_map<std::string, std::string> include_file_hashes;
     std::unordered_map<std::string, std::string> deconfliction;
     std::set<std::string> reported_duplicates;
     bool ephemeral;

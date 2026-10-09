@@ -185,6 +185,14 @@ TEST_F(repository_walker , file_type_handling) {
     ASSERT_TRUE(Repository_walker::file_is_verilog("test.v"));
     ASSERT_TRUE(Repository_walker::file_is_verilog("test.vh"));
     ASSERT_FALSE(Repository_walker::file_is_verilog("test.xx"));
+    ASSERT_FALSE(Repository_walker::file_is_verilog("test.h"));
+    //SV INCLUDE HEADERS (index-only: discoverable via `include, never top-level parsed)
+    ASSERT_TRUE(Repository_walker::file_is_sv_include_header("test.h"));
+    ASSERT_FALSE(Repository_walker::file_is_sv_include_header("test.svh"));
+    ASSERT_FALSE(Repository_walker::file_is_sv_include_header("test.sv"));
+    ASSERT_FALSE(Repository_walker::file_is_sv_include_header("test.vh"));
+    ASSERT_FALSE(Repository_walker::file_is_sv_include_header("test.v"));
+    ASSERT_FALSE(Repository_walker::file_is_sv_include_header("test.xx"));
     //VHDL
     ASSERT_TRUE(Repository_walker::file_is_vhdl("test.vhd"));
     ASSERT_TRUE(Repository_walker::file_is_vhdl("test.vhdl"));
@@ -200,4 +208,115 @@ TEST_F(repository_walker , file_type_handling) {
     ASSERT_TRUE(Repository_walker::file_is_data("test.dat"));
     ASSERT_TRUE(Repository_walker::file_is_data("test.mem"));
     ASSERT_FALSE(Repository_walker::file_is_data("test.xx"));
+    //.h is index-only: no other family claims it
+    ASSERT_FALSE(Repository_walker::file_is_vhdl("test.h"));
+    ASSERT_FALSE(Repository_walker::file_is_script("test.h"));
+    ASSERT_FALSE(Repository_walker::file_is_constraint("test.h"));
+    ASSERT_FALSE(Repository_walker::file_is_data("test.h"));
+}
+
+TEST_F(repository_walker, h_include_index_only) {
+    // Veer-like layout: `include "global.h" lives in a different directory
+    // than the includer, so it can only resolve via repository-index
+    // auto-discovery. The unrelated C header must be indexed but never
+    // parsed as HDL.
+    const std::string root = "/tmp/ananke_h_idx_test";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root + "/design/include");
+    std::filesystem::create_directories(root + "/design");
+    std::filesystem::create_directories(root + "/fw");
+
+    {
+        std::ofstream ofs(root + "/design/include/global.h");
+        ofs << "`define GLOBAL_VAL 42\n";
+    }
+    {
+        std::ofstream ofs(root + "/design/veer_wrapper.sv");
+        ofs << "`include \"global.h\"\nmodule veer_wrapper;\n  parameter P = `GLOBAL_VAL;\nendmodule\n";
+    }
+    {
+        std::ofstream ofs(root + "/fw/util.h");
+        ofs << "#ifndef UTIL_H\n#define UTIL_H\n#include <stdint.h>\n"
+               "typedef struct { int x; } util_t;\nstatic inline int f(int a) { return a + 1; }\n#endif\n";
+    }
+
+    const std::string settings_dir = root + "/settings";
+    std::filesystem::create_directories(settings_dir);
+    {
+        std::ofstream ofs(settings_dir + "/settings");
+        ofs << "{\"profiles\": {\"h_idx\": {\"hdl_store\":\"" << root << "\"}}}";
+    }
+    auto s = std::make_shared<settings_store>(false, settings_dir, "h_idx");
+    auto d = std::make_shared<data_store>(true, root + "/data_store");
+
+    Repository_walker walker(s, d, true);
+
+    auto idx = walker.get_repository_index();
+    ASSERT_NE(idx, nullptr);
+    // Both the SV header and the C header are indexed for lookup...
+    EXPECT_EQ(idx->lookup("global.h").size(), 1u);
+    EXPECT_EQ(idx->lookup("util.h").size(), 1u);
+
+    // ...but only the .sv includer is analyzed as HDL; no top-level parse
+    // of either .h (a C-header parse would error / pollute the store).
+    const std::string top = root + "/design/veer_wrapper.sv";
+    EXPECT_TRUE(d->get_file<hdl_file>(top).has_value());
+    EXPECT_FALSE(d->get_file<hdl_file>(root + "/design/include/global.h").has_value());
+    EXPECT_FALSE(d->get_file<hdl_file>(root + "/fw/util.h").has_value());
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_F(repository_walker, h_include_invalidation) {
+    // Editing a consumed index-only `.h` must invalidate its (cache-hit)
+    // consumers on the next run even though the consumers' own bytes are
+    // unchanged. The header renames the module via macro, so a stale cache
+    // hit is directly observable as the old resource name.
+    const std::string root = "/tmp/ananke_h_inv_test";
+    const std::string settings_dir = root + "/settings";
+    const std::string cache_dir = root + "/cache";
+    const std::string hdr = root + "/design/include/defs.h";
+    const std::string top = root + "/design/top.sv";
+    auto write_header = [&](const std::string &mod) {
+        std::ofstream ofs(hdr, std::ios::trunc);
+        ofs << "`define MODNAME " << mod << "\n";
+    };
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root + "/design/include");
+    std::filesystem::create_directories(root + "/design");
+    std::filesystem::create_directories(settings_dir);
+    write_header("top1");
+    {
+        std::ofstream ofs(top);
+        ofs << "`include \"defs.h\"\nmodule `MODNAME;\nendmodule\n";
+    }
+    {
+        std::ofstream ofs(settings_dir + "/settings");
+        ofs << "{\"profiles\": {\"h_inv\": {\"hdl_store\":\"" << root << "\"}}}";
+    }
+    auto make_store = [&](const std::string &profile) {
+        return std::make_pair(std::make_shared<settings_store>(false, settings_dir, profile),
+                              std::make_shared<data_store>(false, cache_dir));
+    };
+
+    {
+        auto [s, d] = make_store("h_inv");
+        Repository_walker walker(s, d, true);
+        std::string n1 = "top1";
+        ASSERT_TRUE(d->get_HDL_resource(n1).has_value());
+        EXPECT_TRUE(d->get_include_file_hashes().contains(hdr));
+    } // dtors flush settings + cache to disk
+
+    write_header("top2");
+
+    {
+        auto [s, d] = make_store("h_inv");
+        Repository_walker walker(s, d, true);
+        std::string n1 = "top1", n2 = "top2";
+        // Without header-hash tracking the second run serves top1 from cache.
+        EXPECT_FALSE(d->get_HDL_resource(n1).has_value());
+        EXPECT_TRUE(d->get_HDL_resource(n2).has_value());
+    }
+
+    std::filesystem::remove_all(root);
 }

@@ -406,6 +406,8 @@ void data_store::load_cache() {
         if (!is.good()) {
             spdlog::warn("Could not open cache file {}, starting with an empty cache", unified_cache);
             cache.clear();
+            macro_table_fingerprint.clear();
+            include_file_hashes.clear();
             return;
         }
         cereal::BinaryInputArchive archive_in(is);
@@ -414,6 +416,8 @@ void data_store::load_cache() {
         if (schema_hash != get_cache_schema_hash()) {
             spdlog::warn("Cache schema changed, discarding stale cache {}", unified_cache);
             cache.clear();
+            macro_table_fingerprint.clear();
+            include_file_hashes.clear();
             return;
         }
         archive_in(cache);
@@ -425,10 +429,19 @@ void data_store::load_cache() {
         } catch (const std::exception &) {
             macro_table_fingerprint.clear();
         }
+        // Header-hash entry postdates older archives; absence just means
+        // "no previously tracked headers" (one conservative re-parse pass
+        // for `.h` consumers), never a reason to discard the cache.
+        try {
+            archive_in(include_file_hashes);
+        } catch (const std::exception &) {
+            include_file_hashes.clear();
+        }
     } catch (const std::exception &e) {
         spdlog::warn("Could not load cache file {} ({}), starting with an empty cache", unified_cache, e.what());
         cache.clear();
         macro_table_fingerprint.clear();
+        include_file_hashes.clear();
     }
 }
 
@@ -443,7 +456,7 @@ void data_store::store_cache() {
             return;
         }
         cereal::BinaryOutputArchive archive_out(os);
-        archive_out(get_cache_schema_hash(), cache, macro_table_fingerprint);
+        archive_out(get_cache_schema_hash(), cache, macro_table_fingerprint, include_file_hashes);
     } catch (const std::exception &e) {
         spdlog::error("Could not save cache file {}: {}", unified_cache, e.what());
     }
@@ -460,6 +473,11 @@ void data_store::clean_up_caches() {
     for (const auto &path : stale_paths) {
         cache.erase(path);
     }
+    // NOTE: include_file_hashes is deliberately not pruned here. A deleted
+    // header must stay detectable (previous real hash vs current missing),
+    // so its consumers are invalidated once and re-parse with the usual
+    // "include file not found" warning. Unreferenced entries are dropped by
+    // the walker's refresh once nothing consumes them anymore.
 }
 
 void data_store::remove_stale_info(const std::filesystem::path& p) {
