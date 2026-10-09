@@ -111,16 +111,25 @@ std::string Repository_walker::macro_table_fingerprint() const {
 /// never parsed as top-level files.
 void Repository_walker::scan_repository() {
     std::error_code ec;
+    // The recursive iterator never yields the repository root itself, so its
+    // marker would never be discovered by the per-directory probe below.
+    load_ignore_file(std::filesystem::path(target_repository) / ignore_file_name);
     const std::filesystem::recursive_directory_iterator end;
     auto p_iter = std::filesystem::recursive_directory_iterator(target_repository, ec);
     while (p_iter != end && !ec) {
 
         auto path = p_iter->path();
         if(std::filesystem::is_directory(path, ec)){
-            if(is_excluded_directory(path) || contains_excluding_file(path)){
+            if(is_excluded_directory(path) || is_ignored(path, true) || contains_excluding_file(path)){
                 p_iter.disable_recursion_pending();
             }
         } else{
+            if (is_ignored(path, false)) {
+                // Gitignore-style exclusion wins over every file class,
+                // including repository-index entries.
+                p_iter.increment(ec);
+                continue;
+            }
             if(file_is_verilog(path)){
                 if (repository_index_p) repository_index_p->add_file(path);
                 scanned_files.push_back(path);
@@ -594,36 +603,38 @@ bool Repository_walker::is_excluded_directory(const std::filesystem::path& dir) 
 
 
 /// Check if the target directory needs to be skipped on the base of its content
+/// (IDE project markers, `.mkignore` markers and pattern rules).
+/// A marker with patterns never excludes its own directory by itself; an
+/// empty (or content-free) marker keeps the legacy prune-the-directory
+/// behavior for backward compatibility.
 /// \param dir Target directory
 /// \return true if the directory needs to be skipped
 bool Repository_walker::contains_excluding_file(const std::filesystem::path &dir) {
+    bool has_marker = false;
+    size_t rules_added = 0;
     try {
         for(auto& p: std::filesystem::directory_iterator(dir)){
-            if(!std::filesystem::is_directory(p.path())){
-                bool is_excluded = excluding_extensions.find(p.path().extension()) != excluding_extensions.end();
-                if(p.path().filename() == ignore_file_name){
-                    this->read_ignore_file(p.path());
-                    return true;
-                }
-                if(is_excluded) return true;
+            if(std::filesystem::is_directory(p.path())) continue;
+            if(excluding_extensions.find(p.path().extension()) != excluding_extensions.end()) return true;
+            if(p.path().filename() == ignore_file_name){
+                has_marker = true;
+                rules_added += load_ignore_file(p.path());
             }
         }
     } catch (const std::filesystem::filesystem_error &e) {
         spdlog::warn("Error iterating directory {}: {}", dir.string(), e.what());
         return false;
     }
-    return false;
+    if (has_marker && rules_added == 0) return true;
+    return is_ignored(dir, true);
 }
 
-void Repository_walker::read_ignore_file(const std::filesystem::path &file) {
-    std::ifstream content(file);
-    std::string ignore_line;
-    std::string ignore_path;
-    while (std::getline(content, ignore_line)){
-        ignore_path = file.parent_path().string() + "/" + ignore_line;
-        if(std::filesystem::is_directory(ignore_path)) excluded_directories.insert(ignore_path);
-    }
+size_t Repository_walker::load_ignore_file(const std::filesystem::path &file) {
+    return ignore_.add_file(file);
+}
 
+bool Repository_walker::is_ignored(const std::filesystem::path &path, bool is_dir) const {
+    return ignore_.matches(path, is_dir);
 }
 
 

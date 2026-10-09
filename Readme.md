@@ -10,9 +10,16 @@ Upon the first run the software will prompt the user for the HDL repository base
 It should be noted that while the step is multi-threaded, it is computationally intensive, and could take up to few minutes for very large repositories.
 Any subsequent run will be nearly instant as only the modified files will be scanned again.
 
-Several mechanisms are available to exclude sub-directories from the analysis:
+Several mechanisms are available to exclude paths from the analysis:
 
-- **.mkignore**: Directories containing a .mkignore file (it only needs to exist) will be skipped
+- **.mkignore**: `.mkignore` files hold gitignore-style patterns (one per line,
+  relative to the marker's directory) selecting files and sub-directories to
+  skip. Supported syntax: `*`, `?`, `[...]` and `**` wildcards, trailing `/`
+  for directories only, leading `/` to anchor to the marker's directory,
+  `#` comments, `!` negation, last match wins. Markers apply to their subtree
+  and nested markers extend the rule set. An empty `.mkignore` keeps the legacy
+  behavior of skipping its directory. Excluded files are neither parsed nor
+  indexed for `` `include `` auto-discovery.
 - **IDE projects**: Directories containing an IDE project file (like .xpr for Xilinx Vivado) will be ignored
 - **.git**: git source control hidden directories will be ignored
 

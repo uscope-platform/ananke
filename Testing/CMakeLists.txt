@@ -26,6 +26,7 @@ set(ANANKE_TESTS
         frontend/sv_class_tracking.cpp
         frontend/typedef_parsing.cpp
         frontend/source_mapping.cpp
+        frontend/ignore_matcher.cpp
         frontend/repository_walker.cpp
         frontend/vhdl_analyzer.cpp
         data_model/Depfile_test.cpp

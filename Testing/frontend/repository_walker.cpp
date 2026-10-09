@@ -267,6 +267,65 @@ TEST_F(repository_walker, h_include_index_only) {
     std::filesystem::remove_all(root);
 }
 
+TEST_F(repository_walker, mkignore_patterns) {
+    // Gitignore-style `.mkignore`: single-file, anchored, floating, dir-only
+    // and negated patterns; nested markers extend their subtree. Mirrors the
+    // VeeR snapshots layout (generated fragment + needed headers side by
+    // side).
+    const std::string root = "/tmp/ananke_ignore_test";
+    const std::string settings_dir = root + "/settings";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root + "/design/include");
+    std::filesystem::create_directories(root + "/design");
+    std::filesystem::create_directories(root + "/snapshots");
+    std::filesystem::create_directories(root + "/build");
+    std::filesystem::create_directories(settings_dir);
+
+    auto write = [](const std::string &path, const std::string &content) {
+        std::ofstream ofs(path, std::ios::trunc);
+        ofs << content;
+    };
+    write(root + "/.mkignore",
+          "# verilator-only fragment and scratch outputs\n"
+          "snapshots/*.sv\n"
+          "!snapshots/keep.sv\n"
+          "*.scratch.h\n"
+          "build/\n");
+    write(root + "/design/.mkignore", "nested.sv\n");
+    write(root + "/design/top.sv", "module top;\nendmodule\n");
+    write(root + "/design/nested.sv", "module nested_excluded;\nendmodule\n");
+    write(root + "/design/include/defs.h", "`define D 1\n");
+    write(root + "/design/include/stuff.scratch.h", "`define S 1\n");
+    write(root + "/snapshots/frag.sv", "module frag_excluded;\nendmodule\n");
+    write(root + "/snapshots/keep.sv", "module keep;\nendmodule\n");
+    write(root + "/build/junk.sv", "module junk_excluded;\nendmodule\n");
+    write(settings_dir + "/settings",
+          "{\"profiles\": {\"ign\": {\"hdl_store\":\"" + root + "\"}}}");
+
+    auto s = std::make_shared<settings_store>(false, settings_dir, "ign");
+    auto d = std::make_shared<data_store>(true, root + "/data_store");
+    Repository_walker walker(s, d, true);
+
+    std::string n;
+    n = "top";
+    EXPECT_TRUE(d->get_HDL_resource(n).has_value());
+    n = "keep";
+    EXPECT_TRUE(d->get_HDL_resource(n).has_value());
+    n = "frag_excluded";
+    EXPECT_FALSE(d->get_HDL_resource(n).has_value());
+    n = "junk_excluded";
+    EXPECT_FALSE(d->get_HDL_resource(n).has_value());
+    n = "nested_excluded";
+    EXPECT_FALSE(d->get_HDL_resource(n).has_value());
+
+    auto idx = walker.get_repository_index();
+    ASSERT_NE(idx, nullptr);
+    EXPECT_EQ(idx->lookup("defs.h").size(), 1u);
+    EXPECT_TRUE(idx->lookup("stuff.scratch.h").empty());
+
+    std::filesystem::remove_all(root);
+}
+
 TEST_F(repository_walker, h_include_invalidation) {
     // Editing a consumed index-only `.h` must invalidate its (cache-hit)
     // consumers on the next run even though the consumers' own bytes are
