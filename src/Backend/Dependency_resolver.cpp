@@ -16,6 +16,8 @@
 #include "Backend/Dependency_resolver.hpp"
 #include "data_model/HDL/statement/hdl_statements.hpp"
 
+#include <filesystem>
+
 
 
 Dependency_resolver_v2::Dependency_resolver_v2(const std::vector<std::shared_ptr<hdl_ast_node>> &i, std::shared_ptr<data_store> store) {
@@ -42,6 +44,10 @@ std::set<std::string> Dependency_resolver_v2::get_data() {
     return data;
 }
 
+std::set<std::string> Dependency_resolver_v2::get_missing_data() {
+    return missing_data;
+}
+
 void Dependency_resolver_v2::solve_dep(std::shared_ptr<hdl_ast_node> &i) {
 
     auto type = i->get_type();
@@ -63,9 +69,18 @@ void Dependency_resolver_v2::solve_dep(std::shared_ptr<hdl_ast_node> &i) {
                 if (d_store->get_package(inst->get_type(), pkg_path).has_value())
                     packages.insert(pkg_path);
             } else if (dc == memory_init) {
-                auto df = d_store->get_data_file(inst->get_type());
+                // The instance type is the $readmem literal as written
+                // ("program.hex", "mem/init/file.dat"); DataFiles are keyed
+                // by stem, so match on that. A miss means the image is not in
+                // the repository (e.g. toolchain-generated): record the
+                // literal so backends can fail fast with a fix hint instead
+                // of hanging the sim on $readmem warnings.
+                std::string stem = std::filesystem::path(inst->get_type()).stem().string();
+                auto df = d_store->get_data_file(stem);
                 if (df.has_value())
                     data.insert(df.value().get_path());
+                else if (!inst->get_type().empty())
+                    missing_data.insert(inst->get_type());
             }
         }
     }

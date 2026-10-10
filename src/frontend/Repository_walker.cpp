@@ -728,7 +728,7 @@ bool Repository_walker::file_is_constraint(const std::filesystem::path &file) {
 
 bool Repository_walker::file_is_data(const std::filesystem::path &file) {
     std::string extension = file.extension();
-    return extension == ".dat" || extension == ".mem";
+    return extension == ".dat" || extension == ".mem" || extension == ".hex";
 }
 
 

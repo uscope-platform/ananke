@@ -213,7 +213,6 @@ std::optional<int> ananke::build_flow() {
         auto sim_sources = sim_r.get_dependencies();
         auto sim_packages = sim_r.get_packages();
         auto sim_data = sim_r.get_data();
-
         LOG_TIMEPOINT("Solved sim dependencies");
 
         // Collect the include directories that were auto-discovered (only) by
@@ -393,6 +392,11 @@ std::optional<int> ananke::build_flow() {
                     profile_names.insert(d.substr(0, d.find('=')));
                 data.header_units = verilator_project_generator::resolve_leading_units(
                     all_defs, macro_needs, includes, closure, profile_names);
+                // Files included by closure files are compiled via the
+                // include; the backend must not also pass them positionally
+                // (Verilator's single unit would define them twice: MODDUP).
+                for (const auto &[file, targets] : includes)
+                    for (const auto &t : targets) data.included_sources.insert(t);
             }
 
             // Every includer directory joins the +incdir set: relative
@@ -405,6 +409,16 @@ std::optional<int> ananke::build_flow() {
                 for (auto &d : verilator_project_generator::extra_include_dirs(
                          s_store->get_hdl_store().string(), closure, data.commons_dir))
                     data.commons_dir.push_back(d);
+            }
+
+            // Referenced stimulus images absent from the repository (e.g. a
+            // toolchain-generated program.hex): the script checks for them
+            // in the run directory instead of hanging the sim.
+            {
+                std::set<std::string> missing;
+                for (const auto &m : synth_r.get_missing_data()) missing.insert(m);
+                for (const auto &m : sim_r.get_missing_data()) missing.insert(m);
+                data.missing_data_files = {missing.begin(), missing.end()};
             }
 
             generator.set_data(data);

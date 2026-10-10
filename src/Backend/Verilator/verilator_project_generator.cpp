@@ -75,11 +75,25 @@ bool verilator_project_generator::is_cpp_harness(const std::string &path) {
 std::vector<std::string> verilator_project_generator::ordered_units() const {
     // Deterministic order: packages first, then synth units, then sim-only
     // units. Mirrors the ordering used by the xilinx sim script.
+    // Files `included by closure files are skipped: Verilator compiles all
+    // inputs as one unit, so the include already compiles them exactly once
+    // and a positional copy would be a fatal MODDUP (e.g. VeeR tb_top.sv
+    // including testbench/axi_lsu_dma_bridge.sv).
+    std::set<std::string> included_norm;
+    for (const auto &f : data.included_sources) {
+        included_norm.insert(
+            std::filesystem::absolute(std::filesystem::path(f)).lexically_normal().string());
+    }
+    auto is_included = [&](const std::string &f) {
+        return included_norm.contains(
+            std::filesystem::absolute(std::filesystem::path(f)).lexically_normal().string());
+    };
     std::vector<std::string> units;
     auto push = [&](const std::set<std::string> &sources) {
         for (const auto &f : sources) {
             if (is_glbl(f)) continue; // Xilinx simulation helper, not for Verilator
             if (is_cpp_harness(f)) continue; // handled as --exe sources
+            if (is_included(f)) continue; // compiled via the `include
             const std::string ext = lowercase_ext(f);
             if (ext == ".vhd" || ext == ".vhdl") {
                 spdlog::warn("Skipping VHDL file {}: Verilator only supports (System)Verilog", f);
@@ -134,8 +148,7 @@ std::string verilator_project_generator::verilator_bin() const {
     return "verilator";
 }
 
-std::vector<std::string> verilator_project_generator::extra_include_dirs(
-    const std::string &hdl_store,
+std::vector<std::string> verilator_project_generator::extra_include_dirs(    const std::string &hdl_store,
     const std::set<std::string> &closure_files,
     const std::vector<std::string> &existing) {
     auto strip = [](std::string s) {
@@ -295,8 +308,9 @@ void verilator_project_generator::generate_sim_script(std::ostream &output) {
                                                       : " (no C++ harness found: --binary flow)\n");
     output << "# Standalone define-headers (Depfile sim_defines override, else flow-resolved)\n";
     output << "# are compiled first positionally so their `defines precede all units.\n";
-    output << "# Stimulus (program.hex etc.) is NOT built here; stage it in $RUN_DIR before running,\n";
-    output << "# as the VeeR flow does (`verilator: program.hex verilator-build`).\n";
+    output << "# Stimulus (program.hex etc.) is NOT built here; stage it in $RUN_DIR before running\n";
+    output << "# (or set HEX=/path/to/image to stage it as program.hex), as the VeeR flow does\n";
+    output << "# (`verilator: program.hex verilator-build`).\n";
     output << "# NOTE: VeeR appends `undef ASSERT_ON to common_defines.vh before building;\n";
     output << "# apply the same to your generated defines header if assertion macros fire.\n";
     output << "# Run from the directory containing this script, either executed\n";
@@ -330,6 +344,32 @@ void verilator_project_generator::generate_sim_script(std::ostream &output) {
 
     output << "TRACE_FLAGS=\"\"\n";
     output << "if [ \"$TRACE\" = \"1\" ]; then TRACE_FLAGS=\"--trace-fst\"; fi\n\n";
+
+    // Test stimulus: $readmem images absent from the repository (flow-filled
+    // missing_data_files) must exist under RUN_DIR at run time. Point HEX at
+    // a program image to stage it as program.hex. Missing images fail here —
+    // before a build — instead of hanging the sim on $readmem warnings.
+    output << "# Test program image (e.g. VeeR program.hex, built outside this flow).\n";
+    output << "if [ -n \"${HEX:-}\" ]; then\n";
+    output << "    cp \"$HEX\" \"$RUN_DIR/program.hex\""
+           << guard_fail("cannot stage HEX image") << "\n";
+    output << "fi\n";
+    {
+        for (const auto &img : data.missing_data_files) {
+            output << "if [ ! -f \"$RUN_DIR/" << img << "\" ]; then\n";
+            output << "    sim_err \"required stimulus '" << img << "' not found in $RUN_DIR"
+                   << " (read by \\$readmem in the sources)\"\n";
+            if (img == "program.hex" || img.ends_with("/program.hex")) {
+                output << "    sim_err \"copy the image into $RUN_DIR, or point HEX at it"
+                       << " (HEX=/path/to/image stages it as program.hex)\"\n";
+            } else {
+                output << "    sim_err \"stage the file into $RUN_DIR before running\"\n";
+            }
+            output << "    return 1 2>/dev/null || exit 1\n";
+            output << "fi\n";
+        }
+    }
+    output << "\n";
 
     emit_phase(output, "PHASE 1: VERILATE");
     output << "\"$VERILATOR\" ";

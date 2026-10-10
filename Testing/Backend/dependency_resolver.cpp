@@ -95,8 +95,7 @@ TEST_F(dep_resolver , dependency_resolver) {
     ASSERT_EQ(res.get_packages(), check_pkg);
 }
 
-TEST(dep_resolver_import, imported_package_trace) {
-    // The package is in its own file; the entity imports it from another.
+TEST(dep_resolver_import, imported_package_trace) {    // The package is in its own file; the entity imports it from another.
     std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
     std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
 
@@ -131,4 +130,34 @@ end rtl;)";
     Dependency_resolver_v2 r(ast, d_store);
     auto packages = r.get_packages();
     ASSERT_TRUE(packages.contains("test/params_pkg.vhd"));
+}
+
+TEST(dep_resolver_missing, unresolved_mem_init_recorded) {
+    // A $readmem literal with no repository file (e.g. toolchain-generated
+    // program.hex) is reported via get_missing_data, not staged.
+    auto d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    hdl_resource_statement mod_entity;
+    mod_entity.set_name("test_module");
+
+    auto s1 = std::make_shared<hdl_instance_statement>();
+    s1->set_name("__init_file__"); s1->set_type("program.hex"); s1->set_dependency_class(memory_init);
+    mod_entity.add_statement(s1);
+    auto s2 = std::make_shared<hdl_instance_statement>();
+    s2->set_name("__init_file__"); s2->set_type("present.dat"); s2->set_dependency_class(memory_init);
+    mod_entity.add_statement(s2);
+
+    hdl_file f;
+    f.set_content({std::make_shared<hdl_resource_statement>(mod_entity)});
+    d_store->store_file({"test/mod.sv", "file_hash", f});
+    DataFile D("present", "test/present.dat");
+    d_store->store_file({"test/present.dat", "hash", {D}});
+
+    std::shared_ptr<settings_store> s_store =
+        std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto ast = b.build_ast(std::vector<std::string>({"test_module"}));
+
+    Dependency_resolver_v2 r(ast, d_store);
+    ASSERT_EQ(r.get_data(), std::set<std::string>({"test/present.dat"}));
+    ASSERT_EQ(r.get_missing_data(), std::set<std::string>({"program.hex"}));
 }

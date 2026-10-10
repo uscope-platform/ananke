@@ -14,6 +14,7 @@
 //  limitations under the License.
 
 #include <algorithm>
+#include <cctype>
 #include <set>
 
 #include "frontend/analysis/system_verilog/sv_visitor.hpp"
@@ -922,11 +923,15 @@ void sv_visitor::exitPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) {
         data_file.erase(std::remove(data_file.begin(), data_file.end(), '\\'), data_file.end());
         data_file.erase(std::remove(data_file.begin(), data_file.end(), '"'), data_file.end());
         std::filesystem::path p = data_file;
-        auto ext = p.extension().string();
-        if(ext == ".dat"|| ext == ".mem"){
+        std::string ext = p.extension().string();
+        for (auto &c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        if(ext == ".dat" || ext == ".mem" || ext == ".hex"){
             auto stmt = std::make_shared<hdl_instance_statement>();
             stmt->set_name("__init_file__");
-            stmt->set_type(p.stem());
+            // Full literal as written (not the stem): the resolver matches
+            // by stem for staging, and reports the literal when the file is
+            // absent from the repository (e.g. toolchain-generated images).
+            stmt->set_type(data_file);
             stmt->set_dependency_class(memory_init);
             route_resource_statement(stmt);
         }

@@ -205,7 +205,7 @@ TEST( analysis_test , sv_module) {
 
     auto init_file = std::make_shared<hdl_instance_statement>();
     init_file->set_name("__init_file__");
-    init_file->set_type("file");
+    init_file->set_type("mem/init/file.dat");
     init_file->set_dependency_class(memory_init);
 
     auto pkg_stmt = std::make_shared<hdl_instance_statement>();
@@ -573,4 +573,27 @@ TEST(analysis_test, underscore_separated_parameter) {
     auto hex_val = hex_raw->evaluate({});
     ASSERT_TRUE(hex_val.has_value());
     EXPECT_EQ(hex_val->get_integer().get_value(), 0xFFFF00FF);
+}
+
+TEST(sv_analysis, readmem_hex_init_file) {
+    // .hex images take the same memory_init path as .dat/.mem, keeping the
+    // full literal so unresolved references can be reported downstream.
+    sv_analyzer analyzer;
+    auto res = analyzer.analyze("/test/file.sv",
+        "module top;\n"
+        "  reg [7:0] m [3:0];\n"
+        "  initial $readmemh(\"prog.hex\", m);\n"
+        "endmodule\n").value().get_content();
+    auto resource = res[0]->as<hdl_resource_statement>();
+
+    bool found = false;
+    for (const auto &s : resource.get_statements()) {
+        auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(s);
+        if (inst && inst->get_dependency_class() == memory_init) {
+            EXPECT_EQ(inst->get_name(), "__init_file__");
+            EXPECT_EQ(inst->get_type(), "prog.hex");
+            found = true;
+        }
+    }
+    EXPECT_TRUE(found);
 }

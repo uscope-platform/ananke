@@ -55,6 +55,15 @@ struct project_data {
     // standalone macro define-headers the closure needs but nothing includes.
     // Resolved absolute paths, set by the flow (never by hand).
     std::vector<std::string> header_units;
+    // Files `included by closure files (absolute paths). The Verilator
+    // backend does not emit these positionally: Verilator compiles all
+    // inputs as one unit, so an included file would be defined twice
+    // (MODDUP, fatal). Its content stays visible via the include.
+    std::set<std::string> included_sources;
+    // Referenced data images with no repository file ($readmem literals as
+    // written, e.g. toolchain-generated "program.hex"). The backend checks
+    // these exist in the run directory instead of hanging the sim.
+    std::vector<std::string> missing_data_files;
     std::string board_part;
     std::string target_part;
     std::string tb_tl;

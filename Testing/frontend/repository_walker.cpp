@@ -207,6 +207,7 @@ TEST_F(repository_walker , file_type_handling) {
     //DATA
     ASSERT_TRUE(Repository_walker::file_is_data("test.dat"));
     ASSERT_TRUE(Repository_walker::file_is_data("test.mem"));
+    ASSERT_TRUE(Repository_walker::file_is_data("test.hex"));
     ASSERT_FALSE(Repository_walker::file_is_data("test.xx"));
     //.h is index-only: no other family claims it
     ASSERT_FALSE(Repository_walker::file_is_vhdl("test.h"));

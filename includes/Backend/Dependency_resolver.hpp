@@ -33,11 +33,15 @@ public:
     std::set<std::string> get_dependencies();
     std::set<std::string> get_packages();
     std::set<std::string> get_data();
+    // $readmem literals with no matching repository file (e.g.
+    // toolchain-generated images), as written in the sources.
+    std::set<std::string> get_missing_data();
 
 private:
     std::set<std::string> modules;
     std::set<std::string> packages;
     std::set<std::string> data;
+    std::set<std::string> missing_data;
 
     void solve_dep(std::shared_ptr<hdl_ast_node> &i);
     std::vector<std::shared_ptr<hdl_ast_node>> AST;

@@ -330,8 +330,7 @@ TEST(verilator_project_gen, extra_include_dirs_covers_includers) {
     EXPECT_EQ(extra[1], "/testbench");
 }
 
-TEST(verilator_project_gen, extra_include_dirs_skips_covered_and_outside) {
-    std::set<std::string> closure = {
+TEST(verilator_project_gen, extra_include_dirs_skips_covered_and_outside) {    std::set<std::string> closure = {
         "/repo/design/a.sv",
         "/other/tree/b.sv",
         "/repo/top.sv",
@@ -342,4 +341,52 @@ TEST(verilator_project_gen, extra_include_dirs_skips_covered_and_outside) {
 
     ASSERT_EQ(extra.size(), 1u);
     EXPECT_EQ(extra[0], "/");
+}
+
+TEST(verilator_project_gen, included_sources_not_positional) {
+    // VeeR shape: tb_top.sv includes axi_lsu_dma_bridge.sv, which is also in
+    // the closure (instantiated). Emitting both would be a fatal MODDUP under
+    // Verilator's single compilation unit; the include compiles it once.
+    auto s_store = vpg_setup_settings();
+    verilator_project_generator gen(s_store);
+
+    project_data d = vpg_base_data();
+    d.sim_sources = {"/test/sim/tb_top.sv", "/test/sim/axi_lsu_dma_bridge.sv", "/test/sim/ahb_sif.sv"};
+    d.package_sim_sources = {};
+    d.sim_harness = {};
+    d.included_sources = {"/test/sim/axi_lsu_dma_bridge.sv"};
+    gen.set_data(d);
+
+    std::ostringstream out;
+    gen.generate_sim_script(out);
+    auto script = out.str();
+
+    EXPECT_EQ(script.find("axi_lsu_dma_bridge.sv"), std::string::npos);
+    EXPECT_NE(script.find("tb_top.sv"), std::string::npos);
+    EXPECT_NE(script.find("ahb_sif.sv"), std::string::npos);
+    vpg_clean_settings();
+}
+
+TEST(verilator_project_gen, missing_data_stimulus_check_emitted) {
+    auto s_store = vpg_setup_settings();
+    verilator_project_generator gen(s_store);
+
+    project_data d = vpg_base_data();
+    d.sim_sources = {"/test/sim/tb_top.sv"};
+    d.package_sim_sources = {};
+    d.sim_harness = {};
+    // AST-reported absent images (e.g. toolchain-generated program.hex).
+    d.missing_data_files = {"program.hex", "mem/init.hex"};
+    gen.set_data(d);
+
+    std::ostringstream out;
+    gen.generate_sim_script(out);
+    auto script = out.str();
+
+    EXPECT_NE(script.find("HEX"), std::string::npos);
+    EXPECT_NE(script.find("$RUN_DIR/program.hex"), std::string::npos);
+    EXPECT_NE(script.find("$RUN_DIR/mem/init.hex"), std::string::npos);
+    EXPECT_NE(script.find("required stimulus 'program.hex'"), std::string::npos);
+    EXPECT_NE(script.find("HEX=/path/to/image stages it as program.hex"), std::string::npos);
+    vpg_clean_settings();
 }

@@ -44,8 +44,7 @@ public:
         const std::unordered_map<std::string, std::vector<std::string>> &includes,
         const std::set<std::string> &closure_files,
         const std::set<std::string> &profile_define_names);
-    // Extra +incdir entries for the Verilator command line: the parent
-    // directory of every closure file, repo-relative with a leading '/'
+    // Extra +incdir entries for the Verilator command line: the parent    // directory of every closure file, repo-relative with a leading '/'
     // (same convention as the auto-discovered entries). Relative `includes
     // (e.g. VeeR tb_top.sv -> testbench/dasm.svi, covered upstream by an
     // explicit -I testbench) are not guaranteed to resolve against the
