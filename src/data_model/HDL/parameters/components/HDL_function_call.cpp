@@ -267,6 +267,7 @@ void HDL_function_call::apply_concat_assignment(
             rhs_width = shift;
         }
     } else {
+        warn_once("has non-integral RHS value");
         for (size_t i = 0; i < targets.size(); ++i) record_whole(i);
         return;
     }
@@ -298,6 +299,12 @@ void HDL_function_call::apply_concat_assignment(
         concat_member_select sel = i < selects.size() ? selects[i] : concat_member_select{};
         if (is_fcn) {
             measures[i].routed_whole = true;
+            continue;
+        }
+        if (sel.dynamic_select) {
+            // Present-but-non-literal select (part-selects, parametric
+            // bounds): width is unknowable, and declaration lookup would give
+            // a bogus whole-var width for a slice. Whole value + cursor stop.
             continue;
         }
         if (sel.has_bounds()) {
@@ -370,6 +377,7 @@ void HDL_function_call::apply_concat_assignment(
     for (size_t i = 0; i < targets.size(); ++i) {
         const auto &target = targets[i];
         if (!cursor_known || measures[i].width < 0) {
+            warn_once("has unmeasurable member '" + target.get_name() + "'");
             record_whole(i);
             cursor_known = false;
             continue;

@@ -28,11 +28,15 @@
 // syntax at parse time. Range selects vanish before storage everywhere else
 // in the pipeline, so without this the unpacker could not recover them.
 // (-1, -1) means "no literal bounds" (bare, single-bit or dynamic member).
+// `dynamic_select` marks a present-but-non-literal select (part-selects,
+// parametric bounds): the member is never width-resolved, not even via
+// declaration lookup, so it cannot be mistaken for a bare member.
 struct concat_member_select {
     int64_t hi = -1;
     int64_t lo = -1;
+    bool dynamic_select = false;
     [[nodiscard]] bool has_bounds() const { return hi >= 0 && lo >= 0; }
-    template<class Archive> void serialize(Archive & ar) { ar(hi, lo); }
+    template<class Archive> void serialize(Archive & ar) { ar(hi, lo, dynamic_select); }
 };
 
 class hdl_assignment_statement : public hdl_statement_base {

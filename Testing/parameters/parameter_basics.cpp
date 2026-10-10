@@ -2671,6 +2671,21 @@ TEST(parameter_extraction, wide_bit_select) {
     EXPECT_EQ(defaults.at(qualified_identifier("B63")).get_integer().get_value(), 0);
 }
 
+TEST(parameter_extraction, range_select_in_parameter) {
+    // Range reads slice in parameter initializers exactly like in function
+    // bodies: bits [7:4] of 0xA5.
+    auto test_pattern = R"(
+        module test_mod ();
+            parameter [7:0] V = 8'hA5;
+            parameter R = V[7:4];
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
+    EXPECT_EQ(defaults.at(qualified_identifier("R")).get_integer().get_value(), 10);
+}
+
 TEST(parameter_extraction, wide_logic_shift_right) {
     auto test_pattern = R"(
         module test_mod ();

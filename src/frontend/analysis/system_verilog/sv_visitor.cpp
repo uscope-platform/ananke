@@ -2382,25 +2382,29 @@ bool sv_visitor::handle_streaming_lvalue(sv2017::Variable_lvalueContext *ctx) {
 // only there); `getText` is whitespace-free by ANTLR construction.
 // Anything else (bare, single-bit, part-selects, multiple selects) yields
 // no bounds: single-bit members ride the stored index expression exactly
-// like single assignments, the rest fall back.
+// like single assignments, the rest fall back. A present-but-non-literal
+// select (part-selects, parametric bounds) is marked dynamic so evaluation
+// never mistakes the member for a bare one (declaration lookup would give
+// a bogus width for a slice).
 static concat_member_select parse_concat_member_select(
     sv2017::Package_or_class_scoped_hier_id_with_selectContext *hier) {
-    if (hier == nullptr) return {};
-    if (hier->COLON() == nullptr || hier->operator_plus_minus() != nullptr) return {};
+    if (hier == nullptr || hier->COLON() == nullptr) return {};
+    if (hier->operator_plus_minus() != nullptr) return {.dynamic_select = true};
     const auto bounds = hier->expression();
-    if (bounds.size() != 2 || bounds[0] == nullptr || bounds[1] == nullptr) return {};
+    if (bounds.size() != 2 || bounds[0] == nullptr || bounds[1] == nullptr)
+        return {.dynamic_select = true};
     const auto is_digits = [](const std::string &s) {
         return !s.empty() && std::all_of(s.begin(), s.end(),
                                          [](char c) { return c >= '0' && c <= '9'; });
     };
     const std::string hi_s = bounds[0]->getText();
     const std::string lo_s = bounds[1]->getText();
-    if (!is_digits(hi_s) || !is_digits(lo_s)) return {};
+    if (!is_digits(hi_s) || !is_digits(lo_s)) return {.dynamic_select = true};
     try {
         return {static_cast<int64_t>(std::stoll(hi_s)),
                 static_cast<int64_t>(std::stoll(lo_s))};
     } catch (const std::exception &) {
-        return {};
+        return {.dynamic_select = true};
     }
 }
 
@@ -2431,32 +2435,25 @@ bool sv_visitor::handle_concatenation_lvalue(sv2017::Variable_lvalueContext *ctx
     if (!under_foreach && loops_factory.in_loop() && !loops_factory.in_body()) return false;
     // Support inspection first: every member must be a plain hierarchical
     // identifier or a nested concatenation of those. Anything else declines
-    // the whole statement so no partial write is ever recorded.
+    // the whole statement so no partial write is ever recorded. Handled
+    // statements stay silent here; precision loss (if any) is reported at
+    // evaluation, where values exist to judge it.
     std::vector<sv2017::Variable_lvalueContext *> fringe(members.begin(), members.end());
-    size_t writable = 0;
+    bool writable_found = false;
     while (!fringe.empty()) {
         auto *cur = fringe.front();
         fringe.erase(fringe.begin());
         auto *hier = cur->package_or_class_scoped_hier_id_with_select();
         if (hier != nullptr && hier->package_or_class_scoped_path() != nullptr) {
-            ++writable;
+            writable_found = true;
             continue;
         }
         const auto nested = cur->variable_lvalue();
         if (nested.empty()) return false;
         fringe.insert(fringe.begin(), nested.begin(), nested.end());
     }
-    if (writable == 0) return false;
+    if (!writable_found) return false;
     f_factory.start_concat_lvalue();
-    if (!unsupported_lvalue_warned) {
-        unsupported_lvalue_warned = true;
-        std::string text = ctx->getText();
-        if (text.size() > 120) text = text.substr(0, 120) + "...";
-        const std::string where =
-            current_file.empty() ? "<unknown file>" : current_file;
-        spdlog::warn("Concatenation lvalue '{}' at {}:{}, recording {} member(s)",
-                     text, where, ctx->getStart() ? ctx->getStart()->getLine() : 0, writable);
-    }
     return true;
 }
 

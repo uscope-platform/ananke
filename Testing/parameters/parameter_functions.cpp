@@ -2823,3 +2823,136 @@ TEST(parameter_extraction, concat_lvalue_nested_in_function) {
         ASSERT_EQ(value, defaults.at(name));
     }
 }
+
+TEST(parameter_extraction, single_lvalue_range_select_in_function) {
+    // Single range write merges into the previous value exactly like a
+    // concatenation member: only the selected slices change.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer scatter(input [31:0] opcode);
+                int acc;
+                acc = 8'hF0;
+                acc[3:2] = opcode[3:2];
+                scatter = acc;
+            endfunction
+
+            parameter integer TEST_SINGLE_RANGE = scatter(32'hA5);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
+
+    // 0xF0 with bits [3:2] scattered from 0xA5 -> 0xF5.
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("TEST_SINGLE_RANGE"), 244}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, single_member_concat_unpacks_in_function) {
+    // A single-member concatenation carries bounds, so it unpacks instead of
+    // following the whole-var single-assignment path.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer narrow(input [31:0] v);
+                int r;
+                {r[1:0]} = v;
+                narrow = r;
+            endfunction
+
+            parameter integer TEST_SINGLE_CONCAT = narrow(32'hA5);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
+
+    // Low 2 bits of 0xA5.
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("TEST_SINGLE_CONCAT"), 1}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, range_select_read_in_function) {
+    // Range reads slice exactly like range writes do.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer readback(input [31:0] v);
+                int y;
+                y = v[7:4];
+                readback = y;
+            endfunction
+
+            parameter integer TEST_READ = readback(32'hA5);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
+
+    // Bits [7:4] of 0xA5.
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("TEST_READ"), 10}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, concat_lvalue_dynamic_member_in_function) {
+    // A part-select member is never width-resolved (not even via declaration
+    // lookup, which would give a bogus whole-var width for a slice): it and
+    // everything after it take the whole value, stopping the cursor. The
+    // 64-bit RHS proves it: misclassifying `a` as bare would slice it to 0
+    // instead. Wide return/parameter avoid narrowing the observed value.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function logic [63:0] dyn(input [63:0] v, input [31:0] k);
+                int a;
+                int b;
+                {a[k +: 2], b} = v;
+                dyn = a;
+            endfunction
+
+            parameter logic [63:0] TEST_DYN = dyn(64'hA5A5A5A5, 0);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
+
+    EXPECT_EQ(defaults.at(qualified_identifier("TEST_DYN")).get_integer().get_value(), 2779096485LL);
+}

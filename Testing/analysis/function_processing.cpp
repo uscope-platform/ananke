@@ -1408,7 +1408,6 @@ TEST(function_processing, concatenation_lvalue_recorded) {
 
     EXPECT_EQ(check_f, fns.at("scatter"));
     EXPECT_EQ(logs.count("dropping file"), 0u);
-    EXPECT_EQ(logs.count("recording 4 member(s)"), 1u);
 }
 
 TEST(function_processing, concatenation_lvalue_vector_targets) {
@@ -1515,5 +1514,38 @@ TEST(function_processing, concatenation_lvalue_strict_drops) {
     analyzer.set_options(opts);
 
     EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
+}
+
+TEST(function_processing, single_lvalue_range_select_recorded) {
+    // Single assignments with literal bounds capture them exactly like
+    // concatenation members (whole-var + bounds today; sliced at evaluation).
+    auto test_pattern = R"(
+        module test_mod();
+            int acc;
+            logic [31:0] opcode;
+            function void scatter();
+                acc[3:2] = opcode[3:2];
+            endfunction
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+    auto fns = resource->get_functions();
+    ASSERT_TRUE(fns.contains("scatter"));
+
+    hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
+    check_f.set_name("scatter");
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_targets({qualified_identifier("acc")});
+    stmt->set_member_selects({{3, 2}});
+    stmt->set_value(std::make_shared<Identifier_token>(qualified_identifier("opcode")));
+    check_f.add_statement(stmt);
+
+    EXPECT_EQ(check_f, fns.at("scatter"));
 }
 

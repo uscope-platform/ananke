@@ -67,6 +67,7 @@ bool hdl_assignment_statement::equals(const hdl_statement_base& other) const {
         concat_member_select a = i < member_selects.size() ? member_selects[i] : concat_member_select{};
         concat_member_select b = i < rhs.member_selects.size() ? rhs.member_selects[i] : concat_member_select{};
         if (a.has_bounds() != b.has_bounds() || a.hi != b.hi || a.lo != b.lo) return false;
+        if (a.dynamic_select != b.dynamic_select) return false;
     }
     bool res = (!value && !rhs.value) || (value && rhs.value && *value == *rhs.value);
     return res;
