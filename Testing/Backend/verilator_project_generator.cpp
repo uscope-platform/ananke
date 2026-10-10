@@ -390,3 +390,31 @@ TEST(verilator_project_gen, missing_data_stimulus_check_emitted) {
     EXPECT_NE(script.find("HEX=/path/to/image stages it as program.hex"), std::string::npos);
     vpg_clean_settings();
 }
+
+TEST(verilator_project_gen, custom_tool_options) {
+    auto s_store = vpg_setup_settings();
+    verilator_project_generator gen(s_store);
+
+    project_data d = vpg_base_data();
+    d.sim_sources = {"/test/sim/tb_top.sv"};
+    d.package_sim_sources = {};
+    d.sim_harness = {};
+    d.verilator.cflags = {"-std=c++17", "-O2"};
+    d.verilator.waivers = {};
+    d.verilator.make_args = {};
+    d.verilator.autoflush = false;
+    d.verilator.extra_args = {"--x-initial", "fast"};
+    gen.set_data(d);
+
+    std::ostringstream out;
+    gen.generate_sim_script(out);
+    auto script = out.str();
+
+    EXPECT_NE(script.find("-CFLAGS \"-std=c++17 -O2\""), std::string::npos);
+    EXPECT_EQ(script.find("-Wno-"), std::string::npos);
+    EXPECT_EQ(script.find("--autoflush"), std::string::npos);
+    EXPECT_NE(script.find("\"--x-initial\""), std::string::npos);
+    EXPECT_NE(script.find("\"fast\""), std::string::npos);
+    EXPECT_EQ(script.find("OPT_FAST"), std::string::npos);
+    vpg_clean_settings();
+}

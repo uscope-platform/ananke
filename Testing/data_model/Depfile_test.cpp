@@ -123,3 +123,44 @@ TEST( DepfileHarnessTest , sim_harness_parsing) {
     ASSERT_THAT(f.general.sim_defines,
                 testing::ElementsAre("snapshots/default/common_defines.vh"));
 }
+
+TEST(DepfileVerilatorTest, tool_section_parsing) {
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "vproj",
+            "synth_tl": "dut",
+            "sim_tl": "tb"
+        },
+        "verilator": {
+            "cflags": ["-std=c++17", "-O2"],
+            "waivers": [],
+            "make_args": ["OPT_FAST=-O2", "VERBOSE=1"],
+            "autoflush": false,
+            "extra_args": ["--x-initial", "fast"]
+        }
+    })");
+    Depfile f(ss);
+    ASSERT_FALSE(f.has_error()) << f.get_error();
+    ASSERT_THAT(f.verilator.cflags, testing::ElementsAre("-std=c++17", "-O2"));
+    ASSERT_TRUE(f.verilator.waivers.empty());
+    ASSERT_THAT(f.verilator.make_args, testing::ElementsAre("OPT_FAST=-O2", "VERBOSE=1"));
+    ASSERT_FALSE(f.verilator.autoflush);
+    ASSERT_THAT(f.verilator.extra_args, testing::ElementsAre("--x-initial", "fast"));
+}
+
+TEST(DepfileVerilatorTest, tool_section_defaults) {
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "vproj",
+            "synth_tl": "dut",
+            "sim_tl": "tb"
+        }
+    })");
+    Depfile f(ss);
+    ASSERT_FALSE(f.has_error()) << f.get_error();
+    ASSERT_THAT(f.verilator.cflags, testing::ElementsAre("-std=c++14"));
+    ASSERT_THAT(f.verilator.waivers, testing::ElementsAre("UNOPTFLAT"));
+    ASSERT_THAT(f.verilator.make_args, testing::ElementsAre("OPT_FAST=-Os"));
+    ASSERT_TRUE(f.verilator.autoflush);
+    ASSERT_TRUE(f.verilator.extra_args.empty());
+}

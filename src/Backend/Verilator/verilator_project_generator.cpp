@@ -378,12 +378,24 @@ void verilator_project_generator::generate_sim_script(std::ostream &output) {
     } else {
         output << "--binary --timing ";
     }
-    output << "-CFLAGS \"-std=c++14\" \\\n";
-    output << "    -Wno-UNOPTFLAT \\\n";
-    output << "    --autoflush $TRACE_FLAGS \\\n";
+    if (!data.verilator.cflags.empty()) {
+        output << "-CFLAGS \"";
+        for (size_t i = 0; i < data.verilator.cflags.size(); ++i) {
+            if (i > 0) output << " ";
+            output << data.verilator.cflags[i];
+        }
+        output << "\" \\\n";
+    }
+    for (const auto &w : data.verilator.waivers) {
+        output << "    " << shell_quote("-Wno-" + w) << " \\\n";
+    }
+    output << "    ";
+    if (data.verilator.autoflush) output << "--autoflush ";
+    output << "$TRACE_FLAGS \\\n";
     output << "    --top-module \"$TOP\" \\\n";
     for (const auto &d : defines) output << "    " << shell_quote("+define+" + d) << " \\\n";
     for (const auto &d : data.commons_dir) output << "    " << shell_quote("+incdir+" + base_dir + d) << " \\\n";
+    for (const auto &a : data.verilator.extra_args) output << "    " << shell_quote(a) << " \\\n";
     for (const auto &h : leading_units) output << "    " << shell_quote(h) << " \\\n";
     // Explicitly led files that are also closure units must not be emitted
     // twice (double compilation breaks on redefinitions).
@@ -404,8 +416,9 @@ void verilator_project_generator::generate_sim_script(std::ostream &output) {
     if (use_harness) {
         emit_phase(output, "PHASE 2: MAKE");
         output << "NPROC=\"${NPROC:-$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)}\"\n";
-        output << "make -j\"$NPROC\" -C \"$OBJ_DIR\" -f \"V${TOP}.mk\" OPT_FAST=\"-Os\""
-                << guard_fail("model build failed") << "\n\n";
+        output << "make -j\"$NPROC\" -C \"$OBJ_DIR\" -f \"V${TOP}.mk\"";
+        for (const auto &m : data.verilator.make_args) output << " " << shell_quote(m);
+        output << guard_fail("model build failed") << "\n\n";
         emit_phase(output, "PHASE 3: RUN");
         output << "cp \"$OBJ_DIR/V${TOP}\" \"$RUN_DIR/\"" << guard_fail("cannot stage model binary") << "\n";
         output << "( cd \"$RUN_DIR\" && \"./V${TOP}\" \"$@\" )" << guard_fail("simulation run failed") << "\n";

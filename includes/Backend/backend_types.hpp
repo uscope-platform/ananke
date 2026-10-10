@@ -27,10 +27,27 @@ struct script_source {
     std::string path;
     bool function_mode = false;
     std::map<std::string, std::string> variables;
-
     bool operator==(const script_source& other) const {
         return path == other.path && variables == other.variables && name == other.name && function_mode == other.function_mode;
     }
+};
+
+// Tool-specific backend options: the `verilator` Depfile section. Only the
+// Verilator backend consumes it. Member initializers are the defaults used
+// when the section (or a key) is absent; an explicit empty list disables
+// that default (e.g. `"waivers": []` passes no -Wno- flags).
+struct verilator_tool_options {
+    // Extra compiler flags for the generated-model build, joined after -CFLAGS.
+    std::vector<std::string> cflags = {"-std=c++14"};
+    // Verilator warning codes waived as -Wno-<code>.
+    std::vector<std::string> waivers = {"UNOPTFLAT"};
+    // Extra arguments appended to the model `make` invocation.
+    std::vector<std::string> make_args = {"OPT_FAST=-Os"};
+    // Pass --autoflush to Verilator.
+    bool autoflush = true;
+    // Free-form extra Verilator arguments, one element per argv entry,
+    // inserted before the file list.
+    std::vector<std::string> extra_args = {};
 };
 
 struct project_data {
@@ -64,6 +81,8 @@ struct project_data {
     // written, e.g. toolchain-generated "program.hex"). The backend checks
     // these exist in the run directory instead of hanging the sim.
     std::vector<std::string> missing_data_files;
+    // Verilator backend options (Depfile `verilator` section, else defaults).
+    verilator_tool_options verilator;
     std::string board_part;
     std::string target_part;
     std::string tb_tl;

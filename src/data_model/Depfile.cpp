@@ -96,6 +96,14 @@ void Depfile::set_content(const nlohmann::json &file_content) {
     if (file_content.contains("deconfliction")) {
         deconfliction = file_content.at("deconfliction");
     }
+    if (file_content.contains("verilator")) {
+        const auto &v = file_content["verilator"];
+        if (v.contains("cflags")) verilator.cflags = v["cflags"];
+        if (v.contains("waivers")) verilator.waivers = v["waivers"];
+        if (v.contains("make_args")) verilator.make_args = v["make_args"];
+        if (v.contains("autoflush")) verilator.autoflush = v["autoflush"];
+        if (v.contains("extra_args")) verilator.extra_args = v["extra_args"];
+    }
 }
 
 

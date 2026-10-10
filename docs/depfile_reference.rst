@@ -14,6 +14,8 @@ Planned content:
   ``target_part``, ``board``, additional modules, include paths,
   ``sim_harness`` C++ harness sources and the ``sim_defines`` leading-units
   override for the Verilator backend).
+* The ``verilator`` tool section (``cflags``, ``waivers``, ``make_args``,
+  ``autoflush``, ``extra_args``) and its defaults.
 * The ``scripts`` section (``name``, ``type``, ``arguments``,
   ``include_products``, ``products_type``) and the ``Script`` data model.
 * ``excluded_modules`` and ``constraints``.

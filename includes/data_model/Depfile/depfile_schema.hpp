@@ -144,6 +144,36 @@ constexpr std::string_view depfile_schema = R"~(
       "type": "object",
       "description": "Description of the control busses to track",
       "properties": {}
+    },
+    "verilator": {
+      "type": "object",
+      "description": "Verilator backend options (all keys optional, defaults apply when absent)",
+      "properties": {
+        "cflags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Extra compiler flags for the generated-model build, joined after -CFLAGS"
+        },
+        "waivers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Verilator warning codes waived as -Wno-<code>"
+        },
+        "make_args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Extra arguments appended to the model make invocation"
+        },
+        "autoflush": {
+          "type": "boolean",
+          "description": "Pass --autoflush to Verilator"
+        },
+        "extra_args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Free-form extra Verilator arguments, one element per argv entry"
+        }
+      }
     }
   },
   "required": [

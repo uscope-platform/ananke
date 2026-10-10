@@ -24,6 +24,7 @@
 #include "data_model/Script.hpp"
 #include "data_model/Constraints.hpp"
 #include "data_model/Depfile/depfile_validator.hpp"
+#include "Backend/backend_types.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -64,6 +65,7 @@ public:
     std::vector<Constraints> constraints;
     std::unordered_map<std::string, bus_specs> bus;
     std::unordered_map<std::string, std::string> deconfliction;
+    verilator_tool_options verilator;
     Depfile();
     Depfile(const Depfile &other) = default;
     Depfile(Depfile &&other) noexcept = default;
