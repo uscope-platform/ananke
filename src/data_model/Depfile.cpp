@@ -50,6 +50,8 @@ void Depfile::set_content(const nlohmann::json &file_content) {
     if (gen.contains("sim_modules")) general.sim_modules = gen["sim_modules"];
     if (gen.contains("synth_modules")) general.synth_modules = gen["synth_modules"];
     if (gen.contains("include_paths")) general.include_paths = gen["include_paths"];
+    if (gen.contains("sim_harness")) general.sim_harness = gen["sim_harness"];
+    if (gen.contains("sim_defines")) general.sim_defines = gen["sim_defines"];
     if (file_content.contains("constraints")) {
         for(const auto& item : file_content["constraints"]){
             constraints.emplace_back(item);

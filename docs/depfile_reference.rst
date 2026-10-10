@@ -11,7 +11,9 @@ Depfile Reference
 Planned content:
 
 * The ``general`` section (``project_name``, ``synth_tl``, ``sim_tl``,
-  ``target_part``, ``board``, additional modules, include paths).
+  ``target_part``, ``board``, additional modules, include paths,
+  ``sim_harness`` C++ harness sources and the ``sim_defines`` leading-units
+  override for the Verilator backend).
 * The ``scripts`` section (``name``, ``type``, ``arguments``,
   ``include_products``, ``products_type``) and the ``Script`` data model.
 * ``excluded_modules`` and ``constraints``.

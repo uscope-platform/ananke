@@ -51,6 +51,10 @@ public:
 
     std::filesystem::path get_hdl_store();
     std::filesystem::path get_tool_path(const std::string &tool);
+    // Non-prompting lookup: returns the configured path, or fallback when the
+    // tool was never configured (e.g. verilator resolved from PATH).
+    std::filesystem::path get_tool_path_or(const std::string &tool, const std::string &fallback) const;
+    bool has_tool(const std::string &tool) const;
     std::string get_selected_profile() const;
     std::set<std::string> get_default_includes();
     std::set<std::string> get_excluded_paths();

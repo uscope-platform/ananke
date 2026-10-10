@@ -60,6 +60,16 @@ std::filesystem::path settings_store::get_tool_path(const std::string &tool) {
     return tool_paths[tool];
 }
 
+std::filesystem::path settings_store::get_tool_path_or(const std::string &tool, const std::string &fallback) const {
+    auto it = tool_paths.find(tool);
+    if (it != tool_paths.end()) return it->second;
+    return std::filesystem::path(fallback);
+}
+
+bool settings_store::has_tool(const std::string &tool) const {
+    return tool_paths.contains(tool);
+}
+
 std::string settings_store::get_selected_profile() const {
     return selected_profile;
 }
@@ -148,10 +158,13 @@ void settings_store::load_settings(const std::string  &settings_file) {
                 profiles[key].strict = value["strict"];
         }
     }
-    if (settings.contains("amd_vivado_path"))
-        tool_paths["amd_vivado"] = std::filesystem::path(settings["amd_vivado_path"]);
-    if (settings.contains("lattice_radiant_path"))
-        tool_paths["lattice_radiant"] = std::filesystem::path(settings["lattice_radiant_path"]);
+    if (settings.is_object()) for (auto &[key, value] : settings.items()) {
+        // Any "<tool>_path" entry configures a tool installation
+        // (amd_vivado_path, lattice_radiant_path, verilator_path, ...).
+        if (key.ends_with("_path") && value.is_string()) {
+            tool_paths[key.substr(0, key.size() - 5)] = std::filesystem::path(value.get<std::string>());
+        }
+    }
 
     if (settings.contains("default_profile") && selected_profile.empty()) selected_profile = settings["default_profile"];
 }

@@ -39,6 +39,14 @@ struct  general_settings {
     std::string sim_tl;
     std::vector<std::string> sim_modules = {};
     std::vector<std::string> include_paths = {};
+    // C++ simulation harness sources (e.g. Verilator --exe files), as paths
+    // relative to the repository base. Consumed by the Verilator backend.
+    std::vector<std::string> sim_harness = {};
+    // Explicit leading compile units for simulation, as paths relative to the
+    // repository base. When set, this OVERRIDES the flow's automatic
+    // define-header resolution (e.g. to force one side of a macro conflict
+    // the tool refuses to guess). Consumed by the Verilator backend.
+    std::vector<std::string> sim_defines = {};
 };
 
 

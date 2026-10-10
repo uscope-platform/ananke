@@ -38,6 +38,7 @@
 #include "analysis/proxy_bus_analysis.hpp"
 #include "Backend/Xilinx/xilinx_project_generator.hpp"
 #include "Backend/Lattice/lattice_project_generator.hpp"
+#include "Backend/Verilator/verilator_project_generator.hpp"
 #include "Backend/Lattice/Radiant_manager.hpp"
 #include "Backend/Xilinx/Vivado_manager.hpp"
 #include "Backend/uplatform/application_definition_generator.hpp"
@@ -56,6 +57,7 @@ class ananke {
         bool generate_app_definition = false;
         bool generate_periph_definition = false;
         bool generate_lattice = false;
+        bool generate_verilator = false;
         bool synth_design = false;
         bool dump_ast = false;
         bool keep_makefile = false;

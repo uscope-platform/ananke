@@ -15,6 +15,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <sstream>
 
 #include "data_model/Constraints.hpp"
 #include "data_model/Script.hpp"
@@ -48,6 +49,8 @@ TEST_F( DepfileTest , general_section_parsing) {
                 testing::ElementsAre("test_include_1","test_include_2"));
     ASSERT_THAT(file->general.sim_modules, testing::ElementsAre("test_sim_module_add_1", "test_sim_module_add_2"));
     ASSERT_THAT(file->general.synth_modules, testing::ElementsAre("test_synth_module_add_1", "test_synth_module_add_2"));
+    ASSERT_TRUE(file->general.sim_harness.empty());
+    ASSERT_TRUE(file->general.sim_defines.empty());
 
 
 }
@@ -101,4 +104,22 @@ TEST_F( DepfileTest , Depfile_scripts) {
     ASSERT_EQ(res.size(), correct_answer.size());
     for (int i = 0; i<res.size(); i++)
         EXPECT_EQ(res[i], correct_answer[i]);
+}
+
+TEST( DepfileHarnessTest , sim_harness_parsing) {
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "harness_proj",
+            "synth_tl": "dut",
+            "sim_tl": "tb_top",
+            "sim_harness": ["testbench/test_tb_top.cpp", "/abs/harness.cpp"],
+            "sim_defines": ["snapshots/default/common_defines.vh"]
+        }
+    })");
+    Depfile f(ss);
+    ASSERT_FALSE(f.has_error()) << f.get_error();
+    ASSERT_THAT(f.general.sim_harness,
+                testing::ElementsAre("testbench/test_tb_top.cpp", "/abs/harness.cpp"));
+    ASSERT_THAT(f.general.sim_defines,
+                testing::ElementsAre("snapshots/default/common_defines.vh"));
 }

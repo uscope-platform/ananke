@@ -44,6 +44,17 @@ struct project_data {
     std::set<std::string> data_sim_sources;
     std::set<std::string> sim_sources;
     std::string synth_tl;
+    // C++ simulation harness sources (Verilator --exe files). Entries may be
+    // absolute or relative to the repository base; the generator resolves them.
+    std::vector<std::string> sim_harness;
+    // Explicit leading compile units (Depfile sim_defines override). Same path
+    // convention as sim_harness. When non-empty the generator emits exactly
+    // these first and skips automatic define-header resolution.
+    std::vector<std::string> sim_defines;
+    // Flow-resolved leading compile units (see resolve_leading_units):
+    // standalone macro define-headers the closure needs but nothing includes.
+    // Resolved absolute paths, set by the flow (never by hand).
+    std::vector<std::string> header_units;
     std::string board_part;
     std::string target_part;
     std::string tb_tl;

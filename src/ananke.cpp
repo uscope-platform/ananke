@@ -347,6 +347,82 @@ std::optional<int> ananke::build_flow() {
                 }
             }
         }
+        if(opts.generate_verilator){
+            verilator_project_generator generator(s_store);
+            project_data data;
+
+            data.name = dep.general.project_name;
+            data.synth_sources = synth_sources;
+            data.package_synth_sources = synth_packages;
+            data.data_synth_sources = synth_data;
+            data.sim_sources = sim_sources;
+            data.package_sim_sources = sim_packages;
+            data.data_sim_sources = sim_data;
+            data.tb_tl = dep.general.sim_tl;
+            data.synth_tl = dep.general.synth_tl;
+            data.sim_harness = dep.general.sim_harness;
+            data.sim_defines = dep.general.sim_defines;
+            data.commons_dir = commons_dir;
+            data.repo_dir = std::filesystem::current_path();
+            // No target_part/board required: Verilator is device-independent.
+
+            // Verilator evaluates `define directives in command-line order, so
+            // files whose macro definitions the closure consumed (via
+            // injection) but which reach the command line no other way are
+            // resolved from the persisted macro harvests and passed
+            // positionally first. See resolve_leading_units for the policy:
+            // unique verdicts only, profile globals need no file, true
+            // headers stay on +incdir+. Only edges from closure files count —
+            // out-of-closure files (e.g. VeeR's pd_defines.vh, in no flist
+            // and hence in no closure) must not reclassify a unit-header.
+            {
+                std::unordered_map<std::string, std::vector<stored_macro_def>> all_defs =
+                    d_store->get_all_macro_definitions();
+                std::unordered_map<std::string, std::vector<std::string>> macro_needs, includes;
+                std::set<std::string> closure;
+                for (auto *set : {&synth_sources, &synth_packages, &sim_sources, &sim_packages}) {
+                    for (auto &src : *set) {
+                        closure.insert(src);
+                        macro_needs[src] = d_store->get_macro_dependencies(src);
+                        if (auto inc = d_store->get_includes(src); inc.has_value())
+                            for (auto &dep : inc.value()) includes[src].push_back(dep.path);
+                    }
+                }
+                std::set<std::string> profile_names;
+                for (const auto &d : s_store->get_defines())
+                    profile_names.insert(d.substr(0, d.find('=')));
+                data.header_units = verilator_project_generator::resolve_leading_units(
+                    all_defs, macro_needs, includes, closure, profile_names);
+            }
+
+            // Every includer directory joins the +incdir set: relative
+            // `includes (e.g. tb_top.sv -> testbench/dasm.svi) are not
+            // guaranteed to resolve against the including file alone.
+            {
+                std::set<std::string> closure;
+                for (auto *set : {&synth_sources, &synth_packages, &sim_sources, &sim_packages})
+                    for (auto &src : *set) closure.insert(src);
+                for (auto &d : verilator_project_generator::extra_include_dirs(
+                         s_store->get_hdl_store().string(), closure, data.commons_dir))
+                    data.commons_dir.push_back(d);
+            }
+
+            generator.set_data(data);
+
+            if (opts.generate_synth_script) {
+                spdlog::error("Verilator is a simulation-only backend: --synth_script is not supported with --V");
+                return 77;
+            }
+            std::ofstream simfile("sim_verilator.sh");
+            generator.generate_sim_script(simfile);
+            simfile.close();
+            std::error_code ec;
+            std::filesystem::permissions("sim_verilator.sh",
+                std::filesystem::perms::owner_exec | std::filesystem::perms::group_exec | std::filesystem::perms::others_exec,
+                std::filesystem::perm_options::add, ec);
+            if (ec) spdlog::warn("Could not set executable bit on sim_verilator.sh: {}", ec.message());
+            LOG_TIMEPOINT("Verilator sim script generated");
+        }
         if (opts.generate_periph_definition || opts.generate_app_definition) {
             peripheral_definition_generator periph_def_gen(d_store, synth_ast);
             if(opts.generate_periph_definition){

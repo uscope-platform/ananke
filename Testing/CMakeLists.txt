@@ -54,6 +54,7 @@ set(ANANKE_TESTS
         Backend/auxiliary_resolver.cpp
         Backend/project_generator.cpp
         Backend/lattice_project_generator.cpp
+        Backend/verilator_project_generator.cpp
         Backend/dependency_resolver.cpp
         end_to_end/full_application.cpp
 )

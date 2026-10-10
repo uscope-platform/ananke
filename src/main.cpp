@@ -41,6 +41,7 @@ int main(int argc, char *argv[]){
     app.add_flag("--A",opts.generate_app_definition,"Generate application definition file");
     app.add_flag("--P",opts.generate_periph_definition,"Generate Peripherals definition file");
     app.add_flag("--L",opts.generate_lattice,"Generate Lattice Makefile");
+    app.add_flag("--V",opts.generate_verilator,"Generate Verilator simulation script");
     app.add_flag("--S",opts.synth_design,"synthetize design");
     app.add_flag("--k",opts.keep_makefile, "if set to true does not remove the makefile after use");
     app.add_option("--profile", opts.profile, "Select a tool profile to use");

@@ -61,6 +61,14 @@ constexpr std::string_view depfile_schema = R"~(
         "include_paths": {
           "type": "array",
           "description": "List of directories to be added to the include path"
+        },
+        "sim_harness": {
+          "type": "array",
+          "description": "C++ simulation harness sources (e.g. Verilator --exe files), as paths relative to the repository base"
+        },
+        "sim_defines": {
+          "type": "array",
+          "description": "Explicit leading compile units for simulation (overrides automatic define-header resolution, e.g. for explicit conflict resolution), as paths relative to the repository base"
         }
       },
       "required": [

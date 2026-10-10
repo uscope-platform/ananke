@@ -38,6 +38,7 @@ target_sources(ananke_lib
     Backend/project_generator_base.cpp
     Backend/Lattice/lattice_project_generator.cpp
     Backend/Lattice/Radiant_manager.cpp
+    Backend/Verilator/verilator_project_generator.cpp
     Backend/Toolchain_manager.cpp
     Backend/python_script_runner.cpp
     data_model/HDL/hdl_ast_node.cpp

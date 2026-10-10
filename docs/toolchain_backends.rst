@@ -16,6 +16,9 @@ Planned content:
 * Xilinx Vivado support: project makefile, batch simulation flow, standalone
   synthesis flow, and board/target-part handling.
 * Lattice Radiant support and its known limitations.
+* Verilator simulation support: command-line simulation script generation
+  from the simulation dependency closure
+  (:file:`src/Backend/Verilator/verilator_project_generator.cpp`).
 * Adding a new backend (e.g. Quartus or an open Yosys/nextpnr flow).
 * Script and constraint resolution
   (:file:`src/Backend/Auxiliary_resolver.cpp`,
