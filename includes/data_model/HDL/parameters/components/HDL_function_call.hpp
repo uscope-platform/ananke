@@ -84,6 +84,32 @@ private:
         const std::shared_ptr<hdl_type> &rt,
         const std::optional<resolved_type> &expected_type = std::nullopt
     );
+    // Single-target body shared by plain assignments and, per member, by
+    // concatenation assignments below.
+    static void apply_member_assignment(
+        const std::string &fcn_name,
+        const qualified_identifier &target,
+        const std::shared_ptr<Expression_base> &index,
+        const std::shared_ptr<Expression_base> &value_expr,
+        const std::expected<resolved_parameter, solver_errors> &val,
+        std::map<qualified_identifier, resolved_parameter> &ctx,
+        std::map<int64_t, hdl_integer> &value_map,
+        std::map<int64_t, int64_t> &size_map,
+        const std::shared_ptr<hdl_type> &rt,
+        const std::optional<resolved_type> &expected_type
+    );
+    static void apply_concat_assignment(
+        const std::string &fcn_name,
+        const std::vector<qualified_identifier> &targets,
+        const std::vector<std::shared_ptr<Expression_base>> &indices,
+        const std::shared_ptr<Expression_base> &value_expr,
+        const std::expected<resolved_parameter, solver_errors> &val,
+        std::map<qualified_identifier, resolved_parameter> &ctx,
+        std::map<int64_t, hdl_integer> &value_map,
+        std::map<int64_t, int64_t> &size_map,
+        const std::shared_ptr<hdl_type> &rt,
+        const std::optional<resolved_type> &expected_type
+    );
 
     std::string function_name;
     std::string package_prefix;

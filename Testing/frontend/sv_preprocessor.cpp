@@ -2275,3 +2275,77 @@ TEST(preprocessor, gather_stops_at_directive_lines) {
     EXPECT_THAT(result, testing::Not(testing::HasSubstr("ifndef")));
     EXPECT_FALSE(preproc.has_fatal_error());
 }
+
+TEST(preprocessor, define_trailing_comment_not_in_body) {
+    // VeeR dec_tlu_ctl.sv shape: `define X 6'd1 // OOP. Per IEEE 1800 the
+    // trailing comment is stripped before directive processing; leaking it
+    // into the body comments out the rest of the line at every use site.
+    auto test_pattern = R"(
+        `define MHPME_CLK_ACTIVE      6'd1 // OOP - out of pipe
+        `define MHPME_ICACHE_HIT      6'd2 // OOP
+        module m;
+            wire [1:0] w;
+            assign w = ({2{(1'b1 == `MHPME_CLK_ACTIVE)}} & 2'b01) |
+                       ({2{(1'b1 == `MHPME_ICACHE_HIT)}} & 2'b10);
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module m;
+            wire [1:0] w;
+            assign w = ({2{(1'b1 == 6'd1)}} & 2'b01) |
+                       ({2{(1'b1 == 6'd2)}} & 2'b10);
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, define_comment_inside_string_preserved) {
+    // `//` inside a string literal is body text, not a comment.
+    auto test_pattern = R"(
+        `define URL "http://x" // trailing note
+        module m;
+            parameter string U = `URL;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module m;
+            parameter string U = "http://x";
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, function_define_trailing_comment_not_in_body) {
+    auto test_pattern = R"(
+        `define ADD(a,b) ((a)+(b)) // sum
+        module m;
+            wire [3:0] w;
+            assign w = `ADD(1, 2);
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module m;
+            wire [3:0] w;
+            assign w = ((1)+(2));
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_fatal_error());
+}

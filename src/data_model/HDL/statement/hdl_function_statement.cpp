@@ -26,10 +26,11 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_function_statement)
 bool hdl_function_statement::is_scalar() const {
     if (body.size() != 1) return false;
     auto assignment = std::dynamic_pointer_cast<hdl_assignment_statement>(body[0]);
-    return assignment != nullptr
-        && assignment->get_target().get_instance().empty()
-        && assignment->get_target().get_name() == name
-        && assignment->get_index() == nullptr;
+    if (assignment == nullptr || assignment->get_targets().size() != 1) return false;
+    const auto &indices = assignment->get_indices();
+    return assignment->get_targets().front().get_instance().empty()
+        && assignment->get_targets().front().get_name() == name
+        && (indices.empty() || indices.front() == nullptr);
 }
 
 parameter_deps_t hdl_function_statement::get_dependencies() const {

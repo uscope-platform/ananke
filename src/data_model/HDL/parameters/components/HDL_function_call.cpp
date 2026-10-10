@@ -62,6 +62,164 @@ void collect_body_loop_vars(
 }
 }
 
+// Applies one assignment target: the function-name, struct-field and
+// general branches of the former inline chain (early `continue`s become
+// early `return`s). Shared by single-target statements and, per member, by
+// concatenation assignments below.
+void HDL_function_call::apply_member_assignment(
+    const std::string &fcn_name,
+    const qualified_identifier &target,
+    const std::shared_ptr<Expression_base> &index,
+    const std::shared_ptr<Expression_base> &value_expr,
+    const std::expected<resolved_parameter, solver_errors> &val,
+    std::map<qualified_identifier, resolved_parameter> &ctx,
+    std::map<int64_t, hdl_integer> &value_map,
+    std::map<int64_t, int64_t> &size_map,
+    const std::shared_ptr<hdl_type> &rt,
+    const std::optional<resolved_type> &expected_type
+) {
+    if (target.get_instance().empty() && target.get_name() == fcn_name) {
+        if (!val.has_value()) {
+            // return <struct-local>: the whole struct was never
+            // entered as one value, but its per-field assigns live in
+            // ctx under instance keys — pack the still-missing return
+            // slots from them (direct funcname.field assigns win).
+            if (!index && rt && rt->is<HDL_struct_type>() &&
+                value_expr && value_expr->is<Identifier_token>()) {
+                const auto &rid = value_expr->as<Identifier_token>().get_value();
+                if (rid.is_bare() && rid.get_name() != fcn_name) {
+                    const auto &members = rt->as<HDL_struct_type>().member;
+                    for (size_t i = 0; i < members.size(); ++i) {
+                        const int64_t midx = static_cast<int64_t>(i);
+                        if (value_map.contains(midx)) continue;
+                        qualified_identifier fkey(members[i].name);
+                        fkey.set_instance_prefix({rid.get_name()});
+                        auto fit = ctx.find(fkey);
+                        if (fit == ctx.end()) continue;
+                        if (fit->second.is_integer()) {
+                            value_map[midx] = fit->second.get_integer();
+                            size_map[midx] = HDL_function_call::declared_member_width(
+                                members[i].type, ctx, fit->second.get_integer().get_size());
+                        } else if (fit->second.is_int_array()) {
+                            auto slice = fit->second.get_int_array().get_1d_slice({0, 0});
+                            if (slice.empty()) continue;
+                            value_map[midx] = slice[0];
+                            size_map[midx] = 0;
+                        }
+                    }
+                }
+            }
+            return;
+        }
+        int64_t idx = 0;
+        if (index) {
+            auto idx_res = index->evaluate(ctx, expected_type);
+            if (!idx_res.has_value() || !idx_res.value().is_integer()) return;
+            idx = idx_res.value().get_integer().get_value();
+        }
+        if (val.value().is_integer()) {
+            value_map[idx] = val.value().get_integer();
+            size_map[idx] = val.value().get_integer().get_size();
+        } else if (val.value().is_int_array()) {
+            auto slice = val.value().get_int_array().get_1d_slice({0, 0});
+            if (slice.empty()) {
+                spdlog::warn("Empty array value in function body assignment, defaulting to 0");
+                return;
+            }
+            if (rt && rt->is<HDL_struct_type>()) {
+                value_map[idx] = slice[0];
+                size_map[idx] = 0;
+            } else {
+                hdl_integer packed = 0;
+                int64_t shift = 0;
+                for (const auto &e : slice) {
+                    packed = packed | (e.truncate_to(e.get_size()) << hdl_integer(shift));
+                    shift += e.get_size();
+                }
+                value_map[idx] = packed;
+                size_map[idx] = packed.get_size();
+            }
+        }
+    } else if (rt && rt->is<HDL_struct_type>() && target.get_instance().size() == 1 && target.get_instance().front() == fcn_name) {
+        if (!val.has_value()) return;
+        std::string field_name = target.get_name();
+        const auto& members = rt->as<HDL_struct_type>().member;
+        for (size_t i = 0; i < members.size(); ++i) {
+            if (members[i].name == field_name) {
+                int64_t idx = static_cast<int64_t>(i);
+                if (index) {
+                    auto idx_res = index->evaluate(ctx, expected_type);
+                    if (!idx_res.has_value() || !idx_res.value().is_integer()) return;
+                    idx = idx_res.value().get_integer().get_value();
+                }
+                if (val.value().is_integer()) {
+                    value_map[idx] = val.value().get_integer();
+                    // Pack at the declared member width so producer and
+                    // consumer (extract_struct_fields) agree; indexed
+                    // member assignments keep the previous behavior.
+                    if (index) {
+                        size_map[idx] = val.value().get_integer().get_size();
+                    } else {
+                        size_map[idx] = HDL_function_call::declared_member_width(
+                            members[i].type, ctx, val.value().get_integer().get_size());
+                    }
+                } else if (val.value().is_int_array()) {
+                    auto slice = val.value().get_int_array().get_1d_slice({0, 0});
+                    if (slice.empty()) {
+                        spdlog::warn("Empty array value in function body assignment, defaulting to 0");
+                        return;
+                    }
+                    value_map[idx] = slice[0];
+                    size_map[idx] = 0;
+                }
+                break;
+            }
+        }
+    } else {
+        if (!val.has_value()) return;
+        if (index) {
+            auto idx_res = index->evaluate(ctx, expected_type);
+            if (!idx_res.has_value() || !idx_res.value().is_integer()) return;
+            if (!val.value().is_integer()) return;
+            std::vector<int64_t> idxv = {idx_res.value().get_integer().get_value()};
+            while (idxv.size() < 3) idxv.insert(idxv.begin(), 0);
+            mdarray<hdl_integer> arr;
+            auto it = ctx.find(target);
+            if (it != ctx.end() && it->second.is_int_array())
+                arr = it->second.get_int_array();
+            arr.set_value(idxv, val.value().get_integer());
+            ctx[target] = resolved_parameter(arr);
+        } else {
+            ctx[target] = val.value();
+        }
+    }
+}
+
+// Concatenation assignment (`{a[1:0], b} = X`): every member is written,
+// each exactly like the equivalent single assignment (whole-var, selects as
+// the single path models them today — including its dropping of range
+// selects). Slicing the shared RHS across members would need bit-precise
+// write modeling for single assignments first; until then consistency wins
+// over precision, and the file stays alive with exact write edges.
+void HDL_function_call::apply_concat_assignment(
+    const std::string &fcn_name,
+    const std::vector<qualified_identifier> &targets,
+    const std::vector<std::shared_ptr<Expression_base>> &indices,
+    const std::shared_ptr<Expression_base> &value_expr,
+    const std::expected<resolved_parameter, solver_errors> &val,
+    std::map<qualified_identifier, resolved_parameter> &ctx,
+    std::map<int64_t, hdl_integer> &value_map,
+    std::map<int64_t, int64_t> &size_map,
+    const std::shared_ptr<hdl_type> &rt,
+    const std::optional<resolved_type> &expected_type
+) {
+    for (size_t i = 0; i < targets.size(); ++i) {
+        std::shared_ptr<Expression_base> index = i < indices.size() ? indices[i] : nullptr;
+        apply_member_assignment(fcn_name, targets[i], index, value_expr, val, ctx,
+                                value_map, size_map, rt, expected_type);
+    }
+}
+
 int64_t HDL_function_call::declared_member_width(
     const std::shared_ptr<hdl_type> &member_type,
     const std::map<qualified_identifier, resolved_parameter> &context,
@@ -160,122 +318,21 @@ void HDL_function_call::walk_body(
             if (!asgn->get_value()) continue;
             auto val = asgn->get_value()->evaluate(ctx, expected_type);
 
-            const qualified_identifier &target = asgn->get_target();
-            if (target.get_instance().empty() && target.get_name() == fcn_name) {
-                if (!val.has_value()) {
-                    // return <struct-local>: the whole struct was never
-                    // entered as one value, but its per-field assigns live in
-                    // ctx under instance keys — pack the still-missing return
-                    // slots from them (direct funcname.field assigns win).
-                    if (!asgn->get_index() && rt && rt->is<HDL_struct_type>() &&
-                        asgn->get_value() && asgn->get_value()->is<Identifier_token>()) {
-                        const auto &rid = asgn->get_value()->as<Identifier_token>().get_value();
-                        if (rid.is_bare() && rid.get_name() != fcn_name) {
-                            const auto &members = rt->as<HDL_struct_type>().member;
-                            for (size_t i = 0; i < members.size(); ++i) {
-                                const int64_t midx = static_cast<int64_t>(i);
-                                if (value_map.contains(midx)) continue;
-                                qualified_identifier fkey(members[i].name);
-                                fkey.set_instance_prefix({rid.get_name()});
-                                auto fit = ctx.find(fkey);
-                                if (fit == ctx.end()) continue;
-                                if (fit->second.is_integer()) {
-                                    value_map[midx] = fit->second.get_integer();
-                                    size_map[midx] = declared_member_width(
-                                        members[i].type, ctx, fit->second.get_integer().get_size());
-                                } else if (fit->second.is_int_array()) {
-                                    auto slice = fit->second.get_int_array().get_1d_slice({0, 0});
-                                    if (slice.empty()) continue;
-                                    value_map[midx] = slice[0];
-                                    size_map[midx] = 0;
-                                }
-                            }
-                        }
-                    }
-                    continue;
-                }
-                int64_t idx = 0;
-                if (asgn->get_index()) {
-                    auto idx_res = asgn->get_index()->evaluate(ctx, expected_type);
-                    if (!idx_res.has_value() || !idx_res.value().is_integer()) continue;
-                    idx = idx_res.value().get_integer().get_value();
-                }
-                if (val.value().is_integer()) {
-                    value_map[idx] = val.value().get_integer();
-                    size_map[idx] = val.value().get_integer().get_size();
-                } else if (val.value().is_int_array()) {
-                    auto slice = val.value().get_int_array().get_1d_slice({0, 0});
-                    if (slice.empty()) {
-                        spdlog::warn("Empty array value in function body assignment, defaulting to 0");
-                        continue;
-                    }
-                    if (rt && rt->is<HDL_struct_type>()) {
-                        value_map[idx] = slice[0];
-                        size_map[idx] = 0;
-                    } else {
-                        hdl_integer packed = 0;
-                        int64_t shift = 0;
-                        for (const auto &e : slice) {
-                            packed = packed | (e.truncate_to(e.get_size()) << hdl_integer(shift));
-                            shift += e.get_size();
-                        }
-                        value_map[idx] = packed;
-                        size_map[idx] = packed.get_size();
-                    }
-                }
-            } else if (rt && rt->is<HDL_struct_type>() && target.get_instance().size() == 1 && target.get_instance().front() == fcn_name) {
-                if (!val.has_value()) continue;
-                std::string field_name = target.get_name();
-                const auto& members = rt->as<HDL_struct_type>().member;
-                for (size_t i = 0; i < members.size(); ++i) {
-                    if (members[i].name == field_name) {
-                        int64_t idx = static_cast<int64_t>(i);
-                        if (asgn->get_index()) {
-                            auto idx_res = asgn->get_index()->evaluate(ctx, expected_type);
-                            if (!idx_res.has_value() || !idx_res.value().is_integer()) continue;
-                            idx = idx_res.value().get_integer().get_value();
-                        }
-                        if (val.value().is_integer()) {
-                            value_map[idx] = val.value().get_integer();
-                            // Pack at the declared member width so producer and
-                            // consumer (extract_struct_fields) agree; indexed
-                            // member assignments keep the previous behavior.
-                            if (asgn->get_index()) {
-                                size_map[idx] = val.value().get_integer().get_size();
-                            } else {
-                                size_map[idx] = declared_member_width(
-                                    members[i].type, ctx, val.value().get_integer().get_size());
-                            }
-                        } else if (val.value().is_int_array()) {
-                            auto slice = val.value().get_int_array().get_1d_slice({0, 0});
-                            if (slice.empty()) {
-                                spdlog::warn("Empty array value in function body assignment, defaulting to 0");
-                                continue;
-                            }
-                            value_map[idx] = slice[0];
-                            size_map[idx] = 0;
-                        }
-                        break;
-                    }
-                }
-            } else {
-                if (!val.has_value()) continue;
-                if (asgn->get_index()) {
-                    auto idx_res = asgn->get_index()->evaluate(ctx, expected_type);
-                    if (!idx_res.has_value() || !idx_res.value().is_integer()) continue;
-                    if (!val.value().is_integer()) continue;
-                    std::vector<int64_t> idxv = {idx_res.value().get_integer().get_value()};
-                    while (idxv.size() < 3) idxv.insert(idxv.begin(), 0);
-                    mdarray<hdl_integer> arr;
-                    auto it = ctx.find(target);
-                    if (it != ctx.end() && it->second.is_int_array())
-                        arr = it->second.get_int_array();
-                    arr.set_value(idxv, val.value().get_integer());
-                    ctx[target] = resolved_parameter(arr);
-                } else {
-                    ctx[target] = val.value();
-                }
+            // Single-target fast path (all existing producers): identical
+            // behavior to the former scalar fields.
+            static const qualified_identifier no_target;
+            static const std::shared_ptr<Expression_base> no_index;
+            const auto &targets = asgn->get_targets();
+            const auto &indices = asgn->get_indices();
+            if (targets.size() > 1) {
+                apply_concat_assignment(fcn_name, targets, indices, asgn->get_value(), val, ctx,
+                                        value_map, size_map, rt, expected_type);
+                continue;
             }
+            const qualified_identifier &target = targets.empty() ? no_target : targets.front();
+            const std::shared_ptr<Expression_base> &index = indices.empty() ? no_index : indices.front();
+            apply_member_assignment(fcn_name, target, index, asgn->get_value(), val, ctx,
+                                    value_map, size_map, rt, expected_type);
         } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
             if (!loop->get_init()) {
                 spdlog::warn("loop construct cannot be evaluated in constant function, it will be skipped");

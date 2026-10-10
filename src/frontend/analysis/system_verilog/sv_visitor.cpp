@@ -2377,11 +2377,68 @@ bool sv_visitor::handle_streaming_lvalue(sv2017::Variable_lvalueContext *ctx) {
     return true;
 }
 
+// Concatenation lvalue (`{a[1:0], b[0]} = X`, the dasm bit-scatter shape).
+// Members are collected depth-first into the factory's concat frame
+// (nested concatenations recurse) and emitted as one multi-target statement
+// at assignment end, where evaluation unpacks the shared RHS across them.
+// Streaming-concatenation and assignment-pattern members cannot be
+// represented and decline to the drop path, as do loop headers (a
+// concatenation cannot initialize a loop) and nonblocking parents (which
+// have no assignment-completion path at all). Returns true when handled.
+bool sv_visitor::handle_concatenation_lvalue(sv2017::Variable_lvalueContext *ctx) {
+    const auto members = ctx->variable_lvalue();
+    if (members.empty()) return false;
+    bool under_foreach = false;
+    bool under_nonblocking = false;
+    for (auto *p = ctx->parent; p != nullptr; p = p->parent) {
+        if (auto *loop = dynamic_cast<sv2017::Loop_statementContext *>(p)) {
+            under_foreach = (loop->KW_FOREACH() != nullptr);
+            break;
+        }
+        if (dynamic_cast<sv2017::Nonblocking_assignmentContext *>(p) != nullptr) {
+            under_nonblocking = true;
+            break;
+        }
+    }
+    if (under_nonblocking) return false;
+    if (!under_foreach && loops_factory.in_loop() && !loops_factory.in_body()) return false;
+    // Support inspection first: every member must be a plain hierarchical
+    // identifier or a nested concatenation of those. Anything else declines
+    // the whole statement so no partial write is ever recorded.
+    std::vector<sv2017::Variable_lvalueContext *> fringe(members.begin(), members.end());
+    size_t writable = 0;
+    while (!fringe.empty()) {
+        auto *cur = fringe.front();
+        fringe.erase(fringe.begin());
+        auto *hier = cur->package_or_class_scoped_hier_id_with_select();
+        if (hier != nullptr && hier->package_or_class_scoped_path() != nullptr) {
+            ++writable;
+            continue;
+        }
+        const auto nested = cur->variable_lvalue();
+        if (nested.empty()) return false;
+        fringe.insert(fringe.begin(), nested.begin(), nested.end());
+    }
+    if (writable == 0) return false;
+    f_factory.start_concat_lvalue();
+    if (!unsupported_lvalue_warned) {
+        unsupported_lvalue_warned = true;
+        std::string text = ctx->getText();
+        if (text.size() > 120) text = text.substr(0, 120) + "...";
+        const std::string where =
+            current_file.empty() ? "<unknown file>" : current_file;
+        spdlog::warn("Concatenation lvalue '{}' at {}:{}, recording {} member(s)",
+                     text, where, ctx->getStart() ? ctx->getStart()->getLine() : 0, writable);
+    }
+    return true;
+}
+
 void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
     if(f_factory.is_active()) {
         auto hier = ctx->package_or_class_scoped_hier_id_with_select();
         if (!hier || !hier->package_or_class_scoped_path()) {
             if (!opts_.strict && handle_streaming_lvalue(ctx)) return;
+            if (!opts_.strict && handle_concatenation_lvalue(ctx)) return;
             // Graceful degradation: the grammar accepts concatenation,
             // assignment-pattern and streaming-concatenation lvalues, but the
             // write path only models hierarchical identifiers. Warn once per
@@ -2413,6 +2470,20 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
             auto bit_sel = hier->identifier_with_bit_select(i);
             if (bit_sel && bit_sel->identifier())
                 dotted.push_back(bit_sel->identifier()->getText());
+        }
+        // Concatenation members bypass loop-phase handling: a concatenation
+        // cannot legally initialize a loop, and body recording dominates.
+        // Member `[...]` capture is driven by add_concat_target/close_lvalue
+        // in the factory frame (see start_concat_lvalue).
+        if (f_factory.in_concat_lvalue()) {
+            qualified_identifier target_qi(dotted.empty() ? leaf : dotted.back());
+            if (!dotted.empty()) {
+                std::vector<std::string> inst = {leaf};
+                inst.insert(inst.end(), dotted.begin(), dotted.end() - 1);
+                target_qi.set_instance_prefix(inst);
+            }
+            f_factory.add_concat_target(target_qi);
+            return;
         }
         // Loop headers (init/end/step) still belong to loops_factory
         // (start_assignment is a body-phase-only no-op there; only the init
@@ -2446,9 +2517,11 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
 
 void sv_visitor::exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
     // close_lvalue pairs with f_factory.start_assignment, which now runs for
-    // loop bodies too; loop headers never start an f_assignment.
+    // loop bodies too; loop headers never start an f_assignment. Concat
+    // members always close: they bypass loop-phase handling on entry, so
+    // their per-member index slots must be stashed on exit regardless.
     const bool loop_header = loops_factory.in_loop() && !loops_factory.in_body();
-    if(f_factory.is_active() && !loop_header) {
+    if(f_factory.is_active() && (!loop_header || f_factory.in_concat_lvalue())) {
         f_factory.close_lvalue();
     }
 }

@@ -239,6 +239,11 @@ public:
     // Streaming-unpack lvalue approximation (see .cpp). True when the
     // statement was given a plain-member target and parsing may continue.
     bool handle_streaming_lvalue(sv2017::Variable_lvalueContext *ctx);
+    // Concatenation lvalue (`{a[1:0], b} = X`): members are collected into a
+    // factory frame and emitted as one multi-target statement at assignment
+    // end. True when every member is modelable (nested concatenations
+    // recurse); streaming/assignment-pattern members decline to the drop.
+    bool handle_concatenation_lvalue(sv2017::Variable_lvalueContext *ctx);
 
     void exitGenvar_iteration(sv2017::Genvar_iterationContext *ctx) override;
 

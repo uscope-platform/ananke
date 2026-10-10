@@ -29,23 +29,28 @@ public:
     bool equals(const hdl_statement_base& other) const override;
     std::string print() const override;
 
-    void set_target(const std::string& n) { target = qualified_identifier(n); }
-    void set_target(const qualified_identifier& q) { target = q; }
-    const qualified_identifier &get_target() const { return target; }
+    // Write targets, parallel with indices below (an index entry may be
+    // null). Concatenation lvalues record every member; every other producer
+    // records exactly one. The factory always populates both vectors.
+    void set_target(const std::string& n) { targets = {qualified_identifier(n)}; }
+    void set_target(const qualified_identifier& q) { targets = {q}; }
+    void set_targets(const std::vector<qualified_identifier>& qs) { targets = qs; }
+    const std::vector<qualified_identifier> &get_targets() const { return targets; }
 
-    void set_index(const std::shared_ptr<Expression_base>& idx) { index = idx; }
-    std::shared_ptr<Expression_base> get_index() const { return index; }
+    void set_index(const std::shared_ptr<Expression_base>& idx) { indices = {idx}; }
+    void set_indices(const std::vector<std::shared_ptr<Expression_base>>& idxs) { indices = idxs; }
+    const std::vector<std::shared_ptr<Expression_base>> &get_indices() const { return indices; }
 
     void set_value(const std::shared_ptr<Expression_base>& v) { value = v; }
     std::shared_ptr<Expression_base> get_value() const { return value; }
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(target, index, value);
+        ar(targets, indices, value);
     }
 private:
-    qualified_identifier target;
-    std::shared_ptr<Expression_base> index;
+    std::vector<qualified_identifier> targets;
+    std::vector<std::shared_ptr<Expression_base>> indices;
     std::shared_ptr<Expression_base> value;
 };
 

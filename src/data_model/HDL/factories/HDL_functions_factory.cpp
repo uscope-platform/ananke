@@ -22,11 +22,26 @@
 #include "data_model/HDL/factories/parameters/streaming_factory.hpp"
 
 void HDL_functions_factory::start_assignment(const qualified_identifier &n) {
+    // A fresh lvalue supersedes any frame left open by an aborted statement.
+    pending_concat_targets.clear();
+    in_concat = false;
     current_assigned_variable = n;
     lvalue_open = true;
 }
 
+void HDL_functions_factory::start_concat_lvalue() {
+    pending_concat_targets.clear();
+    in_concat = true;
+}
+
+void HDL_functions_factory::add_concat_target(const qualified_identifier &n) {
+    pending_concat_targets.emplace_back(n, nullptr);
+    lvalue_open = true;
+}
+
 void HDL_functions_factory::start_return() {
+    pending_concat_targets.clear();
+    in_concat = false;
     current_assigned_variable = qualified_identifier(f.get_name());
     lvalue_open = false;
 }
@@ -64,13 +79,29 @@ void HDL_functions_factory::add_value(const std::shared_ptr<Expression_base> &v)
 }
 
 void HDL_functions_factory::close_lvalue() {
+    if (in_concat) {
+        // Stash this member's `[...]` (if any) into its own slot. The top
+        // node's own exit-close finds nothing pending and is a safe no-op.
+        if (pending_lhs_index && !pending_concat_targets.empty()) {
+            pending_concat_targets.back().second = pending_lhs_index;
+            pending_lhs_index = nullptr;
+        }
+        lvalue_open = false;
+        return;
+    }
     lvalue_open = false;
     current_lhs_index = pending_lhs_index;
     pending_lhs_index = nullptr;
 }
 
 void HDL_functions_factory::finish_assignment() {
-    if (!assignment_value) return;
+    if (!assignment_value) {
+        // Aborted RHS: drop any open concat frame so a later statement
+        // cannot inherit stale members.
+        pending_concat_targets.clear();
+        in_concat = false;
+        return;
+    }
     lvalue_open = false;
 
     auto val = assignment_value;
@@ -84,8 +115,23 @@ void HDL_functions_factory::finish_assignment() {
     }
 
     auto stmt = std::make_shared<hdl_assignment_statement>();
-    stmt->set_target(current_assigned_variable);
-    if (current_lhs_index) stmt->set_index(current_lhs_index);
+    if (in_concat) {
+        std::vector<qualified_identifier> targets;
+        std::vector<std::shared_ptr<Expression_base>> indices;
+        targets.reserve(pending_concat_targets.size());
+        indices.reserve(pending_concat_targets.size());
+        for (auto &entry : pending_concat_targets) {
+            targets.push_back(entry.first);
+            indices.push_back(entry.second);
+        }
+        stmt->set_targets(targets);
+        stmt->set_indices(indices);
+        pending_concat_targets.clear();
+        in_concat = false;
+    } else {
+        stmt->set_target(current_assigned_variable);
+        if (current_lhs_index) stmt->set_index(current_lhs_index);
+    }
     stmt->set_value(val);
     f.add_statement(stmt);
     current_lhs_index = nullptr;

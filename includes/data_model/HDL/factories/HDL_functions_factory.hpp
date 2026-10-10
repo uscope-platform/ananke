@@ -20,6 +20,8 @@
 #include <memory>
 #include <stack>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "data_model/HDL/statement/hdl_statements.hpp"
 #include "data_model/HDL/HDL_definitions.hpp"
@@ -37,6 +39,14 @@ public:
         active = true;
     }
     void start_assignment(const qualified_identifier &n);
+    // Concatenation-lvalue frame: members are collected one by one as the
+    // walker descends (add_concat_target opens index capture for each
+    // member's own `[...]`), then finish_assignment emits a single statement
+    // holding every member. Selects ride in the parallel index slots; a null
+    // entry means "whole variable".
+    void start_concat_lvalue();
+    void add_concat_target(const qualified_identifier &n);
+    [[nodiscard]] bool in_concat_lvalue() const { return in_concat; }
     // `return expr` assigns to the function itself with no lvalue select, so
     // unlike start_assignment it must not open lvalue_index capture: any
     // [...] in the returned expression belongs to the RHS.
@@ -135,6 +145,10 @@ private:
     std::shared_ptr<Expression_base> assignment_value;
     qualified_identifier current_assigned_variable;
     std::shared_ptr<Expression_base> current_lhs_index;
+    // Concatenation-lvalue frame, see start_concat_lvalue. Parallel with the
+    // single-target fields above, which stay untouched while a frame is open.
+    bool in_concat = false;
+    std::vector<std::pair<qualified_identifier, std::shared_ptr<Expression_base>>> pending_concat_targets;
 };
 
 

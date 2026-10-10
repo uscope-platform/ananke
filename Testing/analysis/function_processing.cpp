@@ -1370,3 +1370,148 @@ TEST(function_processing, streaming_lvalue_strict_drops) {
 
     EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
 }
+
+TEST(function_processing, concatenation_lvalue_recorded) {
+    // dasm bit-scatter shape (`{imm[5:4],...} = ...`): members behave exactly
+    // like the equivalent sequence of single assignments (whole-var, selects
+    // as today), so the file is kept instead of dropped.
+    auto test_pattern = R"(
+        module test_mod();
+            int imm;
+            logic [31:0] opcode;
+            function void scatter();
+                {imm[5:4],imm[9:6],imm[2],imm[3]} = opcode;
+            endfunction
+        endmodule
+    )";
+
+
+    log_capture logs;
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+    auto fns = resource->get_functions();
+    ASSERT_TRUE(fns.contains("scatter"));
+
+    hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
+    check_f.set_name("scatter");
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_targets({qualified_identifier("imm"), qualified_identifier("imm"),
+                       qualified_identifier("imm"), qualified_identifier("imm")});
+    stmt->set_indices({nullptr, nullptr, std::make_shared<Numeric_token>("2"),
+                       std::make_shared<Numeric_token>("3")});
+    stmt->set_value(std::make_shared<Identifier_token>(qualified_identifier("opcode")));
+    check_f.add_statement(stmt);
+
+    EXPECT_EQ(check_f, fns.at("scatter"));
+    EXPECT_EQ(logs.count("dropping file"), 0u);
+    EXPECT_EQ(logs.count("recording 4 member(s)"), 1u);
+}
+
+TEST(function_processing, concatenation_lvalue_vector_targets) {
+    // One statement holds every member: the multi-target proof.
+    auto test_pattern = R"(
+        module test_mod();
+            int a;
+            int b;
+            logic [31:0] v;
+            function void both();
+                {a, b} = v;
+            endfunction
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+    auto fns = resource->get_functions();
+    ASSERT_TRUE(fns.contains("both"));
+
+    hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
+    check_f.set_name("both");
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_targets({qualified_identifier("a"), qualified_identifier("b")});
+    stmt->set_value(std::make_shared<Identifier_token>(qualified_identifier("v")));
+    check_f.add_statement(stmt);
+
+    EXPECT_EQ(check_f, fns.at("both"));
+}
+
+TEST(function_processing, concatenation_lvalue_nested) {
+    auto test_pattern = R"(
+        module test_mod();
+            int a;
+            int b;
+            int c;
+            logic [31:0] v;
+            function void nested();
+                {{a, b}, c} = v;
+            endfunction
+        endmodule
+    )";
+
+
+    log_capture logs;
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+    auto fns = resource->get_functions();
+    ASSERT_TRUE(fns.contains("nested"));
+
+    hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
+    check_f.set_name("nested");
+
+    auto stmt = std::make_shared<hdl_assignment_statement>();
+    stmt->set_targets({qualified_identifier("a"), qualified_identifier("b"), qualified_identifier("c")});
+    stmt->set_value(std::make_shared<Identifier_token>(qualified_identifier("v")));
+    check_f.add_statement(stmt);
+
+    EXPECT_EQ(check_f, fns.at("nested"));
+    EXPECT_EQ(logs.count("dropping file"), 0u);
+}
+
+TEST(function_processing, concatenation_lvalue_exotic_member_drops) {
+    // A streaming member cannot be represented: the whole statement declines
+    // to the pre-existing drop path.
+    auto test_pattern = R"(
+        module test_mod();
+            int a;
+            int b;
+            function integer exotic(input[31:0] v);
+                {{<<bit{a}}, b} = v;
+                return a + b;
+            endfunction
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+    EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
+}
+
+TEST(function_processing, concatenation_lvalue_strict_drops) {
+    auto test_pattern = R"(
+        module test_mod();
+            int imm;
+            function integer scatter(input[31:0] opcode);
+                {imm[5:4],imm[9:6],imm[2],imm[3]} = opcode[12:5];
+                return imm;
+            endfunction
+        endmodule
+    )";
+
+
+    parse_options opts;
+    opts.strict = true;
+
+    sv_analyzer analyzer;
+    analyzer.set_options(opts);
+
+    EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
+}

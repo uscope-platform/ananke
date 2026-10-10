@@ -46,6 +46,30 @@ static std::string::size_type find_line_comment(const std::string &line) {
     return std::string::npos;
 }
 
+// End of a `define body: first `//` outside a "..." or `"..."` literal.
+// Per IEEE 1800 comments are stripped before directive processing, so a
+// trailing `//` is never part of the replacement text (all commercial tools
+// agree). A naive find("//") would corrupt bodies like "http://x", hence the
+// string tracking (both quoting styles).
+static std::string_view::size_type define_body_end(std::string_view line) {
+    bool in_string = false;
+    bool in_macro_string = false;
+    for (size_t i = 0; i < line.size(); ++i) {
+        char c = line[i];
+        if (c == '\\' && i + 1 < line.size() && (in_string || in_macro_string)) { ++i; continue; }
+        if (in_string) {
+            if (c == '"') in_string = false;
+        } else if (in_macro_string) {
+            if (c == '`' && i + 1 < line.size() && line[i + 1] == '"') { in_macro_string = false; ++i; }
+        } else {
+            if (c == '`' && i + 1 < line.size() && line[i + 1] == '"') { in_macro_string = true; ++i; }
+            else if (c == '"') in_string = true;
+            else if (c == '/' && i + 1 < line.size() && line[i + 1] == '/') return i;
+        }
+    }
+    return std::string_view::npos;
+}
+
 // Include nesting depth is orthogonal to the cycle guards below: guards catch
 // repeats, but a deep *acyclic* chain (machine-generated file lists) would
 // still smash the stack with no diagnostic. Same backstop pattern as the
@@ -413,6 +437,14 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
 
     void sv_preprocessor::parse_definition(const std::string_view &sv, int prefix_length) {
         auto trimmed_view = sv.substr(prefix_length);
+        // A trailing `//` comment is not part of the replacement text:
+        // without this, `` `define MHPME_CLK_ACTIVE 6'd1 // OOP `` would
+        // expand to `6'd1 // OOP` mid-expression, commenting out the rest of
+        // the line at every use site. String-aware so bodies containing
+        // `"http://..."` survive intact.
+        if (auto body_end = define_body_end(trimmed_view); body_end != std::string_view::npos) {
+            trimmed_view = macro_processor::trim(trimmed_view.substr(0, body_end));
+        }
         auto first = trimmed_view.find_first_not_of("\t ");
         if (first == std::string_view::npos) {
             report_error(fmt::format("Malformed `define without identifier at line {} in file: {}", line_number, path));
