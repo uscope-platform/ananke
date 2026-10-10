@@ -174,6 +174,18 @@ private:
         const std::string &kind, const std::string &name, std::string &path);
     std::optional<std::shared_ptr<hdl_package_statement>> pick_owned_package(
         const std::string &name, const std::string &member, const package_predicate &declares);
+    // Path tolerance shared by deconfliction and include-edge matching:
+    // stored paths may be absolute while recorded ones are relative.
+    static bool paths_match(const std::string &a, const std::string &b);
+    // Cache key for a recorded path (exact hit, else equality/suffix scan).
+    std::optional<std::string> resolve_cache_key(const std::string &p) const;
+    // True when `target` is reachable from `from` via recorded `includes.
+    bool file_includes(const std::string &from, const std::string &target) const;
+    // Drop hits shadowed by `include: a hit whose file (transitively)
+    // includes another hit's file is the same logical definition seen twice,
+    // not a conflict. Never empty: falls back to the input on full cycles.
+    template<class StmtT> std::vector<stmt_hit<StmtT>> drop_include_shadowed(
+        const std::vector<stmt_hit<StmtT>> &hits) const;
     void clean_up_caches();
     void load_cache();
     void store_cache();

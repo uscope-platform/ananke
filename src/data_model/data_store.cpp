@@ -62,6 +62,73 @@ void data_store::report_dups(const std::string &kind, const std::string &name,
         spdlog::warn("Multiple {}s named '{}' found:{}\n\tusing {}", kind, name, paths, picked_path);
 }
 
+bool data_store::paths_match(const std::string &a, const std::string &b) {
+    // Stored paths may be absolute while recorded ones are relative (or vice
+    // versa), so match on equality or suffix — same tolerance as the
+    // deconfliction lookup below.
+    if (a.empty() || b.empty()) return false;
+    return a == b || a.ends_with(b) || b.ends_with(a);
+}
+
+std::optional<std::string> data_store::resolve_cache_key(const std::string &p) const {
+    if (p.empty()) return std::nullopt;
+    if (cache.contains(p)) return p;
+    for (const auto &key : cache | std::views::keys) {
+        if (paths_match(key, p)) return key;
+    }
+    return std::nullopt;
+}
+
+bool data_store::file_includes(const std::string &from, const std::string &target) const {
+    // True when `target` is reachable from `from` through the recorded
+    // `include graph (transitive). Bounded by a visited set, so include
+    // cycles cannot loop forever.
+    if (from.empty() || target.empty()) return false;
+    auto start = resolve_cache_key(from);
+    if (!start.has_value()) return false;
+    std::set<std::string> visited{start.value()};
+    std::vector<std::string> stack{start.value()};
+    while (!stack.empty()) {
+        auto cur = std::move(stack.back());
+        stack.pop_back();
+        auto deps = get_includes(cur);
+        if (!deps.has_value()) continue;
+        for (const auto &dep : deps.value()) {
+            if (paths_match(dep.path, target)) return true;
+            auto key = resolve_cache_key(dep.path);
+            if (key.has_value() && visited.insert(key.value()).second) {
+                stack.push_back(key.value());
+            }
+        }
+    }
+    return false;
+}
+
+template<class StmtT>
+std::vector<std::pair<std::shared_ptr<StmtT>, std::string>> data_store::drop_include_shadowed(
+    const std::vector<std::pair<std::shared_ptr<StmtT>, std::string>> &hits) const {
+    // A module defined in def.sv and `included by top.sv is parsed twice:
+    // once standalone under def.sv and once inlined under top.sv. Both cache
+    // entries then surface as "duplicates" of one logical definition. Drop
+    // any hit whose file includes another hit's file — the surviving hit is
+    // the canonical defining file. Genuine duplicates (no include edge
+    // between the hits) are untouched. Never returns empty: on full cycles
+    // fall back to the unfiltered set and let the caller warn as before.
+    if (hits.size() <= 1) return hits;
+    std::vector<std::pair<std::shared_ptr<StmtT>, std::string>> kept;
+    for (size_t i = 0; i < hits.size(); ++i) {
+        bool shadowed = false;
+        for (size_t j = 0; j < hits.size(); ++j) {
+            if (i != j && file_includes(hits[i].second, hits[j].second)) {
+                shadowed = true;
+                break;
+            }
+        }
+        if (!shadowed) kept.push_back(hits[i]);
+    }
+    return kept.empty() ? hits : kept;
+}
+
 template<class StmtT>
 std::optional<std::pair<std::shared_ptr<StmtT>, std::string>> data_store::pick_stmt(
     const std::string &kind,
@@ -69,24 +136,28 @@ std::optional<std::pair<std::shared_ptr<StmtT>, std::string>> data_store::pick_s
     const std::string &name) {
     if (hits.empty()) return std::nullopt;
     if (hits.size() == 1) return hits.front();
+    // Collapse include shadows first: same definition seen via an `include
+    // is a single logical resource, not a conflict — resolve silently to
+    // the defining file.
+    auto filtered = drop_include_shadowed(hits);
+    if (filtered.size() == 1) return filtered.front();
     if (auto it = deconfliction.find(name); it != deconfliction.end()) {
-        for (const auto &hit : hits) {
+        for (const auto &hit : filtered) {
             const auto &stored = hit.second, &wanted = it->second;
-            if (!stored.empty() && !wanted.empty() &&
-                (stored == wanted || stored.ends_with(wanted) || wanted.ends_with(stored))) {
+            if (paths_match(stored, wanted)) {
                 // Explicit pick: configured by the user, so no conflict
                 // warning — just trace the decision.
                 spdlog::trace("Deconflicted {} '{}' → {}", kind, name, hit.second);
                 return hit;
             }
         }
-        report_dups<StmtT>(kind, name, hits, hits.front().second);
+        report_dups<StmtT>(kind, name, filtered, filtered.front().second);
         spdlog::warn("Deconfliction entry for '{}' ('{}') matches no candidate; using {}",
-                     name, it->second, hits.front().second);
-        return hits.front();
+                     name, it->second, filtered.front().second);
+        return filtered.front();
     }
-    report_dups<StmtT>(kind, name, hits, hits.front().second);
-    return hits.front();
+    report_dups<StmtT>(kind, name, filtered, filtered.front().second);
+    return filtered.front();
 }
 
 template<class StmtT>
@@ -150,6 +221,10 @@ std::optional<std::shared_ptr<hdl_package_statement>> data_store::pick_owned_pac
     const std::string &name, const std::string &member, const package_predicate &declares) {
     auto hits = find_by_name<hdl_package_statement>(name, "", false);
     if (hits.empty()) return std::nullopt;
+    if (hits.size() == 1) return hits.front().first;
+    // Same `include-shadowing collapse as pick_stmt: one logical package
+    // seen via an `include is not a conflict.
+    hits = drop_include_shadowed(hits);
     if (hits.size() == 1) return hits.front().first;
     if (!deconfliction.contains(name)) {
         std::optional<stmt_hit<hdl_package_statement>> owner;

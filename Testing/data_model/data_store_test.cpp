@@ -610,3 +610,142 @@ TEST( data_store_test , store_cache_never_throws ) {    // Point store_path at a
     }
     std::filesystem::remove_all("/tmp/ananke_ds_nodir");
 }
+
+namespace {
+// Stores a resource under `path`, recording that `path` `includes `dep`
+// (empty `dep` records no edge).
+void store_resource_with_include(data_store *store, const std::string &path,
+                                 const std::shared_ptr<hdl_resource_statement> &res,
+                                 const std::string &dep = "") {
+    hdl_file f;
+    f.set_content({res});
+    if (dep.empty()) {
+        store->store_file({path, "hash", f});
+    } else {
+        store->store_file({path, "hash", f,
+                           {include_dependency{dep, include_resolution::regular}}});
+    }
+}
+
+std::shared_ptr<hdl_resource_statement> make_resource(const std::string &name) {
+    auto r = std::make_shared<hdl_resource_statement>();
+    r->set_name(name);
+    return r;
+}
+}
+
+TEST( data_store_test , include_shadowed_duplicate_is_silent) {
+    // A module defined in def.sv and `included by top.sv is parsed twice
+    // (standalone + inlined): one logical definition, not a conflict. The
+    // lookup must resolve silently to the defining file.
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto def = make_resource("shadowed");
+    auto top = make_resource("shadowed");
+    store_resource_with_include(store, "/path/def.sv", def);
+    store_resource_with_include(store, "/path/top.sv", top, "/path/def.sv");
+
+    log_capture logs;
+    auto picked = store->get_HDL_resource("shadowed");
+    ASSERT_TRUE(picked.has_value());
+    EXPECT_EQ(picked.value(), def);
+    EXPECT_EQ(logs.count("Multiple resources"), 0);
+
+    delete store;
+}
+
+TEST( data_store_test , include_shadowed_duplicate_suffix_match) {
+    // Recorded include paths may be relative while scanned paths are
+    // absolute: the edge must still match by suffix.
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto def = make_resource("shadowed_suffix");
+    auto top = make_resource("shadowed_suffix");
+    store_resource_with_include(store, "/repo/tb/def.sv", def);
+    store_resource_with_include(store, "/repo/tb/top.sv", top, "tb/def.sv");
+
+    log_capture logs;
+    auto picked = store->get_HDL_resource("shadowed_suffix");
+    ASSERT_TRUE(picked.has_value());
+    EXPECT_EQ(picked.value(), def);
+    EXPECT_EQ(logs.count("Multiple resources"), 0);
+
+    delete store;
+}
+
+TEST( data_store_test , include_shadowed_transitive_chain) {
+    // A includes B includes C defining the module: all three cache entries
+    // hold the definition, but only C is canonical.
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto a = make_resource("chained");
+    auto b = make_resource("chained");
+    auto c = make_resource("chained");
+    store_resource_with_include(store, "/path/c.sv", c);
+    store_resource_with_include(store, "/path/b.sv", b, "/path/c.sv");
+    store_resource_with_include(store, "/path/a.sv", a, "/path/b.sv");
+
+    log_capture logs;
+    auto picked = store->get_HDL_resource("chained");
+    ASSERT_TRUE(picked.has_value());
+    EXPECT_EQ(picked.value(), c);
+    EXPECT_EQ(logs.count("Multiple resources"), 0);
+
+    delete store;
+}
+
+TEST( data_store_test , unrelated_duplicate_still_warns) {
+    // Control: two independent definitions with no include edge between
+    // them must still report the conflict exactly once.
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    store_resource_with_include(store, "/path/one.sv", make_resource("real_dup"));
+    store_resource_with_include(store, "/path/two.sv", make_resource("real_dup"));
+
+    log_capture logs;
+    for (int i = 0; i < 3; ++i) {
+        EXPECT_TRUE(store->get_HDL_resource("real_dup").has_value());
+    }
+    EXPECT_EQ(logs.count("Multiple resources"), 1);
+
+    delete store;
+}
+
+TEST( data_store_test , partial_shadowing_still_warns) {
+    // One genuine duplicate plus an includer copy: the shadow is dropped,
+    // but the remaining real conflict must still warn.
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto def = make_resource("partial");
+    auto other = make_resource("partial");
+    auto top = make_resource("partial");
+    store_resource_with_include(store, "/path/def.sv", def);
+    store_resource_with_include(store, "/path/other.sv", other);
+    store_resource_with_include(store, "/path/top.sv", top, "/path/def.sv");
+
+    log_capture logs;
+    auto picked = store->get_HDL_resource("partial");
+    ASSERT_TRUE(picked.has_value());
+    EXPECT_TRUE(picked.value() == def || picked.value() == other);
+    EXPECT_EQ(logs.count("Multiple resources"), 1);
+
+    delete store;
+}
+
+TEST( data_store_test , include_shadowed_package_owner_is_silent) {
+    // Same shadowing for packages: the owner lookup must resolve to the
+    // defining file without the duplicate-package report.
+    auto *store = new data_store(true, "/tmp/test_data_store");
+    auto def = make_package("shadow_pkg");
+    def->add_statement(std::make_shared<HDL_parameter>("WANTED"));
+    auto top = make_package("shadow_pkg");
+    hdl_file fdef, ftop;
+    fdef.set_content({def});
+    ftop.set_content({top});
+    store->store_file({"/path/def.sv", "hash", fdef});
+    store->store_file({"/path/top.sv", "hash", ftop,
+                       {include_dependency{"/path/def.sv", include_resolution::regular}}});
+
+    log_capture logs;
+    auto owner = store->get_package_param_owner("shadow_pkg", qualified_identifier("WANTED"));
+    ASSERT_TRUE(owner.has_value());
+    EXPECT_EQ(owner.value(), def);
+    EXPECT_EQ(logs.count("Multiple packages"), 0);
+
+    delete store;
+}
