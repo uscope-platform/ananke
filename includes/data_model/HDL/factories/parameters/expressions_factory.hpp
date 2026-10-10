@@ -41,6 +41,9 @@ public:
     [[nodiscard]] bool has_operation() const {return operation_set;}
     void pause();
     void add_index(const std::shared_ptr<Expression_base> &idx);
+    // Literal `[msb:lsb]` range read: same last-routed-identifier lookup as
+    // add_index, but stores bounds instead of an index expression.
+    void set_last_range(int64_t hi, int64_t lo);
     void start_bit_selection();
     void stop_bit_selection();
 

@@ -147,6 +147,18 @@ void expressions_factory::add_index(const std::shared_ptr<Expression_base>  &idx
     }
 }
 
+void expressions_factory::set_last_range(int64_t hi, int64_t lo) {
+    std::shared_ptr<Expression_base> target;
+    if (current_v2.get_rhs()) {
+        target = current_v2.get_rhs();
+    } else if (current_v2.get_lhs()) {
+        target = current_v2.get_lhs();
+    }
+    if (auto tok = std::dynamic_pointer_cast<Identifier_token>(target)) {
+        tok->set_range(hi, lo);
+    }
+}
+
 void expressions_factory::consume(const std::shared_ptr<Expression_base> &v) {
     if (current_v2.get_lhs() == nullptr) {
         current_v2.set_lhs(v);

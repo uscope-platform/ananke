@@ -98,6 +98,9 @@ public:
     void stop_ternary();
 
     void start_bit_selection();
+    // Literal range read for the last routed identifier (see
+    // expressions_factory::set_last_range).
+    void set_last_range(int64_t hi, int64_t lo) { expr_factory_.set_last_range(hi, lo); }
     std::shared_ptr<Expression_base> get_last_value() const { return assignment_value; }
     int get_expression_level() const { return expr_factory_.get_level(); }
     // True while inside a [...] selection: the selection owns a pushed

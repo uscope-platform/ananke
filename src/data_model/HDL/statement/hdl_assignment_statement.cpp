@@ -74,16 +74,22 @@ bool hdl_assignment_statement::equals(const hdl_statement_base& other) const {
 }
 
 std::string hdl_assignment_statement::print() const {
+    auto print_bounds = [this](size_t i, std::ostringstream &out) {
+        if (i < member_selects.size() && member_selects[i].has_bounds())
+            out << "[" << member_selects[i].hi << ":" << member_selects[i].lo << "]";
+    };
     std::ostringstream oss;
     if (targets.size() == 1) {
         oss << targets.front().print();
         if (!indices.empty() && indices.front()) oss << "[" << indices.front()->print() << "]";
+        print_bounds(0, oss);
     } else if (!targets.empty()) {
         oss << "{";
         for (size_t i = 0; i < targets.size(); ++i) {
             if (i != 0) oss << ", ";
             oss << targets[i].print();
             if (i < indices.size() && indices[i]) oss << "[" << indices[i]->print() << "]";
+            print_bounds(i, oss);
         }
         oss << "}";
     }

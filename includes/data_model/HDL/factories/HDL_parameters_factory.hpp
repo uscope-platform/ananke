@@ -47,6 +47,9 @@ public:
     void stop_bit_selection();
 
     void close_array_index();
+    // Literal range read for the last routed identifier (see
+    // expressions_factory::set_last_range).
+    void set_last_range(int64_t hi, int64_t lo) { expr_factory.set_last_range(hi, lo); }
 
     void start_param_assignment();
     void stop_param_assignment();

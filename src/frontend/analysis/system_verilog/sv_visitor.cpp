@@ -1687,6 +1687,10 @@ void sv_visitor::exitPrimaryBitSelect(sv2017::PrimaryBitSelectContext *ctx) {
 }
 
 
+// Literal `[msb:lsb]` bounds shared with the concatenation handling below.
+static concat_member_select parse_literal_bounds(const std::string &hi_s, const std::string &lo_s);
+
+
 void sv_visitor::exitPrimaryIndex(sv2017::PrimaryIndexContext *ctx) {
     if(deps_factory.is_valid_dependency()){
         deps_factory.add_connection_element(ctx->getText());
@@ -1812,6 +1816,24 @@ void sv_visitor::enterArray_range_expression(sv2017::Array_range_expressionConte
     type_engine.open_range();
     if(deps_factory.is_valid_dependency()) {
         deps_factory.start_array_range();
+    }
+    // Literal range reads (`x[7:4]`) bypass the single-expression selection
+    // machinery (which only models one index): attach bounds directly for
+    // evaluation slicing, in both engines. Anything else keeps whole-var
+    // behavior. Only PrimaryIndex parents are reads-in-expressions (the rule
+    // also serves declarations and constraints); attaching at enter time,
+    // the base identifier is still the last routed component, before the
+    // bound expressions pollute it. Gating mirrors the single-bit exposure.
+    if (dynamic_cast<sv2017::PrimaryIndexContext *>(ctx->parent) != nullptr &&
+        ctx->range_separator() != nullptr) {
+        const auto bounds = ctx->expression();
+        if (bounds.size() == 2 && bounds[0] != nullptr && bounds[1] != nullptr) {
+            auto sel = parse_literal_bounds(bounds[0]->getText(), bounds[1]->getText());
+            if (sel.has_bounds()) {
+                if (f_factory.is_active()) f_factory.set_last_range(sel.hi, sel.lo);
+                if (params_factory.is_component_relevant()) params_factory.set_last_range(sel.hi, sel.lo);
+            }
+        }
     }
 }
 
@@ -2377,28 +2399,16 @@ bool sv_visitor::handle_streaming_lvalue(sv2017::Variable_lvalueContext *ctx) {
     return true;
 }
 
-// Literal `[msb:lsb]` bounds of a concatenation member. Ranges live in the
-// hier-id rule's trailing range group, not in bit_select() (single-bit
-// only there); `getText` is whitespace-free by ANTLR construction.
-// Anything else (bare, single-bit, part-selects, multiple selects) yields
-// no bounds: single-bit members ride the stored index expression exactly
-// like single assignments, the rest fall back. A present-but-non-literal
-// select (part-selects, parametric bounds) is marked dynamic so evaluation
+// Literal `[msb:lsb]` bounds from two bound texts (`getText` is
+// whitespace-free by ANTLR construction). Anything non-literal yields no
+// bounds; a present-but-non-literal select is marked dynamic so evaluation
 // never mistakes the member for a bare one (declaration lookup would give
 // a bogus width for a slice).
-static concat_member_select parse_concat_member_select(
-    sv2017::Package_or_class_scoped_hier_id_with_selectContext *hier) {
-    if (hier == nullptr || hier->COLON() == nullptr) return {};
-    if (hier->operator_plus_minus() != nullptr) return {.dynamic_select = true};
-    const auto bounds = hier->expression();
-    if (bounds.size() != 2 || bounds[0] == nullptr || bounds[1] == nullptr)
-        return {.dynamic_select = true};
+static concat_member_select parse_literal_bounds(const std::string &hi_s, const std::string &lo_s) {
     const auto is_digits = [](const std::string &s) {
         return !s.empty() && std::all_of(s.begin(), s.end(),
                                          [](char c) { return c >= '0' && c <= '9'; });
     };
-    const std::string hi_s = bounds[0]->getText();
-    const std::string lo_s = bounds[1]->getText();
     if (!is_digits(hi_s) || !is_digits(lo_s)) return {.dynamic_select = true};
     try {
         return {static_cast<int64_t>(std::stoll(hi_s)),
@@ -2406,6 +2416,32 @@ static concat_member_select parse_concat_member_select(
     } catch (const std::exception &) {
         return {.dynamic_select = true};
     }
+}
+
+// Literal `[msb:lsb]` bounds of a concatenation member. Ranges live in the
+// hier-id rule's trailing range group, not in bit_select() (single-bit
+// only there). Anything else (bare, single-bit, part-selects, multiple
+// selects) yields no bounds: single-bit members ride the stored index
+// expression exactly like single assignments, the rest fall back.
+static concat_member_select parse_concat_member_select(
+    sv2017::Package_or_class_scoped_hier_id_with_selectContext *hier) {
+    if (hier == nullptr || hier->COLON() == nullptr) return {};
+    if (hier->operator_plus_minus() != nullptr) return {.dynamic_select = true};
+    const auto bounds = hier->expression();
+    if (bounds.size() != 2 || bounds[0] == nullptr || bounds[1] == nullptr)
+        return {.dynamic_select = true};
+    return parse_literal_bounds(bounds[0]->getText(), bounds[1]->getText());
+}
+
+// Literal `[msb:lsb]` bounds of a range read (`x[7:4]`). The grammar routes
+// these through PrimaryIndex/array_range_expression, never bit_select().
+static concat_member_select parse_read_range_select(sv2017::PrimaryIndexContext *ctx) {
+    if (ctx == nullptr) return {};
+    auto *range = ctx->array_range_expression();
+    if (range == nullptr || range->range_separator() == nullptr) return {};
+    const auto bounds = range->expression();
+    if (bounds.size() != 2 || bounds[0] == nullptr || bounds[1] == nullptr) return {};
+    return parse_literal_bounds(bounds[0]->getText(), bounds[1]->getText());
 }
 
 // Concatenation lvalue (`{a[1:0], b[0]} = X`, the dasm bit-scatter shape).
@@ -2533,6 +2569,26 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
                 std::vector<std::string> inst = {leaf};
                 inst.insert(inst.end(), dotted.begin(), dotted.end() - 1);
                 target_qi.set_instance_prefix(inst);
+            }
+            // A single lvalue with literal bounds unpacks through the concat
+            // frame exactly like a one-member concatenation (strict is
+            // deliberately not consulted: single assignments were never
+            // gated). Loop headers and nonblocking parents decline, as there
+            // is no assignment-completion path for the frame there.
+            auto single_bounds = parse_concat_member_select(hier);
+            if (single_bounds.has_bounds() && !loop_header) {
+                bool under_nonblocking = false;
+                for (auto *p = ctx->parent; p != nullptr; p = p->parent) {
+                    if (dynamic_cast<sv2017::Nonblocking_assignmentContext *>(p) != nullptr) {
+                        under_nonblocking = true;
+                        break;
+                    }
+                }
+                if (!under_nonblocking) {
+                    f_factory.start_concat_lvalue();
+                    f_factory.add_concat_target(target_qi, single_bounds);
+                    return;
+                }
             }
             f_factory.start_assignment(target_qi);
         }

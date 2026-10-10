@@ -61,7 +61,7 @@ std::expected<resolved_parameter, solver_errors> Identifier_token::evaluate(
         if (resolved.is_undefined()) {
             spdlog::warn("Parameter {} is undefined, using 0 as a default", id.print());
         }
-        if (array_index.empty()) return resolved;
+        if (array_index.empty() && !has_range()) return resolved;
 
         std::vector<int64_t> indices;
         for (const auto &idx_expr : array_index) {
@@ -71,32 +71,52 @@ std::expected<resolved_parameter, solver_errors> Identifier_token::evaluate(
             indices.push_back(idx_val.value().get_integer().get_value());
         }
 
+        std::optional<resolved_parameter> current;
         if (resolved.is_int_array()) {
             auto values = resolved.get_int_array();
             auto array_val = values.get_value(indices);
-            if (array_val.has_value()) return array_val.value();
-            return static_cast<hdl_integer>(0);
+            if (array_val.has_value()) current = array_val.value();
+            else current = static_cast<hdl_integer>(0);
         } else if (resolved.is_string_array()) {
             auto values = resolved.get_string_array();
             auto array_val = values.get_value(indices);
-            if (array_val.has_value()) return resolved_parameter(array_val.value());
-            return resolved_parameter("");
+            if (array_val.has_value()) current = resolved_parameter(array_val.value());
+            else current = resolved_parameter("");
         } else if (resolved.is_integer() && !indices.empty()) {
             int64_t bit = indices[0];
             if (bit < 0 || bit >= hdl_integer::MAX_BIT_WIDTH) return static_cast<hdl_integer>(0);
             auto shifted = resolved.get_integer() >> hdl_integer(bit);
             auto b = shifted & hdl_integer(1);
-            return b;
+            current = b;
+        } else if (resolved.is_integer() && has_range()) {
+            current = resolved;
         }
-         return std::unexpected{wrong_type};
+        if (!current.has_value()) return std::unexpected{wrong_type};
+        if (has_range()) {
+            // Literal `[msb:lsb]` read: slice the resolved bits. to_wide()
+            // zero-extends narrow values, so the pattern bits read true for
+            // negatives as well; anything non-integral here is user error.
+            if (!current->is_integer()) return std::unexpected{wrong_type};
+            int64_t width = range_hi - range_lo + 1;
+            wide_integer slice = (current->get_integer().to_wide() >> range_lo) &
+                                 hdl_integer::width_mask(width).to_wide();
+            hdl_integer result;
+            result.set_value(slice);
+            result.set_size(width);
+            return result;
+        }
+        return current.value();
     }
     return std::unexpected{missing_value};
 }
 
 std::string Identifier_token::print() const {
 
-    if(!array_index.empty()){
-        return id.print() + print_index(array_index);
+    if(!array_index.empty() || has_range()){
+        std::string ret = id.print();
+        if (!array_index.empty()) ret += print_index(array_index);
+        if (has_range()) ret += "[" + std::to_string(range_hi) + ":" + std::to_string(range_lo) + "]";
+        return ret;
     } else {
         return id.print();
     }
@@ -106,6 +126,8 @@ bool operator==(const Identifier_token &lhs, const Identifier_token &rhs) {
     bool ret_val = true;
     ret_val &= lhs.id == rhs.id;
     ret_val &= lhs.array_index == rhs.array_index;
+    ret_val &= lhs.range_hi == rhs.range_hi;
+    ret_val &= lhs.range_lo == rhs.range_lo;
     return ret_val;
 }
 

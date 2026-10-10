@@ -532,7 +532,11 @@ void HDL_function_call::walk_body(
             static const std::shared_ptr<Expression_base> no_index;
             const auto &targets = asgn->get_targets();
             const auto &indices = asgn->get_indices();
-            if (targets.size() > 1) {
+            bool has_bounds = false;
+            for (const auto &sel : asgn->get_member_selects()) {
+                if (sel.has_bounds()) { has_bounds = true; break; }
+            }
+            if (targets.size() > 1 || has_bounds) {
                 apply_concat_assignment(fcn_name, targets, indices, asgn->get_member_selects(), asgn->get_value(), val, ctx,
                                         value_map, size_map, rt, expected_type, local_widths);
                 continue;

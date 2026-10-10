@@ -17,6 +17,7 @@
 #define ANANKE_IDENTIFIER_TOKEN_HPP
 
 #include <bitset>
+#include <cstdint>
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 
 #include <cereal/types/vector.hpp>
@@ -47,6 +48,16 @@ public:
     void add_array_index(const std::shared_ptr<Expression_base> &a_i) {array_index.push_back(a_i);}
     std::vector<std::shared_ptr<Expression_base>> get_array_index() {return array_index;}
 
+    // Literal `[msb:lsb]` range read (`x[7:4]`), sliced at evaluation.
+    // Absent (-1) means no range: single-bit selects ride array_index as
+    // before, everything else reads whole. Bounds normalize here so all
+    // consumers see hi >= lo.
+    void set_range(int64_t hi, int64_t lo) {
+        if (hi < lo) { range_hi = lo; range_lo = hi; }
+        else { range_hi = hi; range_lo = lo; }
+    }
+    bool has_range() const { return range_hi >= 0 && range_lo >= 0; }
+
     qualified_identifier get_value() const {return id;}
 
     void set_expression_type(const std::shared_ptr<hdl_type> &t) { expression_type = t; }
@@ -62,7 +73,7 @@ public:
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(id, array_index, type_placeholder, expression_type);
+        ar(id, array_index, type_placeholder, expression_type, range_hi, range_lo);
     }
 
 private:
@@ -72,6 +83,8 @@ private:
 
     qualified_identifier id;
     std::vector<std::shared_ptr<Expression_base>> array_index;
+    int64_t range_hi = -1;
+    int64_t range_lo = -1;
     std::shared_ptr<hdl_type> expression_type;
     bool type_placeholder = false;
 };
