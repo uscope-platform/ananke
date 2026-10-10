@@ -535,3 +535,42 @@ TEST(analysis_test, dpi_import_implicit_return) {
 
 
 
+
+TEST(analysis_test, underscore_separated_parameter) {
+    // Regression test: `parameter MAX_CYCLES = 10_000_000;` was parsed as an
+    // identifier instead of the integer 10000000.
+    auto test_pattern = R"(
+        module underscore_test;
+            parameter MAX_CYCLES = 10_000_000;
+            parameter HEX_MASK = 32'hFF_FF_00_FF;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+    auto resource = result.value().get_content()[0]->as<hdl_resource_statement>();
+
+    const auto& stmts = resource.get_statements();
+    ASSERT_EQ(stmts.size(), 2);
+
+    auto max_cycles = std::dynamic_pointer_cast<HDL_parameter>(stmts[0]);
+    ASSERT_NE(max_cycles, nullptr);
+    EXPECT_EQ(max_cycles->get_name(), "MAX_CYCLES");
+    auto raw = std::dynamic_pointer_cast<Numeric_token>(max_cycles->get_expression());
+    ASSERT_NE(raw, nullptr) << "10_000_000 was parsed as an identifier";
+    auto val = raw->evaluate({});
+    ASSERT_TRUE(val.has_value());
+    ASSERT_TRUE(val->is_integer());
+    EXPECT_EQ(val->get_integer().get_value(), 10000000);
+
+    auto hex_mask = std::dynamic_pointer_cast<HDL_parameter>(stmts[1]);
+    ASSERT_NE(hex_mask, nullptr);
+    EXPECT_EQ(hex_mask->get_name(), "HEX_MASK");
+    auto hex_raw = std::dynamic_pointer_cast<Numeric_token>(hex_mask->get_expression());
+    ASSERT_NE(hex_raw, nullptr);
+    auto hex_val = hex_raw->evaluate({});
+    ASSERT_TRUE(hex_val.has_value());
+    EXPECT_EQ(hex_val->get_integer().get_value(), 0xFFFF00FF);
+}

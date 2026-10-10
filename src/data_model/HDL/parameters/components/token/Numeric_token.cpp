@@ -157,24 +157,31 @@ Numeric_token::literal_qualifiers Numeric_token::parse_qualifiers(const std::str
         auto size_str = body.substr(0, quote_pos);
 
         if (!size_str.empty()) {
-            auto [ptr, ec] = std::from_chars(size_str.data(), size_str.data() + size_str.size(), qualifiers.explicit_size, 10);
-            if (ec == std::errc() && ptr != size_str.data()) qualifiers.sized_explicit = true;
+            std::string purged_size;
+            purged_size.reserve(size_str.size());
+            for (char c : size_str) if (c != '_') purged_size.push_back(c);
+            if (!purged_size.empty()) {
+                auto [ptr, ec] = std::from_chars(purged_size.data(), purged_size.data() + purged_size.size(), qualifiers.explicit_size, 10);
+                if (ec == std::errc() && ptr == purged_size.data() + purged_size.size()) qualifiers.sized_explicit = true;
+            }
         }
     } else {
         raw_value = body;
     }
 
-    if (raw_value.starts_with('s')) {
+    if (raw_value.starts_with('s') || raw_value.starts_with('S')) {
         raw_value = raw_value.substr(1);
         is_signed = true;
     }
 
-    qualifiers.based = raw_value.starts_with("d") || raw_value.starts_with("b")
-                       || raw_value.starts_with("o") || raw_value.starts_with("h");
+    qualifiers.based = raw_value.starts_with("d") || raw_value.starts_with("D")
+                       || raw_value.starts_with("b") || raw_value.starts_with("B")
+                       || raw_value.starts_with("o") || raw_value.starts_with("O")
+                       || raw_value.starts_with("h") || raw_value.starts_with("H");
 
-    // Strictly check for unbased unsized literals: no size prefix, starts with single quote, and is 0/1/x/z
+    // Strictly check for unbased unsized literals: no size prefix, starts with single quote, and is 0/1/x/z/?
     if (!qualifiers.sized_explicit && !qualifiers.based && body.starts_with('\'')) {
-        if (raw_value == "1" || raw_value == "0" || raw_value == "x" || raw_value == "z" || raw_value == "X" || raw_value == "Z") {
+        if (raw_value == "1" || raw_value == "0" || raw_value == "x" || raw_value == "z" || raw_value == "X" || raw_value == "Z" || raw_value == "?") {
             qualifiers.base = 2;
             qualifiers.digits = raw_value;
             return qualifiers;
@@ -188,19 +195,19 @@ Numeric_token::literal_qualifiers Numeric_token::parse_qualifiers(const std::str
 
 int Numeric_token::detect_base(std::string_view &digits) {
     int base = 10;
-    if (digits.starts_with("d")) {
+    if (digits.starts_with("d") || digits.starts_with("D")) {
         base = 10;
         digits = digits.substr(1);
     }
-    if (digits.starts_with("b")) {
+    if (digits.starts_with("b") || digits.starts_with("B")) {
         base = 2;
         digits = digits.substr(1);
     }
-    if (digits.starts_with("o")) {
+    if (digits.starts_with("o") || digits.starts_with("O")) {
         base = 8;
         digits = digits.substr(1);
     }
-    if (digits.starts_with("h")) {
+    if (digits.starts_with("h") || digits.starts_with("H")) {
         base = 16;
         digits = digits.substr(1);
     }

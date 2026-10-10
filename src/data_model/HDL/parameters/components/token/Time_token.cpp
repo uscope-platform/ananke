@@ -41,8 +41,11 @@ Time_token::Time_token(const std::string &s) {
     else if (s.ends_with("ms")) { scale = 1e-3; unit_size = 2; }
 
     auto number = s.substr(0, s.size() - unit_size);
+    std::string purged;
+    purged.reserve(number.size());
+    for (char c : number) if (c != '_') purged.push_back(c);
     double v;
-    std::from_chars(number.data(), number.data() + number.size(), v);
+    std::from_chars(purged.data(), purged.data() + purged.size(), v);
     value = v * scale;
 }
 

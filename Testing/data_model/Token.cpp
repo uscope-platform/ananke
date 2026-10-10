@@ -22,7 +22,9 @@
 #include "data_model/HDL/parameters/components/token/LoopVar_token.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include "data_model/HDL/parameters/components/token/Real_token.hpp"
+#include "data_model/HDL/parameters/components/token/Time_token.hpp"
 #include "data_model/HDL/parameters/components/token/String_token.hpp"
+#include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 #include "data_model/HDL/parameters/common/hdl_integer.hpp"
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"
 #include <sstream>
@@ -476,6 +478,58 @@ TEST(Token, loop_var_token_reports_data_and_loop_deps) {
     Identifier_token plain(qualified_identifier("g"));
     EXPECT_FALSE(plain.is<LoopVar_token>());
     EXPECT_TRUE(plain.get_dependencies().loop_vars.empty());
+}
+
+TEST(Token, make_value_underscore_separated_decimal) {
+    // Regression test: `parameter MAX_CYCLES = 10_000_000;` was parsed as an
+    // identifier instead of the integer 10000000.
+    auto tok = sv_parsing_helpers::make_value("10_000_000");
+    auto num = std::dynamic_pointer_cast<Numeric_token>(tok);
+    ASSERT_NE(num, nullptr) << "10_000_000 was not classified as a number";
+    auto val = num->evaluate({});
+    ASSERT_TRUE(val.has_value());
+    ASSERT_TRUE(val->is_integer());
+    EXPECT_EQ(val->get_integer().get_value(), 10000000);
+}
+
+TEST(Token, make_value_underscore_variants) {
+    // Plain decimal with separators.
+    auto plain = sv_parsing_helpers::make_value("1_0");
+    ASSERT_NE(std::dynamic_pointer_cast<Numeric_token>(plain), nullptr);
+    EXPECT_EQ(std::dynamic_pointer_cast<Numeric_token>(plain)->evaluate({})->get_integer().get_value(), 10);
+
+    // Sized based literals with separators in the digits.
+    auto hex = sv_parsing_helpers::make_value("32'hFF_FF");
+    auto hex_num = std::dynamic_pointer_cast<Numeric_token>(hex);
+    ASSERT_NE(hex_num, nullptr);
+    EXPECT_EQ(hex_num->evaluate({})->get_integer().get_value(), 0xFFFF);
+
+    auto bin = sv_parsing_helpers::make_value("8'b1010_1010");
+    auto bin_num = std::dynamic_pointer_cast<Numeric_token>(bin);
+    ASSERT_NE(bin_num, nullptr);
+    EXPECT_EQ(bin_num->evaluate({})->get_integer().get_value(), 0xAA);
+
+    // Real literal with separators must stay a real with the right value.
+    auto real = sv_parsing_helpers::make_value("1_000.5");
+    auto real_tok = std::dynamic_pointer_cast<Real_token>(real);
+    ASSERT_NE(real_tok, nullptr);
+    EXPECT_DOUBLE_EQ(real_tok->evaluate({})->get_real(), 1000.5);
+
+    // Time literal with separators must stay a time literal.
+    auto time = sv_parsing_helpers::make_value("10_000ns");
+    EXPECT_NE(std::dynamic_pointer_cast<Time_token>(time), nullptr);
+}
+
+TEST(Token, make_value_identifiers_unaffected) {
+    // Identifiers (including ones with underscores and digits) must not be
+    // swallowed by the numeric classification.
+    for (const auto &name : {"MAX_CYCLES", "_foo", "foo_1", "DATA_10_M"}) {
+        auto tok = sv_parsing_helpers::make_value(name);
+        EXPECT_NE(std::dynamic_pointer_cast<Identifier_token>(tok), nullptr) << name;
+        EXPECT_EQ(std::dynamic_pointer_cast<Numeric_token>(tok), nullptr) << name;
+    }
+    // String literals still classify as strings.
+    EXPECT_NE(std::dynamic_pointer_cast<String_token>(sv_parsing_helpers::make_value("\"hello\"")), nullptr);
 }
 
 TEST(Token, loop_var_token_evaluates_like_identifier) {

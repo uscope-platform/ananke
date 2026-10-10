@@ -32,8 +32,11 @@ Real_token::Real_token(double v) {
 }
 
 Real_token::Real_token(const std::string &s) {
+    std::string purged;
+    purged.reserve(s.size());
+    for (char c : s) if (c != '_') purged.push_back(c);
     double v;
-    std::from_chars(s.data(), s.data() + s.size(), v);
+    std::from_chars(purged.data(), purged.data() + purged.size(), v);
     value = v;
 }
 
