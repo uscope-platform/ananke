@@ -45,7 +45,7 @@ public:
     // holding every member. Selects ride in the parallel index slots; a null
     // entry means "whole variable".
     void start_concat_lvalue();
-    void add_concat_target(const qualified_identifier &n);
+    void add_concat_target(const qualified_identifier &n, concat_member_select select = {});
     [[nodiscard]] bool in_concat_lvalue() const { return in_concat; }
     // `return expr` assigns to the function itself with no lvalue select, so
     // unlike start_assignment it must not open lvalue_index capture: any
@@ -147,8 +147,14 @@ private:
     std::shared_ptr<Expression_base> current_lhs_index;
     // Concatenation-lvalue frame, see start_concat_lvalue. Parallel with the
     // single-target fields above, which stay untouched while a frame is open.
+    // Select bounds ride alongside so evaluation can unpack literal ranges.
     bool in_concat = false;
-    std::vector<std::pair<qualified_identifier, std::shared_ptr<Expression_base>>> pending_concat_targets;
+    struct concat_pending_target {
+        qualified_identifier target;
+        std::shared_ptr<Expression_base> index;
+        concat_member_select select;
+    };
+    std::vector<concat_pending_target> pending_concat_targets;
 };
 
 

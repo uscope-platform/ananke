@@ -2616,3 +2616,210 @@ TEST(parameter_extraction, duplicate_declaration_each_gets_function_link) {
     auto solved = parameter_solver::process_parameters(mod->get_parameter_statements(), {});
     EXPECT_EQ(solved.at(qualified_identifier("P")).get_integer().get_value(), 1);
 }
+
+TEST(parameter_extraction, concat_lvalue_in_function) {
+    // `{a, b} = 11` zero-extends the 32-bit input across 64 bits of members:
+    // a takes the top 32 (0), b the low 32 (11).
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer combine(input [31:0] v);
+                int a;
+                int b;
+                {a, b} = v;
+                combine = a + b;
+            endfunction
+
+            parameter integer TEST_PARAM = combine(11);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("TEST_PARAM"), 11}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, concat_lvalue_selected_members_in_function) {
+    // Full-coverage scatter unpacks exactly: the 4-bit RHS lands across the
+    // members, so the read-back equals the input slice.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer scatter(input [31:0] v);
+                int acc;
+                {acc[1:0], acc[3:2]} = v[3:0];
+                scatter = acc;
+            endfunction
+
+            parameter integer TEST_SCATTER = scatter(32'hA5);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
+
+    // Low nibble of 0xA5 scattered across the members.
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("TEST_SCATTER"), 5}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, concat_lvalue_partial_scatter_in_function) {
+    // Partial coverage merges into the previous value: only the scattered
+    // slices change, the rest is preserved.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer scatter(input [31:0] v);
+                int acc;
+                acc = 8'hF0;
+                {acc[1:0], acc[3:2]} = v[3:0];
+                scatter = acc;
+            endfunction
+
+            parameter integer TEST_PARTIAL = scatter(32'hA5);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
+
+    // 0xF0 with low nibble scattered from 0xA5 -> 0xF5.
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("TEST_PARTIAL"), 245}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, concat_lvalue_truncation_in_function) {
+    // Narrower total than RHS truncates the excess top bits with a warning.
+    // (Single-member `{r[1:0]} = x` keeps single-assignment behavior by
+    // design, so truncation is pinned with two members.)
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer narrow(input [31:0] v);
+                int r;
+                int dummy;
+                {r[1:0], dummy[1:0]} = v;
+                narrow = r;
+            endfunction
+
+            parameter integer TEST_NARROW = narrow(32'hA5);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
+
+    // Low 2 bits of 0xA5.
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("TEST_NARROW"), 1}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, concat_lvalue_negative_rhs_in_function) {
+    // Negative RHS values mask to their native width and zero-fill above it
+    // (Xcelium parity): `{a, b} = -1` gives a = 0, b = -1, never
+    // sign-extended.
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer neg(input [31:0] v);
+                int a;
+                int b;
+                {a, b} = v;
+                neg = a + b;
+            endfunction
+
+            parameter integer TEST_NEG = neg(-1);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("TEST_NEG"), -1}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(parameter_extraction, concat_lvalue_nested_in_function) {
+    auto test_pattern = R"(
+        module test_mod #(
+        )();
+            function integer nested(input [31:0] v);
+                int a;
+                int b;
+                int c;
+                {{a, b}, c} = v;
+                nested = a + b + c;
+            endfunction
+
+            parameter integer TEST_NESTED = nested(11);
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = std::static_pointer_cast<hdl_resource_statement>(analyzer.analyze("", test_pattern).value().get_content()[0]);
+
+    parameter_solver::propagate_functions(resource, nullptr);
+    auto defaults = parameter_solver::process_parameters(resource->get_parameter_statements(), {});
+
+    std::map<qualified_identifier, resolved_parameter> check_defaults  = {
+        {qualified_identifier("TEST_NESTED"), 11}
+    };
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}

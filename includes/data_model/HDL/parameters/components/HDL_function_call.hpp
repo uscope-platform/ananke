@@ -82,7 +82,8 @@ private:
         std::map<int64_t, hdl_integer> &value_map,
         std::map<int64_t, int64_t> &size_map,
         const std::shared_ptr<hdl_type> &rt,
-        const std::optional<resolved_type> &expected_type = std::nullopt
+        const std::optional<resolved_type> &expected_type = std::nullopt,
+        const std::map<std::string, int64_t> &local_widths = {}
     );
     // Single-target body shared by plain assignments and, per member, by
     // concatenation assignments below.
@@ -102,13 +103,15 @@ private:
         const std::string &fcn_name,
         const std::vector<qualified_identifier> &targets,
         const std::vector<std::shared_ptr<Expression_base>> &indices,
+        const std::vector<concat_member_select> &selects,
         const std::shared_ptr<Expression_base> &value_expr,
         const std::expected<resolved_parameter, solver_errors> &val,
         std::map<qualified_identifier, resolved_parameter> &ctx,
         std::map<int64_t, hdl_integer> &value_map,
         std::map<int64_t, int64_t> &size_map,
         const std::shared_ptr<hdl_type> &rt,
-        const std::optional<resolved_type> &expected_type
+        const std::optional<resolved_type> &expected_type,
+        const std::map<std::string, int64_t> &local_widths
     );
 
     std::string function_name;

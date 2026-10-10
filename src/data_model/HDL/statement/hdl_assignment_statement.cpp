@@ -55,12 +55,18 @@ bool hdl_assignment_statement::equals(const hdl_statement_base& other) const {
     }
     // A missing slot and an explicit null both mean "whole variable": the
     // factory always populates parallel slots, hand-built statements often
-    // omit them.
+    // omit them. Same for member bounds (absent ≡ all-absent).
     size_t n_indices = std::max(indices.size(), rhs.indices.size());
     for (size_t i = 0; i < n_indices; ++i) {
         std::shared_ptr<Expression_base> a = i < indices.size() ? indices[i] : nullptr;
         std::shared_ptr<Expression_base> b = i < rhs.indices.size() ? rhs.indices[i] : nullptr;
         if (!same_index(a, b)) return false;
+    }
+    size_t n_selects = std::max(member_selects.size(), rhs.member_selects.size());
+    for (size_t i = 0; i < n_selects; ++i) {
+        concat_member_select a = i < member_selects.size() ? member_selects[i] : concat_member_select{};
+        concat_member_select b = i < rhs.member_selects.size() ? rhs.member_selects[i] : concat_member_select{};
+        if (a.has_bounds() != b.has_bounds() || a.hi != b.hi || a.lo != b.lo) return false;
     }
     bool res = (!value && !rhs.value) || (value && rhs.value && *value == *rhs.value);
     return res;

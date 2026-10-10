@@ -1402,6 +1402,7 @@ TEST(function_processing, concatenation_lvalue_recorded) {
                        qualified_identifier("imm"), qualified_identifier("imm")});
     stmt->set_indices({nullptr, nullptr, std::make_shared<Numeric_token>("2"),
                        std::make_shared<Numeric_token>("3")});
+    stmt->set_member_selects({{5, 4}, {9, 6}, {-1, -1}, {-1, -1}});
     stmt->set_value(std::make_shared<Identifier_token>(qualified_identifier("opcode")));
     check_f.add_statement(stmt);
 
@@ -1515,3 +1516,4 @@ TEST(function_processing, concatenation_lvalue_strict_drops) {
 
     EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
 }
+

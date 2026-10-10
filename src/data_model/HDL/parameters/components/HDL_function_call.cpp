@@ -195,28 +195,227 @@ void HDL_function_call::apply_member_assignment(
     }
 }
 
-// Concatenation assignment (`{a[1:0], b} = X`): every member is written,
-// each exactly like the equivalent single assignment (whole-var, selects as
-// the single path models them today — including its dropping of range
-// selects). Slicing the shared RHS across members would need bit-precise
-// write modeling for single assignments first; until then consistency wins
-// over precision, and the file stays alive with exact write edges.
+// Concatenation assignment (`{a[1:0], b} = X`): every member is written.
+// Members with literal `[msb:lsb]` bounds are unpacked MSB-first out of the
+// shared RHS with a read-modify-write merge into their current value
+// (absent reads as 0, per the 2-state rule); everything else behaves exactly
+// like the equivalent single assignment (whole-var, selects as today).
 void HDL_function_call::apply_concat_assignment(
     const std::string &fcn_name,
     const std::vector<qualified_identifier> &targets,
     const std::vector<std::shared_ptr<Expression_base>> &indices,
+    const std::vector<concat_member_select> &selects,
     const std::shared_ptr<Expression_base> &value_expr,
     const std::expected<resolved_parameter, solver_errors> &val,
     std::map<qualified_identifier, resolved_parameter> &ctx,
     std::map<int64_t, hdl_integer> &value_map,
     std::map<int64_t, int64_t> &size_map,
     const std::shared_ptr<hdl_type> &rt,
-    const std::optional<resolved_type> &expected_type
+    const std::optional<resolved_type> &expected_type,
+    const std::map<std::string, int64_t> &local_widths
 ) {
-    for (size_t i = 0; i < targets.size(); ++i) {
+    auto record_whole = [&](size_t i) {
         std::shared_ptr<Expression_base> index = i < indices.size() ? indices[i] : nullptr;
         apply_member_assignment(fcn_name, targets[i], index, value_expr, val, ctx,
                                 value_map, size_map, rt, expected_type);
+    };
+    bool warned = false;
+    auto warn_once = [&](const std::string &what) {
+        if (!warned) {
+            warned = true;
+            spdlog::warn("Concatenation assignment {} in function '{}', proceeding", what, fcn_name);
+        }
+    };
+    if (!val.has_value()) return;
+    // 1. Shared RHS as bits, masked to its native width and zero-filled
+    // above it (Xcelium parity: `{a, b} = -1` gives a = 0, b = -1, never
+    // sign-extended). Native width is the explicit size when carried, else
+    // the declared width of a bare identifier RHS, else the 32-bit unsized
+    // default. Non-integral values have no bits to split: record whole.
+    wide_integer rhs_bits = 0;
+    int64_t rhs_width = 0;
+    if (val.value().is_integer()) {
+        const auto &iv = val.value().get_integer();
+        int64_t native = -1;
+        if (iv.has_explicit_size() && iv.get_size() > 0) {
+            native = static_cast<int64_t>(iv.get_size());
+        } else if (value_expr && value_expr->is<Identifier_token>()) {
+            const auto &rid = value_expr->as<Identifier_token>().get_value();
+            if (rid.is_bare()) {
+                auto hit = local_widths.find(rid.get_name());
+                if (hit != local_widths.end()) native = hit->second;
+            }
+        }
+        if (native < 0) {
+            // No declared width anywhere: computed values keep their minimal
+            // width, everything else defaults to 32-bit unsized (house rule).
+            uint64_t minimal = iv.get_size();
+            if (minimal < 32) minimal = 32;
+            native = minimal > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())
+                         ? 32
+                         : static_cast<int64_t>(minimal);
+        }
+        rhs_bits = iv.to_wide() & hdl_integer::width_mask(native).to_wide();
+        rhs_width = native;
+    } else if (val.value().is_int_array()) {
+        auto packed = val.value().get_int_array().get_1d_slice({0, 0});
+        if (packed.empty()) return;
+        int64_t shift = 0;
+        for (const auto &e : packed) {
+            rhs_bits = rhs_bits | (wide_integer(e.truncate_to(e.get_size()).to_wide()) << shift);
+            shift += static_cast<int64_t>(e.get_size());
+            rhs_width = shift;
+        }
+    } else {
+        for (size_t i = 0; i < targets.size(); ++i) record_whole(i);
+        return;
+    }
+    // 2. Per-member measurability. Unpacking needs each member's width;
+    // slicing additionally needs every previous width (offsets). Function
+    // and struct members always take the whole value through their dedicated
+    // paths, but a known width still advances the cursor for followers.
+    struct measure {
+        int64_t width = -1;
+        int64_t lo = -1;
+        bool slice = false;
+        bool bare = false;
+        bool routed_whole = false;
+    };
+    auto struct_field_width = [&](const qualified_identifier &target) -> int64_t {
+        if (!rt || !rt->is<HDL_struct_type>() || target.get_instance().size() != 1 ||
+            target.get_instance().front() != fcn_name)
+            return -1;
+        for (const auto &member : rt->as<HDL_struct_type>().member) {
+            if (member.name == target.get_name())
+                return declared_member_width(member.type, ctx, -1);
+        }
+        return -1;
+    };
+    std::vector<measure> measures(targets.size());
+    for (size_t i = 0; i < targets.size(); ++i) {
+        const auto &target = targets[i];
+        const bool is_fcn = target.get_instance().empty() && target.get_name() == fcn_name;
+        concat_member_select sel = i < selects.size() ? selects[i] : concat_member_select{};
+        if (is_fcn) {
+            measures[i].routed_whole = true;
+            continue;
+        }
+        if (sel.has_bounds()) {
+            measures[i].width = (sel.hi > sel.lo ? sel.hi - sel.lo : sel.lo - sel.hi) + 1;
+            measures[i].lo = sel.hi > sel.lo ? sel.lo : sel.hi;
+            // Struct fields keep their dedicated whole-value path; every
+            // other bounded member (plain or hierarchical) slices.
+            if (struct_field_width(target) >= 0 && !target.get_instance().empty()) {
+                measures[i].routed_whole = true;
+            } else {
+                measures[i].slice = true;
+            }
+            continue;
+        }
+        std::shared_ptr<Expression_base> index = i < indices.size() ? indices[i] : nullptr;
+        if (index) {
+            // Single-bit select: width 1 by language rule, recorded through
+            // the existing index path exactly like a single assignment.
+            measures[i].width = 1;
+            continue;
+        }
+        if (!target.get_instance().empty()) {
+            int64_t struct_width = struct_field_width(target);
+            if (struct_width > 0) {
+                measures[i].width = struct_width;
+            } else {
+                auto found = ctx.find(target);
+                if (found != ctx.end() && found->second.is_integer() &&
+                    found->second.get_integer().get_size() > 0)
+                    measures[i].width = static_cast<int64_t>(found->second.get_integer().get_size());
+            }
+            continue;
+        }
+        auto hit = local_widths.find(target.get_name());
+        if (hit != local_widths.end()) {
+            measures[i].width = hit->second;
+            measures[i].bare = true;
+            continue;
+        }
+        auto found = ctx.find(target);
+        if (found != ctx.end() && found->second.is_integer() && found->second.get_integer().get_size() > 0) {
+            measures[i].width = static_cast<int64_t>(found->second.get_integer().get_size());
+            measures[i].bare = true;
+        }
+    }
+    for (auto &m : measures) {
+        if (m.width <= 0) m.width = -1;
+    }
+    // 3. Normalize once when every width is known (standard assignment
+    // conversion: truncate excess top bits with a warning, zero-extend).
+    bool all_known = true;
+    int64_t total = 0;
+    for (const auto &m : measures) {
+        if (m.width < 0) { all_known = false; break; }
+        total += m.width;
+    }
+    if (all_known && total != rhs_width) {
+        if (total < rhs_width) {
+            warn_once("has " + std::to_string(rhs_width) + "-bit RHS into " +
+                      std::to_string(total) + " bits, truncating");
+            rhs_bits = rhs_bits & hdl_integer::width_mask(total).to_wide();
+        }
+        rhs_width = total;
+    }
+    // 4. MSB-first walk. The first unmeasurable member (and everything after
+    // it, whose offsets are unknowable) takes the whole value. Bare members
+    // slice like everyone else and replace (whole variable, no merge).
+    int64_t cursor = rhs_width;
+    bool cursor_known = true;
+    for (size_t i = 0; i < targets.size(); ++i) {
+        const auto &target = targets[i];
+        if (!cursor_known || measures[i].width < 0) {
+            record_whole(i);
+            cursor_known = false;
+            continue;
+        }
+        int64_t take = std::min(measures[i].width, cursor);
+        if (take <= 0) {
+            warn_once("has " + std::to_string(rhs_width) + "-bit RHS exhausted, zero-padding");
+            record_whole(i);
+            cursor_known = false;
+            continue;
+        }
+        if (take < measures[i].width) {
+            warn_once("has " + std::to_string(rhs_width) + "-bit RHS exhausted, zero-padding");
+            cursor_known = false;
+        }
+        if (!measures[i].slice) {
+            if (measures[i].bare) {
+                wide_integer part = (rhs_bits >> (cursor - take)) & hdl_integer::width_mask(take).to_wide();
+                cursor -= take;
+                hdl_integer result;
+                result.set_value(part);
+                result.set_size(take);
+                ctx[target] = resolved_parameter(result);
+                continue;
+            }
+            record_whole(i);
+            cursor -= take;
+            continue;
+        }
+        int64_t lo = measures[i].lo;
+        wide_integer field_mask = hdl_integer::width_mask(take).to_wide() << lo;
+        wide_integer slice = ((rhs_bits >> (cursor - take)) & hdl_integer::width_mask(take).to_wide()) << lo;
+        cursor -= take;
+        wide_integer current = 0;
+        uint64_t current_size = 0;
+        if (auto found = ctx.find(target); found != ctx.end() && found->second.is_integer()) {
+            current = found->second.get_integer().to_wide();
+            current_size = found->second.get_integer().get_size();
+        }
+        wide_integer merged = (current & ~field_mask) | slice;
+        hdl_integer result;
+        result.set_value(merged);
+        uint64_t want_size = static_cast<uint64_t>(lo + take);
+        if (current_size > want_size) want_size = current_size;
+        result.set_size(static_cast<int64_t>(want_size));
+        ctx[target] = resolved_parameter(result);
     }
 }
 
@@ -311,7 +510,8 @@ void HDL_function_call::walk_body(
     std::map<int64_t, hdl_integer> &value_map,
     std::map<int64_t, int64_t> &size_map,
     const std::shared_ptr<hdl_type> &rt,
-    const std::optional<resolved_type> &expected_type
+    const std::optional<resolved_type> &expected_type,
+    const std::map<std::string, int64_t> &local_widths
 ) {
     for (const auto &stmt : stmts) {
         if (auto asgn = std::dynamic_pointer_cast<hdl_assignment_statement>(stmt)) {
@@ -325,8 +525,8 @@ void HDL_function_call::walk_body(
             const auto &targets = asgn->get_targets();
             const auto &indices = asgn->get_indices();
             if (targets.size() > 1) {
-                apply_concat_assignment(fcn_name, targets, indices, asgn->get_value(), val, ctx,
-                                        value_map, size_map, rt, expected_type);
+                apply_concat_assignment(fcn_name, targets, indices, asgn->get_member_selects(), asgn->get_value(), val, ctx,
+                                        value_map, size_map, rt, expected_type, local_widths);
                 continue;
             }
             const qualified_identifier &target = targets.empty() ? no_target : targets.front();
@@ -343,7 +543,7 @@ void HDL_function_call::walk_body(
             for (auto &idx : indices) {
                 auto loop_ctx = ctx;
                 loop_ctx[loop_var] = resolved_parameter(idx);
-                walk_body(fcn_name, loop->get_body(), loop_ctx, value_map, size_map, rt, expected_type);
+                walk_body(fcn_name, loop->get_body(), loop_ctx, value_map, size_map, rt, expected_type, local_widths);
                 // Scalar updates (locals, accumulators) must survive into
                 // later iterations: loop_ctx is per-iteration scratch, while
                 // return-target writes already persist via value_map. Only
@@ -365,7 +565,7 @@ void HDL_function_call::walk_body(
                                  MAX_SEQUENTIAL_ITERATIONS);
                     break;
                 }
-                walk_body(fcn_name, while_loop->get_body(), ctx, value_map, size_map, rt, expected_type);
+                walk_body(fcn_name, while_loop->get_body(), ctx, value_map, size_map, rt, expected_type, local_widths);
                 iteration_count++;
             }
         } else if (auto repeat_loop = std::dynamic_pointer_cast<hdl_repeat_statement>(stmt)) {
@@ -379,7 +579,7 @@ void HDL_function_call::walk_body(
                 reps = MAX_SEQUENTIAL_ITERATIONS;
             }
             for (int64_t i = 0; i < reps; i++) {
-                walk_body(fcn_name, repeat_loop->get_body(), ctx, value_map, size_map, rt, expected_type);
+                walk_body(fcn_name, repeat_loop->get_body(), ctx, value_map, size_map, rt, expected_type, local_widths);
             }
         } else if (auto do_loop = std::dynamic_pointer_cast<hdl_do_while_statement>(stmt)) {\
             int64_t iteration_count = 0;
@@ -389,7 +589,7 @@ void HDL_function_call::walk_body(
                                  MAX_SEQUENTIAL_ITERATIONS);
                     break;
                 }
-                walk_body(fcn_name, do_loop->get_body(), ctx, value_map, size_map, rt, expected_type);
+                walk_body(fcn_name, do_loop->get_body(), ctx, value_map, size_map, rt, expected_type, local_widths);
                 iteration_count++;
                 if (do_loop->get_end_condition()) {
                     auto cond = do_loop->get_end_condition()->evaluate(ctx, expected_type);
@@ -406,13 +606,13 @@ void HDL_function_call::walk_body(
                     auto result = branch.condition->evaluate(ctx, expected_type);
                     if (result.has_value() && result.value().is_integer() && result.value().get_integer() != 0) {
                         matched = true;
-                        walk_body(fcn_name, branch.body, ctx, value_map, size_map, rt, expected_type);
+                        walk_body(fcn_name, branch.body, ctx, value_map, size_map, rt, expected_type, local_widths);
                         break;
                     }
                 }
             }
             if (!matched)
-                walk_body(fcn_name, cond->get_else_body(), ctx, value_map, size_map, rt, expected_type);
+                walk_body(fcn_name, cond->get_else_body(), ctx, value_map, size_map, rt, expected_type, local_widths);
         }
     }
 }
@@ -516,11 +716,24 @@ std::expected<resolved_parameter, solver_errors> HDL_function_call::evaluate(con
         }
     }
 
-    // 4. Walk the SHARED definition body read-only. Nothing here writes
+    // 4. Declared widths of function locals, for unpacking bare concatenation
+    // members (`{a, b} = v` needs `a`/`b` widths; no types are visible
+    // inside the walk itself). Unresolvable types stay absent = unmeasurable.
+    std::map<std::string, int64_t> local_widths;
+    for (const auto &local : linked_->get_local_variables()) {
+        if (!local || !local->get_type()) continue;
+        auto resolved = local->get_type()->evaluate_type(call_ctx);
+        if (!resolved || resolved->packed_sizes.empty()) continue;
+        uint64_t width = packed_width(*resolved);
+        if (width == 0 || width > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) continue;
+        local_widths[local->get_name()] = static_cast<int64_t>(width);
+    }
+
+    // 5. Walk the SHARED definition body read-only. Nothing here writes
     // through linked_: per-site state lives in call_ctx and the maps below.
     std::map<int64_t, hdl_integer> value_map;
     std::map<int64_t, int64_t> size_map;
-    walk_body(function_name, linked_->get_body(), call_ctx, value_map, size_map, linked_->get_return_type(), expected_type);
+    walk_body(function_name, linked_->get_body(), call_ctx, value_map, size_map, linked_->get_return_type(), expected_type, local_widths);
 
     if (value_map.empty()) return std::unexpected{missing_value};
 

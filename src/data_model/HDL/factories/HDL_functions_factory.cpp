@@ -34,8 +34,8 @@ void HDL_functions_factory::start_concat_lvalue() {
     in_concat = true;
 }
 
-void HDL_functions_factory::add_concat_target(const qualified_identifier &n) {
-    pending_concat_targets.emplace_back(n, nullptr);
+void HDL_functions_factory::add_concat_target(const qualified_identifier &n, concat_member_select select) {
+    pending_concat_targets.push_back({n, nullptr, select});
     lvalue_open = true;
 }
 
@@ -83,7 +83,7 @@ void HDL_functions_factory::close_lvalue() {
         // Stash this member's `[...]` (if any) into its own slot. The top
         // node's own exit-close finds nothing pending and is a safe no-op.
         if (pending_lhs_index && !pending_concat_targets.empty()) {
-            pending_concat_targets.back().second = pending_lhs_index;
+            pending_concat_targets.back().index = pending_lhs_index;
             pending_lhs_index = nullptr;
         }
         lvalue_open = false;
@@ -118,14 +118,18 @@ void HDL_functions_factory::finish_assignment() {
     if (in_concat) {
         std::vector<qualified_identifier> targets;
         std::vector<std::shared_ptr<Expression_base>> indices;
+        std::vector<concat_member_select> selects;
         targets.reserve(pending_concat_targets.size());
         indices.reserve(pending_concat_targets.size());
+        selects.reserve(pending_concat_targets.size());
         for (auto &entry : pending_concat_targets) {
-            targets.push_back(entry.first);
-            indices.push_back(entry.second);
+            targets.push_back(entry.target);
+            indices.push_back(entry.index);
+            selects.push_back(entry.select);
         }
         stmt->set_targets(targets);
         stmt->set_indices(indices);
+        stmt->set_member_selects(selects);
         pending_concat_targets.clear();
         in_concat = false;
     } else {

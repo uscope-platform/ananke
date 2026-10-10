@@ -2377,6 +2377,33 @@ bool sv_visitor::handle_streaming_lvalue(sv2017::Variable_lvalueContext *ctx) {
     return true;
 }
 
+// Literal `[msb:lsb]` bounds of a concatenation member. Ranges live in the
+// hier-id rule's trailing range group, not in bit_select() (single-bit
+// only there); `getText` is whitespace-free by ANTLR construction.
+// Anything else (bare, single-bit, part-selects, multiple selects) yields
+// no bounds: single-bit members ride the stored index expression exactly
+// like single assignments, the rest fall back.
+static concat_member_select parse_concat_member_select(
+    sv2017::Package_or_class_scoped_hier_id_with_selectContext *hier) {
+    if (hier == nullptr) return {};
+    if (hier->COLON() == nullptr || hier->operator_plus_minus() != nullptr) return {};
+    const auto bounds = hier->expression();
+    if (bounds.size() != 2 || bounds[0] == nullptr || bounds[1] == nullptr) return {};
+    const auto is_digits = [](const std::string &s) {
+        return !s.empty() && std::all_of(s.begin(), s.end(),
+                                         [](char c) { return c >= '0' && c <= '9'; });
+    };
+    const std::string hi_s = bounds[0]->getText();
+    const std::string lo_s = bounds[1]->getText();
+    if (!is_digits(hi_s) || !is_digits(lo_s)) return {};
+    try {
+        return {static_cast<int64_t>(std::stoll(hi_s)),
+                static_cast<int64_t>(std::stoll(lo_s))};
+    } catch (const std::exception &) {
+        return {};
+    }
+}
+
 // Concatenation lvalue (`{a[1:0], b[0]} = X`, the dasm bit-scatter shape).
 // Members are collected depth-first into the factory's concat frame
 // (nested concatenations recurse) and emitted as one multi-target statement
@@ -2474,7 +2501,8 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
         // Concatenation members bypass loop-phase handling: a concatenation
         // cannot legally initialize a loop, and body recording dominates.
         // Member `[...]` capture is driven by add_concat_target/close_lvalue
-        // in the factory frame (see start_concat_lvalue).
+        // in the factory frame (see start_concat_lvalue); literal ranges are
+        // captured as bounds for evaluation-time unpacking.
         if (f_factory.in_concat_lvalue()) {
             qualified_identifier target_qi(dotted.empty() ? leaf : dotted.back());
             if (!dotted.empty()) {
@@ -2482,7 +2510,7 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
                 inst.insert(inst.end(), dotted.begin(), dotted.end() - 1);
                 target_qi.set_instance_prefix(inst);
             }
-            f_factory.add_concat_target(target_qi);
+            f_factory.add_concat_target(target_qi, parse_concat_member_select(hier));
             return;
         }
         // Loop headers (init/end/step) still belong to loops_factory
