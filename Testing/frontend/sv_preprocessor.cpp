@@ -1389,6 +1389,60 @@ TEST(preprocessor, simple_macro_empty_without_defaults) {
 }
 
 
+TEST(preprocessor, whitespace_only_actual_uses_default) {
+    // `, ,` actuals (as in `downcast(blk, parent, , , `gfn)) must read as
+    // empty so formal defaults apply, not as a single blank.
+    auto test_pattern = R"(
+        `define  ADD(a=5, b=7)  a+b
+        module test_module ();
+            parameter TEST_PARAM = `ADD( , );
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            parameter TEST_PARAM = 5+7;
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+}
+
+
+TEST(preprocessor, paste_with_blank_actual_fuses_default) {
+    // Mirrors dv_macros.svh: `my_``SEV_ with a blank SEV_ actual must fuse
+    // with the default (fatal), not produce a phantom `my_ macro use.
+    auto test_pattern = R"(
+        `define my_fatal(MSG_) $fatal(MSG_)
+        `define WRAP(A_, SEV_=fatal) `my_``SEV_(A_)
+        module test_module ();
+            initial begin
+                `WRAP("boom", , )
+            end
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            initial begin
+                $fatal("boom")
+            end
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_TRUE(preproc.get_undefined_macros().empty());
+}
+
+
 TEST(preprocessor, comma_in_string_argument) {
     std::string test_pattern = R"(
         `define DISPLAY_MSG( msg, suffix) initial $display("%s %s", msg, suffix);

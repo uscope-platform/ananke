@@ -306,7 +306,12 @@ namespace preprocessor {
                     if (c==',') string_length--;
                     auto arg_text = raw_arguments.substr(current_arg_start, string_length);
                     current_arg_start = i+1;
-                    arguments.emplace_back(ltrim(arg_text));
+                    // Fully trim: a whitespace-only actual (`, ,`) must read
+                    // as empty so the formal default applies (LRM 22.5.1).
+                    // ltrim alone leaves " " non-empty, which both skips the
+                    // default and breaks `` pastes (`dv_``SEV_ with blank
+                    // SEV_ fused into a phantom `dv_ use).
+                    arguments.emplace_back(trim(arg_text));
                 }
             }
         }
