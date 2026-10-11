@@ -200,17 +200,14 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 auto included_file = parse_include_path(trimmed_line);
                 if (included_file.has_value()) {
                     includes.insert(included_file.value());
-                    if (included_file.value().path == path || active_includes.contains(included_file.value().path)) {
-                        // Ancestor re-entry: skip instead of failing. Guarded
-                        // mutual includes (A includes B includes A behind an
-                        // ifndef guard) are a deliberate safe idiom: skipping
-                        // is equivalent to reprocessing for visible
-                        // definitions, and avoids emitting duplicate code.
-                        // Guardless true cycles also terminate here; the depth
-                        // cap below still backstops deep acyclic chains.
-                        spdlog::trace("Skipping recursive include of {} in file {} (already being processed)",
-                                      included_file.value().path, path);
-                    } else {
+                    {
+                        // Ancestor re-entry (including guarded mutual includes
+                        // such as A includes B includes A behind an ifndef
+                        // guard) is reprocessed so the guards evaluate
+                        // naturally through the shared definitions map; the
+                        // guarded body then yields empty as designed.
+                        // Guardless true cycles are bounded by the depth cap
+                        // below instead of crashing the stack.
                         auto saved_path = path;
                         auto saved_line = line_number;
                         path = included_file.value().path;
@@ -220,15 +217,11 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                         auto f_opt = mm_file::try_open(path);
                         if (!f_opt.has_value()) {
                             report_error(fmt::format("Could not open include file: {}", path));
-                        } else if (claim_include_file(path)) {
-                            // Same file via a different spelling
-                            // (symlink/relative path): same skip treatment.
-                            spdlog::trace("Skipping recursive include of {} in file {} (already being processed)",
-                                          path, saved_path);
                         } else if (include_nesting_depth >= MAX_INCLUDE_DEPTH) {
                             report_error(fmt::format("Maximum include depth ({}) exceeded including file {} in file {}",
                                                      MAX_INCLUDE_DEPTH, path, saved_path));
                         } else {
+                            claim_include_file(path);
                             include_depth_guard depth_guard;
                             auto content = preprocess_body(f_opt->view(), output_line_n);
                             if (!error) { out << content; out.put('\n'); }
@@ -711,14 +704,6 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                     continue;
                 }
                 includes.insert(included_file.value());
-                if (included_file.value().path == path ||
-                    active_includes.contains(included_file.value().path)) {
-                    // Same ancestor skip as the main loop above: guarded
-                    // mutual includes are a safe idiom, not an error.
-                    spdlog::trace("Skipping recursive include of {} in file {} (already being processed)",
-                                  included_file.value().path, path);
-                    continue;
-                }
                 auto saved_path = path;
                 auto saved_line = line_number;
                 path = included_file.value().path;
@@ -727,10 +712,6 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 auto f_opt = mm_file::try_open(path);
                 if (!f_opt.has_value()) {
                     report_error(fmt::format("Could not open include file: {}", path));
-                } else if (claim_include_file(path)) {
-                    // Same-file-different-spelling cycle: same skip treatment.
-                    spdlog::trace("Skipping recursive include of {} in file {} (already being processed)",
-                                  path, saved_path);
                 } else if (include_nesting_depth >= MAX_INCLUDE_DEPTH) {
                     report_error(fmt::format("Maximum include depth ({}) exceeded including file {} in file {}",
                                              MAX_INCLUDE_DEPTH, path, saved_path));

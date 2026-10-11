@@ -2073,9 +2073,10 @@ TEST(preprocessor, recursive_macro_capped) {
     EXPECT_TRUE(preproc.has_error());
 }
 
-TEST(preprocessor, self_include_skipped) {
-    // A file that includes itself terminates: the re-entrant include is
-    // skipped, the rest of the file still processes, no error.
+TEST(preprocessor, self_include_rejected) {
+    // A file that includes itself recurses until the depth cap and errors
+    // out instead of crashing the stack. (Guarded mutual includes, by
+    // contrast, terminate cleanly via their guards.)
     std::filesystem::create_directories("/tmp/ananke_inc_test");
     std::string inc = "/tmp/ananke_inc_test/self.svh";
     {
@@ -2086,9 +2087,8 @@ TEST(preprocessor, self_include_skipped) {
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/ananke_inc_test/main.sv");
-    auto result = preproc.preprocess(pattern);
-    EXPECT_FALSE(preproc.has_error());
-    EXPECT_THAT(result, testing::HasSubstr("wire self_wire;"));
+    preproc.preprocess(pattern);
+    EXPECT_TRUE(preproc.has_error());
     std::filesystem::remove_all("/tmp/ananke_inc_test");
 }
 
@@ -2295,9 +2295,10 @@ TEST(preprocessor, covergroup_token_paste_with_keyword_name) {
 }
 
 TEST(preprocessor, recursive_include_different_spelling) {
-    // Same file reached through different path spellings terminates cleanly:
-    // the re-entrant include is skipped instead of recursing until stack
-    // exhaustion (EXC_BAD_ACCESS on the guard page, deep stack).
+    // Same file reached through different path spellings recurses until the
+    // depth cap and errors out instead of recursing until stack exhaustion
+    // (EXC_BAD_ACCESS on the guard page, deep stack). Guarded mutual
+    // includes, by contrast, terminate cleanly via their guards.
     std::filesystem::create_directories("/tmp/ananke_rec_test");
     {
         std::ofstream ofs("/tmp/ananke_rec_test/main.sv");
@@ -2317,11 +2318,10 @@ TEST(preprocessor, recursive_include_different_spelling) {
     sv_preprocessor preproc;
     preproc.set_path("/tmp/ananke_rec_test/main.sv");
 
-    auto result = preproc.preprocess(test_pattern);
+    preproc.preprocess(test_pattern);
     std::filesystem::remove_all("/tmp/ananke_rec_test");
 
-    EXPECT_FALSE(preproc.has_error());
-    EXPECT_THAT(result, testing::HasSubstr("module test_module"));
+    EXPECT_TRUE(preproc.has_error());
 }
 
 TEST(preprocessor, guarded_mutual_include_resolves) {
