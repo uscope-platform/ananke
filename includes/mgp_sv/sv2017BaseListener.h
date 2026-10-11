@@ -699,6 +699,9 @@ public:
   virtual void enterCover_cross(sv2017::Cover_crossContext * /*ctx*/) override { }
   virtual void exitCover_cross(sv2017::Cover_crossContext * /*ctx*/) override { }
 
+  virtual void enterCross_identifier_list(sv2017::Cross_identifier_listContext * /*ctx*/) override { }
+  virtual void exitCross_identifier_list(sv2017::Cross_identifier_listContext * /*ctx*/) override { }
+
   virtual void enterIdentifier_list_2plus(sv2017::Identifier_list_2plusContext * /*ctx*/) override { }
   virtual void exitIdentifier_list_2plus(sv2017::Identifier_list_2plusContext * /*ctx*/) override { }
 

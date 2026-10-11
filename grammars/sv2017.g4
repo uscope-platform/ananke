@@ -1050,8 +1050,14 @@ covergroup_declaration:
                   | {_input->LA(1) != COLON}?
                   );
 cover_cross:
- ( identifier COLON )? KW_CROSS identifier_list_2plus ( KW_IFF LPAREN expression RPAREN )?
+ ( identifier COLON )? KW_CROSS cross_identifier_list ( KW_IFF LPAREN expression RPAREN )?
       cross_body;
+// A cross list nominally names coverpoints, but commercial simulators accept
+// hierarchical references too (implicit coverpoints, e.g. Caliptra
+// aes_cov_if.sv `cross aes2caliptra.kv_data_out_valid, ...`). Accept the
+// wider shape so dependency scanning does not choke on it.
+cross_identifier_list:
+ hierarchical_identifier ( COMMA hierarchical_identifier )+;
 identifier_list_2plus:
  identifier ( COMMA identifier )+;
 cross_body:

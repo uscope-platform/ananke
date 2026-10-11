@@ -697,6 +697,9 @@ public:
   virtual void enterCover_cross(sv2017::Cover_crossContext *ctx) = 0;
   virtual void exitCover_cross(sv2017::Cover_crossContext *ctx) = 0;
 
+  virtual void enterCross_identifier_list(sv2017::Cross_identifier_listContext *ctx) = 0;
+  virtual void exitCross_identifier_list(sv2017::Cross_identifier_listContext *ctx) = 0;
+
   virtual void enterIdentifier_list_2plus(sv2017::Identifier_list_2plusContext *ctx) = 0;
   virtual void exitIdentifier_list_2plus(sv2017::Identifier_list_2plusContext *ctx) = 0;
 

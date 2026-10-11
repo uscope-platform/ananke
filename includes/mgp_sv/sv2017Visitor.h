@@ -474,6 +474,8 @@ public:
 
     virtual std::any visitCover_cross(sv2017::Cover_crossContext *context) = 0;
 
+    virtual std::any visitCross_identifier_list(sv2017::Cross_identifier_listContext *context) = 0;
+
     virtual std::any visitIdentifier_list_2plus(sv2017::Identifier_list_2plusContext *context) = 0;
 
     virtual std::any visitCross_body(sv2017::Cross_bodyContext *context) = 0;

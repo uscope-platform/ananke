@@ -925,6 +925,10 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitCross_identifier_list(sv2017::Cross_identifier_listContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitIdentifier_list_2plus(sv2017::Identifier_list_2plusContext *ctx) override {
     return visitChildren(ctx);
   }
