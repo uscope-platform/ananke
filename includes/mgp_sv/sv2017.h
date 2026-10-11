@@ -9721,10 +9721,10 @@ public:
     antlr4::tree::TerminalNode *RPAREN();
     antlr4::tree::TerminalNode *DOT();
     Class_scopeContext *class_scope();
-    std::vector<Statement_or_nullContext *> statement_or_null();
-    Statement_or_nullContext* statement_or_null(size_t i);
     std::vector<Tf_item_declarationContext *> tf_item_declaration();
     Tf_item_declarationContext* tf_item_declaration(size_t i);
+    std::vector<Statement_or_nullContext *> statement_or_null();
+    Statement_or_nullContext* statement_or_null(size_t i);
     std::vector<Block_item_declarationContext *> block_item_declaration();
     Block_item_declarationContext* block_item_declaration(size_t i);
 
@@ -10492,12 +10492,15 @@ public:
     antlr4::tree::TerminalNode* RPAREN(size_t i);
     std::vector<Block_item_declarationContext *> block_item_declaration();
     Block_item_declarationContext* block_item_declaration(size_t i);
-    antlr4::tree::TerminalNode *KW_SUPER();
-    antlr4::tree::TerminalNode *DOT();
     std::vector<Statement_or_nullContext *> statement_or_null();
     Statement_or_nullContext* statement_or_null(size_t i);
     antlr4::tree::TerminalNode *COLON();
-    List_of_argumentsContext *list_of_arguments();
+    std::vector<antlr4::tree::TerminalNode *> KW_SUPER();
+    antlr4::tree::TerminalNode* KW_SUPER(size_t i);
+    std::vector<antlr4::tree::TerminalNode *> DOT();
+    antlr4::tree::TerminalNode* DOT(size_t i);
+    std::vector<List_of_argumentsContext *> list_of_arguments();
+    List_of_argumentsContext* list_of_arguments(size_t i);
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;

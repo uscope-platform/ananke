@@ -552,11 +552,16 @@ action_block:
 ;
 seq_block:
     KW_BEGIN ( COLON identifier | {_input->LA(1) != COLON}? )
-        ( block_item_declaration )* ( statement_or_null )*
+        // Strict LRM is ( block_item_declaration )* ( statement_or_null )*,
+        // but real-world UVM code (e.g. Caliptra ahb_mgr_register_layer_vseq)
+        // interleaves `int unsigned hsize = ...` after statements and every
+        // commercial simulator accepts it. Accept the superset.
+        ( block_item_declaration | statement_or_null )*
     KW_END (COLON identifier |  {_input->LA(1) != COLON}?);
 par_block:
     KW_FORK ( COLON identifier | {_input->LA(1) != COLON}? )
-        ( block_item_declaration )* ( statement_or_null )*
+        // Same interleaving extension as seq_block.
+        ( block_item_declaration | statement_or_null )*
     join_keyword ( COLON identifier |  {_input->LA(1) != COLON}? );
 /******************************************** case ********************************************************************/
 case_statement:
@@ -1891,10 +1896,11 @@ dpi_function_import_property:
 dpi_task_import_property: KW_CONTEXT;
 task_and_function_declaration_common:
     ( identifier DOT | class_scope )? identifier
-    ( SEMI ( tf_item_declaration )*
-      | LPAREN tf_port_list RPAREN SEMI ( block_item_declaration )*
+    // Strict LRM keeps declarations before statements; accept interleaved
+    // declarations (VCS/Xcelium/Questa extension, ubiquitous in UVM).
+    ( SEMI ( tf_item_declaration | statement_or_null )*
+      | LPAREN tf_port_list RPAREN SEMI ( block_item_declaration | statement_or_null )*
     )
-    ( statement_or_null )*
 ;
 task_declaration:
     KW_TASK ( lifetime )?
@@ -2064,10 +2070,10 @@ class_constraint:
 constraint_declaration:
   ( KW_STATIC )? KW_CONSTRAINT identifier constraint_block;
 class_constructor_declaration:
- KW_FUNCTION ( class_scope )? KW_NEW ( LPAREN tf_port_list RPAREN )? SEMI
-      ( block_item_declaration )* ( KW_SUPER DOT KW_NEW ( LPAREN ( list_of_arguments )? RPAREN )? SEMI )?
-      ( statement_or_null )*
-      KW_ENDFUNCTION ( COLON KW_NEW )?;
+  KW_FUNCTION ( class_scope )? KW_NEW ( LPAREN tf_port_list RPAREN )? SEMI
+       // Same interleaving extension as tasks; super.new may appear in order.
+       ( block_item_declaration | statement_or_null | ( KW_SUPER DOT KW_NEW ( LPAREN ( list_of_arguments )? RPAREN )? SEMI ) )*
+       KW_ENDFUNCTION ( COLON KW_NEW )?;
 class_property:
   KW_CONST ( class_item_qualifier )* data_type identifier ( ASSIGN ( constant_expression | class_new ) )? SEMI
    | ( property_qualifier )* data_declaration

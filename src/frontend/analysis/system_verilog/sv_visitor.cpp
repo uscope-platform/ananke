@@ -405,6 +405,17 @@ void sv_visitor::capture_enum_base(sv2017::Data_typeContext *dt) {
 }
 
 void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
+    // `import pkg::*;` and net declarations also reduce through
+    // data_declaration. They are handled by their own visitors
+    // (enterPackage_import_declaration files the dependency); there is
+    // no variable declarator here, so skip the local/property flows
+    // below which would otherwise report "Malformed variable declaration".
+    // This matters for function-scoped imports, e.g.
+    //   function ...; import prim_mubi_pkg::*; uvm_reg_data_t out; ...
+    if (ctx->package_import_declaration() || ctx->net_type_declaration()) {
+        capturing_class_property = false;
+        return;
+    }
     // Class-scope properties (`int x;` directly in a class body) resolve
     // their type with the same setup/range flow as parameters; the matching
     // exit files one HDL_parameter per declarator. Typedefs, function locals
@@ -491,6 +502,11 @@ void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
 }
 
 void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
+    volatile std::string dbg = ctx->getText();
+    // See enterData_declaration: imports/net decls carry no declarator.
+    if (ctx->package_import_declaration() || ctx->net_type_declaration()) {
+        return;
+    }
     if (in_function_var_decl) {
         in_function_var_decl = false;
         auto var_decls = ctx->list_of_variable_decl_assignments();
