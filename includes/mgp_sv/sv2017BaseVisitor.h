@@ -1301,6 +1301,10 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitAssoc_literal_pair(sv2017::Assoc_literal_pairContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitDynamic_array_new(sv2017::Dynamic_array_newContext *ctx) override {
     return visitChildren(ctx);
   }

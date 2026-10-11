@@ -979,6 +979,9 @@ public:
   virtual void enterConcatenation(sv2017::ConcatenationContext *ctx) = 0;
   virtual void exitConcatenation(sv2017::ConcatenationContext *ctx) = 0;
 
+  virtual void enterAssoc_literal_pair(sv2017::Assoc_literal_pairContext *ctx) = 0;
+  virtual void exitAssoc_literal_pair(sv2017::Assoc_literal_pairContext *ctx) = 0;
+
   virtual void enterDynamic_array_new(sv2017::Dynamic_array_newContext *ctx) = 0;
   virtual void exitDynamic_array_new(sv2017::Dynamic_array_newContext *ctx) = 0;
 

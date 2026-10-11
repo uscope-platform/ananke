@@ -1367,7 +1367,13 @@ replication_size : expression;
 replication_value : expression;
 
 concatenation:
-    LBRACE (expression ( concatenation | ( COMMA expression )+)?)? RBRACE;
+    LBRACE (expression ( concatenation | ( COMMA expression )+)?)? RBRACE
+    | LBRACE assoc_literal_pair ( COMMA assoc_literal_pair )* RBRACE;
+// Bare-brace associative-array literal without the `'` assignment-pattern
+// prefix (e.g. `dict = { "key": value }`), accepted by commercial simulators
+// and used in Caliptra testbenches (soc_ifc_tb_pkg.sv).
+assoc_literal_pair:
+    ( STRING_LITERAL | KW_DEFAULT | identifier ) COLON expression;
 dynamic_array_new:
     KW_NEW LSQUARE_BR expression RSQUARE_BR ( LPAREN expression RPAREN )?;
 const_or_range_expression:
@@ -1879,7 +1885,9 @@ untyped_function_declaration:
     ;
 
 task_prototype: KW_TASK ( lifetime )? identifier ( LPAREN tf_port_list RPAREN )?;
-function_prototype: KW_FUNCTION ( lifetime )? data_type_or_void identifier ( LPAREN tf_port_list RPAREN )?;
+ // The return type may be omitted (defaults to logic), same as in a
+ // function_declaration; e.g. `extern function lock_fuses();`.
+function_prototype: KW_FUNCTION ( lifetime )? ( data_type_or_void )? identifier ( LPAREN tf_port_list RPAREN )?;
 dpi_function_prototype: KW_FUNCTION ( lifetime )? ( function_data_type_or_implicit )? identifier ( LPAREN tf_port_list RPAREN )?;
 dpi_import_export:
  ( KW_IMPORT STRING_LITERAL ( ( dpi_function_import_property )? ( ( C_IDENTIFIER

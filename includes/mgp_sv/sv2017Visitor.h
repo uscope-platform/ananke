@@ -662,6 +662,8 @@ public:
 
     virtual std::any visitConcatenation(sv2017::ConcatenationContext *context) = 0;
 
+    virtual std::any visitAssoc_literal_pair(sv2017::Assoc_literal_pairContext *context) = 0;
+
     virtual std::any visitDynamic_array_new(sv2017::Dynamic_array_newContext *context) = 0;
 
     virtual std::any visitConst_or_range_expression(sv2017::Const_or_range_expressionContext *context) = 0;

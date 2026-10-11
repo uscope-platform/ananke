@@ -25,6 +25,7 @@ set(ANANKE_TESTS
         frontend/macro_quarantine.cpp
         frontend/sv_class_tracking.cpp
         frontend/sv_coverage_parsing.cpp
+        frontend/sv_compat_parsing.cpp
         frontend/typedef_parsing.cpp
         frontend/source_mapping.cpp
         frontend/ignore_matcher.cpp

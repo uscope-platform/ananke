@@ -981,6 +981,9 @@ public:
   virtual void enterConcatenation(sv2017::ConcatenationContext * /*ctx*/) override { }
   virtual void exitConcatenation(sv2017::ConcatenationContext * /*ctx*/) override { }
 
+  virtual void enterAssoc_literal_pair(sv2017::Assoc_literal_pairContext * /*ctx*/) override { }
+  virtual void exitAssoc_literal_pair(sv2017::Assoc_literal_pairContext * /*ctx*/) override { }
+
   virtual void enterDynamic_array_new(sv2017::Dynamic_array_newContext * /*ctx*/) override { }
   virtual void exitDynamic_array_new(sv2017::Dynamic_array_newContext * /*ctx*/) override { }
 
