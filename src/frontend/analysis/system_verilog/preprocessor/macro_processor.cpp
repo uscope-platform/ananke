@@ -150,7 +150,36 @@ namespace preprocessor {
             // advancing `remaining` can never alias the `result` buffer that
             // is being built in this pass.
             std::string_view remaining = working;
+            // String-literal awareness for this pass: a `name inside "..." is
+            // prose (e.g. "did you forget to call `set_sequencer()?"), not an
+            // invocation. State is tracked over the pass *input* (`working`);
+            // consumed macro-call text is quote-balanced, hence net-neutral,
+            // so only the plain-text gaps need syncing.
+            size_t quote_scanned = 0;
+            bool in_string = false;
+            auto sync_string_state = [&](size_t upto) {
+                for (; quote_scanned < upto; ++quote_scanned) {
+                    if (working[quote_scanned] != '"') continue;
+                    const bool escaped = quote_scanned > 0 && working[quote_scanned - 1] == '\\';
+                    // A quote right after a backtick while already inside a
+                    // string is literal (e.g. `"a `" b"`); outside strings
+                    // `"..."` pairs still balance by toggling.
+                    const bool literal_paste = in_string && quote_scanned > 0 &&
+                                               working[quote_scanned - 1] == '`';
+                    if (!escaped && !literal_paste) in_string = !in_string;
+                }
+            };
             while (auto match = identifier_pattern(remaining)) {
+                const size_t mstart = static_cast<size_t>(match.begin() - working.data());
+                sync_string_state(mstart);
+                if (in_string) {
+                    // Literal backtick text: preserve verbatim. A later pass
+                    // re-examines it from the line start with fresh state.
+                    result.append(remaining.begin(), match.end());
+                    remaining = std::string_view{match.end(), remaining.end()};
+                    quote_scanned = static_cast<size_t>(remaining.data() - working.data());
+                    continue;
+                }
                 result.append(remaining.begin(), match.begin());
                 if (match.view().back() == '(') {
                     auto id_view = match.view().substr(1, match.size()-2);
@@ -160,6 +189,7 @@ namespace preprocessor {
                     if (is_structural_directive(id)) {
                         result.append(match.view());
                         remaining = args_text;
+                        quote_scanned = static_cast<size_t>(remaining.data() - working.data());
                         continue;
                     }
                     auto [args, rest_of_line] = get_call_arguments(args_text, !opts.strict);
@@ -181,6 +211,7 @@ namespace preprocessor {
                             result.append(";");
                             result.append(newlines, '\n');
                             remaining = rest_of_line;
+                            quote_scanned = static_cast<size_t>(remaining.data() - working.data());
                             continue;
                         }
                         // Record and strip: the file quarantines, but
@@ -190,6 +221,7 @@ namespace preprocessor {
                         // with the file.
                         report_undefined(id, static_cast<int>(args.size()));
                         remaining = rest_of_line;
+                        quote_scanned = static_cast<size_t>(remaining.data() - working.data());
                         continue;
                     }
                     auto macro = definitions.at(id);
@@ -209,6 +241,9 @@ namespace preprocessor {
 
                     remaining = std::string_view{match.end(), remaining.end()};
                 }
+                // Consumed call text is quote-balanced (net-neutral for the
+                // literal check), so the scan position simply follows.
+                quote_scanned = static_cast<size_t>(remaining.data() - working.data());
             }
 
             result.append(remaining);

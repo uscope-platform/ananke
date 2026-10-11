@@ -440,6 +440,36 @@ TEST(preprocessor, include_via_macro_body_inlined) {
 }
 
 
+TEST(preprocessor, backtick_inside_string_is_not_a_macro_use) {
+    // A `name inside a "..." literal is prose (e.g. a help message naming a
+    // macro), not an invocation: it must survive expansion verbatim and
+    // record nothing undefined.
+    auto test_pattern = R"(
+        `define CHK(A_, E_, M_="dflt") $error(A_, E_, M_)
+        module test_module ();
+            initial begin
+                `CHK(0, 0, "Did you forget to call `set_sequencer()`?")
+            end
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            initial begin
+                $error(0, 0, "Did you forget to call `set_sequencer()`?")
+            end
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_TRUE(preproc.get_undefined_macros().empty());
+}
+
+
 TEST(preprocessor, multiline_paste_with_default_severity) {
     // Mirrors dv_macros.svh `DV_CHECK_EQ(..., error, ...) split across lines:
     // continuation-line actuals carry `\n<indent>` which must not defeat
