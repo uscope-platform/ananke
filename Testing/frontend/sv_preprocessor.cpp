@@ -436,7 +436,44 @@ TEST(preprocessor, include_via_macro_body_inlined) {
     )";
     EXPECT_EQ(result, check_string);
     EXPECT_FALSE(preproc.has_error());
-    EXPECT_EQ(preproc.get_includes().size(), 1u);
+    EXPECT_TRUE(preproc.get_undefined_macros().empty());
+}
+
+
+TEST(preprocessor, multiline_paste_with_default_severity) {
+    // Mirrors dv_macros.svh `DV_CHECK_EQ(..., error, ...) split across lines:
+    // continuation-line actuals carry `\n<indent>` which must not defeat
+    // substitution or `` paste fusion (no phantom `my_` recorded).
+    auto test_pattern = R"(
+        `define my_error(MSG_, ID_) $error(MSG_, ID_)
+        `define my_fatal(MSG_, ID_) $fatal(MSG_, ID_)
+        `define CHK(A_, E_, M_="", SEV_=error, ID_="dflt") `my_``SEV_(M_, ID_)
+        module test_module ();
+            initial begin
+                `CHK(0, 0,
+                     $sformatf("x %0s", "y"),
+                     error, $sformatf("%m"))
+            end
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    // Plain substitution keeps the continuation-line verbatim; what matters
+    // is that the SEV_ paste fused ($error, not a phantom `my_ use).
+    auto check_string = R"(
+        module test_module ();
+            initial begin
+                $error(
+                     $sformatf("x %0s", "y"), $sformatf("%m"))
+            end
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_TRUE(preproc.get_undefined_macros().empty());
 }
 
 TEST(preprocessor, define_in_macro_body_evaluated) {

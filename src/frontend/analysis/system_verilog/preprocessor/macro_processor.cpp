@@ -306,12 +306,11 @@ namespace preprocessor {
                     if (c==',') string_length--;
                     auto arg_text = raw_arguments.substr(current_arg_start, string_length);
                     current_arg_start = i+1;
-                    // Fully trim: a whitespace-only actual (`, ,`) must read
-                    // as empty so the formal default applies (LRM 22.5.1).
-                    // ltrim alone leaves " " non-empty, which both skips the
-                    // default and breaks `` pastes (`dv_``SEV_ with blank
-                    // SEV_ fused into a phantom `dv_ use).
-                    arguments.emplace_back(trim(arg_text));
+                    // Keep the actual verbatim (leading indentation of
+                    // continuation-line actuals is significant to callers
+                    // that splice values into output text); blank detection
+                    // for defaults happens at substitution time.
+                    arguments.emplace_back(ltrim(arg_text));
                 }
             }
         }
@@ -339,7 +338,11 @@ namespace preprocessor {
     std::string_view macro_processor::trim(const std::string_view &in) {
         if (in.empty())
             return in;
-        const auto start = in.find_first_not_of(" \t");
+        // Leading set must cover newlines as well: multi-line invocations
+        // leave `\n<indent>` at the head of continuation-line actuals, and a
+        // residue there defeats default substitution and `` paste fusion
+        // (phantom `dv_ from `dv_``SEV_ with blank-looking SEV_).
+        const auto start = in.find_first_not_of(" \t\r\n");
         if (start == std::string_view::npos)
             return "";
         const auto end = in.find_last_not_of(" \t\r\n");
@@ -352,7 +355,11 @@ namespace preprocessor {
         int required = 0;
         for (int i = 0; i<macro.arguments.size(); i++) {
             if (!macro.arguments[i].has_default) ++required;
-            if (i >= args.size() || args[i].empty()) {
+            // A whitespace-only actual (`, ,`, or a continuation line holding
+            // only indentation) counts as empty: the formal default applies
+            // (LRM 22.5.1). The stored actual itself stays verbatim so plain
+            // substitution preserves the call-site text.
+            if (i >= args.size() || trim(args[i]).empty()) {
                 arguments_map[macro.arguments[i].name] = macro.arguments[i].default_value;
             } else {
                 arguments_map[macro.arguments[i].name] = std::string(args[i]);
@@ -480,9 +487,21 @@ namespace preprocessor {
                         expanded_tokens[next_idx].find_first_not_of(" \t") == std::string_view::npos) {
                     ++next_idx;
                 }
+                // A substituted actual from a continuation line starts with
+                // `\n<indent>` (kept verbatim for plain substitution). For a
+                // paste the leading whitespace is not part of the fused
+                // identifier: drop it inside the token so `frag`` + `\n  id`
+                // fuses to `fragid` instead of leaving a phantom `frag` use.
+                // Literal body text is left untouched.
+                if (next_idx < expanded_tokens.size() && expanded_from_arg[next_idx]) {
+                    const auto lead = expanded_tokens[next_idx].find_first_not_of(" \t\r\n");
+                    if (lead != std::string_view::npos && lead > 0) {
+                        expanded_tokens[next_idx].remove_prefix(lead);
+                    }
+                }
                 std::string_view right_tok;
                 if (next_idx < expanded_tokens.size()) right_tok = expanded_tokens[next_idx];
-                size_t right_pos = right_tok.find_first_not_of(" \t");
+                size_t right_pos = right_tok.find_first_not_of(" \t\r\n");
                 bool keyword_paste = !left_word.empty() && right_pos != std::string_view::npos &&
                     is_sv_keyword(left_word) && is_id_char(right_tok[right_pos]) &&
                     expanded_from_arg[next_idx];
