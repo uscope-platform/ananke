@@ -532,17 +532,46 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             } else if (trigger == '/') {
                 if (cursor != content.size()-1) {
                     if (content[cursor + 1] == '/') {
-                        result.append("//");
-                        cursor += 2;
-                        while (cursor < content.size() && content[cursor] != '\n' && content[cursor] != '\r') {
-                            if (content[cursor] == '\\' && (content[cursor+1] == '\n' || content[cursor+1] == '\r')) {
-                                size_t next = content.find_first_of("\n\r", cursor + 1);
-                                if (next != std::string_view::npos) {
-                                    cursor = next + (content[next] == '\r' && content[next+1] == '\n' ? 2 : 1);
-                                    continue; // Skip backslash and newline, stay in comment
-                                }
+                        if (in_string) {
+                            // A `//` inside a string literal is content, not a comment.
+                            result.push_back('/');
+                            cursor++;
+                        } else if (in_macro) {
+                            // Inside a multi-line `define a `//` comment ends at the
+                            // physical newline: interior comment lines (e.g. the
+                            // `// ... \` documentation inside OpenTitan assertion
+                            // macros) are discarded without truncating the rest of
+                            // the definition, while a trailing `\` still continues
+                            // the directive. Outside defines the historical C-style
+                            // continuation swallowing below is kept.
+                            size_t com = cursor + 2;
+                            while (com < content.size() && content[com] != '\n' && content[com] != '\r') com++;
+                            size_t back = com;
+                            while (back > cursor + 2 && (content[back - 1] == ' ' || content[back - 1] == '\t')) --back;
+                            if (back > cursor + 2 && content[back - 1] == '\\') {
+                                size_t next = com + 1;
+                                if (next < content.size() && content[com] == '\r' && content[next] == '\n') ++next;
+                                cursor = next;
+                            } else {
+                                cursor = com;
                             }
-                            result.push_back(content[cursor++]);
+                            // Drop whitespace preceding the comment so the body keeps
+                            // no trailing blanks (matches the old trim-via-truncation
+                            // behavior for single-line `define trailing comments).
+                            while (!result.empty() && (result.back() == ' ' || result.back() == '\t')) result.pop_back();
+                        } else {
+                            result.append("//");
+                            cursor += 2;
+                            while (cursor < content.size() && content[cursor] != '\n' && content[cursor] != '\r') {
+                                if (cursor + 1 < content.size() && content[cursor] == '\\' && (content[cursor+1] == '\n' || content[cursor+1] == '\r')) {
+                                    size_t next = content.find_first_of("\n\r", cursor + 1);
+                                    if (next != std::string_view::npos) {
+                                        cursor = next + (content[next] == '\r' && next + 1 < content.size() && content[next+1] == '\n' ? 2 : 1);
+                                        continue; // Skip backslash and newline, stay in comment
+                                    }
+                                }
+                                result.push_back(content[cursor++]);
+                            }
                         }
                     } else if (content[cursor + 1] == '*') {
 

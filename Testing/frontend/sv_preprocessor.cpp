@@ -2496,3 +2496,39 @@ TEST(preprocessor, function_define_trailing_comment_not_in_body) {
     EXPECT_EQ(result, check_string);
     EXPECT_FALSE(preproc.has_fatal_error());
 }
+
+TEST(preprocessor, multiline_define_with_interior_line_comments) {
+    // Caliptra/OpenTitan shape (caliptra_prim_assert_standard_macros.svh):
+    // `//` documentation lines *inside* a multi-line `define body must be
+    // discarded without truncating the rest of the definition. Truncation left
+    // `CALIPTRA_ASSERT_INIT_NET as a bare `initial begin`, breaking the parse
+    // of caliptra_prim_double_lfsr.sv with `extraneous input 'endmodule'`.
+    auto test_pattern = R"(
+        `define MY_ASSERT_INIT_NET(__name, __prop)                                                   \
+          initial begin                                                                      \
+            // When a net is assigned with a value, the assignment is evaluated after        \
+            // initial in Xcelium. Add 1ps delay to check value after the assignment is      \
+            // completed.                                                                    \
+            #1ps;                                                                            \
+            __name: assert (__prop)                                                          \
+              else begin                                                                     \
+                $error("failed");                                                            \
+              end                                                                            \
+          end
+        module m;
+            logic unused_assert_connected;
+            `MY_ASSERT_INIT_NET(AssertConnected_A, unused_assert_connected === 1'b1)
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("#1ps;"));
+    EXPECT_THAT(result, testing::HasSubstr("AssertConnected_A: assert"));
+    EXPECT_THAT(result, testing::HasSubstr("$error"));
+    EXPECT_THAT(result, testing::Not(testing::HasSubstr("When a net is assigned")));
+    EXPECT_THAT(result, testing::Not(testing::HasSubstr("Xcelium")));
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
