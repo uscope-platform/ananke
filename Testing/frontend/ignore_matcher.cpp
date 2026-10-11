@@ -123,3 +123,27 @@ TEST(ignore_matcher, empty_marker_adds_no_rules) {
     EXPECT_TRUE(m.empty());
     std::filesystem::remove_all(dir);
 }
+
+TEST(ignore_matcher, floating_pattern_scoped_to_marker_subtree) {
+    // `*` in tools/templates/.mkignore must match tools/templates/* only:
+    // sibling trees (src/, docs/) and the marker dir itself are unaffected.
+    ignore_matcher m;
+    m.add_pattern("*", "/r/tools/templates");
+    EXPECT_TRUE(m.matches("/r/tools/templates/foo.sv", false));
+    EXPECT_TRUE(m.matches("/r/tools/templates/nested/dir", true));
+    EXPECT_FALSE(m.matches("/r/tools/templates", true));
+    EXPECT_FALSE(m.matches("/r/src/integration/rtl/caliptra_top.sv", false));
+    EXPECT_FALSE(m.matches("/r/src", true));
+    EXPECT_FALSE(m.matches("/r/docs", true));
+    EXPECT_FALSE(m.matches("/r/uvm/uvm_pkg.sv", false));
+}
+
+TEST(ignore_matcher, floating_wildcard_scoped_to_marker_subtree) {
+    // Same scoping for `*.sv`: matches at any depth *below* the marker dir.
+    ignore_matcher m;
+    m.add_pattern("*.sv", "/r/sub");
+    EXPECT_TRUE(m.matches("/r/sub/a.sv", false));
+    EXPECT_TRUE(m.matches("/r/sub/deep/b.sv", false));
+    EXPECT_FALSE(m.matches("/r/other/a.sv", false));
+    EXPECT_FALSE(m.matches("/r/a.sv", false));
+}

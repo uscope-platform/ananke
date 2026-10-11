@@ -72,6 +72,16 @@ bool ignore_matcher::match_rule(const rule &r, const std::filesystem::path &path
     if (r.dir_only && !is_dir) return false;
     const auto norm = path.lexically_normal();
     if (!r.anchored) {
+        // Floating patterns match the basename at any depth *below the marker
+        // dir* (see header docs). Without the containment check a bare `*` in
+        // tools/templates/.mkignore matches src/, docs/, ... repo-wide and
+        // prunes them order-dependently (whatever is walked after the marker
+        // loads its rule).
+        std::error_code ec;
+        const auto rel = std::filesystem::relative(norm, r.base, ec);
+        if (ec) return false;
+        const auto rel_str = rel.generic_string();
+        if (rel_str.empty() || rel_str == "." || rel_str.starts_with("..")) return false;
         return fnmatch(r.pattern.c_str(), norm.filename().string().c_str(), 0) == 0;
     }
     std::error_code ec;
