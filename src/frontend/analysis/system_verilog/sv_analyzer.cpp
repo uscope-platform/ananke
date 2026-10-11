@@ -23,6 +23,21 @@
 #include <BailErrorStrategy.h>
 #include <spdlog/spdlog.h>
 
+#include <filesystem>
+
+namespace {
+// A `.svh`/`.vh` header that cannot parse as a standalone compilation unit
+// is assumed to be a module-body include fragment (bare `logic` decls and
+// `assign` statements meant to be `` `include ``d inside a module, e.g. the
+// VeeR `el2_dec_csr_equ_m.svh` shape). Only `.svh`/`.vh` qualify: `.sv`/`.v`
+// must stay compilation units so genuine errors there keep failing.
+bool is_fragment_header(const std::string &path) {
+    if (path.empty()) return false;
+    const std::string ext = std::filesystem::path(path).extension().string();
+    return ext == ".svh" || ext == ".vh";
+}
+} // namespace
+
 
 void sv_analyzer::capture_preprocessor_state(preprocessor::sv_preprocessor &preproc) {
     includes = preproc.get_includes();
@@ -36,6 +51,8 @@ std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const s
     last_error.reset();
     includes.clear();
     fatal_error = false;
+    syntax_errors = false;
+    is_include_fragment_ = false;
     undefined_macros.clear();
     unknown_conditionals.clear();
     harvested.clear();
@@ -54,6 +71,7 @@ std::pair<std::string, std::vector<std::string>> sv_analyzer::preprocess(const s
 std::optional<hdl_file> sv_analyzer::analyze(const std::string &path, const std::string_view &file_content) {
     last_error.reset();
     syntax_errors = false;
+    is_include_fragment_ = false;
     includes.clear();
     fatal_error = false;
     undefined_macros.clear();
@@ -132,6 +150,24 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
 
     tok_stream.fill();
 
+    // A header that declares a design unit is a real compilation unit, even
+    // when broken: never mistake it for a module-body include fragment.
+    // Token types (not text) are scanned, so a comment or string mentioning
+    // e.g. "module" cannot false-positive. Covers every `description`
+    // alternative that declares a unit: module/macromodule, interface,
+    // package, program, primitive (udp) and config.
+    bool declares_unit = false;
+    for (auto *tok : tok_stream.getTokens()) {
+        const auto type = tok->getType();
+        if (type == sv2017Lexer::KW_MODULE || type == sv2017Lexer::KW_MACROMODULE ||
+            type == sv2017Lexer::KW_INTERFACE || type == sv2017Lexer::KW_PACKAGE ||
+            type == sv2017Lexer::KW_PROGRAM || type == sv2017Lexer::KW_PRIMITIVE ||
+            type == sv2017Lexer::KW_CONFIG) {
+            declares_unit = true;
+            break;
+        }
+    }
+
     sv2017 parser(&tok_stream);
 
     // Two-stage parsing: fast SLL trial with Bail (fail-fast, never silently
@@ -160,6 +196,22 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
         Tree = parser.source_text();
     }
     syntax_errors = error_listener.has_errors;
+    // Lenient-only workaround (strict rejects): a `.svh`/`.vh` header that
+    // declares no design unit and fails as a standalone compilation unit is
+    // a module-body include fragment, not a broken file. Its content still
+    // reaches the build via `include inlining at each includer, so store an
+    // empty resource here instead of failing. A header that does declare a
+    // unit (module/interface/package/...) but fails to parse is genuinely
+    // broken and keeps failing, even in lenient mode.
+    const bool fragment =
+        syntax_errors && !opts_.strict && !declares_unit && is_fragment_header(path);
+    if (fragment) {
+        is_include_fragment_ = true;
+        spdlog::info("{} is a module-body include fragment, skipping standalone parse "
+                      "(lenient mode; --strict rejects it)", path);
+        for (const auto &message : error_listener.messages) spdlog::debug("{}", message);
+        return result;
+    }
     for (const auto &message : error_listener.messages) spdlog::error("{}", message);
     if (syntax_errors) {
         // The error-recovered tree is not a faithful model of the file:

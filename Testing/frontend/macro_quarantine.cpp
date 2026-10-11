@@ -224,3 +224,111 @@ TEST(macro_quarantine, include_guard_not_inverted) {
     // ... while other files still resolve it normally.
     EXPECT_EQ(table.build_injection(bare_needs({"GUARDED_SV"}), "other.sv").definitions.size(), 1u);
 }
+
+TEST(macro_quarantine, include_fragment_tolerated_in_lenient_mode) {
+    // VeeR shape (`el2_dec_csr_equ_m.svh`): bare `logic` decls + `assign`
+    // statements meant to be `` `include ``d inside a module. Not a
+    // compilation unit, so standalone `source_text` parsing must fail — the
+    // lenient workaround stores an empty resource instead of erroring.
+    auto fragment_pattern = R"(
+        logic csr_misa;
+        logic csr_mvendorid;
+        assign csr_misa = (!dec_csr_rdaddr_d[11]&dec_csr_rdaddr_d[0]);
+        assign csr_mvendorid = (dec_csr_rdaddr_d[10]&dec_csr_rdaddr_d[0]);
+    )";
+
+    sv_analyzer frag;
+    auto result = frag.analyze("frag.svh", fragment_pattern);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result.value().get_content().empty());
+    EXPECT_TRUE(frag.is_include_fragment());
+    EXPECT_FALSE(frag.has_error());
+    EXPECT_FALSE(frag.has_fatal_error());
+
+    // Same body as `.sv` is still a genuine error: only `.svh`/`.vh`
+    // qualify as fragments.
+    sv_analyzer sv_sibling;
+    EXPECT_FALSE(sv_sibling.analyze("frag.sv", fragment_pattern).has_value());
+    EXPECT_FALSE(sv_sibling.is_include_fragment());
+    EXPECT_TRUE(sv_sibling.has_error());
+
+    // A valid package header keeps parsing normally (not flagged).
+    auto package_pattern = R"(
+        package frag_pkg;
+            parameter W = 8;
+        endpackage
+    )";
+    sv_analyzer pkg;
+    auto pkg_result = pkg.analyze("defs.svh", package_pattern);
+    ASSERT_TRUE(pkg_result.has_value());
+    EXPECT_FALSE(pkg.is_include_fragment());
+    ASSERT_EQ(pkg_result.value().get_content().size(), 1u);
+}
+
+TEST(macro_quarantine, include_fragment_rejected_in_strict_mode) {
+    auto fragment_pattern = R"(
+        logic csr_misa;
+        assign csr_misa = (!dec_csr_rdaddr_d[11]&dec_csr_rdaddr_d[0]);
+    )";
+
+    parse_options opts;
+    opts.strict = true;
+
+    sv_analyzer frag;
+    frag.set_options(opts);
+    EXPECT_FALSE(frag.analyze("frag.svh", fragment_pattern).has_value());
+    EXPECT_FALSE(frag.is_include_fragment());
+    EXPECT_TRUE(frag.has_error());
+
+    // `.vh` obeys the same gate.
+    sv_analyzer vh;
+    vh.set_options(opts);
+    EXPECT_FALSE(vh.analyze("frag.vh", fragment_pattern).has_value());
+    EXPECT_FALSE(vh.is_include_fragment());
+}
+
+TEST(macro_quarantine, include_fragment_only_when_no_unit_declared) {
+    // A `.svh` that declares a unit but fails to parse is genuinely broken:
+    // lenient mode must keep rejecting it, not mistake it for a fragment.
+    auto broken_package = R"(
+        package broken_pkg;
+            parameter W = ;
+        endpackage
+    )";
+    sv_analyzer pkg;
+    EXPECT_FALSE(pkg.analyze("broken.svh", broken_package).has_value());
+    EXPECT_FALSE(pkg.is_include_fragment());
+    EXPECT_TRUE(pkg.has_error());
+
+    auto broken_module = R"(
+        module broken_mod(;
+        endmodule
+    )";
+    sv_analyzer mod;
+    EXPECT_FALSE(mod.analyze("broken.svh", broken_module).has_value());
+    EXPECT_FALSE(mod.is_include_fragment());
+    EXPECT_TRUE(mod.has_error());
+
+    auto broken_interface = R"(
+        interface broken_if;
+            logic clk = ;
+        endinterface
+    )";
+    sv_analyzer ifc;
+    EXPECT_FALSE(ifc.analyze("broken.svh", broken_interface).has_value());
+    EXPECT_FALSE(ifc.is_include_fragment());
+
+    // The guard scans token types, not text: a comment mentioning "module"
+    // must not disqualify a real fragment.
+    auto commented_fragment = R"(
+        // module-body fragment: bare assigns for the consumer module
+        logic csr_misa;
+        assign csr_misa = (!dec_csr_rdaddr_d[11]&dec_csr_rdaddr_d[0]);
+    )";
+    sv_analyzer frag;
+    auto result = frag.analyze("frag.svh", commented_fragment);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result.value().get_content().empty());
+    EXPECT_TRUE(frag.is_include_fragment());
+    EXPECT_FALSE(frag.has_error());
+}

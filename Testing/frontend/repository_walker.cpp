@@ -380,3 +380,70 @@ TEST_F(repository_walker, h_include_invalidation) {
 
     std::filesystem::remove_all(root);
 }
+
+TEST_F(repository_walker, svh_fragment_stores_empty_and_includer_parses) {
+    // VeeR shape: a module-body `.svh` fragment (bare `logic` + `assign`)
+    // `included inside a consumer module. Lenient mode stores the fragment
+    // as an empty resource (no error) and the consumer parses with the
+    // inlined content; strict mode keeps rejecting the fragment standalone
+    // while the consumer still parses.
+    const std::string root = "/tmp/ananke_frag_test";
+    const std::string settings_dir = root + "/settings";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root + "/design");
+    std::filesystem::create_directories(settings_dir);
+
+    const std::string frag = root + "/design/frag.svh";
+    const std::string top = root + "/design/top.sv";
+    {
+        std::ofstream ofs(frag, std::ios::trunc);
+        ofs << "logic csr_misa;\n"
+               "assign csr_misa = (!dec_csr_rdaddr_d[11]&dec_csr_rdaddr_d[0]);\n";
+    }
+    {
+        std::ofstream ofs(top, std::ios::trunc);
+        ofs << "module top(\n"
+               "  input logic [11:0] dec_csr_rdaddr_d\n"
+               ");\n"
+               "  `include \"frag.svh\"\n"
+               "endmodule\n";
+    }
+
+    // Lenient (default): fragment stored empty, consumer parses.
+    {
+        std::ofstream ofs(settings_dir + "/settings", std::ios::trunc);
+        ofs << "{\"profiles\": {\"frag\": {\"hdl_store\":\"" << root << "\"}}}";
+    }
+    {
+        auto s = std::make_shared<settings_store>(false, settings_dir, "frag");
+        auto d = std::make_shared<data_store>(true, root + "/data_store");
+        Repository_walker walker(s, d, true);
+
+        auto frag_file = d->get_file<hdl_file>(frag);
+        ASSERT_TRUE(frag_file.has_value());
+        EXPECT_TRUE(frag_file.value().get_content().empty());
+
+        std::string n = "top";
+        EXPECT_TRUE(d->get_HDL_resource(n).has_value());
+    }
+
+    // Strict: fragment standalone is rejected (absent from the store) but
+    // the includer still parses via inlining.
+    {
+        std::ofstream ofs(settings_dir + "/settings", std::ios::trunc);
+        ofs << "{\"profiles\": {\"frag_strict\": {\"hdl_store\":\"" << root
+            << "\", \"strict\":true}}}";
+    }
+    {
+        auto s = std::make_shared<settings_store>(false, settings_dir, "frag_strict");
+        auto d = std::make_shared<data_store>(true, root + "/data_store_strict");
+        Repository_walker walker(s, d, true);
+
+        EXPECT_FALSE(d->get_file<hdl_file>(frag).has_value());
+
+        std::string n = "top";
+        EXPECT_TRUE(d->get_HDL_resource(n).has_value());
+    }
+
+    std::filesystem::remove_all(root);
+}

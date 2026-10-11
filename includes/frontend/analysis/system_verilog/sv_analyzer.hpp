@@ -54,7 +54,15 @@ public:
     // Whether lexing or parsing reported any syntax error (listener latch).
     // A file with syntax errors fails analysis (last_error set): partial
     // error-recovered trees are never stored silently.
+    // Lenient-only exception: a `.svh`/`.vh` header that declares no design
+    // unit (no module/interface/package/program/primitive/config keyword)
+    // and fails as a standalone compilation unit is treated as a module-body
+    // include fragment (e.g. bare `logic` + `assign` meant to be `included
+    // inside a module). In lenient mode it stores an empty resource and no
+    // error; strict mode (`parse_options::strict`) keeps rejecting it, as
+    // does any header that does declare a unit but fails to parse.
     [[nodiscard]] bool has_syntax_errors() const {return syntax_errors;}
+    [[nodiscard]] bool is_include_fragment() const {return is_include_fragment_;}
 private:
 
     hdl_file process_hdl(const std::string &path, const std::string &preprocessed_content);
@@ -69,6 +77,7 @@ private:
     std::set<std::string> unknown_conditionals;
     preprocessor::macro_definitions_map harvested;
     bool syntax_errors = false;
+    bool is_include_fragment_ = false;
 };
 
 

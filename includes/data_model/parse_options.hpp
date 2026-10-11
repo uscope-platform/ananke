@@ -31,7 +31,10 @@ struct parse_options {
     // analyzer. Every LRM deviation must consult this flag so strict stays
     // a single switch: no new tolerated construct without a strict gate.
     // Currently gated: empty-parens macro calls (`f()` for a 1-formal
-    // macro) and streaming-concatenation lvalue approximation.
+    // macro), streaming-concatenation lvalue approximation, and unit-less
+    // `.svh`/`.vh` include fragments (bare `logic`/`assign` with no
+    // module/interface/package/program/primitive/config declaration, meant
+    // to be `included inside a module, stored as empty resources).
     bool strict = false;
 };
 
