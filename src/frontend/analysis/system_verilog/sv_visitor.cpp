@@ -1117,7 +1117,9 @@ void sv_visitor::enterParameter_override(sv2017::Parameter_overrideContext *ctx)
             auto hi = da->hierarchical_identifier();
             if (hi) {
                 std::string text = hi->getText();
-                if (text.starts_with("$root.") || text.starts_with("$unit.")) {
+                // Only $root. can reach here ($unit. hierarchical prefixes
+                // are invalid SystemVerilog and rejected by the grammar).
+                if (text.starts_with("$root.")) {
                     spdlog::warn("Unsupported defparam scope qualifier '{}' ignored", text);
                     skip_current_defparam = true;
                 } else {

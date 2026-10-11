@@ -126,7 +126,37 @@ TEST(parameter_defparam, root_qualified_warns_and_does_not_crash) {
     EXPECT_EQ(child->find_parameter("P")->get_numeric_value(), 0);
 }
 
-TEST(parameter_defparam, unit_qualified_warns_and_does_not_crash) {
+TEST(parameter_defparam, unit_scope_reference_accepted) {
+    // $unit::W is legal SystemVerilog (compilation-unit scope resolution):
+    // the file must be accepted and elaborate without crashing. ($unit-scope
+    // lookup itself is not resolved.)
+    auto test_pattern = R"(
+        parameter int W = 8;
+        module m ();
+            localparam X = $unit::W;
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", test_pattern).value();
+    EXPECT_FALSE(analyzer.has_error());
+    bool found_m = false;
+    for (auto &res : resources.get_content()) {
+        if (res->is<hdl_resource_statement>() &&
+            res->as<hdl_resource_statement>().getName() == "m") found_m = true;
+    }
+    ASSERT_TRUE(found_m);
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"m"}))[0];
+    EXPECT_EQ(ast_v2->get_type(), "m");
+}
+
+TEST(parameter_defparam, unit_hierarchical_defparam_rejected) {
+    // defparam $unit.u1.P is NOT legal SystemVerilog ($unit is a scope
+    // qualifier, used with ::, not a hierarchical path prefix): it must fail
+    // loudly at parse time - never silently, never with a crash.
     auto test_pattern = R"(
         module child #(
             parameter P = 0
@@ -139,14 +169,7 @@ TEST(parameter_defparam, unit_qualified_warns_and_does_not_crash) {
         endmodule
     )";
     sv_analyzer analyzer;
-    auto resources = analyzer.analyze("", test_pattern).value();
-    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
-    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
-    d_store->store_file({"/dev/zero", "file_hash", resources});
-    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
-    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
-
-    auto child = ast_v2->get_dependencies()[0];
-    ASSERT_TRUE(child->has_parameter("P"));
-    EXPECT_EQ(child->find_parameter("P")->get_numeric_value(), 0);
+    EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
+    EXPECT_TRUE(analyzer.has_error());
+    EXPECT_TRUE(analyzer.has_syntax_errors());
 }

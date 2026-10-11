@@ -780,12 +780,16 @@ file_analysis_context<hdl_file> analyze_verilog(
         ctx.unknown_conditionals = file_processor.get_unknown_conditionals();
         ctx.harvested = file_processor.get_harvested_definitions();
         if (!analysis.has_value()) {
-            // Quarantine instead of erroring when the ONLY thing missing is
-            // repository-learnable: undefined macros and/or conditionals
-            // queried while unknown. Anything fatal (bad includes, syntax,
-            // macro misuse) errors out immediately, as before.
+            // Quarantine instead of erroring when the failure may still be
+            // repository-learnable: undefined macros, conditionals queried
+            // while unknown, or a syntax failure (a later pass with more
+            // macros injected can parse cleanly). Anything fatal (bad
+            // includes, macro misuse) errors out immediately, as before.
+            // Syntax failures carry no macro needs, so they cost exactly one
+            // extra attempt before converging to the quarantine report below.
             if (!file_processor.has_fatal_error() &&
-                (!ctx.undefined_macros.empty() || !ctx.unknown_conditionals.empty())) {
+                (!ctx.undefined_macros.empty() || !ctx.unknown_conditionals.empty() ||
+                 file_processor.has_syntax_errors())) {
                 ctx.quarantined = true;
                 if (file_processor.has_error()) ctx.error_detail = file_processor.get_error();
                 return ctx;

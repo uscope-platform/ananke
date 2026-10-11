@@ -185,7 +185,7 @@ The value model is 2-state (0/1). There is no X/Z representation, so literals co
 
 The set-membership operator (`x inside {1, 4, [7:9]}`) is parsed by the grammar but not evaluated. It is valid in constant expressions per the LRM, but does not appear in the parameter sets this tool processes, so it is not implemented.
 
-## `$root` / `$unit` defparam prefixes
+## `$root` / `$unit` scope qualifiers
 
-Package-scoped defparam paths using `$root` or `$unit` are not supported; the tool warns and skips them (no crash).
+`$root`-qualified defparam targets (e.g. `defparam $root.u1.P = 5;`) are legal SystemVerilog but not supported; the tool warns and skips them (no crash). `$unit.` is not a legal hierarchical prefix (use `$unit::` scope resolution instead) and is rejected during parsing.
 

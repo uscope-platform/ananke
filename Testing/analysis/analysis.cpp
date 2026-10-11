@@ -597,3 +597,33 @@ TEST(sv_analysis, readmem_hex_init_file) {
     }
     EXPECT_TRUE(found);
 }
+
+TEST(sv_analysis, syntax_error_fails_analysis_loudly) {
+    // A file with a syntax error must fail analysis (no silent partial
+    // entities): the error is logged with file:line:col context and the
+    // analyzer reports has_error/has_syntax_errors.
+    sv_analyzer analyzer;
+    auto res = analyzer.analyze("/test/broken.sv",
+        "module broken;\n"
+        "  wire x\n"
+        "  assign x = 1;\n"
+        "endmodule\n");
+    EXPECT_FALSE(res.has_value());
+    EXPECT_TRUE(analyzer.has_error());
+    EXPECT_TRUE(analyzer.has_syntax_errors());
+    EXPECT_NE(analyzer.get_error().find("Syntax error"), std::string::npos);
+}
+
+TEST(sv_analysis, stray_token_fails_analysis_loudly) {
+    // An illegal character (lexer-level failure) fails the same way.
+    sv_analyzer analyzer;
+    auto res = analyzer.analyze("/test/broken.sv",
+        "module broken;\n"
+        "  wire x;\n"
+        "  assign x = 1;\n"
+        "endmodule\n"
+        "@\n");
+    EXPECT_FALSE(res.has_value());
+    EXPECT_TRUE(analyzer.has_error());
+    EXPECT_TRUE(analyzer.has_syntax_errors());
+}

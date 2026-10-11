@@ -21,6 +21,7 @@
 #include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
 
 #include <BailErrorStrategy.h>
+#include <spdlog/spdlog.h>
 
 
 void sv_analyzer::capture_preprocessor_state(preprocessor::sv_preprocessor &preproc) {
@@ -159,6 +160,19 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
         Tree = parser.source_text();
     }
     syntax_errors = error_listener.has_errors;
+    for (const auto &message : error_listener.messages) spdlog::error("{}", message);
+    if (syntax_errors) {
+        // The error-recovered tree is not a faithful model of the file:
+        // fail loudly instead of storing partial entities silently. The
+        // walker quarantines the file (retry across fixpoint passes when new
+        // macros arrive) and reports it; single-shot flows surface
+        // last_error directly. This also skips the visitor walk, whose
+        // diagnostics on a broken tree would only be noise.
+        // Message stays file-independent: every surfacing path prefixes the
+        // path already, and identical messages group in the quarantine report.
+        last_error = "Syntax error(s) during parsing (see log for details)";
+        return result;
+    }
 
     sv_visitor sv_modules_explorer;
     sv_modules_explorer.set_file(path);
@@ -178,11 +192,17 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
 
 void SvParserErrorListener::syntaxError(antlr4::Recognizer *recognizer, antlr4::Token *offendingSymbol, size_t line,
                                         size_t charPositionInLine, const std::string &msg, std::exception_ptr e) {
+    (void)offendingSymbol;
+    (void)e;
     has_errors = true;
-    // 1. Standardized compiler-style error header (file:line:column: error: message)
-    std::cerr << this->file_path << ":" << line << ":" << (charPositionInLine + 1) << ": error: " << msg << "\n";
+    // Standardized compiler-style error header (file:line:column: error:
+    // message), offending source line and caret. Assembled here and emitted
+    // by the caller in one logger call so concurrent parses cannot
+    // interleave fragments (the old code wrote to stderr piece by piece).
+    std::ostringstream oss;
+    oss << this->file_path << ":" << line << ":" << (charPositionInLine + 1) << ": error: " << msg << "\n";
 
-    // 2. Fetch the underlying input stream to print the offending line
+    // Fetch the underlying input stream to print the offending line
     if (recognizer != nullptr) {
         auto tokens = dynamic_cast<antlr4::TokenStream*>(recognizer->getInputStream());
         if (tokens != nullptr) {
@@ -193,16 +213,19 @@ void SvParserErrorListener::syntaxError(antlr4::Recognizer *recognizer, antlr4::
 
             // Move to the correct line in the source string
             for (size_t i = 0; i < line; ++i) {
-                std::getline(ss, lineText);
+                if (!std::getline(ss, lineText)) {
+                    lineText.clear();
+                    break;
+                }
             }
 
             // Print the offending line of code
-            std::cerr << " " << line << " | " << lineText << "\n";
+            oss << " " << line << " | " << lineText << "\n";
 
             // Print the visual caret (^) pointer underneath the offending character
-            std::cerr << std::string(std::to_string(line).length() + 1, ' ') << " | "; // Aligns with the '|'
-            std::cerr << std::string(charPositionInLine, ' ') << "^\n";
+            oss << std::string(std::to_string(line).length() + 1, ' ') << " | "; // Aligns with the '|'
+            oss << std::string(charPositionInLine, ' ') << "^";
         }
     }
-    std::cerr << std::endl;
+    messages.push_back(oss.str());
 }

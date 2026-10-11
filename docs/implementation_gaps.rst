@@ -281,7 +281,8 @@ Generate-statement gaps
   modport references in module ports are parsed).
 * ``defparam`` only consumes the first assignment of a comma-separated group
   (:file:`src/frontend/analysis/system_verilog/sv_visitor.cpp:599-602`) and
-  ``$root.``/``$unit.`` scopes are skipped with a warning.
+  ``$root.`` scopes are skipped with a warning (``$unit.`` hierarchical
+  prefixes are invalid SystemVerilog and rejected during parsing).
 
 .. _factory-consolidation:
 

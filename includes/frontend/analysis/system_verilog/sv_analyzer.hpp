@@ -52,7 +52,8 @@ public:
     [[nodiscard]] const std::set<std::string>& get_unknown_conditionals() const {return unknown_conditionals;}
     [[nodiscard]] const preprocessor::macro_definitions_map& get_harvested_definitions() const {return harvested;}
     // Whether lexing or parsing reported any syntax error (listener latch).
-    // Independent from has_error(): recovered files still analyze.
+    // A file with syntax errors fails analysis (last_error set): partial
+    // error-recovered trees are never stored silently.
     [[nodiscard]] bool has_syntax_errors() const {return syntax_errors;}
 private:
 
@@ -75,6 +76,10 @@ class SvParserErrorListener : public antlr4::BaseErrorListener {
 public:
     std::string file_path;
     bool has_errors = false;
+    // Collected formatted errors (header + offending line + caret), emitted
+    // by the caller through the logger in a single call each so concurrent
+    // parses cannot interleave fragments.
+    std::vector<std::string> messages;
     void syntaxError(antlr4::Recognizer *recognizer, antlr4::Token * offendingSymbol, size_t line, size_t charPositionInLine,
                      const std::string &msg, std::exception_ptr e) override;
 };
