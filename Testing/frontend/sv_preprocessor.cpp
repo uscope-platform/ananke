@@ -2073,9 +2073,9 @@ TEST(preprocessor, recursive_macro_capped) {
     EXPECT_TRUE(preproc.has_error());
 }
 
-TEST(preprocessor, self_include_rejected) {
-    // A file that includes itself must be detected and error out instead of
-    // recursing until the stack overflows.
+TEST(preprocessor, self_include_skipped) {
+    // A file that includes itself terminates: the re-entrant include is
+    // skipped, the rest of the file still processes, no error.
     std::filesystem::create_directories("/tmp/ananke_inc_test");
     std::string inc = "/tmp/ananke_inc_test/self.svh";
     {
@@ -2086,8 +2086,9 @@ TEST(preprocessor, self_include_rejected) {
 
     sv_preprocessor preproc;
     preproc.set_path("/tmp/ananke_inc_test/main.sv");
-    preproc.preprocess(pattern);
-    EXPECT_TRUE(preproc.has_error());
+    auto result = preproc.preprocess(pattern);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::HasSubstr("wire self_wire;"));
     std::filesystem::remove_all("/tmp/ananke_inc_test");
 }
 
@@ -2294,9 +2295,9 @@ TEST(preprocessor, covergroup_token_paste_with_keyword_name) {
 }
 
 TEST(preprocessor, recursive_include_different_spelling) {
-    // Same file reached through different path spellings must still trip the
-    // recursion guard instead of recursing until stack exhaustion
-    // (EXC_BAD_ACCESS on the guard page, deep stack).
+    // Same file reached through different path spellings terminates cleanly:
+    // the re-entrant include is skipped instead of recursing until stack
+    // exhaustion (EXC_BAD_ACCESS on the guard page, deep stack).
     std::filesystem::create_directories("/tmp/ananke_rec_test");
     {
         std::ofstream ofs("/tmp/ananke_rec_test/main.sv");
@@ -2319,7 +2320,32 @@ TEST(preprocessor, recursive_include_different_spelling) {
     auto result = preproc.preprocess(test_pattern);
     std::filesystem::remove_all("/tmp/ananke_rec_test");
 
-    EXPECT_TRUE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::HasSubstr("module test_module"));
+}
+
+TEST(preprocessor, guarded_mutual_include_resolves) {
+    // caliptra_prim_assert idiom: A includes B, B includes A behind ifndef
+    // guards making re-entry a no-op. Terminates with both files'
+    // definitions visible and no error.
+    std::filesystem::create_directories("/tmp/ananke_mut_test");
+    {
+        std::ofstream ofs("/tmp/ananke_mut_test/a.svh");
+        ofs << "`ifndef A_SVH\n`define A_SVH\n`define FROM_A 1\n`include \"b.svh\"\n`endif\n";
+    }
+    {
+        std::ofstream ofs("/tmp/ananke_mut_test/b.svh");
+        ofs << "`ifndef B_SVH\n`define B_SVH\n`define FROM_B 2\n`include \"a.svh\"\n`endif\n";
+    }
+    std::string pattern = "`include \"a.svh\"\nmodule m;\nparameter P = `FROM_A + `FROM_B;\nendmodule\n";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/ananke_mut_test/main.sv");
+    auto result = preproc.preprocess(pattern);
+    std::filesystem::remove_all("/tmp/ananke_mut_test");
+
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::HasSubstr("parameter P = 1 + 2;"));
 }
 
 TEST(preprocessor, deep_acyclic_include_chain_capped) {

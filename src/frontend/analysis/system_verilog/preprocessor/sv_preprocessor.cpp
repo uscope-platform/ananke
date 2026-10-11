@@ -201,7 +201,15 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 if (included_file.has_value()) {
                     includes.insert(included_file.value());
                     if (included_file.value().path == path || active_includes.contains(included_file.value().path)) {
-                        report_error(fmt::format("Recursive include detected for file {} in file {}", included_file.value().path, path));
+                        // Ancestor re-entry: skip instead of failing. Guarded
+                        // mutual includes (A includes B includes A behind an
+                        // ifndef guard) are a deliberate safe idiom: skipping
+                        // is equivalent to reprocessing for visible
+                        // definitions, and avoids emitting duplicate code.
+                        // Guardless true cycles also terminate here; the depth
+                        // cap below still backstops deep acyclic chains.
+                        spdlog::trace("Skipping recursive include of {} in file {} (already being processed)",
+                                      included_file.value().path, path);
                     } else {
                         auto saved_path = path;
                         auto saved_line = line_number;
@@ -213,7 +221,10 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                         if (!f_opt.has_value()) {
                             report_error(fmt::format("Could not open include file: {}", path));
                         } else if (claim_include_file(path)) {
-                            report_error(fmt::format("Recursive include detected for file {} in file {}", path, saved_path));
+                            // Same file via a different spelling
+                            // (symlink/relative path): same skip treatment.
+                            spdlog::trace("Skipping recursive include of {} in file {} (already being processed)",
+                                          path, saved_path);
                         } else if (include_nesting_depth >= MAX_INCLUDE_DEPTH) {
                             report_error(fmt::format("Maximum include depth ({}) exceeded including file {} in file {}",
                                                      MAX_INCLUDE_DEPTH, path, saved_path));
@@ -702,8 +713,10 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 includes.insert(included_file.value());
                 if (included_file.value().path == path ||
                     active_includes.contains(included_file.value().path)) {
-                    report_error(fmt::format("Recursive include detected for file {} in file {}",
-                                             included_file.value().path, path));
+                    // Same ancestor skip as the main loop above: guarded
+                    // mutual includes are a safe idiom, not an error.
+                    spdlog::trace("Skipping recursive include of {} in file {} (already being processed)",
+                                  included_file.value().path, path);
                     continue;
                 }
                 auto saved_path = path;
@@ -715,8 +728,9 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 if (!f_opt.has_value()) {
                     report_error(fmt::format("Could not open include file: {}", path));
                 } else if (claim_include_file(path)) {
-                    report_error(fmt::format("Recursive include detected for file {} in file {}",
-                                             path, saved_path));
+                    // Same-file-different-spelling cycle: same skip treatment.
+                    spdlog::trace("Skipping recursive include of {} in file {} (already being processed)",
+                                  path, saved_path);
                 } else if (include_nesting_depth >= MAX_INCLUDE_DEPTH) {
                     report_error(fmt::format("Maximum include depth ({}) exceeded including file {} in file {}",
                                              MAX_INCLUDE_DEPTH, path, saved_path));
