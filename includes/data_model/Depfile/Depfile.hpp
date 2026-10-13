@@ -98,17 +98,9 @@ public:
     explicit Depfile(std::istream &in);
     void set_content(const nlohmann::json &c);
 
-    // Lenient pre-parse of just the `includes` section (no schema
-    // validation: the walker runs before the full Depfile is known). Returns
-    // false when the file is missing/unparseable or has no `includes`.
-    static bool try_load_includes_section(const std::string &path, includes_settings &out);
-    // Same lenient pre-parse for the top-level `defines` dictionary.
-    // Returns false when the file is missing/unparseable or has no `defines`.
-    static bool try_load_defines_section(const std::string &path, depfile_defines &out);
-
     std::optional<bus_specs> get_bus_section(const std::string &bus_type);
 
-    std::vector<Script> get_scripts();
+    std::vector<Script> get_scripts() const;
     bool is_module_excluded(const std::string &s);
     void add_excluded_module(const std::string &s);
     [[nodiscard]] bool has_error() const {return !validation_error.empty();}

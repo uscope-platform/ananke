@@ -177,7 +177,7 @@ void Depfile::set_content(const nlohmann::json &file_content) {
 
 
 
-std::vector<Script> Depfile::get_scripts() {
+std::vector<Script> Depfile::get_scripts() const {
     std::vector<Script> retval;
     for(const auto& item : scripts){
         retval.emplace_back(item);
@@ -186,44 +186,6 @@ std::vector<Script> Depfile::get_scripts() {
 }
 
 
-
-bool Depfile::try_load_includes_section(const std::string &path, includes_settings &out) {
-    try {
-        std::ifstream ifs(path);
-        if (!ifs.good()) return false;
-        nlohmann::json content;
-        ifs >> content;
-        if (!content.is_object() || !content.contains("includes")) return false;
-        const auto &inc = content["includes"];
-        if (!inc.is_object()) return false;
-        includes_settings parsed;
-        parse_includes_section(inc, parsed);
-        out = std::move(parsed);
-        return true;
-    } catch (const std::exception &e) {
-        spdlog::warn("Could not pre-parse includes section of {}: {}", path, e.what());
-        return false;
-    }
-}
-
-bool Depfile::try_load_defines_section(const std::string &path, depfile_defines &out) {
-    try {
-        std::ifstream ifs(path);
-        if (!ifs.good()) return false;
-        nlohmann::json content;
-        ifs >> content;
-        if (!content.is_object() || !content.contains("defines")) return false;
-        const auto &def = content["defines"];
-        if (!def.is_object()) return false;
-        depfile_defines parsed;
-        parse_defines_section(def, parsed);
-        out = std::move(parsed);
-        return true;
-    } catch (const std::exception &e) {
-        spdlog::warn("Could not pre-parse defines section of {}: {}", path, e.what());
-        return false;
-    }
-}
 
 std::optional<bus_specs> Depfile::get_bus_section(const std::string &bus_type) {
     if (bus.contains(bus_type)) return bus.at(bus_type);

@@ -30,43 +30,66 @@ ananke::ananke(const CLI_opt &options) {
 
     s_store = std::make_shared<settings_store>(false, opts.cache_dir, opts.profile);
     s_store->set_strict_override(opts.strict);
-    apply_depfile_analysis_overrides();
+    load_early_depfile();
 
     t1 = std::chrono::high_resolution_clock::now();
 }
 
-void ananke::apply_depfile_analysis_overrides() {
-    // Pre-parse just the analysis-relevant sections (`includes`, `defines`)
-    // of the effective Depfile so the walker (which runs before the full
-    // Depfile is parsed) already skips intentionally-absent headers,
-    // resolves ambiguous ones and knows build-system macros. Explicit
-    // --depfile wins; otherwise ./Depfile. A Depfile elsewhere is NOT
-    // sniffed here (the hdl_store fallback happens in load_data_cache once
-    // the repository path is known without prompting).
-    std::string candidate;
+std::optional<std::string> ananke::resolve_depfile_candidate(
+    const std::string &explicit_target,
+    const std::filesystem::path &cwd,
+    const std::optional<std::filesystem::path> &hdl_store) {
     std::error_code ec;
-    if (!opts.target.empty() && std::filesystem::exists(opts.target, ec)) {
-        candidate = opts.target;
-    } else {
-        auto cwd_dep = std::filesystem::current_path() / "Depfile";
-        if (std::filesystem::exists(cwd_dep, ec)) candidate = cwd_dep.string();
+    auto absolute_normalized = [](const std::filesystem::path &p) {
+        return std::filesystem::absolute(p).lexically_normal().string();
+    };
+    if (!explicit_target.empty()) {
+        std::filesystem::path target(explicit_target);
+        if (!target.is_absolute()) target = cwd / target;
+        if (std::filesystem::exists(target, ec)) return absolute_normalized(target);
+        ec.clear();
     }
-    if (candidate.empty()) return;
-    apply_depfile_analysis_file(candidate);
+    auto cwd_dep = cwd / "Depfile";
+    if (std::filesystem::exists(cwd_dep, ec)) return absolute_normalized(cwd_dep);
+    ec.clear();
+    if (hdl_store.has_value()) {
+        auto root_dep = hdl_store.value() / "Depfile";
+        if (std::filesystem::exists(root_dep, ec)) return absolute_normalized(root_dep);
+    }
+    return std::nullopt;
 }
 
-void ananke::apply_depfile_analysis_file(const std::string &candidate) {
-    includes_settings inc;
-    if (Depfile::try_load_includes_section(candidate, inc) &&
-        (!inc.ignored.empty() || !inc.deconfliction.empty())) {
-        std::set<std::string> ignored(inc.ignored.begin(), inc.ignored.end());
-        s_store->set_ephemeral_include_config(std::move(ignored), std::move(inc.deconfliction));
-        spdlog::debug("Loaded includes overrides from {}", candidate);
+void ananke::load_early_depfile() {
+    // Parse the whole Depfile once, up front: its `includes`/`defines`
+    // sections steer the repository walk below, and build_flow reuses the
+    // held object instead of re-reading the file. Only explicit/CWD roots
+    // are considered here (hdl_store may still be unconfigured, and looking
+    // it up would prompt); load_data_cache adds that fallback.
+    std::error_code ec;
+    auto cwd = std::filesystem::current_path(ec);
+    if (ec) return;
+    auto candidate = resolve_depfile_candidate(opts.target, cwd, std::nullopt);
+    if (candidate.has_value()) load_early_depfile_from(candidate.value());
+}
+
+void ananke::load_early_depfile_from(const std::string &candidate) {
+    std::ifstream ifs(candidate);
+    if (!ifs.good()) return;
+    Depfile dep(ifs);
+    early_depfile_path_ = candidate;
+    if (dep.has_error()) early_depfile_error_ = dep.get_error();
+    populate_analysis_overlays(dep);
+    early_depfile_ = std::move(dep);
+    spdlog::debug("Loaded Depfile {}", candidate);
+}
+
+void ananke::populate_analysis_overlays(const Depfile &dep) {
+    if (!dep.includes.ignored.empty() || !dep.includes.deconfliction.empty()) {
+        std::set<std::string> ignored(dep.includes.ignored.begin(), dep.includes.ignored.end());
+        s_store->set_ephemeral_include_config(std::move(ignored), dep.includes.deconfliction);
     }
-    depfile_defines defs;
-    if (Depfile::try_load_defines_section(candidate, defs) && !defs.empty()) {
-        s_store->set_ephemeral_defines(std::move(defs));
-        spdlog::debug("Loaded defines overrides from {}", candidate);
+    if (!dep.defines.empty()) {
+        s_store->set_ephemeral_defines(dep.defines);
     }
 }
 
@@ -184,16 +207,15 @@ std::optional<int> ananke::load_data_cache() {
     if (opts.refresh_cache) data_store::clear_cache(opts.cache_dir);
     d_store = std::make_shared<data_store>(opts.no_cache, opts.cache_dir);
 
-    // hdl_store fallback for the analysis pre-parse: if no explicit/CWD
-    // Depfile was found in the constructor, look for one at the repository
-    // root now that the path is known (get_hdl_store() was already called
-    // for the trace above, so this never prompts).
-    if (!s_store->has_ephemeral_include_config() && !s_store->has_ephemeral_defines()) {
-        std::error_code ec;
-        auto root_dep = s_store->get_hdl_store() / "Depfile";
-        if (std::filesystem::exists(root_dep, ec)) {
-            apply_depfile_analysis_file(root_dep.string());
-        }
+    // hdl_store fallback for the early Depfile: if no explicit/CWD Depfile
+    // was loaded in the constructor, try one at the repository root now that
+    // the path is known (get_hdl_store() was already called for the trace
+    // above, so this never prompts). A found file anywhere blocks the other
+    // roots: there is exactly one effective Depfile.
+    if (!early_depfile_.has_value()) {
+        auto candidate = resolve_depfile_candidate(
+            opts.target, std::filesystem::current_path(), s_store->get_hdl_store());
+        if (candidate.has_value()) load_early_depfile_from(candidate.value());
     }
 
     // analyze repository content and update cache
@@ -207,15 +229,34 @@ std::optional<int> ananke::load_data_cache() {
 
 std::optional<int> ananke::build_flow() {
 
-    // Parse depfile
+    // Reuse the startup parse when it addresses the same file; otherwise
+    // (nothing found then, or an exotic flow) fall back to reading it here.
+    // A stored validation error surfaces exactly as before (error 60).
     if(opts.target.empty()) opts.target = std::filesystem::current_path().string() + "/Depfile";
-    if(std::filesystem::exists(opts.target)) {
-        std::ifstream ifs(opts.target);
-        Depfile dep(ifs);
-        if (dep.has_error()) {
-            spdlog::error("Invalid Depfile {}: {}", opts.target, dep.get_error());
-            return 60;
+    std::optional<Depfile> fresh_dep;
+    const Depfile *dep_ptr = nullptr;
+    {
+        std::error_code ec;
+        const std::string effective =
+            std::filesystem::absolute(opts.target, ec).lexically_normal().string();
+        if (!ec && early_depfile_.has_value() && effective == early_depfile_path_) {
+            if (!early_depfile_error_.empty()) {
+                spdlog::error("Invalid Depfile {}: {}", opts.target, early_depfile_error_);
+                return 60;
+            }
+            dep_ptr = &early_depfile_.value();
+        } else if (std::filesystem::exists(opts.target, ec)) {
+            std::ifstream ifs(opts.target);
+            fresh_dep.emplace(ifs);
+            if (fresh_dep->has_error()) {
+                spdlog::error("Invalid Depfile {}: {}", opts.target, fresh_dep->get_error());
+                return 60;
+            }
+            dep_ptr = &fresh_dep.value();
         }
+    }
+    if(dep_ptr != nullptr) {
+        const Depfile &dep = *dep_ptr;
 
         // Resolve auxiliary files (scripts and constraints)
         Auxiliary_resolver aux_resolver(d_store);

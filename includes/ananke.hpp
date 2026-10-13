@@ -19,7 +19,9 @@
 #define ANANKE_ANANKE_HPP
 
 #include <string>
+#include <filesystem>
 #include <memory>
+#include <optional>
 #include <vector>
 #include <expected>
 #include <spdlog/spdlog.h>
@@ -86,14 +88,31 @@ class ananke {
     [[nodiscard]] std::optional<int> load_data_cache();
     [[nodiscard]] std::optional<int> build_flow();
 
+    // Effective-Depfile discovery order: explicit --depfile, ./Depfile,
+    // then <hdl_store>/Depfile. Pure (no prompting, no settings access) so
+    // it is unit-testable; hdl_store is nullopt until the repository path is
+    // known. Returns absolute normalized paths.
+    static std::optional<std::string> resolve_depfile_candidate(
+        const std::string &explicit_target,
+        const std::filesystem::path &cwd,
+        const std::optional<std::filesystem::path> &hdl_store);
+
 private:
-    // See ananke.cpp: root-Depfile `includes`/`defines` pre-parse.
-    void apply_depfile_analysis_overrides();
-    void apply_depfile_analysis_file(const std::string &candidate);
+    // Full Depfile parse at startup (see ananke.cpp): the held object feeds
+    // both the analysis overlays and build_flow, so the file is read once.
+    void load_early_depfile();
+    void load_early_depfile_from(const std::string &candidate);
+    void populate_analysis_overlays(const Depfile &dep);
     std::shared_ptr<settings_store>  s_store;
     std::shared_ptr<data_store> d_store;
     CLI_opt opts;
     std::chrono::time_point<std::chrono::high_resolution_clock> t1;
+    // Single effective Depfile, parsed once. Validation errors stay deferred
+    // to build_flow (error 60, as before) so Depfile-independent commands
+    // (--refresh-cache, --new-app, --parse, --clear-cache) behave unchanged.
+    std::optional<Depfile> early_depfile_;
+    std::string early_depfile_path_;
+    std::string early_depfile_error_;
 
 };
 

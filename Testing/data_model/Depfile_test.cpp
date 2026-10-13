@@ -19,6 +19,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "ananke.hpp"
+
 #include "data_model/Constraints.hpp"
 #include "data_model/Script.hpp"
 #include "data_model/Depfile/Depfile.hpp"
@@ -230,36 +232,6 @@ TEST(DepfileIncludesTest, invalid_shape_rejected) {
     EXPECT_TRUE(f.has_error());
 }
 
-TEST(DepfileIncludesTest, lenient_section_preparse) {
-    const std::string path = "/tmp/ananke_depfile_inc_test_Depfile";
-    {
-        std::ofstream ofs(path);
-        ofs << R"({
-            "general": {
-                "project_name": "vproj",
-                "synth_tl": "dut",
-                "sim_tl": "tb"
-            },
-            "includes": {
-                "ignored": ["avery_defines.svh"],
-                "deconfliction": {"x.svh": "rtl/x.svh"}
-            }
-        })";
-    }
-    includes_settings inc;
-    EXPECT_TRUE(Depfile::try_load_includes_section(path, inc));
-    EXPECT_THAT(inc.ignored, testing::ElementsAre("avery_defines.svh"));
-    ASSERT_TRUE(inc.deconfliction.contains("x.svh"));
-    EXPECT_EQ(inc.deconfliction.at("x.svh").global_target,
-              std::optional<std::string>("rtl/x.svh"));
-    std::filesystem::remove(path);
-}
-
-TEST(DepfileIncludesTest, lenient_section_preparse_missing_file) {
-    includes_settings inc;
-    EXPECT_FALSE(Depfile::try_load_includes_section("/tmp/ananke_depfile_no_such_file_xyz", inc));
-}
-
 TEST(DepfileIncludesTest, file_like_top_level_deconfliction_warns_not_applies) {
     // Top-level `deconfliction` is module-only: a file-like key must not
     // leak into include resolution (it warns pointing at `includes`).
@@ -331,30 +303,52 @@ TEST(DepfileDefinesTest, invalid_shape_rejected) {
     EXPECT_TRUE(f.has_error());
 }
 
-TEST(DepfileDefinesTest, lenient_section_preparse) {
-    const std::string path = "/tmp/ananke_depfile_def_test_Depfile";
-    {
-        std::ofstream ofs(path);
-        ofs << R"({
-            "general": {
-                "project_name": "vproj",
-                "synth_tl": "dut",
-                "sim_tl": "tb"
-            },
-            "defines": {
-                "FOO": "bar",
-                "N": 7
-            }
-        })";
-    }
-    depfile_defines defs;
-    EXPECT_TRUE(Depfile::try_load_defines_section(path, defs));
-    EXPECT_EQ(defs.at("FOO"), "bar");
-    EXPECT_EQ(defs.at("N"), "7");
-    std::filesystem::remove(path);
+namespace {
+std::string dep_abs(const std::filesystem::path &p) {
+    return std::filesystem::absolute(p).lexically_normal().string();
 }
+} // namespace
 
-TEST(DepfileDefinesTest, lenient_section_preparse_missing) {
-    depfile_defines defs;
-    EXPECT_FALSE(Depfile::try_load_defines_section("/tmp/ananke_depfile_no_such_file_xyz", defs));
+TEST(DepfileDiscoveryTest, precedence_explicit_cwd_hdl_store) {
+    const std::filesystem::path root = "/tmp/ananke_dep_disc";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root / "cwd");
+    std::filesystem::create_directories(root / "hdl");
+    {
+        std::ofstream ofs(root / "cwd" / "Depfile");
+        ofs << "{}";
+    }
+    {
+        std::ofstream ofs(root / "hdl" / "Depfile");
+        ofs << "{}";
+    }
+    {
+        std::ofstream ofs(root / "explicit_dep");
+        ofs << "{}";
+    }
+    {
+        std::ofstream ofs(root / "cwd" / "rel_dep");
+        ofs << "{}";
+    }
+
+    // Explicit absolute path wins over everything.
+    EXPECT_EQ(ananke::resolve_depfile_candidate((root / "explicit_dep").string(), root / "cwd", root / "hdl"),
+              dep_abs(root / "explicit_dep"));
+    // Relative explicit paths resolve against the cwd.
+    EXPECT_EQ(ananke::resolve_depfile_candidate("rel_dep", root / "cwd", root / "hdl"),
+              dep_abs(root / "cwd" / "rel_dep"));
+    // Missing explicit falls through to ./Depfile.
+    EXPECT_EQ(ananke::resolve_depfile_candidate((root / "missing").string(), root / "cwd", root / "hdl"),
+              dep_abs(root / "cwd" / "Depfile"));
+    // ./Depfile wins over <hdl_store>/Depfile.
+    EXPECT_EQ(ananke::resolve_depfile_candidate("", root / "cwd", root / "hdl"),
+              dep_abs(root / "cwd" / "Depfile"));
+    // hdl_store fallback when cwd has none.
+    EXPECT_EQ(ananke::resolve_depfile_candidate("", root / "nowhere", root / "hdl"),
+              dep_abs(root / "hdl" / "Depfile"));
+    // Nothing anywhere.
+    EXPECT_FALSE(ananke::resolve_depfile_candidate("", root / "nowhere", root / "alsonowhere").has_value());
+    EXPECT_FALSE(ananke::resolve_depfile_candidate("", root / "nowhere", std::nullopt).has_value());
+
+    std::filesystem::remove_all(root);
 }

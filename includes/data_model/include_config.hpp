@@ -100,22 +100,6 @@ inline bool target_matches(const std::string &candidate, const std::string &targ
     return false;
 }
 
-// Merge a Depfile `includes` section into parse options (union; the
-// section wins per header/scope on conflict). Used both for the startup
-// root-Depfile pre-parse and the settings-profile fallback (which shares
-// the same value shape).
-template <typename IncludesSettings>
-void merge_into(parse_options &opts, const IncludesSettings &inc) {
-    for (const auto &s : inc.ignored) opts.ignored_includes.insert(s);
-    for (const auto &kv : inc.deconfliction) {
-        auto &dst = opts.include_deconfliction[normalize_repo_path(kv.first)];
-        if (kv.second.global_target.has_value()) dst.global_target = kv.second.global_target;
-        for (const auto &sv : kv.second.scoped_targets) {
-            dst.scoped_targets[normalize_repo_path(sv.first)] = sv.second;
-        }
-    }
-}
-
 // Deterministic fingerprint for cache invalidation (config change forces a
 // re-parse; include outcomes and global macro meanings are only
 // re-evaluated on parse). Covers the `includes` config and the effective
