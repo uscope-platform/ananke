@@ -1709,6 +1709,14 @@ void sv_visitor::enterStructure_pattern_key(sv2017::Structure_pattern_keyContext
 
     if (ctx->identifier() && !ctx->assignment_pattern_key()) {
         params_factory.record_literal_key(ctx->getText());
+    } else if (ctx->assignment_pattern_key() && ctx->assignment_pattern_key()->KW_DEFAULT()) {
+        // Record `default:` like any other key so keyed+default patterns
+        // (e.g. '{a: 1, default: '0}, IEEE 1800-2017 §10.9.1) keep their
+        // shape; the backend fills unmentioned members with the default.
+        // Without this the key is dropped, the literal looks mixed
+        // keyed/positional downstream, and the keys are wrongly ignored.
+        // Type-keys (tagged union patterns) stay unrecorded as before.
+        params_factory.record_literal_key("default");
     }
 }
 
@@ -1720,6 +1728,14 @@ void sv_visitor::exitAssignment_pattern(sv2017::Assignment_patternContext *ctx) 
                 default_assignment = true;
             }
         }
+    }
+
+    // Pure `'{default: X}` keeps the legacy unkeyed shape (single value
+    // broadcast downstream); only mixed keyed+default patterns retain the
+    // recorded `default` key for member-wise placement.
+    if (default_assignment && ctx->structure_pattern_key().size() == 1 &&
+        !ctx->replication_assignment()) {
+        params_factory.clear_literal_keys();
     }
 
     if (!ctx->replication_assignment()) params_factory.stop_initialization_list(default_assignment);

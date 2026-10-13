@@ -24,11 +24,56 @@ CEREAL_REGISTER_TYPE(Concatenation)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(Expression_base, Concatenation)
 
 namespace {
+// Join up to max_names, appending "+N more" when truncated so huge structs
+// don't flood the log.
+std::string join_names(const std::vector<std::string> &names, size_t max_names = 10) {
+    std::string out;
+    const size_t n = std::min(names.size(), max_names);
+    for (size_t i = 0; i < n; ++i) {
+        if (i) out += ", ";
+        out += names[i];
+    }
+    if (names.size() > max_names) {
+        out += " + " + std::to_string(names.size() - max_names) + " more";
+    }
+    return out;
+}
+
+// Single-line rendering of a (fully-keyed) literal for diagnostics, capped
+// so huge initializers don't flood the log.
+std::string describe_literal(const Concatenation &c, size_t max_len = 160) {
+    std::string s = c.print();
+    if (!s.empty() && s.back() == '\n') s.pop_back();
+    if (s.size() > max_len) s = s.substr(0, max_len) + "...";
+    return s;
+}
+
+// Values in written order, without keys: shows how a mixed literal is
+// actually packed once the keys are ignored. print() can't be used here —
+// it indexes keys per component, which misaligns (and misleads) for mixed
+// literals. Capped for log sanity.
+std::string print_values_only(const Concatenation &c, size_t max_len = 160) {
+    std::string out = "'{";
+    const auto comps = c.get_components();
+    for (size_t i = 0; i < comps.size(); ++i) {
+        if (i) out += ", ";
+        std::string v = comps[i] ? comps[i]->print() : "?";
+        if (!v.empty() && v.back() == '\n') v.pop_back();
+        if (v.size() > 60) v = v.substr(0, 60) + "...";
+        if (out.size() + v.size() > max_len) {
+            out += "... (" + std::to_string(comps.size() - i) + " more)";
+            break;
+        }
+        out += v;
+    }
+    out += "}";
+    return out;
+}
+
 // Sizing derivation shared by evaluate/resolve when an incoming container
 // type is present: per-component narrowing computed into locals instead of
 // mutating members.
-struct concat_expected_sizing {
-    bool packing = false;
+struct concat_expected_sizing {    bool packing = false;
     std::vector<uint64_t> unpacked_dimension;
     std::vector<bool> unpacked_ascending;
     int64_t container_size = 0;
@@ -108,14 +153,93 @@ Concatenation::Concatenation(const Concatenation &other) {
 }
 
 bool Concatenation::reorder_by_member_names(const std::vector<std::string> &member_names) {
-    if (component_keys.empty() || default_initialization) return true;
+    if (component_keys.empty()) return true;
+    // Every message below names the literal, the keys and the struct members,
+    // so the offending source can be found by grep.
+    // Split off `default:` entries (IEEE 1800-2017 §10.9.1): keyed members
+    // combined with `default:` is legal — members not mentioned take the
+    // default value. `default` can't be a member name (reserved keyword), so
+    // it is an unambiguous sentinel. True keyed/positional mixing is rejected
+    // by the grammar, so fewer keys than values means `default:` entries
+    // (or exotic type-keys, handled as malformed below).
+    std::shared_ptr<Expression_base> default_value;
+    bool multiple_defaults = false;
+    std::vector<std::string> keys;
+    std::vector<std::shared_ptr<Expression_base>> vals;
+    keys.reserve(components.size());
+    vals.reserve(components.size());
+    for (size_t i = 0; i < components.size(); ++i) {
+        const std::string k = i < component_keys.size() ? component_keys[i] : "";
+        if (k == "default") {
+            if (default_value) multiple_defaults = true;
+            else default_value = components[i];
+        } else {
+            keys.push_back(k);
+            vals.push_back(components[i]);
+        }
+    }
+    if (multiple_defaults) {
+        spdlog::warn("Struct literal has multiple `default:` entries: {}; using the first",
+                     describe_literal(*this));
+    }
+    // Fill base: the default value when present, else zero (normal for
+    // partial keyed literals). Shared across slots like the zero below is —
+    // plain values are never mutated by remap, only nested keyed literals.
+    auto fill = default_value ? default_value : std::make_shared<Numeric_token>("0");
+    if (default_value) {
+        std::vector<std::shared_ptr<Expression_base>> ordered(member_names.size(), fill);
+        std::vector<bool> placed(member_names.size(), false);
+        for (size_t i = 0; i < keys.size(); ++i) {
+            if (keys[i].empty()) {
+                spdlog::warn("Struct literal mixes keyed/`default:` members with unkeyed values; ignoring "
+                             "the keys and packing positionally into struct ({}): {}",
+                             join_names(member_names), describe_literal(*this));
+                return false;
+            }
+            size_t pos = 0;
+            bool found = false;
+            for (; pos < member_names.size(); ++pos) {
+                if (member_names[pos] == keys[i]) { found = true; break; }
+            }
+            if (!found) {
+                spdlog::warn("Struct literal key '{}' is not a member of struct ({}): {}; ignoring the "
+                             "keys and packing positionally",
+                             keys[i], join_names(member_names), describe_literal(*this));
+                return false;
+            }
+            if (placed[pos]) {
+                spdlog::warn("Struct literal key '{}' appears twice: {}; ignoring the keys and packing "
+                             "positionally", keys[i], describe_literal(*this));
+                return false;
+            }
+            placed[pos] = true;
+            ordered[pos] = vals[i];
+        }
+        components = std::move(ordered);
+        component_keys.clear();
+        return true;
+    }
     if (component_keys.size() != components.size()) {
-        spdlog::warn("Struct literal mixes keyed and positional members; packing positionally");
+        if (component_keys.size() < components.size()) {
+            spdlog::warn("Struct literal mixes keyed members with unkeyed values ({} of {} values keyed: {}); "
+                         "ignoring the keys and packing values in written order {} into struct ({}), so keyed "
+                         "values can land in the wrong fields. Give every value a member key (a single "
+                         "`default:` covers the rest)",
+                         component_keys.size(), components.size(), join_names(component_keys),
+                         print_values_only(*this), join_names(member_names));
+        } else {
+            spdlog::warn("Struct literal has more keys ({}) than values ({}): {}; ignoring the keys and "
+                         "packing positionally into struct ({})",
+                         component_keys.size(), components.size(), describe_literal(*this),
+                         join_names(member_names));
+        }
         return false;
     }
     if (component_keys.size() > member_names.size()) {
-        spdlog::warn("Struct literal has {} keyed members for {} struct members; packing positionally",
-                     component_keys.size(), member_names.size());
+        spdlog::warn("Struct literal has {} keys ({}) for a {}-member struct ({}): {}; ignoring the keys "
+                     "and packing positionally",
+                     component_keys.size(), join_names(component_keys), member_names.size(),
+                     join_names(member_names), describe_literal(*this));
         return false;
     }
     // Missing members default to zero (normal for partial keyed literals).
@@ -129,12 +253,14 @@ bool Concatenation::reorder_by_member_names(const std::vector<std::string> &memb
             if (member_names[pos] == component_keys[i]) { found = true; break; }
         }
         if (!found) {
-            spdlog::warn("Struct literal key '{}' is not a struct member; packing positionally",
-                         component_keys[i]);
+            spdlog::warn("Struct literal key '{}' is not a member of struct ({}): {}; ignoring the keys "
+                         "and packing positionally",
+                         component_keys[i], join_names(member_names), describe_literal(*this));
             return false;
         }
         if (placed[pos]) {
-            spdlog::warn("Struct literal key '{}' appears twice; packing positionally", component_keys[i]);
+            spdlog::warn("Struct literal key '{}' appears twice: {}; ignoring the keys and packing "
+                         "positionally", component_keys[i], describe_literal(*this));
             return false;
         }
         placed[pos] = true;
@@ -191,8 +317,13 @@ std::expected<resolved_parameter, solver_errors> Concatenation::evaluate(const s
     // `default:` fills the rest by design and is exempt.
     if (!cur.fields_sizes.empty() && !default_initialization &&
         cur.fields_sizes.size() != concat_size) {
-        spdlog::warn("Struct literal has {} components for {} members; packing positionally",
-                     concat_size, cur.fields_sizes.size());
+        // When keys are still attached the reorder failed (or there was no
+        // struct type to reorder against): render values-only so the message
+        // doesn't imply a key-to-field mapping that isn't happening.
+        const std::string shown = component_keys.empty() ? describe_literal(*this)
+                                                        : print_values_only(*this);
+        spdlog::warn("Struct literal has {} values for a {}-member struct; packing positionally: {}",
+                     concat_size, cur.fields_sizes.size(), shown);
     }
     if (cur.packing) {
         std::vector<int64_t> sizes;

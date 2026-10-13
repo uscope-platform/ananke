@@ -33,6 +33,10 @@ void concatenation_factory::add_key(const std::string &key) {
     new_concatenation.add_component_key(key);
 }
 
+void concatenation_factory::clear_keys() {
+    new_concatenation.clear_component_keys();
+}
+
 bool concatenation_factory::active() const {
  return factory_active;
 }

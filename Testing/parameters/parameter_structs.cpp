@@ -1194,3 +1194,50 @@ endmodule
         EXPECT_EQ(lp->get_numeric_value(), expected_q[i]) << "instance " << i;
     }
 }
+
+TEST(parameter_extraction, struct_keyed_plus_default_literal) {
+    // Keyed members combined with `default:` (IEEE 1800-2017 §10.9.1) is
+    // legal: members not mentioned take the default value. Pre-fix the
+    // frontend dropped the `default:` key, the literal looked mixed
+    // keyed/positional, and the backend packed positionally, scrambling
+    // every field (caliptra TL_H2D_DEFAULT: d_ready landed in a_valid...).
+    auto test_pattern = R"(
+package tlul_pkg;
+    typedef struct packed {
+        logic       a_valid;
+        logic [2:0] a_opcode;
+        logic [2:0] a_param;
+        logic [7:0] a_data;
+        logic       d_ready;
+    } tl_h2d_t;
+    localparam tl_h2d_t TL_H2D_DEFAULT = '{
+        d_ready:  1'b1,
+        a_opcode: 3'd4,
+        a_data:   8'hFF,
+        default:  '0
+    };
+    localparam tl_h2d_t TL_ALL_DEFAULT = '{default: '0};
+endpackage
+)";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("", test_pattern).value();
+    auto resources = file.get_content();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    d_store->store_file({"/dev/zero", "file_hash", file});
+    std::shared_ptr<hdl_package_statement> pkg;
+    for (auto &r : resources) {
+        if (!r->is<hdl_package_statement>()) continue;
+        auto p = std::static_pointer_cast<hdl_package_statement>(r);
+        if (p->getName() == "tlul_pkg") pkg = p;
+    }
+    ASSERT_TRUE(pkg);
+
+    parameter_solver::propagate_types(pkg, d_store);
+    auto pkg_context = package_solver().retrieve(pkg->get_parameter_statements(), d_store);
+    auto solved = parameter_solver::process_parameters(pkg->get_parameter_statements(), pkg_context);
+
+    // MSB->LSB: a_valid=0, a_opcode=4, a_param=0, a_data=0xFF, d_ready=1.
+    EXPECT_EQ(solved.at(qualified_identifier("TL_H2D_DEFAULT")).get_integer().get_value(), 0x41FF);
+    EXPECT_EQ(solved.at(qualified_identifier("TL_ALL_DEFAULT")).get_integer().get_value(), 0);
+}

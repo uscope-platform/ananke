@@ -64,6 +64,12 @@ void HDL_parameters_factory::record_literal_key(const std::string &key) {
     }
 }
 
+void HDL_parameters_factory::clear_literal_keys() {
+    if (top_as<concatenation_factory>()) {
+        top_as<concatenation_factory>()->clear_keys();
+    }
+}
+
 void HDL_parameters_factory::stop_initialization_list(bool default_assignment) {
     if (top_as<concatenation_factory>()) {
         if (top_as<replication_factory>()) {

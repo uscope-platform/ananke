@@ -26,6 +26,7 @@ public:
     void start_concatenation();
     void set_default_init();
     void add_key(const std::string &key);
+    void clear_keys();
 
     void consume(const std::shared_ptr<Expression_base>& expr) override;
     bool active() const override;
