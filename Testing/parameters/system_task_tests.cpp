@@ -23,6 +23,7 @@
 #include "analysis/parameter_solver.hpp"
 #include "data_model/HDL/parameters/components/HDL_function_call.hpp"
 #include "data_model/HDL/parameters/components/HDL_builtin_function.hpp"
+#include "data_model/HDL/parameters/components/Concatenation.hpp"
 #include "data_model/HDL/parameters/components/token/Real_token.hpp"
 #include "analysis/HDL_ast_builder_v2.hpp"
 #include "data_model/data_store.hpp"
@@ -125,6 +126,65 @@ TEST(system_task, multiple) {
     std::map<qualified_identifier, resolved_parameter> check_defaults = {
         {qualified_identifier("CAST"), 16},
         {qualified_identifier("CAST_2"), 12},
+    };
+
+    for(const auto& [name, value]:check_defaults){
+        ASSERT_TRUE(defaults.contains(name));
+        ASSERT_EQ(value, defaults.at(name));
+    }
+}
+
+TEST(system_task, clog2_of_concat_expression) {
+    // A single call argument containing concatenations as operands must
+    // parse as exactly one argument. Previously every independently
+    // completing sub-expression was consumed as a separate argument, so
+    // `$clog2({a,b} ^ {c,d})` parsed with the two concatenations (plus
+    // operator residue) as distinct arguments and evaluated arguments[0]
+    // (an unpacked array) to "invalid argument for a $clog2 call".
+    auto test_pattern = R"(
+
+    module test_mod #(
+    )();
+
+        localparam W = $clog2({32'h20005000, 32'h20004000} ^ {32'h20005FFF, 32'h20004FFF});
+
+    endmodule
+    )";
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto parameters = resource.get_parameter_statements();
+
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+    p->set_name("W");
+    p->set_type(Type_engine::create_primitive_type("implicit"));
+    auto call = std::make_shared<HDL_builtin_function>(HDL_builtin_function::function::clog2);
+    Concatenation lhs;
+    lhs.add_component(std::make_shared<Numeric_token>("32'h20005000"));
+    lhs.add_component(std::make_shared<Numeric_token>("32'h20004000"));
+    Concatenation rhs;
+    rhs.add_component(std::make_shared<Numeric_token>("32'h20005FFF"));
+    rhs.add_component(std::make_shared<Numeric_token>("32'h20004FFF"));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Concatenation>(lhs));
+    e.set_rhs(std::make_shared<Concatenation>(rhs));
+    e.set_operation(Expression_v2::bitwise_xor);
+    call->add_argument(std::make_shared<Expression_v2>(e));
+
+    p->set_raw_value(call);
+
+    check_params.push_back(p);
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
+    }
+
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
+    std::map<qualified_identifier, resolved_parameter> check_defaults = {
+        {qualified_identifier("W"), 44},
     };
 
     for(const auto& [name, value]:check_defaults){
