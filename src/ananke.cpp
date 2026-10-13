@@ -77,7 +77,15 @@ void ananke::load_early_depfile_from(const std::string &candidate) {
     if (!ifs.good()) return;
     Depfile dep(ifs);
     early_depfile_path_ = candidate;
-    if (dep.has_error()) early_depfile_error_ = dep.get_error();
+    if (dep.has_error()) {
+        // Deferred as a hard error to build_flow, but say so NOW: otherwise
+        // a typo'd Depfile silently contributes empty includes/defines to
+        // the whole walk (e.g. all ignores stop working) with no indication
+        // until project generation — or never, on refresh-only runs.
+        early_depfile_error_ = dep.get_error();
+        spdlog::warn("Depfile {} is invalid ({}); analysis continues without its "
+                     "includes/defines sections", candidate, early_depfile_error_);
+    }
     populate_analysis_overlays(dep);
     early_depfile_ = std::move(dep);
     spdlog::debug("Loaded Depfile {}", candidate);

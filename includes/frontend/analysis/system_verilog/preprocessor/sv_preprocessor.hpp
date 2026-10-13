@@ -151,7 +151,6 @@ namespace preprocessor {
         // misses keep their per-occurrence warn/error so diagnostics are
         // unchanged. FS state is stable for the instance lifetime.
         std::unordered_map<std::string, std::optional<include_dependency>> include_resolution_cache;
-        static constexpr auto identifier_pattern = ctre::search<R"(`([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()*)">;
     };
 }
 

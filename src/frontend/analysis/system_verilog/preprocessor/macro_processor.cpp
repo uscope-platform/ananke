@@ -207,6 +207,24 @@ namespace preprocessor {
                         quote_scanned = static_cast<size_t>(remaining.data() - working.data());
                         continue;
                     }
+                    // Object-like macro followed by '(': not a call. The
+                    // parens belong to the surrounding syntax — a module
+                    // header after a cell-name define (`CELL_NAME (...)), or
+                    // a call to whatever function the replacement names
+                    // (`FOO (a, b) with `define FOO my_func). Expand the
+                    // bare `ID and rewind to '('; the rescan handles any
+                    // macro usages inside the parens. Skipping
+                    // get_call_arguments here also avoids misreading e.g. a
+                    // port list as macro actuals.
+                    if (auto dit = definitions.find(id); dit != definitions.end() &&
+                        std::holds_alternative<std::string>(dit->second)) {
+                        result.append(get_define_replacement(std::string_view(match.begin(), id.size() + 1)));
+                        // Rewind past the bare `ID only, keeping any whitespace
+                        // before '(' in the stream for output fidelity.
+                        remaining = std::string_view{match.begin() + id.size() + 1, remaining.end()};
+                        quote_scanned = static_cast<size_t>(remaining.data() - working.data());
+                        continue;
+                    }
                     auto [args, rest_of_line] = get_call_arguments(args_text, !opts.strict);
                     if (!definitions.contains(id)) {
                         if (opts.strip_uvm_macros && is_external_methodology_macro(id)) {

@@ -600,10 +600,14 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             definitions[std::string(identifier)] = macro.value();
             if (lineal) locally_defined.insert(std::string(identifier));
         } else {
+            // Right-trim like the commented-define path above: trailing
+            // whitespace is never significant after lexing, and the
+            // replacement can become an identifier (e.g. a module name from
+            // a cell-name define), which must not carry stray blanks.
             auto value_first = remaining_view.find_first_not_of("\t ");
             std::string value = (value_first == std::string_view::npos)
                 ? ""
-                : std::string{remaining_view.substr(value_first)};
+                : std::string{macro_processor::trim(remaining_view.substr(value_first))};
             definitions[std::string(identifier)] = value;
             if (lineal) locally_defined.insert(std::string(identifier));
         }

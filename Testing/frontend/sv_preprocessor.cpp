@@ -2884,3 +2884,95 @@ TEST(preprocessor, unused_actual_macro_never_expands_or_reports) {
     EXPECT_FALSE(preproc.has_fatal_error());
     EXPECT_TRUE(preproc.get_undefined_macros().empty());
 }
+
+TEST(preprocessor, object_like_macro_before_paren_is_not_a_call) {
+    // Caliptra `CALIPTRA_ICG shape: an object-like (text) define followed
+    // by '(' is not a macro call — the parens belong to the surrounding
+    // syntax (here a module header). Previously fatal ("Attempted to pass
+    // arguments to a macro ... that does not need them").
+    auto test_pattern = R"(
+        `define MY_CELL cptra_clk_gate
+        module `MY_CELL (
+            input logic clk,
+            input logic en,
+            output clk_cg
+        );
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module cptra_clk_gate (
+            input logic clk,
+            input logic en,
+            output clk_cg
+        );
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, object_like_macro_call_form_keeps_parens) {
+    // `FOO (a, b) with object-like FOO expands to the replacement followed
+    // by the parens (i.e. a call to whatever the replacement names).
+    auto test_pattern = R"(
+        `define MY_FUNC my_func
+        module test_module ();
+            wire w;
+            assign w = `MY_FUNC (1'b1, 1'b0);
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("assign w = my_func (1'b1, 1'b0);"));
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, function_like_macro_with_space_still_a_call) {
+    // Regression guard: whitespace between a function-like macro name and
+    // '(' must still parse as a call.
+    auto test_pattern = R"(
+        `define ADD(a,b) ((a)+(b))
+        module test_module ();
+            wire [3:0] w;
+            assign w = `ADD (1, 2);
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("assign w = ((1)+(2));"));
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, undefined_macro_before_paren_keeps_arity) {
+    // Undefined uses still consume the parens so the call-site arity is
+    // recorded for quarantine (unchanged behavior).
+    auto test_pattern = R"(
+        module test_module ();
+            wire w;
+            assign w = `MISSING_MACRO (1'b1, 1'b0);
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    preproc.preprocess(test_pattern);
+    EXPECT_TRUE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+    EXPECT_THAT(preproc.get_undefined_macros(), testing::Contains(testing::Pair(
+        "MISSING_MACRO", testing::ElementsAre(2))));
+}
