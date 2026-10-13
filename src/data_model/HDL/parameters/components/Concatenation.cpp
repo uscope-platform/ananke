@@ -168,6 +168,19 @@ void Concatenation::propagate_function(const hdl_function_def_ptr &def) {
 std::expected<resolved_parameter, solver_errors> Concatenation::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type){
     std::expected<resolved_parameter, solver_errors> result;
     auto concat_size = components.size();
+    // Self-determined packed evaluation: SystemVerilog concatenations are
+    // packed by construction, but without a container type the default below
+    // is unpacked (an int array), which breaks packed operators over the
+    // result (e.g. `$clog2({a,b} ^ {c,d})`, whose argument carries no
+    // container). When the concatenation is self-determined packed, retry
+    // through the packing path; anything else falls through unchanged.
+    if (!expected_type && !default_initialization && !components.empty()) {
+        if (auto self = resolve_expression_type(context, std::nullopt);
+            self && !self->is_real && !self->packed_sizes.empty() && self->unpacked_sizes.empty()) {
+            if (auto packed = evaluate(context, self); packed.has_value() && packed->is_integer())
+                return packed;
+        }
+    }
     // Sizing comes only from the incoming container type (see
     // derive_concat_sizing); without one the construction defaults apply.
     concat_expected_sizing cur;

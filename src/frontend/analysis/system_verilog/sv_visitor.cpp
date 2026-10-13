@@ -1165,6 +1165,12 @@ bool sv_visitor::expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
     return false;
 }
 
+bool sv_visitor::is_top_call_argument(antlr4::tree::ParseTree *node) {
+    auto *p = node ? node->parent : nullptr;
+    return dynamic_cast<sv2017::List_of_argumentsContext *>(p) != nullptr ||
+           dynamic_cast<sv2017::List_of_arguments_named_itemContext *>(p) != nullptr;
+}
+
 bool sv_visitor::is_package_typedef(const std::string &prefix, const std::string &name) {
     // Packages are the only owners of package-qualified typedefs: modules and
     // interfaces never declare `prefix::name`. The old resource branch could
@@ -1189,11 +1195,13 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
         if (auto primary = dynamic_cast<sv2017::PrimaryAssigContext*>(ctx->primary())) {
             if (primary->assignment_pattern_expression()) return;
         }
+        if (is_top_call_argument(ctx)) params_factory.start_call_argument();
         params_factory.start_expression_new(ctx->primary() == nullptr);
         if(ctx->QUESTIONMARK()){
             params_factory.start_ternary_operator();
         }
     } else if (f_factory.is_active() && !in_streaming_slice) {
+            if (is_top_call_argument(ctx)) f_factory.start_call_argument();
             f_factory.start_expression(ctx->primary() == nullptr);
             if(ctx->QUESTIONMARK()){
                 f_factory.start_ternary();
@@ -1217,11 +1225,13 @@ void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
             params_factory.stop_ternary();
         }
         params_factory.stop_expression_new(ctx->primary() == nullptr);
+        if (is_top_call_argument(ctx)) params_factory.stop_call_argument();
     }else if (f_factory.is_active() && !in_streaming_slice) {
         if(ctx->QUESTIONMARK()){
             f_factory.stop_ternary();
         }
         f_factory.stop_expression(ctx->primary() == nullptr);
+        if (is_top_call_argument(ctx)) f_factory.stop_call_argument();
         // Nested sub-expressions exit here too, while assignment_value still
         // holds the previous statement's value: only take the condition once
         // the outermost expression just completed (level back to 0 outside

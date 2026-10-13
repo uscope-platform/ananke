@@ -270,6 +270,11 @@ private:
     // True when an expression sits inside [...] dimension bounds as opposed
     // to a plain value expression (e.g. a variable initializer).
     static bool expression_in_decl_dimensions(antlr4::tree::ParseTree *node);
+    // True when an expression is a top-level call argument (a direct child
+    // of a `list_of_arguments`, named or positional): such expressions are
+    // framed so interior completions accumulate into the argument instead of
+    // being claimed as extra call arguments (see call_argument_frame).
+    static bool is_top_call_argument(antlr4::tree::ParseTree *node);
     // True when `prefix` names an already-parsed package/resource defining a
     // typedef `name` (e.g. `p::fmt_e`): disambiguates `pkg::Type'(x)`
     // type-casts from `pkg::PARAM'(x)` size-casts, which share the `::` shape.

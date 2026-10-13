@@ -69,6 +69,17 @@ void Replication::propagate_function(const hdl_function_def_ptr &def) {
 
 std::expected<resolved_parameter, solver_errors> Replication::evaluate(const std::map<qualified_identifier, resolved_parameter> &context, const std::optional<resolved_type> &expected_type) {
     if (!repetition_size || !repeated_item) return std::unexpected{missing_value};
+    // Self-determined packed evaluation, mirroring Concatenation: a
+    // replication is packed by construction, so without a container type a
+    // self-determined integer repetition still packs (e.g. the
+    // `{32{1'b1}}` mask inside `$clog2`); otherwise fall through unchanged.
+    if (!expected_type) {
+        if (auto self = resolve_expression_type(context, std::nullopt);
+            self && !self->is_real && !self->packed_sizes.empty() && self->unpacked_sizes.empty()) {
+            if (auto packed = evaluate(context, self); packed.has_value() && packed->is_integer())
+                return packed;
+        }
+    }
     // Packing comes only from the incoming container type; without one the
     // construction default (unpacked) applies. Children always evaluate
     // plain, as the old pass never touched them.

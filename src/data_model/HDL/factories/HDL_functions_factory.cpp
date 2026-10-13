@@ -20,6 +20,7 @@
 #include "data_model/HDL/factories/parameters/function_calls_factory.hpp"
 #include "data_model/HDL/factories/parameters/ternary_factory.hpp"
 #include "data_model/HDL/factories/parameters/streaming_factory.hpp"
+#include "data_model/HDL/factories/parameters/call_argument_frame.hpp"
 
 void HDL_functions_factory::start_assignment(const qualified_identifier &n) {
     // A fresh lvalue supersedes any frame left open by an aborted statement.
@@ -273,6 +274,33 @@ void HDL_functions_factory::stop_function_call() {
     }
 }
 
+void HDL_functions_factory::start_call_argument() {
+    auto frame = std::make_unique<call_argument_frame>(expr_factory_);
+    consumer_stack.push(std::move(frame));
+}
+
+void HDL_functions_factory::stop_call_argument() {
+    // Pops the argument frame opened by start_call_argument and delivers the
+    // accumulated argument expression. Interior completions were diverted
+    // into the argument expression (never into the call), so exactly one
+    // value is delivered per argument no matter how many composites it
+    // contains.
+    if (!top_as<call_argument_frame>()) return;
+    consumer_stack.pop();
+    auto expr = expr_factory_.get_expression_v2();
+    std::shared_ptr<Expression_base> value;
+    if (expr.has_value()) {
+        if (expr->get_operation() != Expression_v2::none) {
+            value = Expression_v2::unwrap(std::move(*expr));
+        } else if (auto lhs = expr->get_lhs()) {
+            value = lhs;
+        }
+    }
+    expr_factory_.clear_expression();
+    if (!value) return;
+    sink_value(value);
+}
+
 void HDL_functions_factory::set_function_package_prefix(const std::string &p) {
     if (top_as<function_calls_factory>()) {
         top_as<function_calls_factory>()->set_package_prefix(p);
@@ -337,6 +365,10 @@ void HDL_functions_factory::stop_expression(bool new_expr) {
     // level-0 closings are index fragments, not statement values.
     if (selection_depth > 0) return;
     if (expr_factory_.get_level() == 0) {
+        // Inside a call argument (marker on top) completions accumulate in
+        // the argument expression; the argument's own exit finalizes exactly
+        // one value into the call (see stop_call_argument).
+        if (top_as<call_argument_frame>()) return;
         auto expr = expr_factory_.get_expression_v2();
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {

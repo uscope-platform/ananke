@@ -18,6 +18,7 @@
 #include "data_model/HDL/factories/parameters/concatenation_factory.hpp"
 #include "data_model/HDL/factories/parameters/function_calls_factory.hpp"
 #include "data_model/HDL/factories/parameters/ternary_factory.hpp"
+#include "data_model/HDL/factories/parameters/call_argument_frame.hpp"
 #include "data_model/HDL/factories/parameters/cast_factory.hpp"
 #include "data_model/HDL/factories/parameters/streaming_factory.hpp"
 
@@ -165,6 +166,12 @@ void HDL_parameters_factory::stop_expression_new(bool new_expr) {
     if (in_bit_selection) return;
     expr_factory.stop_expression(new_expr);
     if (expr_factory.get_level() == 0) {
+        // Inside a call argument (marker on top) completions accumulate in
+        // the argument expression; the argument's own exit finalizes exactly
+        // one value into the call (see stop_call_argument). Routing them
+        // here would either claim extra arguments or double-count the value
+        // already held by the expression.
+        if (top_as<call_argument_frame>()) return;
         auto expr = expr_factory.get_expression_v2();
         if (expr.has_value()) {
             if (expr->get_operation() != Expression_v2::none) {
@@ -262,7 +269,7 @@ void HDL_parameters_factory::set_stream_slice_size(const std::shared_ptr<Express
 }
 
 void HDL_parameters_factory::start_replication() {
-    if(ctx == param_context::declaration || ctx == param_context::packed_dim || top_as<concatenation_factory>()){
+    if(ctx == param_context::declaration || ctx == param_context::packed_dim || ctx == param_context::override || top_as<concatenation_factory>()){
         auto repl = std::make_unique<replication_factory>();
         repl->start_replication(true);
         consumer_stack.push(std::move(repl));
@@ -452,5 +459,37 @@ void HDL_parameters_factory::stop_function_call() {
             current_resource.set_raw_value(call);
             expr_factory.clear_expression();
         }
+    }
+}
+
+void HDL_parameters_factory::start_call_argument() {
+    auto frame = std::make_unique<call_argument_frame>(expr_factory);
+    consumer_stack.push(std::move(frame));
+}
+
+void HDL_parameters_factory::stop_call_argument() {
+    // Pops the argument frame opened by start_call_argument and delivers the
+    // accumulated argument expression. Interior completions were diverted
+    // into the argument expression (never into the call), so exactly one
+    // value is delivered per argument no matter how many composites it
+    // contains.
+    if (!top_as<call_argument_frame>()) return;
+    consumer_stack.pop();
+    auto expr = expr_factory.get_expression_v2();
+    std::shared_ptr<Expression_base> value;
+    if (expr.has_value()) {
+        if (expr->get_operation() != Expression_v2::none) {
+            value = Expression_v2::unwrap(expr.value());
+        } else if (auto lhs = expr->get_lhs()) {
+            value = lhs;
+        }
+    }
+    expr_factory.clear_expression();
+    if (!value) return;
+    if (!consumer_stack.empty()) {
+        consumer_stack.top()->consume(value);
+    } else {
+        current_resource.set_type(current_type);
+        current_resource.set_raw_value(value);
     }
 }

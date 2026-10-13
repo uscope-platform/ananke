@@ -91,6 +91,11 @@ public:
     void stop_expression(bool new_expr = false);
     void start_function_call(const std::string &name);
     void stop_function_call();
+    // Call-argument framing (see call_argument_frame): pushed when a
+    // top-level call argument starts, popped when it completes with exactly
+    // one value delivered to the call.
+    void start_call_argument();
+    void stop_call_argument();
     void set_function_package_prefix(const std::string &p);
     void set_language(hdl_language l) { language = l; }
     void add_call_argument(const std::shared_ptr<Expression_base> &ec);

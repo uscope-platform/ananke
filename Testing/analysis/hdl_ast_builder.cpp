@@ -1560,3 +1560,33 @@ endmodule
     std::sort(seen.begin(), seen.end());
     EXPECT_EQ(seen, (std::vector<int64_t>{1, 2, 10}));
 }
+
+TEST(hdl_ast_builder, replication_in_instance_override) {
+    // A replication used as an instance parameter override must parse as a
+    // replication. Previously start_replication did not cover override
+    // context (unlike every other starter), so `{2{1'b1}}` degraded to bare
+    // components and the override evaluated to garbage.
+    auto source = R"(
+module leaf #(parameter int W = 0)();
+endmodule
+
+module top ();
+    leaf #(.W({2{1'b1}})) u_leaf ();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", source);
+    ASSERT_TRUE(resources.has_value());
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/tmp/repl_override.sv", "h", resources.value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto ast = b.build_ast(std::vector<std::string>{"top"})[0];
+    ASSERT_EQ(ast->get_dependencies().size(), 1u);
+    auto w = ast->get_dependencies()[0]->find_parameter("W");
+    ASSERT_NE(w, nullptr);
+    ASSERT_TRUE(w->get_numeric_value().has_value());
+    EXPECT_EQ(w->get_numeric_value().value().get_value(), 3);
+}

@@ -89,6 +89,12 @@ public:
     void stop_function_call();
     void set_language(hdl_language l) { language = l; }
 
+    // Call-argument framing (see call_argument_frame): pushed when a
+    // top-level call argument starts, popped when it completes with exactly
+    // one value delivered to the call.
+    void start_call_argument();
+    void stop_call_argument();
+
     bool in_packed_context() const {return ctx == param_context::packed_dim; }
     bool is_param_assignment() const {return ctx == param_context::declaration;}
     bool is_param_override() const {return ctx == param_context::override;}
