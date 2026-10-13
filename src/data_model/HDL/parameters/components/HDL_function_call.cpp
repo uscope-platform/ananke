@@ -228,8 +228,7 @@ void HDL_function_call::apply_concat_assignment(
     };
     if (!val.has_value()) return;
     // 1. Shared RHS as bits, masked to its native width and zero-filled
-    // above it (Xcelium parity: `{a, b} = -1` gives a = 0, b = -1, never
-    // sign-extended). Native width is the explicit size when carried, else
+    // above it. Native width is the explicit size when carried, else
     // the declared width of a bare identifier RHS, else the 32-bit unsized
     // default. Non-integral values have no bits to split: record whole.
     wide_integer rhs_bits = 0;

@@ -2758,8 +2758,7 @@ TEST(parameter_extraction, concat_lvalue_truncation_in_function) {
 
 TEST(parameter_extraction, concat_lvalue_negative_rhs_in_function) {
     // Negative RHS values mask to their native width and zero-fill above it
-    // (Xcelium parity): `{a, b} = -1` gives a = 0, b = -1, never
-    // sign-extended.
+
     auto test_pattern = R"(
         module test_mod #(
         )();
