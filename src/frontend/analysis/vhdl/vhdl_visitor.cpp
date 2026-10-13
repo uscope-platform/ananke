@@ -904,6 +904,12 @@ void vhdl_visitor::enterActual_part(mgp_vh::vhdlParser::Actual_partContext *ctx)
         if (!is_vhdl_builtin(call_name))
             spdlog::warn("Unsupported VHDL function '{}' in generic default, ignored", call_name);
         params_factory.start_function_call(call_name);
+    } else if (ctx->actual_designator() && ctx->actual_designator()->expression()) {
+        // Plain value argument: frame it so interior completions (nested
+        // calls, aggregates, casts) accumulate into this argument instead of
+        // being claimed as extra arguments of an enclosing call
+        // (see call_argument_frame).
+        params_factory.start_call_argument();
     }
 }
 
@@ -918,6 +924,8 @@ void vhdl_visitor::exitActual_part(mgp_vh::vhdlParser::Actual_partContext *ctx) 
     if (ctx->name() && ctx->LPAREN() && ctx->name()->name_literal() &&
         ctx->name()->name_literal()->identifier()) {
         params_factory.stop_function_call();
+    } else if (ctx->actual_designator() && ctx->actual_designator()->expression()) {
+        params_factory.stop_call_argument();
     }
 }
 

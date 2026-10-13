@@ -592,6 +592,14 @@ TEST(vhdl_analyzer, builtin_function_unknown_does_not_crash) {
     ASSERT_NE(param, nullptr);
 }
 
+TEST(vhdl_analyzer, builtin_function_nested_call_operand) {
+    // A nested call used as an operand inside a call argument must not be
+    // claimed as a separate argument: `maximum(minimum(10, 4)+100, 20)` is
+    // two arguments (minimum(10,4)+100 = 104, and 20), evaluating to 104.
+    // Previously it split into three arguments and evaluated to 100.
+    EXPECT_EQ(eval_generic("V : integer := maximum(minimum(10, 4)+100, 20)", "v"), 104);
+}
+
 TEST(vhdl_analyzer, qualified_expression_cast) {
     // `integer'(...)`/`natural'(...)` convert to an integer (real→int rounds).
     EXPECT_EQ(eval_generic("V : integer := integer'(5)", "v"), 5);
