@@ -376,6 +376,18 @@ std::optional<std::shared_ptr<hdl_package_statement>> data_store::get_package_me
         });
 }
 
+std::optional<std::string> data_store::get_package_path(
+    const std::shared_ptr<hdl_package_statement> &pkg) const {
+    if (!pkg) return std::nullopt;
+    for (const auto &[path, file] : cache) {
+        if (!std::holds_alternative<hdl_file>(file.content)) continue;
+        for (const auto &stmt : std::get<hdl_file>(file.content).get_content()) {
+            if (stmt.get() == pkg.get()) return path;
+        }
+    }
+    return std::nullopt;
+}
+
 void data_store::store_file(const cached_item &file) {
     cache.insert_or_assign(file.path, file);
 }

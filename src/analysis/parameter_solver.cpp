@@ -1118,6 +1118,15 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_package_statement
     propagate_functions(tmp, d_store);
 }
 
+void parameter_solver::propagate_imports(std::shared_ptr<hdl_package_statement> &resource,
+    const std::map<std::string, hdl_function_statement> &imported_functions,
+    const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
+    auto tmp = std::make_shared<hdl_resource_statement>();
+    tmp->set_name(resource->getName());
+    for (auto &s : resource->get_statements()) tmp->add_statement(s);
+    propagate_imports(tmp, imported_functions, imported_types);
+}
+
 
 std::shared_ptr<hdl_type> parameter_solver::resolve_dtype_reference(
     const qualified_identifier &ref,

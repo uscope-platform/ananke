@@ -116,6 +116,13 @@ public:
     // Same owner policy as the per-kind lookups above.
     std::optional<std::shared_ptr<hdl_package_statement>> get_package_member_owner(
         const std::string& pkg, const std::string& member);
+    // Defining-file path for an exact package owner instance (pointer
+    // identity): lets the package solver read that file's `import` list so
+    // bare function calls (e.g. `vbits(x)` after
+    // `import other_pkg::vbits;` inside the package) can be linked.
+    // Nullopt when the owner is not found in the cache.
+    std::optional<std::string> get_package_path(
+        const std::shared_ptr<hdl_package_statement> &pkg) const;
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, const std::string &arch);
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, std::string &path);
     std::optional<Script> get_script(std::string& name);

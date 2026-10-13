@@ -96,6 +96,9 @@ public:
     static void propagate_imports(std::shared_ptr<hdl_resource_statement> &resource,
         const std::map<std::string, hdl_function_statement> &imported_functions,
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types);
+    static void propagate_imports(std::shared_ptr<hdl_package_statement> &resource,
+        const std::map<std::string, hdl_function_statement> &imported_functions,
+        const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types);
     static void remap_keyed_literals(const std::shared_ptr<Expression_base> &expr,
                               const std::shared_ptr<hdl_type> &type);
     static std::map<qualified_identifier, resolved_parameter> solve_complex_overrides(

@@ -755,6 +755,52 @@ endmodule)";
     ASSERT_EQ(param->get_value()->get_integer().get_value(), 42);
 }
 
+TEST(hdl_ast_builder, sv_package_param_via_selective_import) {
+    // A package parameter calling a bare function imported from another
+    // package (`import other_pkg::vbits;` inside the package, e.g.
+    // lc_ctrl_state_pkg using caliptra_prim_util_pkg::vbits) must resolve.
+    // Previously the package solver never propagated functions, so the call
+    // stayed unlinked (empty body) and defaulted to 0.
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    {
+        auto util_content = R"(package caliptra_prim_util_pkg;
+    function automatic integer vbits(integer value);
+        return (value == 1) ? 1 : $clog2(value);
+    endfunction
+endpackage)";
+        sv_analyzer util_analyzer;
+        d_store->store_file({"test/util_pkg.sv", "hash_util", util_analyzer.analyze("", util_content).value()});
+    }
+    {
+        auto state_content = R"(package lc_ctrl_state_pkg;
+    import caliptra_prim_util_pkg::vbits;
+    parameter int NumLcCountStates = 25;
+    parameter int DecLcCountWidth = vbits(NumLcCountStates);
+endpackage)";
+        sv_analyzer state_analyzer;
+        d_store->store_file({"test/state_pkg.sv", "hash_state", state_analyzer.analyze("", state_content).value()});
+    }
+    {
+        auto top_content = R"(import lc_ctrl_state_pkg::*;
+module top
+    #(parameter int W = lc_ctrl_state_pkg::DecLcCountWidth)();
+endmodule)";
+        sv_analyzer top_analyzer;
+        d_store->store_file({"test/top.sv", "hash_top", top_analyzer.analyze("", top_content).value()});
+    }
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto ast = b.build_ast(std::vector<std::string>({"top"}));
+    ASSERT_EQ(ast.size(), 1u);
+    auto param = ast[0]->find_parameter("W");
+    ASSERT_NE(param, nullptr);
+    ASSERT_TRUE(param->get_numeric_value().has_value());
+    // vbits(25) = ceil(log2(25)) = 5.
+    EXPECT_EQ(param->get_numeric_value().value().get_value(), 5);
+}
+
 TEST(hdl_ast_builder, sv_module_header_import) {
     // `import` inside the module header must parse and be captured as a
     // file-level import statement.

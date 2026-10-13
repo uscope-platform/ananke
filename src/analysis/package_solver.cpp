@@ -20,6 +20,9 @@
 
 #include "analysis/parameter_solver.hpp"
 #include "data_model/data_store.hpp"
+#include "data_model/hdl_file.hpp"
+#include "data_model/HDL/statement/hdl_import_stmt.hpp"
+#include "data_model/HDL/statement/hdl_package_statement.hpp"
 #include "data_model/HDL/types/HDL_enum_type.hpp"
 
 namespace {
@@ -94,6 +97,79 @@ void collect_package_closure(
     }
 }
 
+// File-level `import` statements in the file that defines `owner`.
+// SV scopes `import pkg::item;` inside a package to that package, but the
+// frontend files every import on the hdl_file, so the defining file's list
+// is the source of truth for bare calls like `vbits(x)` in package params.
+std::vector<std::shared_ptr<hdl_import_stmt>> get_package_file_imports(
+    const std::shared_ptr<hdl_package_statement> &owner,
+    const std::shared_ptr<data_store> &d_store) {
+    std::vector<std::shared_ptr<hdl_import_stmt>> out;
+    if (!owner || !d_store) return out;
+    auto path = d_store->get_package_path(owner);
+    if (!path.has_value()) return out;
+    auto file = d_store->get_file<hdl_file>(path.value());
+    if (!file.has_value()) return out;
+    for (const auto &stmt : file.value().get_content()) {
+        if (auto imp = std::dynamic_pointer_cast<hdl_import_stmt>(stmt)) out.push_back(imp);
+    }
+    return out;
+}
+
+// Owner packages referenced by the defining file's imports: wildcard
+// (`import pkg::*`) resolves to the package itself, selective
+// (`import pkg::item`) to the item's owner so values/types agree with the
+// module-side solver under duplicate package names.
+std::vector<package_ref> import_package_refs(
+    const std::shared_ptr<hdl_package_statement> &owner,
+    const std::shared_ptr<data_store> &d_store) {
+    std::vector<package_ref> refs;
+    for (const auto &imp : get_package_file_imports(owner, d_store)) {
+        if (!imp) continue;
+        if (imp->is_wildcard()) {
+            auto pkg = d_store->get_package(imp->get_package());
+            if (pkg.has_value()) refs.push_back({imp->get_package(), pkg.value()});
+        } else {
+            auto pkg = d_store->get_package_member_owner(imp->get_package(), imp->get_item());
+            if (pkg.has_value()) refs.push_back({imp->get_package(), pkg.value()});
+        }
+    }
+    return refs;
+}
+
+// Imported functions/typedefs visible to `owner` via its defining file's
+// imports (same filter semantics as HDL_ast_builder_v2 for modules).
+void collect_package_imports(
+    const std::shared_ptr<hdl_package_statement> &owner,
+    const std::shared_ptr<data_store> &d_store,
+    std::map<std::string, hdl_function_statement> &imported_functions,
+    std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
+    for (const auto &imp : get_package_file_imports(owner, d_store)) {
+        if (!imp) continue;
+        std::optional<std::shared_ptr<hdl_package_statement>> pkg;
+        if (imp->is_wildcard()) pkg = d_store->get_package(imp->get_package());
+        else pkg = d_store->get_package_member_owner(imp->get_package(), imp->get_item());
+        if (!pkg.has_value()) continue;
+        for (auto &[name, fn] : pkg.value()->get_functions())
+            if (imp->is_wildcard() || imp->get_item() == name) imported_functions[name] = fn;
+        for (auto &[name, t] : pkg.value()->get_typedefs())
+            if (imp->is_wildcard() || imp->get_item() == name) imported_types[name] = t;
+    }
+}
+
+std::vector<package_ref> package_direct_edges(
+    const std::shared_ptr<hdl_package_statement> &owner,
+    const std::shared_ptr<data_store> &d_store) {
+    std::vector<package_ref> edge_list;
+    for (const auto &sub_param : owner->get_parameter_statements()) {
+        auto sub_refs = param_package_refs(sub_param, d_store);
+        edge_list.insert(edge_list.end(), sub_refs.begin(), sub_refs.end());
+    }
+    auto import_refs = import_package_refs(owner, d_store);
+    edge_list.insert(edge_list.end(), import_refs.begin(), import_refs.end());
+    return edge_list;
+}
+
 }  // namespace
 
 std::map<qualified_identifier, resolved_parameter> package_solver::retrieve(
@@ -113,12 +189,7 @@ std::map<qualified_identifier, resolved_parameter> package_solver::retrieve(
         if (!in_progress.insert(ref).second) return;  // cyclic refs: solve without the back edge
         auto eit = edges.find(ref);
         if (eit == edges.end()) {
-            std::vector<package_ref> edge_list;
-            for (const auto &sub_param : ref.owner->get_parameter_statements()) {
-                auto sub_refs = param_package_refs(sub_param, d_store);
-                edge_list.insert(edge_list.end(), sub_refs.begin(), sub_refs.end());
-            }
-            eit = edges.emplace(ref, std::move(edge_list)).first;
+            eit = edges.emplace(ref, package_direct_edges(ref.owner, d_store)).first;
         }
         for (const auto &d : eit->second) ensure_solved(d);
         in_progress.erase(ref);
@@ -147,6 +218,14 @@ std::map<qualified_identifier, resolved_parameter> package_solver::retrieve(
             }
         }
         parameter_solver::propagate_types(package, d_store);
+        parameter_solver::propagate_functions(package, d_store);
+        {
+            std::map<std::string, hdl_function_statement> imported_functions;
+            std::map<std::string, std::shared_ptr<hdl_type>> imported_types;
+            collect_package_imports(package, d_store, imported_functions, imported_types);
+            if (!imported_functions.empty() || !imported_types.empty())
+                parameter_solver::propagate_imports(package, imported_functions, imported_types);
+        }
         auto pkg_solved = parameter_solver::process_parameters(package->get_parameter_statements(), ctx);
 
         for (auto &[pkg_id, pkg_val] : pkg_solved) {
@@ -179,12 +258,8 @@ std::map<qualified_identifier, resolved_parameter> package_solver::retrieve(
     visit = [&](const std::string &pkg_name, const std::shared_ptr<hdl_package_statement> &package) {
         package_ref ref{pkg_name, package};
         if (!visited.insert(ref).second) return;
-        std::vector<package_ref> edge_list;
-        for (const auto &sub_param : package->get_parameter_statements()) {
-            auto sub_refs = param_package_refs(sub_param, d_store);
-            for (const auto &r : sub_refs) visit(r.name, r.owner);
-            edge_list.insert(edge_list.end(), sub_refs.begin(), sub_refs.end());
-        }
+        auto edge_list = package_direct_edges(package, d_store);
+        for (const auto &r : edge_list) visit(r.name, r.owner);
         edges[ref] = std::move(edge_list);
         order.push_back(std::move(ref));
     };
