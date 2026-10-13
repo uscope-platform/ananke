@@ -1232,8 +1232,9 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     // identifiers when the defining package is only visible through the
     // parent's imports. Resolve them against the parent scope here so they
     // evaluate through the typedef instead of warning as missing parameters.
+    std::map<std::string, std::shared_ptr<hdl_type>> scope_types;
     if (parent_node) {
-        auto scope_types = collect_override_scope_types(parent_node, parent_resource, d_store);
+        scope_types = collect_override_scope_types(parent_node, parent_resource, d_store);
         if (!scope_types.empty()) {
             for (const auto &param : work.node->get_parameters()) {
                 annotate_override_type_queries(param->get_expression(), scope_types, d_store);
@@ -1279,6 +1280,66 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     ctx.insert(node_defaults.begin(), node_defaults.end());
     if (auto overlaid = overlay_unambiguous_scope(ctx)) {
         ctx = std::move(*overlaid);
+    }
+
+    // Enum members declared in the instantiating (parent) scope are visible
+    // to override expressions written there (e.g. ResetValue($bits(t)'(IDLE))
+    // where IDLE comes from the parent's local `typedef enum ... t`). They
+    // are not parameters, so neither the parent frame nor the package
+    // defaults carry them. Seed them here so bare members resolve instead of
+    // warning as missing parameters. Local scope shadows packages, so locals
+    // overwrite; imported typedefs only fill absent names.
+    if (!scope_types.empty()) {
+        // Collect names of value parameters that must not be clobbered: an
+        // enum member can never share a name with a parameter in the same
+        // legal scope, so any collision means the ctx entry is the real
+        // parameter value.
+        std::set<std::string> protected_names;
+        for (const auto &p : to_solve) {
+            if (p) protected_names.insert(p->get_name());
+        }
+        for (const auto &o : work.node->get_parameters()) {
+            if (o) protected_names.insert(o->get_name());
+        }
+        if (work.scope_chain.size() > 1) {
+            const auto &parent_frame = work.scope_chain[work.scope_chain.size() - 2].params;
+            if (parent_frame) {
+                for (const auto &[k, _] : *parent_frame) {
+                    if (k.get_package_prefix().empty() && k.get_instance().empty())
+                        protected_names.insert(k.get_name());
+                }
+            }
+        }
+        // Local typedefs first (overwrite package-derived bare entries),
+        // imported typedefs only fill gaps. scope_types already prefers
+        // locals for duplicate type names, but member names can still collide
+        // across distinct typedefs; locals win.
+        auto is_local = [&](const std::shared_ptr<hdl_type> &t) -> bool {
+            if (!parent_resource) return false;
+            for (const auto &[name, lt] : parent_resource->get_typedefs()) {
+                if (lt == t) return true;
+            }
+            return false;
+        };
+        std::map<qualified_identifier, resolved_parameter> local_enums, import_enums;
+        for (const auto &[tname, t] : scope_types) {
+            std::map<qualified_identifier, resolved_parameter> ev;
+            collect_type_enum_values(t, ev);
+            if (is_local(t)) local_enums.insert(ev.begin(), ev.end());
+            else {
+                for (auto &[k, v] : ev) {
+                    if (!local_enums.contains(k)) import_enums.emplace(k, v);
+                }
+            }
+        }
+        for (auto &[k, v] : local_enums) {
+            if (protected_names.contains(k.get_name())) continue;
+            ctx[k] = v;
+        }
+        for (auto &[k, v] : import_enums) {
+            if (protected_names.contains(k.get_name())) continue;
+            if (!ctx.contains(k)) ctx[k] = v;
+        }
     }
 
     // type parameters should be resolved at the binding stage, not where used (for example in $bits() calls)

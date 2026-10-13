@@ -681,17 +681,28 @@ void sv_visitor::enterEnum_name_declaration(sv2017::Enum_name_declarationContext
 void sv_visitor::exitEnum_name_declaration(sv2017::Enum_name_declarationContext *ctx) {
     type_engine.close_composite_member(ctx->identifier()->getText());
     if (ctx->expression()) {
+        // Parse the explicit value with the canonical SV literal parser
+        // (Numeric_token via make_value) instead of hand-rolled strtoull
+        // logic: base letters, 's marker, underscores, signs and wide
+        // values are handled in one place. Non-literal expressions keep
+        // auto-increment, as before.
         std::string val_text = ctx->expression()->getText();
-        auto tick = val_text.find('\'');
-        if (tick != std::string::npos) {
-            val_text = val_text.substr(tick + 1);
-            if (!val_text.empty() && (val_text[0] == 'b' || val_text[0] == 'h'
-                || val_text[0] == 'd' || val_text[0] == 'o'))
-                val_text = val_text.substr(1);
+        bool neg = false;
+        std::string_view view = val_text;
+        if (!view.empty() && (view[0] == '-' || view[0] == '+')) {
+            neg = view[0] == '-';
+            view.remove_prefix(1);
         }
-        char *end = nullptr;
-        uint64_t v = std::strtoull(val_text.c_str(), &end, 0);
-        if (end != val_text.c_str()) type_engine.set_current_enum_value(v);
+        auto tok = sv_parsing_helpers::make_value(std::string(view));
+        if (auto num = std::dynamic_pointer_cast<Numeric_token>(tok)) {
+            if (num->get_size() != 0) {
+                if (auto v = num->get_value(); v.has_value() && v->is_integer()) {
+                    uint64_t u = static_cast<uint64_t>(v->get_integer().to_wide());
+                    if (neg) u = static_cast<uint64_t>(-static_cast<int64_t>(u));
+                    type_engine.set_current_enum_value(u);
+                }
+            }
+        }
     }
 }
 
