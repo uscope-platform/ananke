@@ -30,15 +30,16 @@ ananke::ananke(const CLI_opt &options) {
 
     s_store = std::make_shared<settings_store>(false, opts.cache_dir, opts.profile);
     s_store->set_strict_override(opts.strict);
-    apply_depfile_include_overrides();
+    apply_depfile_analysis_overrides();
 
     t1 = std::chrono::high_resolution_clock::now();
 }
 
-void ananke::apply_depfile_include_overrides() {
-    // Pre-parse just the `includes` section of the effective Depfile so the
-    // walker (which runs before the full Depfile is parsed) already skips
-    // intentionally-absent headers and resolves ambiguous ones. Explicit
+void ananke::apply_depfile_analysis_overrides() {
+    // Pre-parse just the analysis-relevant sections (`includes`, `defines`)
+    // of the effective Depfile so the walker (which runs before the full
+    // Depfile is parsed) already skips intentionally-absent headers,
+    // resolves ambiguous ones and knows build-system macros. Explicit
     // --depfile wins; otherwise ./Depfile. A Depfile elsewhere is NOT
     // sniffed here (the hdl_store fallback happens in load_data_cache once
     // the repository path is known without prompting).
@@ -51,12 +52,21 @@ void ananke::apply_depfile_include_overrides() {
         if (std::filesystem::exists(cwd_dep, ec)) candidate = cwd_dep.string();
     }
     if (candidate.empty()) return;
+    apply_depfile_analysis_file(candidate);
+}
+
+void ananke::apply_depfile_analysis_file(const std::string &candidate) {
     includes_settings inc;
     if (Depfile::try_load_includes_section(candidate, inc) &&
         (!inc.ignored.empty() || !inc.deconfliction.empty())) {
         std::set<std::string> ignored(inc.ignored.begin(), inc.ignored.end());
         s_store->set_ephemeral_include_config(std::move(ignored), std::move(inc.deconfliction));
         spdlog::debug("Loaded includes overrides from {}", candidate);
+    }
+    depfile_defines defs;
+    if (Depfile::try_load_defines_section(candidate, defs) && !defs.empty()) {
+        s_store->set_ephemeral_defines(std::move(defs));
+        spdlog::debug("Loaded defines overrides from {}", candidate);
     }
 }
 
@@ -174,21 +184,15 @@ std::optional<int> ananke::load_data_cache() {
     if (opts.refresh_cache) data_store::clear_cache(opts.cache_dir);
     d_store = std::make_shared<data_store>(opts.no_cache, opts.cache_dir);
 
-    // hdl_store fallback for the `includes` pre-parse: if no explicit/CWD
+    // hdl_store fallback for the analysis pre-parse: if no explicit/CWD
     // Depfile was found in the constructor, look for one at the repository
     // root now that the path is known (get_hdl_store() was already called
     // for the trace above, so this never prompts).
-    if (!s_store->has_ephemeral_include_config()) {
+    if (!s_store->has_ephemeral_include_config() && !s_store->has_ephemeral_defines()) {
         std::error_code ec;
         auto root_dep = s_store->get_hdl_store() / "Depfile";
         if (std::filesystem::exists(root_dep, ec)) {
-            includes_settings inc;
-            if (Depfile::try_load_includes_section(root_dep.string(), inc) &&
-                (!inc.ignored.empty() || !inc.deconfliction.empty())) {
-                std::set<std::string> ignored(inc.ignored.begin(), inc.ignored.end());
-                s_store->set_ephemeral_include_config(std::move(ignored), std::move(inc.deconfliction));
-                spdlog::debug("Loaded includes overrides from {}", root_dep.string());
-            }
+            apply_depfile_analysis_file(root_dep.string());
         }
     }
 

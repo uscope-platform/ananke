@@ -280,3 +280,81 @@ TEST(DepfileIncludesTest, file_like_top_level_deconfliction_warns_not_applies) {
     ASSERT_TRUE(f.deconfliction.contains("x.svh"));
     EXPECT_EQ(f.deconfliction.at("x.svh"), "rtl/x.svh");
 }
+
+TEST(DepfileDefinesTest, defaults_empty) {
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "vproj",
+            "synth_tl": "dut",
+            "sim_tl": "tb"
+        }
+    })");
+    Depfile f(ss);
+    ASSERT_FALSE(f.has_error()) << f.get_error();
+    EXPECT_TRUE(f.defines.empty());
+}
+
+TEST(DepfileDefinesTest, dictionary_parsing) {
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "vproj",
+            "synth_tl": "dut",
+            "sim_tl": "tb"
+        },
+        "defines": {
+            "CALIPTRA_PRIM_MODULE_PREFIX": "caliptra_prim_generic",
+            "BOARD_ID": 42,
+            "USE_FEATURE": true,
+            "EMPTY_VAL": "",
+            "BARE": null
+        }
+    })");
+    Depfile f(ss);
+    ASSERT_FALSE(f.has_error()) << f.get_error();
+    EXPECT_EQ(f.defines.at("CALIPTRA_PRIM_MODULE_PREFIX"), "caliptra_prim_generic");
+    EXPECT_EQ(f.defines.at("BOARD_ID"), "42");
+    EXPECT_EQ(f.defines.at("USE_FEATURE"), "true");
+    EXPECT_EQ(f.defines.at("EMPTY_VAL"), "");
+    EXPECT_EQ(f.defines.at("BARE"), "1");
+}
+
+TEST(DepfileDefinesTest, invalid_shape_rejected) {
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "vproj",
+            "synth_tl": "dut",
+            "sim_tl": "tb"
+        },
+        "defines": ["NOT_A_DICT"]
+    })");
+    Depfile f(ss);
+    EXPECT_TRUE(f.has_error());
+}
+
+TEST(DepfileDefinesTest, lenient_section_preparse) {
+    const std::string path = "/tmp/ananke_depfile_def_test_Depfile";
+    {
+        std::ofstream ofs(path);
+        ofs << R"({
+            "general": {
+                "project_name": "vproj",
+                "synth_tl": "dut",
+                "sim_tl": "tb"
+            },
+            "defines": {
+                "FOO": "bar",
+                "N": 7
+            }
+        })";
+    }
+    depfile_defines defs;
+    EXPECT_TRUE(Depfile::try_load_defines_section(path, defs));
+    EXPECT_EQ(defs.at("FOO"), "bar");
+    EXPECT_EQ(defs.at("N"), "7");
+    std::filesystem::remove(path);
+}
+
+TEST(DepfileDefinesTest, lenient_section_preparse_missing) {
+    depfile_defines defs;
+    EXPECT_FALSE(Depfile::try_load_defines_section("/tmp/ananke_depfile_no_such_file_xyz", defs));
+}

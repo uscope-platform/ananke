@@ -142,6 +142,23 @@ parse_options settings_store::get_parse_options() {
             }
         }
     }
+    if (ephemeral_defines_set) {
+        // Depfile dictionary wins per macro name over the profile list:
+        // drop any profile entry for the same name ("NAME" or "NAME=..."),
+        // then insert the Depfile "NAME=value" form.
+        for (const auto &[name, value] : ephemeral_defines) {
+            for (auto it = opts.defines.begin(); it != opts.defines.end();) {
+                const std::string &e = *it;
+                if (e == name || (e.size() > name.size() && e.compare(0, name.size(), name) == 0 &&
+                                  e[name.size()] == '=')) {
+                    it = opts.defines.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+            opts.defines.insert(name + "=" + value);
+        }
+    }
     std::error_code ec;
     auto abs_root = std::filesystem::absolute(profiles[selected_profile].hdl_store, ec);
     if (!ec) opts.repo_root = abs_root.lexically_normal().string();
@@ -158,6 +175,15 @@ void settings_store::set_ephemeral_include_config(std::set<std::string> ignored,
 
 bool settings_store::has_ephemeral_include_config() const {
     return ephemeral_includes_set;
+}
+
+void settings_store::set_ephemeral_defines(std::unordered_map<std::string, std::string> defines) {
+    ephemeral_defines = std::move(defines);
+    ephemeral_defines_set = true;
+}
+
+bool settings_store::has_ephemeral_defines() const {
+    return ephemeral_defines_set;
 }
 
 settings_store::~settings_store() {

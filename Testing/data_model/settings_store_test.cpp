@@ -276,3 +276,29 @@ TEST(settings_store, ephemeral_include_overlay_unioned_not_persisted) {
 
     std::filesystem::remove_all(store_settings_path);
 }
+
+TEST(settings_store, ephemeral_defines_overlay_wins_per_name) {
+    std::filesystem::create_directories(store_settings_path);
+    std::ofstream ofs(store_settings_file);
+    ofs << "{\"profiles\": {\"test_profile\": {\"hdl_store\":\"/tmp/repo\","
+            "\"defines\":[\"KEEP=1\",\"OVERRIDDEN=old\",\"BARE\"]}}}";
+    ofs.flush();
+    ofs.close();
+
+    {
+        settings_store s(false, store_settings_path, "test_profile");
+        EXPECT_FALSE(s.has_ephemeral_defines());
+        s.set_ephemeral_defines({{"OVERRIDDEN", "new"}, {"FROM_DEPFILE", "x"}});
+        EXPECT_TRUE(s.has_ephemeral_defines());
+        EXPECT_EQ(s.get_parse_options().defines,
+                  (std::set<std::string>{"KEEP=1", "OVERRIDDEN=new", "BARE", "FROM_DEPFILE=x"}));
+        s.flush();
+    }
+
+    // Overlay is ephemeral: a fresh store sees the profile list only.
+    settings_store s2(false, store_settings_path, "test_profile");
+    EXPECT_FALSE(s2.has_ephemeral_defines());
+    EXPECT_EQ(s2.get_defines(), (std::set<std::string>{"KEEP=1", "OVERRIDDEN=old", "BARE"}));
+
+    std::filesystem::remove_all(store_settings_path);
+}

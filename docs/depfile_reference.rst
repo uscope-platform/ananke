@@ -19,6 +19,8 @@ Planned content:
 * The ``scripts`` section (``name``, ``type``, ``arguments``,
   ``include_products``, ``products_type``) and the ``Script`` data model.
 * ``excluded_modules`` and ``constraints``.
+* The top-level ``defines`` dictionary (build-system macros as name ->
+  replacement text, overriding the profile ``defines`` list per name).
 * The ``includes`` section (``ignored`` exact-basename silent skips for
   quoted includes, and ``deconfliction`` ambiguous-header resolution with
   global-string or per-folder scoped-object values, all paths repo-relative).

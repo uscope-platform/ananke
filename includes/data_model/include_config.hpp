@@ -117,7 +117,9 @@ void merge_into(parse_options &opts, const IncludesSettings &inc) {
 }
 
 // Deterministic fingerprint for cache invalidation (config change forces a
-// re-parse; warnings are only re-evaluated on parse).
+// re-parse; include outcomes and global macro meanings are only
+// re-evaluated on parse). Covers the `includes` config and the effective
+// global defines (profile list + Depfile overlay alike).
 inline std::string fingerprint(const parse_options &opts) {
     std::vector<std::string> parts;
     for (const auto &s : opts.ignored_includes) parts.push_back("i:" + normalize_repo_path(s));
@@ -141,6 +143,7 @@ inline std::string fingerprint(const parse_options &opts) {
     std::sort(parts.begin(), parts.end());
     std::string out;
     for (const auto &p : parts) { out += p; out.push_back('\n'); }
+    for (const auto &d : opts.defines) { out += "d:"; out += d; out.push_back('\n'); }
     return out;
 }
 

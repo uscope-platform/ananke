@@ -73,6 +73,11 @@ public:
     void set_ephemeral_include_config(std::set<std::string> ignored,
         std::unordered_map<std::string, include_header_resolution_opt> decon);
     bool has_ephemeral_include_config() const;
+    // Ephemeral overlay from the root-Depfile top-level `defines` dictionary
+    // (never persisted). Merged into the parse defines in get_parse_options(),
+    // winning per macro name over the profile's `defines` list.
+    void set_ephemeral_defines(std::unordered_map<std::string, std::string> defines);
+    bool has_ephemeral_defines() const;
     bool get_include_auto_discovery();
     bool get_strip_uvm_macros();
     bool get_strict();
@@ -94,6 +99,9 @@ private:
     bool ephemeral_includes_set = false;
     std::set<std::string> ephemeral_ignored;
     std::unordered_map<std::string, include_header_resolution_opt> ephemeral_decon;
+    // Root-Depfile `defines` overlay (see set_ephemeral_defines).
+    bool ephemeral_defines_set = false;
+    std::unordered_map<std::string, std::string> ephemeral_defines;
 
     bool ephemeral;
     std::string store_path;

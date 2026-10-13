@@ -21,6 +21,18 @@
 #include <sys/stat.h>
 
 namespace {
+// Replacement text for a `defines` dictionary value: strings as-is,
+// numbers/booleans stringified, null = bare define ("1").
+std::string define_value_text(const nlohmann::json &v) {
+    if (v.is_string()) return v.get<std::string>();
+    if (v.is_null()) return "1";
+    return v.dump();
+}
+void parse_defines_section(const nlohmann::json &def, depfile_defines &out) {
+    for (auto &[key, value] : def.items()) {
+        out[key] = define_value_text(value);
+    }
+}
 void parse_includes_section(const nlohmann::json &inc, includes_settings &out) {
     if (inc.contains("ignored")) {
         for (const auto &item : inc["ignored"]) {
@@ -87,6 +99,9 @@ void Depfile::set_content(const nlohmann::json &file_content) {
     }
 
     if (file_content.contains("excluded_modules")) excluded_modules = file_content["excluded_modules"];
+    if (file_content.contains("defines") && file_content["defines"].is_object()) {
+        parse_defines_section(file_content["defines"], defines);
+    }
     if (file_content.contains("scripts")) {
         for (auto &scr:file_content["scripts"]) {
             script_specs s;
@@ -187,6 +202,25 @@ bool Depfile::try_load_includes_section(const std::string &path, includes_settin
         return true;
     } catch (const std::exception &e) {
         spdlog::warn("Could not pre-parse includes section of {}: {}", path, e.what());
+        return false;
+    }
+}
+
+bool Depfile::try_load_defines_section(const std::string &path, depfile_defines &out) {
+    try {
+        std::ifstream ifs(path);
+        if (!ifs.good()) return false;
+        nlohmann::json content;
+        ifs >> content;
+        if (!content.is_object() || !content.contains("defines")) return false;
+        const auto &def = content["defines"];
+        if (!def.is_object()) return false;
+        depfile_defines parsed;
+        parse_defines_section(def, parsed);
+        out = std::move(parsed);
+        return true;
+    } catch (const std::exception &e) {
+        spdlog::warn("Could not pre-parse defines section of {}: {}", path, e.what());
         return false;
     }
 }

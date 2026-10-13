@@ -87,8 +87,9 @@ class ananke {
     [[nodiscard]] std::optional<int> build_flow();
 
 private:
-    // See ananke.cpp: root-Depfile `includes` pre-parse.
-    void apply_depfile_include_overrides();
+    // See ananke.cpp: root-Depfile `includes`/`defines` pre-parse.
+    void apply_depfile_analysis_overrides();
+    void apply_depfile_analysis_file(const std::string &candidate);
     std::shared_ptr<settings_store>  s_store;
     std::shared_ptr<data_store> d_store;
     CLI_opt opts;

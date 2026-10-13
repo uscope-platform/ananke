@@ -44,6 +44,13 @@ struct includes_settings {
     std::unordered_map<std::string, include_header_resolution_opt> deconfliction;
 };
 
+// Top-level `defines` section: build-system macros as a name -> value
+// dictionary (e.g. `"CALIPTRA_PRIM_MODULE_PREFIX": "caliptra_prim_generic"`).
+// Values are replacement texts; scalar JSON values (number/boolean) are
+// stringified, null means a bare define (value "1"). Merged into the
+// analyzer's global defines, winning per name over the settings profile.
+using depfile_defines = std::unordered_map<std::string, std::string>;
+
 
 struct  general_settings {
     std::string project_name;
@@ -80,6 +87,7 @@ public:
     std::unordered_map<std::string, bus_specs> bus;
     std::unordered_map<std::string, std::string> deconfliction;
     includes_settings includes;
+    depfile_defines defines;
     verilator_tool_options verilator;
     Depfile();
     Depfile(const Depfile &other) = default;
@@ -94,6 +102,9 @@ public:
     // validation: the walker runs before the full Depfile is known). Returns
     // false when the file is missing/unparseable or has no `includes`.
     static bool try_load_includes_section(const std::string &path, includes_settings &out);
+    // Same lenient pre-parse for the top-level `defines` dictionary.
+    // Returns false when the file is missing/unparseable or has no `defines`.
+    static bool try_load_defines_section(const std::string &path, depfile_defines &out);
 
     std::optional<bus_specs> get_bus_section(const std::string &bus_type);
 

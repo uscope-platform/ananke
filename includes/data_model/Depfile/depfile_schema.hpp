@@ -136,6 +136,13 @@ constexpr std::string_view depfile_schema = R"~(
       "type": "array",
       "description": "List of modules that should be excluded from the tool analysis"
     },
+    "defines": {
+      "type": "object",
+      "description": "Build-system macros as a name -> replacement-text dictionary (e.g. CALIPTRA_PRIM_MODULE_PREFIX); scalar values are stringified, null means a bare define",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      }
+    },
     "includes": {
       "type": "object",
       "description": "Include-file handling: intentionally-absent headers and ambiguous-header resolution (all paths repo-relative)",

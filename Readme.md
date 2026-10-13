@@ -105,6 +105,10 @@ required by the tool
        "excluded_module_1",
        "excluded_module_2"
     ],
+    "defines":{
+       "BUILD_MACRO": "macro_value",
+       "BOARD_ID": 42
+    },
     "includes":{
        "ignored":[
           "proprietary_header.svh"
@@ -147,6 +151,7 @@ This section contains a list of script objects that need to be invoked prior or 
 
 - **excluded_modules**: List of HDL module names that do not need to be added to the project even if they are dependencies (ie. Xilinx IPI block diagrams)
 - **constraints**: List of constraint files that need to be added to the project
+- **defines**: Build-system macros as a name -> replacement-text dictionary (e.g. `"CALIPTRA_PRIM_MODULE_PREFIX": "caliptra_prim_generic"`), applied as global defines to every analyzed file (like the profile `defines` list, which it overrides per macro name). String values are used as-is; numbers/booleans are stringified; `null` means a bare define. Pre-parsed before repository analysis like `includes`, and changing it forces a full re-parse on the next run.
 - **includes**: Include-file handling (all paths relative to the repository base) -- OPTIONAL, with:
   - **ignored**: Exact basenames of quoted `` `include `` files to skip silently, with no "include file not found" warning (e.g. unavailable proprietary headers like `avery_defines.svh`). Quoted includes only; `` `include <…> `` still errors when missing.
   - **deconfliction**: Ambiguous-header resolution keyed on the include-file key. Each value is either a global target string (`"shared.svh": "rtl/shared/shared.svh"`) or a scoped object mapping includer directories to targets, so different subtrees can use different variants of the same header (`"defs.svh": {"rtl/foo": "rtl/foo/defs.svh", "rtl/bar": "rtl/bar/defs.svh"}`). Scopes are matched by longest includer-directory prefix (nested scopes inherit). A target matching no candidate falls back to the default warn-and-skip behavior.
