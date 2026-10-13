@@ -115,13 +115,15 @@ void HDL_parameters_factory::stop_replication() {
     if (top_as<replication_factory>()) {
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
+        expr_factory.pop_level();
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
+        } else if (expr_factory.active()) {
+            expr_factory.consume(result);
         } else {
             current_resource.set_type(current_type);
             current_resource.set_raw_value(result);
         }
-        expr_factory.pop_level();
     }
 }
 
@@ -134,10 +136,17 @@ void HDL_parameters_factory::start_replication_assignment() {
 
 void HDL_parameters_factory::stop_replication_assignment() {
     if (top_as<replication_factory>()) {
-        current_resource.set_type(current_type);
-        current_resource.set_raw_value(consumer_stack.top()->result());
+        auto result = consumer_stack.top()->result();
         consumer_stack.pop();
         expr_factory.pop_level();
+        if (!consumer_stack.empty()) {
+            consumer_stack.top()->consume(result);
+        } else if (expr_factory.active()) {
+            expr_factory.consume(result);
+        } else {
+            current_resource.set_type(current_type);
+            current_resource.set_raw_value(result);
+        }
     }
 }
 
@@ -206,6 +215,8 @@ void HDL_parameters_factory::stop_concatenation() {
         consumer_stack.pop();
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
+        } else if (expr_factory.active()) {
+            expr_factory.consume(result);
         } else {
             current_resource.set_type(current_type);
             current_resource.set_raw_value(result);
@@ -233,6 +244,8 @@ void HDL_parameters_factory::stop_streaming() {
         consumer_stack.pop();
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
+        } else if (expr_factory.active()) {
+            expr_factory.consume(result);
         } else {
             current_resource.set_type(current_type);
             current_resource.set_raw_value(result);
@@ -395,15 +408,19 @@ void HDL_parameters_factory::stop_function_assignment() {
     if (top_as<function_calls_factory>()) {
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
+        expr_factory.pop_level();
         if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
+        } else if (expr_factory.active()) {
+            expr_factory.consume(result);
         } else {
             current_resource.set_type(current_type);
             current_resource.set_raw_value(result);
             expr_factory.clear_expression();
         }
+    } else {
+        expr_factory.pop_level();
     }
-    expr_factory.pop_level();
 }
 
 void HDL_parameters_factory::start_function_call(const std::string &f_name) {

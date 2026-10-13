@@ -19,6 +19,13 @@
 void expressions_factory::push_level() {
     context_stack.push({expression_level, factory_active, current_v2});
     expression_level = 0;
+    // The pushed frame parses independently (concatenation items, call
+    // arguments, ternary branches, ...): start it from a fresh expression so
+    // leaves inside never accumulate onto the saved outer partial (e.g. the
+    // `i <` of `i < (c ? a : b)` or the `{a,b} ^` of `{a,b} ^ {c,d}`). The
+    // outer state is restored untouched by pop_level.
+    current_v2 = Expression_v2();
+    operation_set = false;
 }
 
 void expressions_factory::pop_level() {
