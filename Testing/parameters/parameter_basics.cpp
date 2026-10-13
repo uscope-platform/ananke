@@ -594,6 +594,62 @@ TEST(parameter_extraction, cast_in_concat) {
 }
 
 
+TEST(parameter_extraction, concat_operand_of_bitwise_expression) {
+    // A concatenation used as an operand of a binary operator must remain
+    // part of the enclosing expression. Previously the finished
+    // concatenation was stored straight to the parameter value, destroying
+    // the expression: `{a,b} ^ {c,d}` parsed as an empty expression, so
+    // $clog2 over the caliptra address-mask concatenations evaluated to
+    // garbage (0, or "invalid argument").
+    auto test_pattern = R"(
+        module test_mod #(
+            )();
+
+            parameter integer X = {32'h20005000, 32'h20004000} ^ {32'h20005FFF, 32'h20004FFF};
+
+        endmodule
+    )";
+
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto parameters = resource.get_parameter_statements();
+
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
+
+    auto p = std::make_shared<HDL_parameter>();
+    p->set_name("X");
+
+    Concatenation lhs;
+    lhs.add_component(std::make_shared<Numeric_token>("32'h20005000"));
+    lhs.add_component(std::make_shared<Numeric_token>("32'h20004000"));
+    Concatenation rhs;
+    rhs.add_component(std::make_shared<Numeric_token>("32'h20005FFF"));
+    rhs.add_component(std::make_shared<Numeric_token>("32'h20004FFF"));
+    Expression_v2 e;
+    e.set_lhs(std::make_shared<Concatenation>(lhs));
+    e.set_rhs(std::make_shared<Concatenation>(rhs));
+    e.set_operation(Expression_v2::bitwise_xor);
+    auto param_type = Type_engine::create_primitive_type("integer");
+    p->set_type(param_type);
+    p->set_raw_value(std::make_shared<Expression_v2>(e));
+
+    check_params.push_back(p);
+
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        EXPECT_EQ(*check_params[i], *parameters[i]);
+    }
+
+    auto solved = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
+
+    ASSERT_EQ(0xFFF, solved.at(qualified_identifier("X")).get_integer());
+}
+
+
 TEST(parameter_extraction, strings_dafault_init) {
     auto test_pattern = R"(
         module test_mod #(
