@@ -141,7 +141,18 @@ std::shared_ptr<hdl_ast_node> HDL_ast_builder_v2::build_ast(const std::string &t
                 }
 
                 if (!res_opt.has_value()) {
-                    spdlog::error("Definition of module {} while AST building", type);
+                    std::string inst_path;
+                    for (auto n = working_instance; n; n = n->get_parent()) {
+                        inst_path = inst_path.empty() ? n->get_name() : n->get_name() + "." + inst_path;
+                    }
+                    auto parent = working_instance->get_parent();
+                    spdlog::error("Definition of module '{}' not found while AST building "
+                                  "(instance '{}' in module '{}', hierarchy '{}'). "
+                                  "If it is a vendor primitive or an out-of-tree block, add it to "
+                                  "'excluded_modules' in the Depfile; otherwise check that its file is "
+                                  "parsed (parse errors, `ifdef gating or .mkignore exclusion)",
+                                  type, working_instance->get_name(),
+                                  parent ? parent->get_type() : "<top>", inst_path);
                     continue;
                 }
                 auto res = res_opt.value();

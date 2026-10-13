@@ -21,6 +21,7 @@
 #include "frontend/analysis/vhdl/vhdl_analyzer.hpp"
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/parameters/components/token/LoopVar_token.hpp"
+#include "data_model/HDL/parameters/components/Ternary.hpp"
 #include "data_model/HDL/statement/hdl_statements.hpp"
 
 #include "test_paths.hpp"
@@ -450,6 +451,100 @@ TEST(analysis_test, generate_for_loop) {
     auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmts[0]);
     ASSERT_NE(loop, nullptr);
     ASSERT_EQ(*loop, expected);
+}
+
+TEST(analysis_test, generate_for_loop_ternary_bounds) {
+    // Ternaries in a generate-loop init and end condition (el2_pic_ctrl GW
+    // loop shape) must parse intact: the init keeps its branches and the end
+    // comparison keeps the ternary on its RHS. Previously the init branches
+    // were dropped (`i = p==0`) and the `i <` leaked into the ternary true
+    // branch, leaving a bare ternary as the end condition and running the
+    // loop to the iteration ceiling.
+    auto test_pattern = R"(
+        module test_mod #(parameter int N = 2)();
+            genvar p;
+            for (p=0; p<=N; p++) begin : OUTER
+                for(genvar i = (p==0 ? 1 : 0); i < (p==N ? 9-p*4 : 4); i++) begin : GW
+                end
+            end
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto cond = [](const std::string &var, const std::shared_ptr<Expression_base> &rhs) {
+        Expression_v2 e;
+        e.set_lhs(std::make_shared<LoopVar_token>(var));
+        e.set_rhs(rhs);
+        e.set_operation(Expression_v2::equal);
+        return std::make_shared<Expression_v2>(e);
+    };
+
+    hdl_loop_statement inner;
+    auto inner_init = std::make_shared<HDL_parameter>();
+    inner_init->set_name("i");
+    auto init_ternary = std::make_shared<Ternary>();
+    init_ternary->set_condition(cond("p", std::make_shared<Numeric_token>("0")));
+    init_ternary->set_true_value(std::make_shared<Numeric_token>("1"));
+    init_ternary->set_false_value(std::make_shared<Numeric_token>("0"));
+    inner_init->set_raw_value(init_ternary);
+    inner.set_init(inner_init);
+
+    Expression_v2 prod;
+    prod.set_lhs(std::make_shared<LoopVar_token>("p"));
+    prod.set_rhs(std::make_shared<Numeric_token>("4"));
+    prod.set_operation(Expression_v2::multiply);
+    Expression_v2 diff;
+    diff.set_lhs(std::make_shared<Numeric_token>("9"));
+    diff.set_rhs(std::make_shared<Expression_v2>(prod));
+    diff.set_operation(Expression_v2::subtract);
+    auto end_ternary = std::make_shared<Ternary>();
+    end_ternary->set_condition(cond("p", std::make_shared<Identifier_token>(qualified_identifier("N"))));
+    end_ternary->set_true_value(std::make_shared<Expression_v2>(diff));
+    end_ternary->set_false_value(std::make_shared<Numeric_token>("4"));
+    Expression_v2 end_cond;
+    end_cond.set_lhs(std::make_shared<LoopVar_token>("i"));
+    end_cond.set_rhs(end_ternary);
+    end_cond.set_operation(Expression_v2::less);
+    inner.set_end_condition(std::make_shared<Expression_v2>(end_cond));
+
+    Expression_v2 inner_iter;
+    // NOTE: see outer_iter above: `i++` yields a plain Identifier LHS.
+    inner_iter.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("i")));
+    inner_iter.set_rhs(std::make_shared<Numeric_token>("1"));
+    inner_iter.set_operation(Expression_v2::add);
+    inner.set_iteration(std::make_shared<Expression_v2>(inner_iter));
+
+    hdl_loop_statement outer;
+    auto outer_init = std::make_shared<HDL_parameter>();
+    outer_init->set_name("p");
+    outer_init->set_raw_value(std::make_shared<Numeric_token>("0"));
+    outer.set_init(outer_init);
+
+    Expression_v2 outer_end;
+    outer_end.set_lhs(std::make_shared<LoopVar_token>("p"));
+    outer_end.set_rhs(std::make_shared<Identifier_token>(qualified_identifier("N")));
+    outer_end.set_operation(Expression_v2::less_equal);
+    outer.set_end_condition(std::make_shared<Expression_v2>(outer_end));
+
+    Expression_v2 outer_iter;
+    // NOTE: `p++` routes through exitGenvar_iteration's make_value, so the
+    // step LHS is a plain Identifier (unlike init/end, which see LoopVar).
+    outer_iter.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("p")));
+    outer_iter.set_rhs(std::make_shared<Numeric_token>("1"));
+    outer_iter.set_operation(Expression_v2::add);
+    outer.set_iteration(std::make_shared<Expression_v2>(outer_iter));
+    outer.add_body_stmt(std::make_shared<hdl_loop_statement>(inner));
+
+    const auto& stmts = resource.get_statements();
+    std::shared_ptr<hdl_loop_statement> loop;
+    for (const auto &s : stmts) {
+        loop = std::dynamic_pointer_cast<hdl_loop_statement>(s);
+        if (loop) break;
+    }
+    ASSERT_NE(loop, nullptr);
+    ASSERT_EQ(*loop, outer);
 }
 TEST(analysis_test, string_unlisted_escape_sequences) {
     auto test_pattern = R"(

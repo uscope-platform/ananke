@@ -191,6 +191,79 @@ TEST(function_processing, simple_loop_function) {
 }
 
 
+TEST(function_processing, comparison_against_ternary) {
+    // A comparison against a ternary with a nested expression in a branch
+    // (`1 < (c == 0 ? 10-K*4 : 20)`) must keep the comparison outside the
+    // ternary. Previously the `1 <` leaked into the true branch, so the
+    // assignment stored just `20` for a false condition instead of `1 < 20`.
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter int K = 2
+        )();
+
+            function automatic int check_lt(int c);
+                int x;
+                x = 1 < (c == 0 ? 10-K*4 : 20);
+                return x;
+            endfunction
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+
+    auto resource = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+
+    auto functions = resource.get_functions();
+
+    EXPECT_EQ(functions.size(), 1);
+    EXPECT_TRUE(functions.contains("check_lt"));
+    auto result = functions["check_lt"];
+
+    hdl_function_statement check_f;
+    check_f.set_language(hdl_language::system_verilog);
+    check_f.set_name("check_lt");
+    check_f.add_argument("c");
+
+    auto lv = std::make_shared<HDL_parameter>("x");
+    lv->set_type(Type_engine::create_primitive_type("int"));
+    check_f.add_local_variable(lv);
+
+    Expression_v2 prod;
+    prod.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("K")));
+    prod.set_rhs(std::make_shared<Numeric_token>("4"));
+    prod.set_operation(Expression_v2::multiply);
+    Expression_v2 diff;
+    diff.set_lhs(std::make_shared<Numeric_token>("10"));
+    diff.set_rhs(std::make_shared<Expression_v2>(prod));
+    diff.set_operation(Expression_v2::subtract);
+
+    Expression_v2 branch_cond;
+    branch_cond.set_lhs(std::make_shared<Identifier_token>(qualified_identifier("c")));
+    branch_cond.set_rhs(std::make_shared<Numeric_token>("0"));
+    branch_cond.set_operation(Expression_v2::equal);
+    auto ternary = std::make_shared<Ternary>();
+    ternary->set_condition(std::make_shared<Expression_v2>(branch_cond));
+    ternary->set_true_value(std::make_shared<Expression_v2>(diff));
+    ternary->set_false_value(std::make_shared<Numeric_token>("20"));
+
+    Expression_v2 cmp;
+    cmp.set_lhs(std::make_shared<Numeric_token>("1"));
+    cmp.set_rhs(ternary);
+    cmp.set_operation(Expression_v2::less);
+    auto assign = std::make_shared<hdl_assignment_statement>();
+    assign->set_target("x");
+    assign->set_value(std::make_shared<Expression_v2>(cmp));
+    check_f.add_statement(assign);
+
+    auto ret = std::make_shared<hdl_assignment_statement>();
+    ret->set_target("check_lt");
+    ret->set_value(std::make_shared<Identifier_token>(qualified_identifier("x")));
+    check_f.add_statement(ret);
+
+    EXPECT_EQ(check_f, result);
+}
+
+
 TEST(function_processing, parametric_loop_function) {
     auto test_pattern = R"(
         module test_mod #(

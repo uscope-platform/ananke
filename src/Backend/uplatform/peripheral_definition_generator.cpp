@@ -32,7 +32,8 @@ peripheral_definition_generator::peripheral_definition_generator(std::shared_ptr
             auto parameters = current_node->get_parameters();
             auto periph = d_store->get_HDL_resource(current_node->get_type());
             if (!periph.has_value()) {
-                spdlog::error("Definition of module {} while generating peripheral definitions", current_node->get_type());
+                spdlog::error("Definition of module '{}' not found while generating peripheral definitions "
+                              "(instance '{}'), skipping", current_node->get_type(), current_node->get_name());
                 continue;
             }
             generate_peripheral(periph.value(), parameters, current_node->get_name());

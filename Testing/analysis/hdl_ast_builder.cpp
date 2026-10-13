@@ -834,6 +834,33 @@ endmodule)";
     EXPECT_EQ(param->get_numeric_value().value().get_value(), 0);
 }
 
+TEST(hdl_ast_builder, missing_module_error_names_instance) {
+    // A reference to an undefined module (e.g. a vendor primitive wrapper
+    // like caliptra_prim_xilinx_buf with no source in the repo) must say
+    // what is missing, where it is instantiated, and how to silence it.
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    {
+        auto top_content = R"(module caliptra_prim_buf();
+    caliptra_prim_xilinx_buf u_impl_xilinx();
+endmodule)";
+        sv_analyzer top_analyzer;
+        d_store->store_file({"test/buf.sv", "hash_buf", top_analyzer.analyze("", top_content).value()});
+    }
+
+    log_capture logs;
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto ast = b.build_ast(std::vector<std::string>({"caliptra_prim_buf"}));
+    ASSERT_EQ(ast.size(), 1u);
+    const auto out = logs.stream.str();
+    EXPECT_NE(out.find("caliptra_prim_xilinx_buf"), std::string::npos) << out;
+    EXPECT_NE(out.find("u_impl_xilinx"), std::string::npos) << out;
+    EXPECT_NE(out.find("caliptra_prim_buf"), std::string::npos) << out;
+    EXPECT_NE(out.find("not found"), std::string::npos) << out;
+    EXPECT_NE(out.find("excluded_modules"), std::string::npos) << out;
+}
+
 TEST(hdl_ast_builder, sv_module_header_import) {
     // `import` inside the module header must parse and be captured as a
     // file-level import statement.

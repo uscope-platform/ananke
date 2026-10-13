@@ -126,7 +126,13 @@ void HDL_loops_factory::set_phase(loop_phase_t p) {
             }
         }
         auto init = _statement.get_init();
-        if (init) {
+        // Only derive the init value from the parallel header capture when no
+        // value was parsed (procedural loops record a name-only init via
+        // add_loop_variable). Generate loops already carry the fully parsed
+        // init from set_loop_init, and the header capture understands neither
+        // ternaries nor calls/concats: rewriting here dropped the init
+        // branches of e.g. `for(genvar i = (p==0 ? 1 : 0); ...)`.
+        if (init && !init->get_expression()) {
             auto copy = std::make_shared<HDL_parameter>(*init);
             auto lhs = current_expression.get_lhs();
             auto rhs = current_expression.get_rhs();

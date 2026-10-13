@@ -49,7 +49,12 @@ public:
 
     void consume(const std::shared_ptr<Expression_base>& v);
     bool active() const;
-
+    // Ternary branches: after one branch completes back at level 0, the next
+    // branch must still open its own nesting frame. Staying active across
+    // branch boundaries balances every branch entry (push) with its exit
+    // (pop); otherwise the exit pops an ancestor frame (e.g. in `i < (c ? a
+    // : b)` the true branch grafts itself onto `i <`).
+    void reactivate() { factory_active = true; }
 private:
     // State saved when entering a nested expression context (concatenation,
     // function call, ...): the enclosing partial expression plus its level and

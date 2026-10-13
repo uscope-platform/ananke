@@ -175,6 +175,9 @@ void HDL_parameters_factory::stop_expression_new(bool new_expr) {
             }
         }
         expr_factory.clear_expression();
+        // While a ternary is still open, further branches follow: stay active
+        // so the next branch opens its own nesting frame (see reactivate).
+        if (top_as<ternary_factory>()) expr_factory.reactivate();
     }
 }
 
