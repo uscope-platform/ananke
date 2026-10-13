@@ -78,6 +78,21 @@ bool is_sv_keyword(const std::string_view &word) {
 bool is_id_char(char c) {
     return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '$';
 }
+
+// Depth backstop for paste-operand pre-expansion (see
+// replace_function_macro): recursive paste shapes must degrade to a clean
+// diagnostic, never unbounded C++ recursion. Thread-local so alternating
+// engine instances share one budget, mirroring the preprocessor's own
+// conditional-nesting guard.
+constexpr int MAX_PASTE_OPERAND_DEPTH = 32;
+thread_local int paste_operand_depth = 0;
+struct paste_depth_guard {
+    paste_depth_guard() { ++paste_operand_depth; }
+    ~paste_depth_guard() { --paste_operand_depth; }
+};
+bool is_blank_token(const std::string_view &t) {
+    return t.find_first_not_of(" \t\r\n") == std::string_view::npos;
+}
 }
 
 namespace preprocessor {
@@ -386,20 +401,8 @@ namespace preprocessor {
 
 
     std::optional<std::string> macro_processor::replace_function_macro(const std::vector<std::string_view> &args, const function_macro &macro) {
-        std::unordered_map<std::string_view, std::string> arguments_map;
         int required = 0;
-        for (int i = 0; i<macro.arguments.size(); i++) {
-            if (!macro.arguments[i].has_default) ++required;
-            // A whitespace-only actual (`, ,`, or a continuation line holding
-            // only indentation) counts as empty: the formal default applies
-            // (LRM 22.5.1). The stored actual itself stays verbatim so plain
-            // substitution preserves the call-site text.
-            if (i >= args.size() || trim(args[i]).empty()) {
-                arguments_map[macro.arguments[i].name] = macro.arguments[i].default_value;
-            } else {
-                arguments_map[macro.arguments[i].name] = std::string(args[i]);
-            }
-        }
+        for (const auto &formal : macro.arguments) if (!formal.has_default) ++required;
         // `f()` supplies one (empty) actual, so a single-formal macro
         // expands while `ADD()` for two required formals still errors,
         // matching commercial tools.
@@ -459,6 +462,63 @@ namespace preprocessor {
 
         if (current_token_start < body.size()) {
             tokens.push_back(body.substr(current_token_start));
+        }
+
+        // Formals adjacent to a `` paste operator (nearest non-blank token
+        // on either side). Their actuals are expanded before substitution
+        // (see below); every other formal substitutes verbatim as before.
+        std::unordered_set<std::string_view> paste_formals;
+        for (size_t k = 0; k < tokens.size(); ++k) {
+            if (tokens[k] != "``") continue;
+            size_t l = k;
+            while (l > 0 && is_blank_token(tokens[l - 1])) --l;
+            if (l > 0) {
+                for (const auto &formal : macro.arguments) {
+                    if (tokens[l - 1] == formal.name) paste_formals.insert(tokens[l - 1]);
+                }
+            }
+            size_t r = k + 1;
+            while (r < tokens.size() && is_blank_token(tokens[r])) ++r;
+            if (r < tokens.size()) {
+                for (const auto &formal : macro.arguments) {
+                    if (tokens[r] == formal.name) paste_formals.insert(tokens[r]);
+                }
+            }
+        }
+
+        std::unordered_map<std::string_view, std::string> arguments_map;
+        for (int i = 0; i<macro.arguments.size(); i++) {
+            // A whitespace-only actual (`, ,`, or a continuation line holding
+            // only indentation) counts as empty: the formal default applies
+            // (LRM 22.5.1). The stored actual itself stays verbatim so plain
+            // substitution preserves the call-site text — except for paste
+            // operands below.
+            std::string actual;
+            if (i >= args.size() || trim(args[i]).empty()) {
+                actual = std::string(macro.arguments[i].default_value);
+            } else {
+                actual = std::string(args[i]);
+            }
+            // A paste operand that is itself a macro usage must expand
+            // before fusing, matching commercial simulators: verbatim
+            // substitution would fuse the backtick-led name into a longer,
+            // bogus macro usage (caliptra's `PREFIX``_``and2 fusing to
+            // `PREFIX_and2 instead of `generic_and2`). Only paste-adjacent
+            // formals are pre-expanded: an unused actual's macros must never
+            // report (the rescan pass expands everything else in due course).
+            if (!actual.empty() && actual.find('`') != std::string::npos &&
+                paste_formals.contains(std::string_view(macro.arguments[i].name))) {
+                if (paste_operand_depth >= MAX_PASTE_OPERAND_DEPTH) {
+                    report_error(fmt::format("Macro paste-operand expansion exceeded maximum depth ({}) in file {}",
+                                             MAX_PASTE_OPERAND_DEPTH, path));
+                    return "";
+                }
+                paste_depth_guard guard;
+                std::string expanded = process_macro(actual);
+                if (fatal_error) return "";
+                actual = std::move(expanded);
+            }
+            arguments_map[macro.arguments[i].name] = std::move(actual);
         }
 
         // Views only: arg values live in arguments_map (no inserts after

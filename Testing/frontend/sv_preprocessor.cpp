@@ -2799,3 +2799,88 @@ TEST(preprocessor, include_deconfliction_bad_target_falls_back_cleanly) {
     EXPECT_FALSE(preproc.has_error());
     EXPECT_FALSE(preproc.has_fatal_error());
 }
+
+TEST(preprocessor, paste_expands_macro_usage_actual) {
+    // Caliptra `CALIPTRA_PRIM_MODULE_NAME shape: a `` paste operand that is
+    // itself a macro usage must expand before fusing, matching commercial
+    // simulators. Fusing literally yields `PREFIX_and2 (unknown) instead of
+    // `caliptra_prim_generic_and2`.
+    auto test_pattern = R"(
+        `define PREFIX caliptra_prim_generic
+        `define PASTE2(prefix, name) prefix``_``name
+        `define WRAP(__name) `PASTE2(`PREFIX, __name)
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+        `WRAP(and2) #(.Width(8)) u_blk ();
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("caliptra_prim_generic_and2 #(.Width(8)) u_blk ();"));
+    EXPECT_THAT(result, testing::Not(testing::HasSubstr("PREFIX_and2")));
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, paste_undefined_actual_stays_undefined) {
+    // Pre-expansion must not hide genuinely missing macros: an undefined
+    // paste operand still reports (deferrable, like any unknown).
+    auto test_pattern = R"(
+        `define PASTE2(prefix, name) prefix``_``name
+        `define WRAP(__name) `PASTE2(`MISSING_PREFIX, __name)
+        `WRAP(and2)
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    preproc.preprocess(test_pattern);
+    EXPECT_TRUE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+    EXPECT_THAT(preproc.get_undefined_macros(), testing::Contains(testing::Pair(
+        "MISSING_PREFIX_and2", testing::_)));
+}
+
+TEST(preprocessor, paste_expands_right_side_macro_usage_actual) {
+    // Same rule on the right of ``: `base`` + `SUFFIX expands SUFFIX first.
+    auto test_pattern = R"(
+        `define SUFFIX _and2
+        `define PASTE2R(base, suf) base``suf
+        `define WRAPR(b) `PASTE2R(b, `SUFFIX)
+        module test_module ();
+        endmodule
+        `WRAPR(caliptra_prim_generic) u_blk ();
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("caliptra_prim_generic_and2 u_blk ();"));
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, unused_actual_macro_never_expands_or_reports) {
+    // Only paste-adjacent formals pre-expand: a macro usage passed to an
+    // unused formal must neither expand nor report as undefined.
+    auto test_pattern = R"(
+        `define IGNORE(unused) all_good
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+        `IGNORE(`MISSING)
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("all_good"));
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+    EXPECT_TRUE(preproc.get_undefined_macros().empty());
+}
