@@ -483,6 +483,7 @@ void data_store::load_cache() {
             cache.clear();
             macro_table_fingerprint.clear();
             include_file_hashes.clear();
+            include_config_fingerprint.clear();
             return;
         }
         cereal::BinaryInputArchive archive_in(is);
@@ -493,6 +494,7 @@ void data_store::load_cache() {
             cache.clear();
             macro_table_fingerprint.clear();
             include_file_hashes.clear();
+            include_config_fingerprint.clear();
             return;
         }
         archive_in(cache);
@@ -512,11 +514,20 @@ void data_store::load_cache() {
         } catch (const std::exception &) {
             include_file_hashes.clear();
         }
+        // Include-config fingerprint postdates older archives; absence just
+        // means "no previously tracked config" (one conservative full
+        // re-parse when a config is newly set), never cache discard.
+        try {
+            archive_in(include_config_fingerprint);
+        } catch (const std::exception &) {
+            include_config_fingerprint.clear();
+        }
     } catch (const std::exception &e) {
         spdlog::warn("Could not load cache file {} ({}), starting with an empty cache", unified_cache, e.what());
         cache.clear();
         macro_table_fingerprint.clear();
         include_file_hashes.clear();
+        include_config_fingerprint.clear();
     }
 }
 
@@ -531,7 +542,8 @@ void data_store::store_cache() {
             return;
         }
         cereal::BinaryOutputArchive archive_out(os);
-        archive_out(get_cache_schema_hash(), cache, macro_table_fingerprint, include_file_hashes);
+        archive_out(get_cache_schema_hash(), cache, macro_table_fingerprint, include_file_hashes,
+                    include_config_fingerprint);
     } catch (const std::exception &e) {
         spdlog::error("Could not save cache file {}: {}", unified_cache, e.what());
     }

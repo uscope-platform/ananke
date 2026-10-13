@@ -15,6 +15,7 @@
 
 
 #include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
+#include "data_model/include_config.hpp"
 
 
 
@@ -312,6 +313,14 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             if (auto hit = include_resolution_cache.find(cache_key); hit != include_resolution_cache.end()) {
                 return hit->second;
             }
+            // Intentionally-absent headers (`includes.ignored`, exact
+            // basename): skip silently — no warning, no error, no edge.
+            // Quoted-only: the angle branch below never consults the list.
+            if (is_ignored_include(std::string(name))) {
+                spdlog::trace("Ignoring include file {} at line {} in file: {} (ignored_includes)",
+                              std::string(name), line_number, path);
+                return std::optional<include_dependency>{};
+            }
             std::string full_path;
             auto rel_path = std::string(std::filesystem::path(parent_dir)/name);
             if (std::filesystem::exists(rel_path)) {
@@ -330,20 +339,38 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                     resolved = discovered.resolved.value();
                     include_resolution_cache.emplace(std::move(cache_key), resolved);
                 } else if (!discovered.candidates.empty()) {
-                    // Ambiguous: report the candidates, not "not found".
+                    // Ambiguous: an explicit `includes.deconfliction` pick
+                    // (scoped longest-prefix, else global) wins silently;
+                    // otherwise report the candidates, not "not found".
                     // Skipped without failing the parse (quoted include).
                     // Not cached: keep per-occurrence warn/line info exact.
-                    std::string candidate_dirs;
-                    for (auto &c : discovered.candidates) {
-                        candidate_dirs += "\n    " + c.parent_path().string();
+                    if (auto pick = resolve_deconflicted(std::string(name), discovered.candidates);
+                        pick.has_value()) {
+                        pick->path = normalize_include_path(pick->path);
+                        resolved = pick.value();
+                        include_resolution_cache.emplace(std::move(cache_key), resolved);
+                    } else {
+                        std::string candidate_dirs;
+                        for (auto &c : discovered.candidates) {
+                            candidate_dirs += "\n    " + c.parent_path().string();
+                        }
+                        spdlog::warn("include file {} is ambiguous ({} candidates), skipping include "
+                                     "at line {} in file: {}{}", std::string(name),
+                                     discovered.candidates.size(), line_number, path, candidate_dirs);
+                        resolved = std::optional<include_dependency>{};
                     }
-                    spdlog::warn("include file {} is ambiguous ({} candidates), skipping include "
-                                 "at line {} in file: {}{}", std::string(name),
-                                 discovered.candidates.size(), line_number, path, candidate_dirs);
-                    resolved = std::optional<include_dependency>{};
                 } else {
-                    spdlog::warn("include file not found: {} at line {} in file: {}", std::string(name), line_number, path);
-                    resolved = std::optional<include_dependency>{};
+                    // No candidates: a deconflicted target may still exist
+                    // on disk without being indexed — try it before warning.
+                    if (auto pick = resolve_deconflicted(std::string(name), discovered.candidates);
+                        pick.has_value()) {
+                        pick->path = normalize_include_path(pick->path);
+                        resolved = pick.value();
+                        include_resolution_cache.emplace(std::move(cache_key), resolved);
+                    } else {
+                        spdlog::warn("include file not found: {} at line {} in file: {}", std::string(name), line_number, path);
+                        resolved = std::optional<include_dependency>{};
+                    }
                 }
             } else {
                 resolved = include_dependency{normalize_include_path(full_path), include_resolution::regular};
@@ -407,6 +434,102 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                                                  include_resolution::auto_discovered};
         }
         return result;
+    }
+
+    bool sv_preprocessor::is_ignored_include(const std::string &name) const {
+        if (opts_.ignored_includes.empty()) return false;
+        const std::string base = std::filesystem::path(name).filename().generic_string();
+        for (const auto &entry : opts_.ignored_includes) {
+            const std::string ebase = std::filesystem::path(entry).filename().generic_string();
+            if (!ebase.empty() && ebase == base) return true;
+        }
+        return false;
+    }
+
+    std::optional<include_dependency> sv_preprocessor::resolve_deconflicted(
+        const std::string &name,
+        const std::vector<std::filesystem::path> &candidates) {
+        if (opts_.include_deconfliction.empty()) return std::nullopt;
+        const include_header_resolution_opt *rule = nullptr;
+        const std::string full_key = include_config::include_key_of(name);
+        if (auto it = opts_.include_deconfliction.find(full_key); it != opts_.include_deconfliction.end()) {
+            rule = &it->second;
+        } else {
+            const std::string base = include_config::basename_of(name);
+            if (auto it = opts_.include_deconfliction.find(base); it != opts_.include_deconfliction.end()) {
+                rule = &it->second;
+            } else if (auto it2 = opts_.include_deconfliction.find(name); it2 != opts_.include_deconfliction.end()) {
+                rule = &it2->second;
+            }
+        }
+        if (rule == nullptr) return std::nullopt;
+
+        auto match_candidate = [&](const std::string &target) -> std::optional<include_dependency> {
+            for (const auto &c : candidates) {
+                if (include_config::target_matches(c.generic_string(), target)) {
+                    return include_dependency{normalize_include_path(c.string()),
+                                              include_resolution::auto_discovered};
+                }
+            }
+            // Target may exist on disk without being indexed (e.g. `.h`
+            // headers are index-only, or the index predates the file).
+            std::error_code ec;
+            std::filesystem::path tp(target);
+            if (!tp.is_absolute() && !opts_.repo_root.empty()) tp = std::filesystem::path(opts_.repo_root) / tp;
+            if (std::filesystem::exists(tp, ec)) {
+                return include_dependency{normalize_include_path(tp.string()),
+                                          include_resolution::auto_discovered};
+            }
+            return std::nullopt;
+        };
+
+        // Scoped entries first: longest includer-dir prefix wins, so nested
+        // scopes (rtl/foo/sub) inherit their parent unless overridden.
+        if (!rule->scoped_targets.empty()) {
+            const std::string includer_dir = include_config::includer_scope_of(path, opts_.repo_root);
+            std::string best_key;
+            std::string best_norm;
+            for (const auto &[scope, ignored] : rule->scoped_targets) {
+                (void)ignored;
+                const std::string norm_scope = include_config::normalize_repo_path(scope);
+                if (!includer_dir.empty() && include_config::scope_covers(norm_scope, includer_dir) &&
+                    norm_scope.size() > best_norm.size()) {
+                    best_norm = norm_scope;
+                    best_key = scope;
+                }
+            }
+            if (!best_key.empty()) {
+                const std::string target = rule->scoped_targets.at(best_key);
+                if (auto hit = match_candidate(target); hit.has_value()) {
+                    spdlog::trace("Deconflicted include '{}' in '{}' (scope '{}') -> {}",
+                                  name, path, best_norm, hit->path);
+                    return hit;
+                }
+                spdlog::warn("include deconfliction for '{}' (scope '{}') target '{}' matches no candidate; "
+                             "falling back to default resolution", name, best_norm, target);
+                return std::nullopt;
+            }
+            // No scope covers this includer: fall through to global/default.
+            if (rule->global_target.has_value()) {
+                if (auto hit = match_candidate(*rule->global_target); hit.has_value()) {
+                    spdlog::trace("Deconflicted include '{}' in '{}' (global fallback) -> {}",
+                                  name, path, hit->path);
+                    return hit;
+                }
+                spdlog::warn("include deconfliction for '{}' target '{}' matches no candidate; "
+                             "falling back to default resolution", name, *rule->global_target);
+            }
+            return std::nullopt;
+        }
+        if (rule->global_target.has_value()) {
+            if (auto hit = match_candidate(*rule->global_target); hit.has_value()) {
+                spdlog::trace("Deconflicted include '{}' in '{}' -> {}", name, path, hit->path);
+                return hit;
+            }
+            spdlog::warn("include deconfliction for '{}' target '{}' matches no candidate; "
+                         "falling back to default resolution", name, *rule->global_target);
+        }
+        return std::nullopt;
     }
 
     std::string sv_preprocessor::get_define_replacement(const std::string_view &identifier) {

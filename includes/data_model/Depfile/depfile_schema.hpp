@@ -136,6 +136,31 @@ constexpr std::string_view depfile_schema = R"~(
       "type": "array",
       "description": "List of modules that should be excluded from the tool analysis"
     },
+    "includes": {
+      "type": "object",
+      "description": "Include-file handling: intentionally-absent headers and ambiguous-header resolution (all paths repo-relative)",
+      "properties": {
+        "ignored": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Exact basenames of quoted includes to skip silently (e.g. unavailable proprietary headers)"
+        },
+        "deconfliction": {
+          "type": "object",
+          "description": "Ambiguous-header resolution keyed on the include-file key; each value is a global target string or a scoped object mapping includer directories (repo-relative) to targets",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "constraints": {
       "type": "array",
       "description": "List of constraint files to add to the project"

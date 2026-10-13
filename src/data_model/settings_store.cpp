@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "data_model/settings_store.hpp"
+#include "data_model/include_config.hpp"
 
 #include <utility>
 
@@ -98,6 +99,14 @@ std::set<std::string> settings_store::get_defines() {
     return profiles[selected_profile].defines;
 }
 
+std::set<std::string> settings_store::get_ignored_includes() {
+    return profiles[selected_profile].ignored_includes;
+}
+
+std::unordered_map<std::string, include_header_resolution_opt> settings_store::get_include_deconfliction() {
+    return profiles[selected_profile].include_deconfliction;
+}
+
 bool settings_store::get_include_auto_discovery() {
     return profiles[selected_profile].include_auto_discovery;
 }
@@ -121,7 +130,34 @@ parse_options settings_store::get_parse_options() {
     opts.defines = get_defines();
     opts.strip_uvm_macros = get_strip_uvm_macros();
     opts.strict = get_strict();
+    opts.ignored_includes = get_ignored_includes();
+    opts.include_deconfliction = get_include_deconfliction();
+    if (ephemeral_includes_set) {
+        for (const auto &s : ephemeral_ignored) opts.ignored_includes.insert(s);
+        for (const auto &kv : ephemeral_decon) {
+            auto &dst = opts.include_deconfliction[kv.first];
+            if (kv.second.global_target.has_value()) dst.global_target = kv.second.global_target;
+            for (const auto &sv : kv.second.scoped_targets) {
+                dst.scoped_targets[sv.first] = sv.second;
+            }
+        }
+    }
+    std::error_code ec;
+    auto abs_root = std::filesystem::absolute(profiles[selected_profile].hdl_store, ec);
+    if (!ec) opts.repo_root = abs_root.lexically_normal().string();
+    else opts.repo_root = profiles[selected_profile].hdl_store.string();
     return opts;
+}
+
+void settings_store::set_ephemeral_include_config(std::set<std::string> ignored,
+    std::unordered_map<std::string, include_header_resolution_opt> decon) {
+    ephemeral_ignored = std::move(ignored);
+    ephemeral_decon = std::move(decon);
+    ephemeral_includes_set = true;
+}
+
+bool settings_store::has_ephemeral_include_config() const {
+    return ephemeral_includes_set;
 }
 
 settings_store::~settings_store() {
@@ -156,6 +192,24 @@ void settings_store::load_settings(const std::string  &settings_file) {
                 profiles[key].strip_uvm_macros = value["strip_uvm_macros"];
             if (value.contains("strict"))
                 profiles[key].strict = value["strict"];
+            if (value.contains("ignored_includes"))
+                profiles[key].ignored_includes = value["ignored_includes"].get<std::set<std::string>>();
+            if (value.contains("include_deconfliction") && value["include_deconfliction"].is_object()) {
+                for (auto &[hkey, hval] : value["include_deconfliction"].items()) {
+                    include_header_resolution_opt res;
+                    if (hval.is_string()) {
+                        res.global_target = hval.get<std::string>();
+                    } else if (hval.is_object()) {
+                        for (auto &[scope, target] : hval.items()) {
+                            res.scoped_targets.emplace(
+                                include_config::normalize_repo_path(scope),
+                                target.get<std::string>());
+                        }
+                    }
+                    profiles[key].include_deconfliction.emplace(
+                        include_config::normalize_repo_path(hkey), std::move(res));
+                }
+            }
         }
     }
     if (settings.is_object()) for (auto &[key, value] : settings.items()) {
@@ -185,6 +239,28 @@ void settings_store::flush() {
             settings["profiles"][key]["include_auto_discovery"] = profile.include_auto_discovery;
             settings["profiles"][key]["strip_uvm_macros"] = profile.strip_uvm_macros;
             settings["profiles"][key]["strict"] = profile.strict;
+            if (!profile.ignored_includes.empty())
+                settings["profiles"][key]["ignored_includes"] = profile.ignored_includes;
+            if (!profile.include_deconfliction.empty()) {
+                nlohmann::json decon = nlohmann::json::object();
+                for (const auto &[hkey, res] : profile.include_deconfliction) {
+                    if (!res.scoped_targets.empty() && !res.global_target.has_value()) {
+                        nlohmann::json scoped = nlohmann::json::object();
+                        for (const auto &[scope, target] : res.scoped_targets) scoped[scope] = target;
+                        decon[hkey] = std::move(scoped);
+                    } else if (res.global_target.has_value() && res.scoped_targets.empty()) {
+                        decon[hkey] = *res.global_target;
+                    } else if (res.global_target.has_value()) {
+                        // Mixed form is not representable in the flat profile
+                        // schema: keep the scoped map (the common case) and
+                        // drop the global rather than serializing garbage.
+                        nlohmann::json scoped = nlohmann::json::object();
+                        for (const auto &[scope, target] : res.scoped_targets) scoped[scope] = target;
+                        decon[hkey] = std::move(scoped);
+                    }
+                }
+                settings["profiles"][key]["include_deconfliction"] = std::move(decon);
+            }
         }
         for (auto &[tool_name, path]: tool_paths) {
             settings[tool_name + "_path"] = path;

@@ -35,6 +35,12 @@ struct settings_profile {
     std::set<std::string> includes;
     std::set<std::string> excludes;
     std::set<std::string> defines;
+    // `includes` fallback (see Depfile `includes` section): exact basenames
+    // of quoted includes to skip silently + ambiguous-header resolution.
+    // All paths repo-relative. Merged (union) with the root-Depfile section,
+    // Depfile winning per header/scope on conflict.
+    std::set<std::string> ignored_includes;
+    std::unordered_map<std::string, include_header_resolution_opt> include_deconfliction;
     bool include_auto_discovery = true;
     // Strip undefined UVM/OVM methodology macros instead of erroring on them.
     // Off by default: strict mode treats them like any other undefined macro
@@ -59,6 +65,14 @@ public:
     std::set<std::string> get_default_includes();
     std::set<std::string> get_excluded_paths();
     std::set<std::string> get_defines();
+    std::set<std::string> get_ignored_includes();
+    std::unordered_map<std::string, include_header_resolution_opt> get_include_deconfliction();
+    // Ephemeral overlay from the root-Depfile `includes` pre-parse (never
+    // persisted by flush()). Unioned in get_parse_options(), overlay winning
+    // per header/scope on conflict.
+    void set_ephemeral_include_config(std::set<std::string> ignored,
+        std::unordered_map<std::string, include_header_resolution_opt> decon);
+    bool has_ephemeral_include_config() const;
     bool get_include_auto_discovery();
     bool get_strip_uvm_macros();
     bool get_strict();
@@ -76,6 +90,10 @@ private:
     std::map<std::string, std::filesystem::path> tool_paths;
     std::string selected_profile;
     std::optional<bool> strict_override;
+    // Root-Depfile overlay (see set_ephemeral_include_config).
+    bool ephemeral_includes_set = false;
+    std::set<std::string> ephemeral_ignored;
+    std::unordered_map<std::string, include_header_resolution_opt> ephemeral_decon;
 
     bool ephemeral;
     std::string store_path;

@@ -16,15 +16,36 @@
 #ifndef ANANKE_PARSE_OPTIONS_HPP
 #define ANANKE_PARSE_OPTIONS_HPP
 
+#include <optional>
 #include <set>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 // Parse-relevant settings bundled for dependency injection. This is the only
 // options parcel threaded walker -> task -> analyzer -> preprocessor ->
 // macro engine, so a future toggle is one field here and zero plumbing.
+struct include_header_resolution_opt {
+    std::optional<std::string> global_target;
+    // Scope dir (repo-relative, normalized, no leading slash) -> target
+    // (repo-relative). Longest matching scope prefix wins.
+    std::unordered_map<std::string, std::string> scoped_targets;
+};
+
 struct parse_options {
     std::set<std::string> include_directories;
     std::set<std::string> defines;
+    // Exact basenames of quoted `includes to skip silently (no warning).
+    // Quoted-only: `<...>` angle includes still error when missing.
+    std::set<std::string> ignored_includes;
+    // Ambiguous-header resolution keyed on the include-file key (basename or
+    // subpath). Value is a global target or scoped includer-dir -> target.
+    // All paths repo-relative (see repo_root).
+    std::unordered_map<std::string, include_header_resolution_opt> include_deconfliction;
+    // Absolute repository root used to relativize includer paths for scoped
+    // matching and to resolve repo-relative targets. Empty = scoping by
+    // absolute suffix fallback.
+    std::string repo_root;
     bool strip_uvm_macros = false;
     // Strict mode: reject out-of-spec code that lenient mode tolerates to
     // get real-world trees (UVM-heavy ones in particular) through the

@@ -14,9 +14,37 @@
 // limitations under the License.
 
 #include "data_model/Depfile/Depfile.hpp"
+#include "data_model/include_config.hpp"
 
+#include <cstring>
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
+
+namespace {
+void parse_includes_section(const nlohmann::json &inc, includes_settings &out) {
+    if (inc.contains("ignored")) {
+        for (const auto &item : inc["ignored"]) {
+            out.ignored.emplace_back(item.get<std::string>());
+        }
+    }
+    if (inc.contains("deconfliction")) {
+        for (auto &[key, value] : inc["deconfliction"].items()) {
+            include_header_resolution_opt res;
+            if (value.is_string()) {
+                res.global_target = value.get<std::string>();
+            } else if (value.is_object()) {
+                for (auto &[scope, target] : value.items()) {
+                    res.scoped_targets.emplace(
+                        include_config::normalize_repo_path(scope),
+                        target.get<std::string>());
+                }
+            }
+            out.deconfliction.emplace(
+                include_config::normalize_repo_path(key), std::move(res));
+        }
+    }
+}
+} // namespace
 
 Depfile::Depfile(std::istream &in) {
 
@@ -95,6 +123,32 @@ void Depfile::set_content(const nlohmann::json &file_content) {
     }
     if (file_content.contains("deconfliction")) {
         deconfliction = file_content.at("deconfliction");
+        // Guard against the silent-misconfiguration trap: top-level
+        // `deconfliction` only applies to module names. A key that looks
+        // like an include file (subpath or HDL/header extension — never a
+        // legal module name) almost certainly belongs in
+        // `includes.deconfliction` and would otherwise be ignored without a
+        // word. Behavior is unchanged; this just points at the right knob.
+        for (const auto &[key, ignored] : deconfliction) {
+            (void)ignored;
+            bool file_like = key.find('/') != std::string::npos ||
+                             key.find('\\') != std::string::npos;
+            for (const char *ext : {".svh", ".sv", ".vh", ".v", ".h"}) {
+                if (key.size() >= std::strlen(ext) &&
+                    key.compare(key.size() - std::strlen(ext), std::strlen(ext), ext) == 0) {
+                    file_like = true;
+                    break;
+                }
+            }
+            if (file_like) {
+                spdlog::warn("Depfile top-level deconfliction entry '{}' looks like an include file: "
+                             "include resolution uses the `includes.deconfliction` section instead",
+                             key);
+            }
+        }
+    }
+    if (file_content.contains("includes")) {
+        parse_includes_section(file_content["includes"], includes);
     }
     if (file_content.contains("verilator")) {
         const auto &v = file_content["verilator"];
@@ -117,6 +171,25 @@ std::vector<Script> Depfile::get_scripts() {
 }
 
 
+
+bool Depfile::try_load_includes_section(const std::string &path, includes_settings &out) {
+    try {
+        std::ifstream ifs(path);
+        if (!ifs.good()) return false;
+        nlohmann::json content;
+        ifs >> content;
+        if (!content.is_object() || !content.contains("includes")) return false;
+        const auto &inc = content["includes"];
+        if (!inc.is_object()) return false;
+        includes_settings parsed;
+        parse_includes_section(inc, parsed);
+        out = std::move(parsed);
+        return true;
+    } catch (const std::exception &e) {
+        spdlog::warn("Could not pre-parse includes section of {}: {}", path, e.what());
+        return false;
+    }
+}
 
 std::optional<bus_specs> Depfile::get_bus_section(const std::string &bus_type) {
     if (bus.contains(bus_type)) return bus.at(bus_type);

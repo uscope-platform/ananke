@@ -2532,3 +2532,270 @@ TEST(preprocessor, multiline_define_with_interior_line_comments) {
     EXPECT_THAT(result, testing::Not(testing::HasSubstr("Xcelium")));
     EXPECT_FALSE(preproc.has_fatal_error());
 }
+
+TEST(preprocessor, ignored_include_skipped_silently) {
+    // Proprietary/unavailable headers listed in `ignored_includes` are
+    // skipped with no warning, no error and no dependency edge.
+    auto test_pattern = R"(
+        `include "avery_defines.svh"
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/ananke_ign_test/file.sv");
+    parse_options opts;
+    opts.ignored_includes = {"avery_defines.svh"};
+    preproc.set_options(opts);
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+    EXPECT_TRUE(preproc.get_includes().empty());
+}
+
+TEST(preprocessor, ignored_include_matches_basename) {
+    // Entries tolerate a directory prefix: matching is basename-exact.
+    auto test_pattern = R"(
+        `include "avery_defines.svh"
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/ananke_ign_test/file.sv");
+    parse_options opts;
+    opts.ignored_includes = {"some/vendor/avery_defines.svh"};
+    preproc.set_options(opts);
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("parameter TEST_PARAM = 5;"));
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, missing_include_without_ignore_still_skips_cleanly) {
+    // Unchanged default: a missing quoted include warns but does not fail.
+    auto test_pattern = R"(
+        `include "not_there.svh"
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/ananke_ign_test/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("parameter TEST_PARAM = 5;"));
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, ignored_list_does_not_apply_to_angle_includes) {
+    // Quoted-only by design: `<...>` still errors even when listed.
+    auto test_pattern = R"(
+        `include <avery_defines.svh>
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/ananke_ign_test/file.sv");
+    parse_options opts;
+    opts.ignored_includes = {"avery_defines.svh"};
+    preproc.set_options(opts);
+
+    preproc.preprocess(test_pattern);
+    EXPECT_TRUE(preproc.has_error());
+    EXPECT_TRUE(preproc.has_fatal_error());
+}
+
+TEST(preprocessor, include_global_deconfliction_picks_target) {
+    std::filesystem::create_directories("/tmp/ananke_idec_test/a");
+    std::filesystem::create_directories("/tmp/ananke_idec_test/b");
+    {
+        std::ofstream ofs("/tmp/ananke_idec_test/a/vals.svh");
+        ofs << "`define VAL 1\n";
+    }
+    {
+        std::ofstream ofs("/tmp/ananke_idec_test/b/vals.svh");
+        ofs << "`define VAL 2\n";
+    }
+
+    auto idx = std::make_shared<repository_index>();
+    idx->add_file("/tmp/ananke_idec_test/a/vals.svh");
+    idx->add_file("/tmp/ananke_idec_test/b/vals.svh");
+
+    auto test_pattern = R"(
+        `include "vals.svh"
+        module test_module ();
+            parameter TEST_PARAM = `VAL;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/ananke_idec_test/file.sv");
+    preproc.set_repository_index(idx);
+    parse_options opts;
+    include_header_resolution_opt res;
+    res.global_target = "b/vals.svh";
+    opts.include_deconfliction["vals.svh"] = std::move(res);
+    preproc.set_options(opts);
+
+    auto result = preproc.preprocess(test_pattern);
+    std::filesystem::remove_all("/tmp/ananke_idec_test");
+
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::HasSubstr("parameter TEST_PARAM = 2;"));
+    ASSERT_EQ(preproc.get_includes().size(), 1u);
+    EXPECT_THAT(preproc.get_includes().begin()->path, testing::HasSubstr("b/vals.svh"));
+}
+
+TEST(preprocessor, include_scoped_deconfliction_picks_per_folder) {
+    // Same basename, different variant per includer subtree: files under
+    // repo/foo resolve shared_a, files under repo/bar resolve shared_b.
+    const std::string root = "/tmp/ananke_scope_test/repo";
+    std::filesystem::create_directories(root + "/shared_a");
+    std::filesystem::create_directories(root + "/shared_b");
+    std::filesystem::create_directories(root + "/foo");
+    std::filesystem::create_directories(root + "/bar");
+    {
+        std::ofstream ofs(root + "/shared_a/defs.svh");
+        ofs << "`define WHICH 1\n";
+    }
+    {
+        std::ofstream ofs(root + "/shared_b/defs.svh");
+        ofs << "`define WHICH 2\n";
+    }
+
+    auto idx = std::make_shared<repository_index>();
+    idx->add_file(root + "/shared_a/defs.svh");
+    idx->add_file(root + "/shared_b/defs.svh");
+
+    auto test_pattern = R"(
+        `include "defs.svh"
+        module test_module ();
+            parameter TEST_PARAM = `WHICH;
+        endmodule
+    )";
+
+    parse_options opts;
+    opts.repo_root = root;
+    include_header_resolution_opt res;
+    res.scoped_targets = {{"foo", "shared_a/defs.svh"}, {"bar", "shared_b/defs.svh"}};
+    opts.include_deconfliction["defs.svh"] = std::move(res);
+
+    sv_preprocessor foo_preproc;
+    foo_preproc.set_path(root + "/foo/top.sv");
+    foo_preproc.set_repository_index(idx);
+    foo_preproc.set_options(opts);
+    auto foo_result = foo_preproc.preprocess(test_pattern);
+
+    sv_preprocessor bar_preproc;
+    bar_preproc.set_path(root + "/bar/top.sv");
+    bar_preproc.set_repository_index(idx);
+    bar_preproc.set_options(opts);
+    auto bar_result = bar_preproc.preprocess(test_pattern);
+
+    std::filesystem::remove_all("/tmp/ananke_scope_test");
+
+    EXPECT_FALSE(foo_preproc.has_error());
+    EXPECT_FALSE(bar_preproc.has_error());
+    EXPECT_THAT(foo_result, testing::HasSubstr("parameter TEST_PARAM = 1;"));
+    EXPECT_THAT(bar_result, testing::HasSubstr("parameter TEST_PARAM = 2;"));
+}
+
+TEST(preprocessor, include_scoped_deconfliction_nested_scope_inherits) {
+    // Longest prefix wins: rtl/foo/sub inherits rtl/foo unless overridden.
+    const std::string root = "/tmp/ananke_scope_nest/repo";
+    std::filesystem::create_directories(root + "/shared_a");
+    std::filesystem::create_directories(root + "/shared_b");
+    std::filesystem::create_directories(root + "/rtl/foo/sub");
+    {
+        std::ofstream ofs(root + "/shared_a/defs.svh");
+        ofs << "`define WHICH 1\n";
+    }
+    {
+        std::ofstream ofs(root + "/shared_b/defs.svh");
+        ofs << "`define WHICH 2\n";
+    }
+
+    auto idx = std::make_shared<repository_index>();
+    idx->add_file(root + "/shared_a/defs.svh");
+    idx->add_file(root + "/shared_b/defs.svh");
+
+    auto test_pattern = R"(
+        `include "defs.svh"
+        module test_module ();
+            parameter TEST_PARAM = `WHICH;
+        endmodule
+    )";
+
+    parse_options opts;
+    opts.repo_root = root;
+    include_header_resolution_opt res;
+    res.scoped_targets = {{"rtl/foo", "shared_a/defs.svh"}, {"rtl/other", "shared_b/defs.svh"}};
+    opts.include_deconfliction["defs.svh"] = std::move(res);
+
+    sv_preprocessor preproc;
+    preproc.set_path(root + "/rtl/foo/sub/top.sv");
+    preproc.set_repository_index(idx);
+    preproc.set_options(opts);
+    auto result = preproc.preprocess(test_pattern);
+
+    std::filesystem::remove_all("/tmp/ananke_scope_nest");
+
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::HasSubstr("parameter TEST_PARAM = 1;"));
+}
+
+TEST(preprocessor, include_deconfliction_bad_target_falls_back_cleanly) {
+    // A target matching nothing keeps the default skip behavior (no error).
+    std::filesystem::create_directories("/tmp/ananke_idec_bad/a");
+    std::filesystem::create_directories("/tmp/ananke_idec_bad/b");
+    {
+        std::ofstream ofs("/tmp/ananke_idec_bad/a/dup.svh");
+        ofs << "`define DUP 1\n";
+    }
+    {
+        std::ofstream ofs("/tmp/ananke_idec_bad/b/dup.svh");
+        ofs << "`define DUP 2\n";
+    }
+
+    auto idx = std::make_shared<repository_index>();
+    idx->add_file("/tmp/ananke_idec_bad/a/dup.svh");
+    idx->add_file("/tmp/ananke_idec_bad/b/dup.svh");
+
+    auto test_pattern = R"(
+        `include "dup.svh"
+        module test_module ();
+            parameter TEST_PARAM = 5;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/ananke_idec_bad/file.sv");
+    preproc.set_repository_index(idx);
+    parse_options opts;
+    include_header_resolution_opt res;
+    res.global_target = "nowhere/missing.svh";
+    opts.include_deconfliction["dup.svh"] = std::move(res);
+    preproc.set_options(opts);
+
+    auto result = preproc.preprocess(test_pattern);
+    std::filesystem::remove_all("/tmp/ananke_idec_bad");
+
+    EXPECT_THAT(result, testing::HasSubstr("parameter TEST_PARAM = 5;"));
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_FALSE(preproc.has_fatal_error());
+}

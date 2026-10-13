@@ -15,6 +15,8 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 
 #include "data_model/Constraints.hpp"
@@ -163,4 +165,118 @@ TEST(DepfileVerilatorTest, tool_section_defaults) {
     ASSERT_THAT(f.verilator.make_args, testing::ElementsAre("OPT_FAST=-Os"));
     ASSERT_TRUE(f.verilator.autoflush);
     ASSERT_TRUE(f.verilator.extra_args.empty());
+}
+TEST(DepfileIncludesTest, defaults_empty) {
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "vproj",
+            "synth_tl": "dut",
+            "sim_tl": "tb"
+        }
+    })");
+    Depfile f(ss);
+    ASSERT_FALSE(f.has_error()) << f.get_error();
+    EXPECT_TRUE(f.includes.ignored.empty());
+    EXPECT_TRUE(f.includes.deconfliction.empty());
+}
+
+TEST(DepfileIncludesTest, ignored_and_mixed_deconfliction) {
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "vproj",
+            "synth_tl": "dut",
+            "sim_tl": "tb"
+        },
+        "includes": {
+            "ignored": ["avery_defines.svh", "avery_vip.svh"],
+            "deconfliction": {
+                "shared.svh": "rtl/shared/shared.svh",
+                "defs.svh": {
+                    "rtl/foo": "rtl/foo/defs.svh",
+                    "rtl/bar": "rtl/bar/defs.svh"
+                }
+            }
+        }
+    })");
+    Depfile f(ss);
+    ASSERT_FALSE(f.has_error()) << f.get_error();
+    ASSERT_THAT(f.includes.ignored,
+                testing::ElementsAre("avery_defines.svh", "avery_vip.svh"));
+    ASSERT_TRUE(f.includes.deconfliction.contains("shared.svh"));
+    EXPECT_EQ(f.includes.deconfliction.at("shared.svh").global_target,
+              std::optional<std::string>("rtl/shared/shared.svh"));
+    EXPECT_TRUE(f.includes.deconfliction.at("shared.svh").scoped_targets.empty());
+    ASSERT_TRUE(f.includes.deconfliction.contains("defs.svh"));
+    EXPECT_FALSE(f.includes.deconfliction.at("defs.svh").global_target.has_value());
+    EXPECT_EQ(f.includes.deconfliction.at("defs.svh").scoped_targets.size(), 2u);
+    EXPECT_EQ(f.includes.deconfliction.at("defs.svh").scoped_targets.at("rtl/foo"),
+              "rtl/foo/defs.svh");
+    EXPECT_EQ(f.includes.deconfliction.at("defs.svh").scoped_targets.at("rtl/bar"),
+              "rtl/bar/defs.svh");
+}
+
+TEST(DepfileIncludesTest, invalid_shape_rejected) {
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "vproj",
+            "synth_tl": "dut",
+            "sim_tl": "tb"
+        },
+        "includes": {
+            "ignored": "avery_defines.svh"
+        }
+    })");
+    Depfile f(ss);
+    EXPECT_TRUE(f.has_error());
+}
+
+TEST(DepfileIncludesTest, lenient_section_preparse) {
+    const std::string path = "/tmp/ananke_depfile_inc_test_Depfile";
+    {
+        std::ofstream ofs(path);
+        ofs << R"({
+            "general": {
+                "project_name": "vproj",
+                "synth_tl": "dut",
+                "sim_tl": "tb"
+            },
+            "includes": {
+                "ignored": ["avery_defines.svh"],
+                "deconfliction": {"x.svh": "rtl/x.svh"}
+            }
+        })";
+    }
+    includes_settings inc;
+    EXPECT_TRUE(Depfile::try_load_includes_section(path, inc));
+    EXPECT_THAT(inc.ignored, testing::ElementsAre("avery_defines.svh"));
+    ASSERT_TRUE(inc.deconfliction.contains("x.svh"));
+    EXPECT_EQ(inc.deconfliction.at("x.svh").global_target,
+              std::optional<std::string>("rtl/x.svh"));
+    std::filesystem::remove(path);
+}
+
+TEST(DepfileIncludesTest, lenient_section_preparse_missing_file) {
+    includes_settings inc;
+    EXPECT_FALSE(Depfile::try_load_includes_section("/tmp/ananke_depfile_no_such_file_xyz", inc));
+}
+
+TEST(DepfileIncludesTest, file_like_top_level_deconfliction_warns_not_applies) {
+    // Top-level `deconfliction` is module-only: a file-like key must not
+    // leak into include resolution (it warns pointing at `includes`).
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "vproj",
+            "synth_tl": "dut",
+            "sim_tl": "tb"
+        },
+        "deconfliction": {
+            "x.svh": "rtl/x.svh",
+            "dup_mod": "rtl/dup_mod.sv"
+        }
+    })");
+    Depfile f(ss);
+    ASSERT_FALSE(f.has_error()) << f.get_error();
+    EXPECT_TRUE(f.includes.deconfliction.empty());
+    ASSERT_TRUE(f.deconfliction.contains("x.svh"));
+    EXPECT_EQ(f.deconfliction.at("x.svh"), "rtl/x.svh");
 }

@@ -143,6 +143,18 @@ public:
     void set_include_file_hashes(std::unordered_map<std::string, std::string> h) {
         include_file_hashes = std::move(h);
     }
+    // Fingerprint of the effective `includes` config (ignored +
+    // deconfliction, see include_config::fingerprint). A change forces a
+    // full re-parse: include warnings/skips are only re-evaluated on parse,
+    // so cache-hit files would otherwise keep stale outcomes.
+    [[nodiscard]] const std::string &get_include_config_fingerprint() const {
+        return include_config_fingerprint;
+    }
+    void set_include_config_fingerprint(std::string fp) {
+        include_config_fingerprint = std::move(fp);
+    }
+    // Drop all cached file entries (used when the include config changed).
+    void clear_contents() { cache.clear(); }
     // OLD IF
 
     void remove_stale_info(const std::filesystem::path& p);
@@ -200,6 +212,8 @@ private:
     std::string macro_table_fingerprint;
     // See get_include_file_hashes: byte hashes of consumed `.h` headers.
     std::unordered_map<std::string, std::string> include_file_hashes;
+    // See get_include_config_fingerprint.
+    std::string include_config_fingerprint;
     std::unordered_map<std::string, std::string> deconfliction;
     std::set<std::string> reported_duplicates;
     bool ephemeral;

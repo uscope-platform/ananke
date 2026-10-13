@@ -16,6 +16,7 @@
 
 #include "frontend/Repository_walker.hpp"
 #include "data_model/mm_file.hpp"
+#include "data_model/include_config.hpp"
 
 
 
@@ -35,6 +36,19 @@ void Repository_walker::construct_walker(std::shared_ptr<settings_store> s, std:
     excluded_directories = std::move(ex);
     target_repository = s_store->get_hdl_store();
     parse_opts_ = s_store->get_parse_options();
+    // Include-config change (ignored/deconfliction) forces a full re-parse:
+    // include skip/warn outcomes are only re-evaluated on parse, so
+    // cache-hit files would otherwise keep stale results.
+    {
+        const std::string fp = include_config::fingerprint(parse_opts_);
+        if (d_store->get_include_config_fingerprint() != fp) {
+            if (!d_store->get_include_config_fingerprint().empty() || !fp.empty()) {
+                spdlog::info("Include configuration changed, re-parsing repository");
+            }
+            d_store->clear_contents();
+            d_store->set_include_config_fingerprint(fp);
+        }
+    }
     if (s_store->get_include_auto_discovery()) {
         repository_index_p = std::make_shared<repository_index>();
     }

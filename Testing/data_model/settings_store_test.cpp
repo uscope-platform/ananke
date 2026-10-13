@@ -206,3 +206,73 @@ TEST(settings_store, strict_override_not_persisted) {
 
     std::filesystem::remove_all(store_settings_path);
 }
+TEST(settings_store, ignored_includes_default_empty) {
+    std::filesystem::create_directories(store_settings_path);
+    std::ofstream ofs(store_settings_file);
+    ofs << "{\"profiles\": {\"test_profile\": {\"hdl_store\":\"/tmp/repo\"}}}";
+    ofs.flush();
+    ofs.close();
+
+    settings_store s(false, store_settings_path, "test_profile");
+    EXPECT_TRUE(s.get_ignored_includes().empty());
+    EXPECT_TRUE(s.get_include_deconfliction().empty());
+    EXPECT_TRUE(s.get_parse_options().ignored_includes.empty());
+
+    std::filesystem::remove_all(store_settings_path);
+}
+
+TEST(settings_store, ignored_includes_loaded_and_persisted) {
+    std::filesystem::create_directories(store_settings_path);
+    std::ofstream ofs(store_settings_file);
+    ofs << "{\"profiles\": {\"test_profile\": {\"hdl_store\":\"/tmp/repo\","
+            "\"ignored_includes\":[\"avery_defines.svh\"],"
+            "\"include_deconfliction\":{\"x.svh\": \"rtl/x.svh\","
+            "\"defs.svh\": {\"rtl/foo\": \"rtl/foo/defs.svh\"}}}}}";
+    ofs.flush();
+    ofs.close();
+
+    {
+        settings_store s(false, store_settings_path, "test_profile");
+        EXPECT_EQ(s.get_ignored_includes(), (std::set<std::string>{"avery_defines.svh"}));
+        ASSERT_TRUE(s.get_include_deconfliction().contains("x.svh"));
+        EXPECT_EQ(s.get_include_deconfliction().at("x.svh").global_target,
+                  std::optional<std::string>("rtl/x.svh"));
+        ASSERT_TRUE(s.get_include_deconfliction().contains("defs.svh"));
+        EXPECT_EQ(s.get_include_deconfliction().at("defs.svh").scoped_targets.at("rtl/foo"),
+                  "rtl/foo/defs.svh");
+        EXPECT_EQ(s.get_parse_options().ignored_includes,
+                  (std::set<std::string>{"avery_defines.svh"}));
+        s.flush();
+    }
+
+    settings_store s2(false, store_settings_path, "test_profile");
+    EXPECT_EQ(s2.get_ignored_includes(), (std::set<std::string>{"avery_defines.svh"}));
+    ASSERT_TRUE(s2.get_include_deconfliction().contains("x.svh"));
+
+    std::filesystem::remove_all(store_settings_path);
+}
+
+TEST(settings_store, ephemeral_include_overlay_unioned_not_persisted) {
+    std::filesystem::create_directories(store_settings_path);
+    std::ofstream ofs(store_settings_file);
+    ofs << "{\"profiles\": {\"test_profile\": {\"hdl_store\":\"/tmp/repo\","
+            "\"ignored_includes\":[\"profile.svh\"]}}}";
+    ofs.flush();
+    ofs.close();
+
+    {
+        settings_store s(false, store_settings_path, "test_profile");
+        EXPECT_FALSE(s.has_ephemeral_include_config());
+        s.set_ephemeral_include_config({"depfile.svh"}, {});
+        EXPECT_TRUE(s.has_ephemeral_include_config());
+        EXPECT_EQ(s.get_parse_options().ignored_includes,
+                  (std::set<std::string>{"profile.svh", "depfile.svh"}));
+        s.flush();
+    }
+
+    settings_store s2(false, store_settings_path, "test_profile");
+    EXPECT_FALSE(s2.has_ephemeral_include_config());
+    EXPECT_EQ(s2.get_ignored_includes(), (std::set<std::string>{"profile.svh"}));
+
+    std::filesystem::remove_all(store_settings_path);
+}

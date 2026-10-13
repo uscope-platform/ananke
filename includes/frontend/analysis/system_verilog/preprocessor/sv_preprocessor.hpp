@@ -98,6 +98,15 @@ namespace preprocessor {
             std::vector<std::filesystem::path> candidates;
         };
         include_lookup resolve_include(const std::string &name);
+        // `includes.ignored`: exact-basename silent skip (quoted `include
+        // only; the angle branch never consults it).
+        bool is_ignored_include(const std::string &name) const;
+        // `includes.deconfliction`: scoped (longest includer-dir prefix wins)
+        // then global pick among auto-discovery candidates. Nullopt = no
+        // rule matched (caller keeps the default warn/skip behavior).
+        std::optional<include_dependency> resolve_deconflicted(
+            const std::string &name,
+            const std::vector<std::filesystem::path> &candidates);
         std::string get_define_replacement(const std::string_view &v);
         void parse_definition(const std::string_view &sv, int prefix_length);
         void install_global_defines();

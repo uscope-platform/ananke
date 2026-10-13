@@ -19,6 +19,9 @@ Planned content:
 * The ``scripts`` section (``name``, ``type``, ``arguments``,
   ``include_products``, ``products_type``) and the ``Script`` data model.
 * ``excluded_modules`` and ``constraints``.
+* The ``includes`` section (``ignored`` exact-basename silent skips for
+  quoted includes, and ``deconfliction`` ambiguous-header resolution with
+  global-string or per-folder scoped-object values, all paths repo-relative).
 * The ``bus`` section (``type``, ``starting_module``, ``bus_interface``) and
   how it drives bus analysis.
 

@@ -24,11 +24,25 @@
 #include "data_model/Script.hpp"
 #include "data_model/Constraints.hpp"
 #include "data_model/Depfile/depfile_validator.hpp"
+#include "data_model/parse_options.hpp"
 #include "Backend/backend_types.hpp"
 
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
+
+
+// Top-level `includes` section: intentionally-absent headers (`ignored`,
+// exact basenames, quoted `include only) and ambiguous-header resolution
+// (`deconfliction`, keyed on the include-file key). A deconfliction value is
+// either a global target string or a scoped object mapping includer
+// directories (repo-relative) to targets. All paths repo-relative. The
+// resolution type is shared with parse_options (see include_config.hpp for
+// the merge/match semantics).
+struct includes_settings {
+    std::vector<std::string> ignored = {};
+    std::unordered_map<std::string, include_header_resolution_opt> deconfliction;
+};
 
 
 struct  general_settings {
@@ -65,6 +79,7 @@ public:
     std::vector<Constraints> constraints;
     std::unordered_map<std::string, bus_specs> bus;
     std::unordered_map<std::string, std::string> deconfliction;
+    includes_settings includes;
     verilator_tool_options verilator;
     Depfile();
     Depfile(const Depfile &other) = default;
@@ -74,6 +89,11 @@ public:
 
     explicit Depfile(std::istream &in);
     void set_content(const nlohmann::json &c);
+
+    // Lenient pre-parse of just the `includes` section (no schema
+    // validation: the walker runs before the full Depfile is known). Returns
+    // false when the file is missing/unparseable or has no `includes`.
+    static bool try_load_includes_section(const std::string &path, includes_settings &out);
 
     std::optional<bus_specs> get_bus_section(const std::string &bus_type);
 
