@@ -532,6 +532,30 @@ TEST(Token, make_value_identifiers_unaffected) {
     EXPECT_NE(std::dynamic_pointer_cast<String_token>(sv_parsing_helpers::make_value("\"hello\"")), nullptr);
 }
 
+TEST(Token, value_spaced_based_literals) {
+    // Regression test: reggen emits based literals with a space after the
+    // base (`1'h 0`, `4'b 0001`, `8'h 69`), which the lexer accepts. They
+    // were classified as identifiers, so package RESVAL parameters using
+    // them failed with "missing value", defaulting to 0.
+    auto spaced_zero = sv_parsing_helpers::make_value("1'h 0");
+    auto spaced_zero_num = std::dynamic_pointer_cast<Numeric_token>(spaced_zero);
+    ASSERT_NE(spaced_zero_num, nullptr) << "1'h 0 was not classified as a number";
+    EXPECT_EQ(spaced_zero_num->evaluate({})->get_integer().get_value(), 0);
+
+    auto spaced_bin = sv_parsing_helpers::make_value("4'b 0001");
+    auto spaced_bin_num = std::dynamic_pointer_cast<Numeric_token>(spaced_bin);
+    ASSERT_NE(spaced_bin_num, nullptr);
+    EXPECT_EQ(spaced_bin_num->evaluate({})->get_integer().get_value(), 1);
+
+    auto spaced_hex = sv_parsing_helpers::make_value("8'h 69");
+    auto spaced_hex_num = std::dynamic_pointer_cast<Numeric_token>(spaced_hex);
+    ASSERT_NE(spaced_hex_num, nullptr);
+    EXPECT_EQ(spaced_hex_num->evaluate({})->get_integer().get_value(), 0x69);
+
+    // Unspaced forms keep working.
+    EXPECT_NE(std::dynamic_pointer_cast<Numeric_token>(sv_parsing_helpers::make_value("1'h0")), nullptr);
+}
+
 TEST(Token, loop_var_token_evaluates_like_identifier) {
     LoopVar_token tok("g");
     std::map<qualified_identifier, resolved_parameter> ctx;

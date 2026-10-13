@@ -115,21 +115,35 @@ namespace {
     }
 
     // ^\d[\d_]*'(s|S)?(h|d|o|b|H|D|O|B)([0-9a-fA-FxXzZ?_]+)  (prefix match)
+    // NOTE: the lexer allows whitespace after the apostrophe, around the
+    // optional sign flag and after the base (e.g. reggen emits `1'h 0`),
+    // so whitespace is ignored for classification. Identifiers never
+    // contain whitespace, so stripping cannot misclassify them.
     bool is_sized_literal(const std::string_view &s) {
-        size_t int_end = s.find_first_not_of("0123456789_");
-        if (int_end == std::string_view::npos || int_end >= s.size() || s[int_end] != '\'') return false;
-        if (int_end != 0 && !is_unsigned_number_text(s.substr(0, int_end))) return false;
+        std::string stripped;
+        std::string_view view = s;
+        if (s.find_first_of(" \t\n\r\f\v") != std::string_view::npos) {
+            stripped.reserve(s.size());
+            for (char c : s) {
+                if (c != ' ' && c != '\t' && c != '\n' && c != '\r' && c != '\f' && c != '\v')
+                    stripped.push_back(c);
+            }
+            view = stripped;
+        }
+        size_t int_end = view.find_first_not_of("0123456789_");
+        if (int_end == std::string_view::npos || int_end >= view.size() || view[int_end] != '\'') return false;
+        if (int_end != 0 && !is_unsigned_number_text(view.substr(0, int_end))) return false;
         size_t i = int_end + 1;
-        if (i < s.size() && (s[i] == 's' || s[i] == 'S')) i++;
-        if (i >= s.size()) return false;
-        char base = s[i];
+        if (i < view.size() && (view[i] == 's' || view[i] == 'S')) i++;
+        if (i >= view.size()) return false;
+        char base = view[i];
         if (base != 'h' && base != 'H' && base != 'd' && base != 'D' &&
             base != 'o' && base != 'O' && base != 'b' && base != 'B') return false;
-        if (i + 1 >= s.size()) return false;
+        if (i + 1 >= view.size()) return false;
         // At least one valid digit, rest must all be valid digits/'_' (prefix match
         // requires the first digit char to be valid; trailing chars were previously
         // unchecked, keep prefix semantics but reject obvious identifiers).
-        if (!is_based_digit(s[i + 1], base)) return false;
+        if (!is_based_digit(view[i + 1], base)) return false;
         return true;
     }
 

@@ -95,9 +95,24 @@ Numeric_token::numeric_parse_result Numeric_token::process_number(const std::str
     result.binary_size = 0;
     result.sized_explicit = false;
 
+    // The lexer allows whitespace inside based literals (e.g. reggen emits
+    // `1'h 0`): strip it so qualifier/digit parsing sees the canonical form.
+    // Classification upstream guarantees whitespace only occurs in those
+    // positions, so this cannot alter plain integers or identifiers.
+    std::string stripped;
+    std::string_view view = s;
+    if (s.find_first_of(" \t\n\r\f\v") != std::string_view::npos) {
+        stripped.reserve(s.size());
+        for (char c : s) {
+            if (c != ' ' && c != '\t' && c != '\n' && c != '\r' && c != '\f' && c != '\v')
+                stripped.push_back(c);
+        }
+        view = stripped;
+    }
+
     bool signed_number = false;
     bool negative_number = false;
-    auto body = strip_sign(s, signed_number, negative_number);
+    auto body = strip_sign(view, signed_number, negative_number);
 
     auto qualifiers = parse_qualifiers(body, signed_number);
     result.sized_explicit = qualifiers.sized_explicit;

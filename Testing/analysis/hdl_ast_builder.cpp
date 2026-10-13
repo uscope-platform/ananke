@@ -801,6 +801,39 @@ endmodule)";
     EXPECT_EQ(param->get_numeric_value().value().get_value(), 5);
 }
 
+TEST(hdl_ast_builder, sv_package_param_spaced_based_literal) {
+    // reggen emits based literals with a space after the base (`1'h 0`);
+    // package RESVAL parameters using them must solve instead of warning
+    // "missing value" and defaulting to 0.
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    {
+        auto pkg_content = R"(package lc_ctrl_reg_pkg;
+    parameter logic [0:0] LC_CTRL_ALERT_TEST_FATAL_BUS_INTEG_ERROR_RESVAL = 1'h 0;
+    parameter logic [7:0] LC_CTRL_CLAIM_TRANSITION_IF_RESVAL = 8'h 69;
+endpackage)";
+        sv_analyzer pkg_analyzer;
+        d_store->store_file({"test/reg_pkg.sv", "hash_pkg", pkg_analyzer.analyze("", pkg_content).value()});
+    }
+    {
+        auto top_content = R"(import lc_ctrl_reg_pkg::*;
+module top
+    #(parameter logic [0:0] W = lc_ctrl_reg_pkg::LC_CTRL_ALERT_TEST_FATAL_BUS_INTEG_ERROR_RESVAL)();
+endmodule)";
+        sv_analyzer top_analyzer;
+        d_store->store_file({"test/top.sv", "hash_top", top_analyzer.analyze("", top_content).value()});
+    }
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto ast = b.build_ast(std::vector<std::string>({"top"}));
+    ASSERT_EQ(ast.size(), 1u);
+    auto param = ast[0]->find_parameter("W");
+    ASSERT_NE(param, nullptr);
+    ASSERT_TRUE(param->get_numeric_value().has_value());
+    EXPECT_EQ(param->get_numeric_value().value().get_value(), 0);
+}
+
 TEST(hdl_ast_builder, sv_module_header_import) {
     // `import` inside the module header must parse and be captured as a
     // file-level import statement.
