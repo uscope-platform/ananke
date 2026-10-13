@@ -405,10 +405,44 @@ void parameter_solver::remap_keyed_literals(const std::shared_ptr<Expression_bas
 
 }
 
+namespace {
+// Fuse reference-site unpacked dims (e.g. the [N] in `T Arr[N]`) onto a COPY
+// of an imported typedef, mirroring the package-qualified fusion in
+// propagate_types: the shared package object must never gain instance dims.
+// Unions carry no unpacked dims in this codebase (same as the qualified
+// path) and pass through unchanged.
+std::shared_ptr<hdl_type> with_fused_unpacked_dims(
+    const std::shared_ptr<hdl_type> &def,
+    const std::vector<dimension_t> &dims) {
+    if (!def || dims.empty()) return def;
+    if (def->is<HDL_simple_type>()) {
+        auto fused = def->as<HDL_simple_type>();
+        auto unpacked = fused.get_unpacked_dimensions();
+        unpacked.insert(unpacked.end(), dims.begin(), dims.end());
+        fused.set_unpacked_dimensions(unpacked);
+        return std::make_shared<HDL_simple_type>(fused);
+    }
+    if (def->is<HDL_struct_type>()) {
+        auto fused = def->as<HDL_struct_type>();
+        auto unpacked = fused.get_unpacked_dimensions();
+        unpacked.insert(unpacked.end(), dims.begin(), dims.end());
+        fused.set_unpacked_dimensions(unpacked);
+        return std::make_shared<HDL_struct_type>(fused);
+    }
+    if (def->is<HDL_enum_type>()) {
+        auto fused = def->as<HDL_enum_type>();
+        auto unpacked = fused.get_unpacked_dimensions();
+        unpacked.insert(unpacked.end(), dims.begin(), dims.end());
+        fused.set_unpacked_dimensions(unpacked);
+        return std::make_shared<HDL_enum_type>(fused);
+    }
+    return def;
+}
+} // namespace
+
 void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement> &resource,
                                          const std::map<std::string, hdl_function_statement> &imported_functions,
-                                         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
-    std::map<std::string, hdl_function_def_ptr> linked_definitions;
+                                         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {    std::map<std::string, hdl_function_def_ptr> linked_definitions;
     for (const auto &param : resource->get_parameter_statements()) {
         const auto deps = param->get_dependencies();
         for (auto &fcn : deps.functions) {
@@ -430,16 +464,30 @@ void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement>
         }
         for (auto &type : deps.types) {
             if (!type.get_package_prefix().empty()) continue;
-            if (imported_types.contains(type.get_name()))
-                param->set_type(imported_types.at(type.get_name()));
+            if (imported_types.contains(type.get_name())) {
+                auto def = imported_types.at(type.get_name());
+                if (!def) continue;
+                // Keep reference-site unpacked dims (e.g. `T Arr[N]`): the
+                // imported typedef itself is dimensionless.
+                if (auto cur = param->get_type();
+                    cur && cur->is<HDL_external_type>() &&
+                    cur->as<HDL_external_type>().get_value() == type) {
+                    def = with_fused_unpacked_dims(
+                        def, cur->as<HDL_external_type>().get_unpacked_dimensions());
+                }
+                param->set_type(def);
+            }
         }
         // A declared type name that wasn't resolvable at parse time keeps its
-        // name on the (dimensionless) placeholder type; swap in the imported
-        // typedef so the real width/orientation is used.
+        // name on the placeholder type; swap in the imported typedef so the
+        // real width/orientation is used, carrying over the reference-site
+        // unpacked dims (e.g. `T Arr[N]`) onto the copy.
         if (auto cur = param->get_type(); cur && cur->is<HDL_simple_type>()) {
             auto &simple = cur->as<HDL_simple_type>();
-            if (imported_types.contains(simple.get_type_name()))
-                param->set_type(imported_types.at(simple.get_type_name()));
+            if (imported_types.contains(simple.get_type_name())) {
+                auto def = imported_types.at(simple.get_type_name());
+                if (def) param->set_type(with_fused_unpacked_dims(def, simple.get_unpacked_dimensions()));
+            }
         }
     }
 }

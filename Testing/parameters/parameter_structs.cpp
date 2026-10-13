@@ -1241,3 +1241,60 @@ endpackage
     EXPECT_EQ(solved.at(qualified_identifier("TL_H2D_DEFAULT")).get_integer().get_value(), 0x41FF);
     EXPECT_EQ(solved.at(qualified_identifier("TL_ALL_DEFAULT")).get_integer().get_value(), 0);
 }
+
+TEST(parameter_extraction, imported_typedef_array_dims_kept) {
+    // Bare typedef reference through an import (`import pkg::*`) with
+    // reference-site unpacked dims (`T Arr[N]`): the dims must survive the
+    // typedef swap in propagate_imports. Pre-fix they were dropped, the
+    // literal was sized as one struct ("2 values for a 4-member struct")
+    // and positionally scrambled (caliptra kmac AppCfg). Separate files are
+    // essential: single-file patterns resolve the typedef at parse time and
+    // never exercise the swap.
+    auto pkg_pattern = R"(
+package cfg_pkg;
+    typedef struct packed {
+        logic [2:0] mode;
+        logic [7:0] data;
+    } cfg_t;
+    parameter cfg_t CFG_ONE = '{3'd4, 8'hFF};
+endpackage
+)";
+    auto mod_pattern = R"(
+module test_mod
+    import cfg_pkg::*;
+#(
+    parameter int unsigned N = 2,
+    parameter cfg_t ARR[N] = '{CFG_ONE, CFG_ONE}
+)();
+endmodule
+module top();
+    test_mod #(.N(2)) u0();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto pkg_file = analyzer.analyze("/pkg.sv", pkg_pattern).value();
+    auto mod_file = analyzer.analyze("/mod.sv", mod_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/pkg.sv", "hash_pkg", pkg_file});
+    d_store->store_file({"/mod.sv", "hash_mod", mod_file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    ASSERT_EQ(ast->get_dependencies().size(), 1);
+    auto arr = ast->get_dependencies()[0]->find_parameter("ARR");
+    ASSERT_NE(arr, nullptr);
+    auto arr_val = arr->get_int_array_value();
+    ASSERT_TRUE(arr_val.has_value());
+    // MSB->LSB per element: mode=4, data=0xFF -> 0x4FF; two elements.
+    auto data = arr_val->get_data();
+    size_t count = 0;
+    for (auto &l2 : data)
+        for (auto &l1 : l2)
+            for (auto &v : l1) {
+                EXPECT_EQ(v.get_value(), 0x4FF);
+                count++;
+            }
+    EXPECT_EQ(count, 2);
+}
