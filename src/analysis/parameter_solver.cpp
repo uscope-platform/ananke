@@ -126,7 +126,8 @@ static void annotate_identifier_types(
 
 std::map<qualified_identifier, resolved_parameter> parameter_solver::process_parameters(
     const std::vector<std::shared_ptr<HDL_parameter>> &params_in,
-    const std::map<qualified_identifier, resolved_parameter> &context
+    const std::map<qualified_identifier, resolved_parameter> &context,
+    const std::set<std::string> &parent_scoped
 ) {
     std::map<qualified_identifier, resolved_parameter> ctx = context;
 
@@ -147,7 +148,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
     }
 
     topological_sorter s;
-    s.analyze(params_in, ctx);
+    s.analyze(params_in, ctx, parent_scoped);
 
     while (auto next = s.get_next()) {
         auto param = by_name.at(next.value().get_name());
@@ -1516,7 +1517,12 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
         }
     }
 
-    return process_parameters(to_solve, ctx);
+    // Overridden entries solve from parent-scope expressions while the rest
+    // solve from own-scope defaults: hand both scopes to the sorter so
+    // same-named background values only satisfy parent-scope dependents.
+    std::set<std::string> parent_scoped;
+    for (const auto &[o_name, _] : override_by_name) parent_scoped.insert(o_name);
+    return process_parameters(to_solve, ctx, parent_scoped);
 }
 
 std::string parameter_solver::get_full_path(const std::shared_ptr<hdl_ast_node> &node) {

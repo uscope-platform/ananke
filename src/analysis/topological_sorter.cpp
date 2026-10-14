@@ -20,7 +20,7 @@
 
 #include <unordered_map>
 
-void topological_sorter::analyze(const std::vector<std::shared_ptr<HDL_parameter>> &params, const std::map<qualified_identifier, resolved_parameter> & context) {
+void topological_sorter::analyze(const std::vector<std::shared_ptr<HDL_parameter>> &params, const std::map<qualified_identifier, resolved_parameter> & context, const std::set<std::string> &parent_scoped) {
 
     std::unordered_map<std::string, std::shared_ptr<HDL_parameter>> by_name;
     for (auto &parameter : params) {
@@ -42,7 +42,13 @@ void topological_sorter::analyze(const std::vector<std::shared_ptr<HDL_parameter
         }
         for (auto &dep:deps_list.data) {
 
-            if (!context.contains(dep)) {
+            // Own-scope defaults must wait for the own definition even when
+            // the context already holds a same-named background value (e.g.
+            // the parent frame): it will be overwritten, so it cannot
+            // satisfy the dependency. Parent-scope (override) expressions
+            // keep the old rule: their bare names are parent values.
+            const bool own_scoped = !parent_scoped.contains(name);
+            if (own_scoped || !context.contains(dep)) {
                 qualified_identifier effective_dep = dep;
                 for (auto &inst : dep.get_instance()) {
                     if (by_name.contains(inst)) {

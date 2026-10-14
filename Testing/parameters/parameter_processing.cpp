@@ -3046,3 +3046,38 @@ TEST(parameter_processing, parent_local_enum_member_in_child_override) {
     ASSERT_NE(v_param, nullptr);
     EXPECT_EQ(v_param->get_numeric_value().value().get_value(), 2);
 }
+
+TEST(parameter_processing, shadowed_parent_param_stale_value) {
+    // A dependent on a bare name must wait for the own-scope definition even
+    // when the parent scope seeds the solving context with a same-named
+    // value: D must see the W override (8), not the parent's W (128).
+    // Without the edge D solves first and reads the stale background value.
+    auto test_pattern = R"(
+module child #(parameter int W = 2)();
+    localparam int D = W + 1;
+endmodule
+module parent();
+    localparam int W = 128;
+    child #(.W(8)) u();
+endmodule
+module top();
+    parent u();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("/mod.sv", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/mod.sv", "hash_mod", file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    ASSERT_EQ(ast->get_dependencies().size(), 1);
+    auto parent = ast->get_dependencies()[0];
+    ASSERT_EQ(parent->get_dependencies().size(), 1);
+    auto child = parent->get_dependencies()[0];
+    // W resolves the override (8); D must follow it (9), not the parent (129).
+    EXPECT_EQ(child->find_parameter("W")->get_numeric_value().value().get_value(), 8);
+    EXPECT_EQ(child->find_parameter("D")->get_numeric_value().value().get_value(), 9);
+}

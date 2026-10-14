@@ -22,7 +22,13 @@
 class topological_sorter {
 public:
     topological_sorter() = default;
-    void analyze(const std::vector<std::shared_ptr<HDL_parameter>> &params, const std::map<qualified_identifier, resolved_parameter> &context);
+    // parent_scoped names the entries whose expression is authored in the
+    // parent scope (instance overrides): their bare dependencies are parent
+    // values, already final in the context, so the context-presence check
+    // applies. All other entries are own-scope defaults: a same-named
+    // background value in the context will be overwritten by the local
+    // definition, so it must not satisfy the edge.
+    void analyze(const std::vector<std::shared_ptr<HDL_parameter>> &params, const std::map<qualified_identifier, resolved_parameter> &context, const std::set<std::string> &parent_scoped = {});
     std::optional<qualified_identifier> get_next();
     void purge(const qualified_identifier &id);
     [[nodiscard]] bool empty() const;

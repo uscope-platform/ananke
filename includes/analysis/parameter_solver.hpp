@@ -74,7 +74,8 @@ class parameter_solver {
 public:
     static std::map<qualified_identifier, resolved_parameter> process_parameters(
         const std::vector<std::shared_ptr<HDL_parameter>> &params,
-        const std::map<qualified_identifier, resolved_parameter> &context
+        const std::map<qualified_identifier, resolved_parameter> &context,
+        const std::set<std::string> &parent_scoped = {}
     );
     static void update_parameters_map(
         const std::map<qualified_identifier, resolved_parameter> &parameters,
