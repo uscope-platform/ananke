@@ -282,6 +282,11 @@ private:
     void process_operation(Expression_v2::expression_operator op);
     std::shared_ptr<hdl_type> setup_data_type(sv2017::Data_type_or_implicitContext *dtoi);
     std::shared_ptr<hdl_type> resolve_data_type(sv2017::Data_typeContext *dt);
+    // Atom type with optional explicit signing (`int unsigned`, ...):
+    // getText() concatenates the tokens spaceless ("intunsigned"), so split
+    // the base type from the signing keyword before lookup, as the
+    // struct-member path already does.
+    std::shared_ptr<hdl_type> resolve_atom_type(sv2017::Data_type_primitiveContext *prim);
     // Enum base capture (e.g. `logic` in `enum logic [1:0]`): stash a fresh
     // primitive for Type_engine to dimension at the first member. Scoped and
     // absent bases keep today's behavior.

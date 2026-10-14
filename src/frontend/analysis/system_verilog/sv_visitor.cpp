@@ -255,6 +255,22 @@ void sv_visitor::exitTf_port_list(sv2017::Tf_port_listContext *ctx) {
     f_factory.start_body();
 }
 
+std::shared_ptr<hdl_type> sv_visitor::resolve_atom_type(sv2017::Data_type_primitiveContext *prim) {
+    std::string base;
+    if (prim->integer_type()) base = prim->integer_type()->getText();
+    else if (prim->non_integer_type()) base = prim->non_integer_type()->getText();
+    else base = prim->getText();
+    const bool from_registry = type_engine.has_type(base);
+    auto resolved = type_engine.resolve_type(base);
+    // Apply an explicit signing keyword to the resolved width. Only freshly
+    // created primitives are mutated: registry-shared types keep their
+    // declared signing.
+    if (!from_registry && prim->signing() && resolved && resolved->is<HDL_simple_type>()) {
+        resolved->as<HDL_simple_type>().set_signed(prim->signing()->getText() == "signed");
+    }
+    return resolved;
+}
+
 std::shared_ptr<hdl_type> sv_visitor::setup_data_type(sv2017::Data_type_or_implicitContext *dtoi) {
     type_engine.set_base_type(std::make_shared<HDL_simple_type>());
     if (dtoi && dtoi->data_type()) {
@@ -266,9 +282,12 @@ std::shared_ptr<hdl_type> sv_visitor::setup_data_type(sv2017::Data_type_or_impli
             type_engine.set_base_type(ext_type);
             return ext_type;
         }
+        if (dtoi->data_type()->data_type_primitive()) {
+            auto resolved = resolve_atom_type(dtoi->data_type()->data_type_primitive());
+            type_engine.set_base_type(resolved);
+            return resolved;
+        }
         std::string type;
-        if (dtoi->data_type()->data_type_primitive())
-            type = dtoi->data_type()->data_type_primitive()->getText();
         if (dtoi->data_type()->package_or_class_scoped_path())
             type = dtoi->data_type()->package_or_class_scoped_path()->getText();
         auto resolved = type_engine.resolve_type(type);
@@ -286,8 +305,7 @@ std::shared_ptr<hdl_type> sv_visitor::setup_data_type(sv2017::Data_type_or_impli
 std::shared_ptr<hdl_type> sv_visitor::resolve_data_type(sv2017::Data_typeContext *dt) {
     if (!dt) return Type_engine::create_primitive_type("implicit");
     if (dt->data_type_primitive()) {
-        std::string type = dt->data_type_primitive()->getText();
-        return type_engine.resolve_type(type);
+        return resolve_atom_type(dt->data_type_primitive());
     }
     if (dt->package_or_class_scoped_path()) {
         auto pkg_ctx = dt->package_or_class_scoped_path();

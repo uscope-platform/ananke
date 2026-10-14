@@ -2934,3 +2934,20 @@ TEST(parameter_extraction, ternary_in_cast) {
     qualified_identifier sid = qualified_identifier("TEST_PARAM");
     EXPECT_EQ(defaults[sid], 32);
 }
+
+TEST(parameter_extraction, unsigned_atom_type_keeps_width) {
+    // Atom types with explicit signing (`int unsigned`, ...) must resolve
+    // to the base width, not a dimensionless placeholder: dependents
+    // otherwise size operands by value and silently truncate (64+64 -> 0).
+    auto test_pattern = R"(
+        module test_mod ();
+            parameter int unsigned InW = 64;
+            parameter int unsigned OutW = 64;
+            localparam int unsigned Width = InW + OutW;
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto defaults = parameter_solver::process_parameters(resource.get_parameter_statements(), {});
+    EXPECT_EQ(defaults.at(qualified_identifier("Width")).get_integer(), 128);
+}
