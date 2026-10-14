@@ -217,15 +217,18 @@ std::map<qualified_identifier, resolved_parameter> package_solver::retrieve(
                 }
             }
         }
-        parameter_solver::propagate_types(package, d_store);
         parameter_solver::propagate_functions(package, d_store);
-        {
-            std::map<std::string, hdl_function_statement> imported_functions;
-            std::map<std::string, std::shared_ptr<hdl_type>> imported_types;
-            collect_package_imports(package, d_store, imported_functions, imported_types);
-            if (!imported_functions.empty() || !imported_types.empty())
-                parameter_solver::propagate_imports(package, imported_functions, imported_types);
-        }
+        std::map<std::string, hdl_function_statement> imported_functions;
+        std::map<std::string, std::shared_ptr<hdl_type>> imported_types;
+        collect_package_imports(package, d_store, imported_functions, imported_types);
+        if (!imported_functions.empty() || !imported_types.empty())
+            parameter_solver::propagate_imports(package, imported_functions, imported_types);
+        // Owned-default type queries ($bits(T)) are annotated inside
+        // propagate_types from the package scope (own typedefs shadow
+        // imports); the twin in solve_complex_overrides covers the parent
+        // scope of instance overrides instead. Same order as the module flow
+        // (functions, imports, types).
+        parameter_solver::propagate_types(package, d_store, imported_types);
         auto pkg_solved = parameter_solver::process_parameters(package->get_parameter_statements(), ctx);
 
         for (auto &[pkg_id, pkg_val] : pkg_solved) {

@@ -1208,3 +1208,89 @@ TEST(system_task, bits_of_scalar_as_type_parameter) {
 
 
 
+
+TEST(system_task, bits_imported_typedef_in_module_default) {
+    // `$bits(T)` in a module's own parameter default, where T is only
+    // visible through the file's imports (caliptra prim_count
+    // `PossibleActions`). Pre-fix the bare typedef parsed as a value
+    // identifier and the query warned "type could not be resolved",
+    // defaulting the parameter to 0. Separate files are essential:
+    // single-file patterns resolve the typedef at parse time.
+    auto pkg_pattern = R"(
+package count_pkg;
+  typedef logic [3:0] action_mask_t;
+endpackage
+)";
+    auto mod_pattern = R"(
+module prim_count
+  import count_pkg::*;
+#(
+  parameter action_mask_t PossibleActions = {$bits(action_mask_t){1'b1}}
+)(
+  input logic clk_i
+);
+endmodule
+module top();
+  prim_count u0();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto pkg_file = analyzer.analyze("/pkg.sv", pkg_pattern).value();
+    auto mod_file = analyzer.analyze("/mod.sv", mod_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/pkg.sv", "hash_pkg", pkg_file});
+    d_store->store_file({"/mod.sv", "hash_mod", mod_file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    ASSERT_EQ(ast->get_dependencies().size(), 1);
+    auto param = ast->get_dependencies()[0]->find_parameter("PossibleActions");
+    ASSERT_NE(param, nullptr);
+    EXPECT_EQ(param->get_numeric_value(), 15);
+}
+
+TEST(system_task, bits_imported_typedef_in_package_default) {
+    // Package twin of the above: `$bits(T)` in a package's own default with
+    // T imported from another package. Pre-fix W solved to 0 (and MASK with
+    // it) with the same unresolvable-argument warning.
+    auto base_pattern = R"(
+package base_pkg;
+  typedef logic [7:0] byte_t;
+endpackage
+)";
+    auto user_pattern = R"(
+package user_pkg;
+  import base_pkg::*;
+  parameter int unsigned W = $bits(byte_t);
+  parameter logic [W-1:0] MASK = {W{1'b1}};
+endpackage
+)";
+    auto mod_pattern = R"(
+module top #(
+  parameter int V = user_pkg::W,
+  parameter logic [user_pkg::W-1:0] M = user_pkg::MASK
+)();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto base_file = analyzer.analyze("/base.sv", base_pattern).value();
+    auto user_file = analyzer.analyze("/user.sv", user_pattern).value();
+    auto mod_file = analyzer.analyze("/mod.sv", mod_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/base.sv", "hash_base", base_file});
+    d_store->store_file({"/user.sv", "hash_user", user_file});
+    d_store->store_file({"/mod.sv", "hash_mod", mod_file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    auto v = ast->find_parameter("V");
+    auto m = ast->find_parameter("M");
+    ASSERT_NE(v, nullptr);
+    ASSERT_NE(m, nullptr);
+    EXPECT_EQ(v->get_numeric_value(), 8);
+    EXPECT_EQ(m->get_numeric_value(), 255);
+}

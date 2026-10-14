@@ -324,7 +324,7 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     // instance in the flow reuses solved packages.
     auto solved_parameters = packages().retrieve(retrieve_inputs, d_store);
 
-    propagate_types(node_spec.value(), d_store);
+    propagate_types(node_spec.value(), d_store, imported_types);
     propagate_port_types(node_spec.value(), imported_types, d_store);
 
     // Bare-only imports (`use pkg.all` / `import pkg::ITEM` with no qualified
@@ -492,7 +492,8 @@ void parameter_solver::propagate_imports(std::shared_ptr<hdl_resource_statement>
     }
 }
 
-void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
+void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store,
+    const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
     for (const auto &param : resource->get_parameter_statements()) {
         // If the parameter type itself is directly an external type
         if (param->get_type()->is<HDL_external_type>()) {
@@ -599,6 +600,29 @@ void parameter_solver::propagate_types(std::shared_ptr<hdl_resource_statement> &
             }
         }
         remap_keyed_literals(param->get_expression(), param->get_type());
+    }
+
+    // Bare typedef names in type queries ($bits(T)) inside the resource's OWN
+    // defaults parse as plain value identifiers when T is only visible
+    // through the file's imports (e.g. `import pkg::*`); local typedefs
+    // resolve at parse time. Annotate them like override-side queries (see
+    // solve_complex_overrides for the parent-scope twin) so they evaluate
+    // through the typedef instead of warning as missing types. Locals shadow
+    // imports. Idempotent on the shared objects.
+    {
+        auto scope_types = imported_types;
+        for (const auto &[name, t] : resource->get_typedefs()) {
+            if (t) scope_types[name] = t;
+        }
+        for (const auto &pp : resource->get_parameter_statements()) {
+            if (pp && pp->is_type_param && pp->get_type()) scope_types[pp->get_name()] = pp->get_type();
+        }
+        if (!scope_types.empty()) {
+            for (const auto &param : resource->get_parameter_statements()) {
+                if (param && param->get_expression())
+                    annotate_type_queries(param->get_expression(), scope_types, d_store);
+            }
+        }
     }
 }
 
@@ -810,15 +834,17 @@ std::map<std::string, std::shared_ptr<hdl_type>> collect_override_scope_types(
     return scope;
 }
 
+} // namespace
+
 // Annotates bare typedef names used as the direct type operand of a type
-// query ($bits(T), $size(T), ...) inside override expressions with the type
-// from the parent scope, and resolves package-qualified placeholders
-// ($bits(pkg::T)) to the real typedef. Bare type names otherwise parse as
-// plain value identifiers and end up as bogus data dependencies ("Parameter
-// ::T is not defined in the design"). Only the direct first argument is a
-// type position; everything else (including array indices) stays a value
-// position so real value dependencies are preserved.
-void annotate_override_type_queries(
+// query ($bits(T), $size(T), ...) with the type from the visible scope, and
+// resolves package-qualified placeholders ($bits(pkg::T)) to the real
+// typedef. Bare type names otherwise parse as plain value identifiers and
+// end up as bogus data dependencies ("Parameter ::T is not defined in the
+// design"). Only the direct first argument is a type position; everything
+// else (including array indices) stays a value position so real value
+// dependencies are preserved.
+void parameter_solver::annotate_type_queries(
     const std::shared_ptr<Expression_base> &expr,
     const std::map<std::string, std::shared_ptr<hdl_type>> &scope_types,
     const std::shared_ptr<data_store> &d_store) {
@@ -910,6 +936,8 @@ void annotate_override_type_queries(
     retained = std::move(stack);
 }
 
+namespace {
+
 void annotate_port_tokens_expr(
     const std::shared_ptr<Expression_base> &expr,
     const std::map<std::string, std::shared_ptr<hdl_type>> &ports,
@@ -924,7 +952,7 @@ void annotate_port_tokens_expr(
         std::shared_ptr<Expression_base> node;
         bool in_type;
     };
-    // Same reuse discipline as annotate_override_type_queries above: steal
+    // Same reuse discipline as annotate_type_queries above: steal
     // the retained buffer into a frame-local (TLS per iteration costs more
     // than the malloc it saves), hand it back at the end.
     thread_local static std::vector<work_item> retained;
@@ -1152,11 +1180,15 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
 // shared_ptrs keep mutations (set_type/propagate_function) on the original
 // package objects; only the container is transient. Path lookups inside
 // already try resources then packages, so standalone resolution works.
-void parameter_solver::propagate_types(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store) {
+void parameter_solver::propagate_types(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store,
+    const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types) {
     auto tmp = std::make_shared<hdl_resource_statement>();
     tmp->set_name(resource->getName());
     for (auto &s : resource->get_statements()) tmp->add_statement(s);
-    propagate_types(tmp, d_store);
+    for (const auto &[name, t] : resource->get_typedefs()) {
+        if (t) tmp->add_typedef(name, t);
+    }
+    propagate_types(tmp, d_store, imported_types);
 }
 
 void parameter_solver::propagate_functions(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store) {
@@ -1280,12 +1312,13 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::solve_compl
     // identifiers when the defining package is only visible through the
     // parent's imports. Resolve them against the parent scope here so they
     // evaluate through the typedef instead of warning as missing parameters.
+    // (The twin for owned defaults lives in propagate_types.)
     std::map<std::string, std::shared_ptr<hdl_type>> scope_types;
     if (parent_node) {
         scope_types = collect_override_scope_types(parent_node, parent_resource, d_store);
         if (!scope_types.empty()) {
             for (const auto &param : work.node->get_parameters()) {
-                annotate_override_type_queries(param->get_expression(), scope_types, d_store);
+                annotate_type_queries(param->get_expression(), scope_types, d_store);
             }
         }
     }

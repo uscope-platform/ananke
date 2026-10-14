@@ -88,8 +88,10 @@ public:
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types = {});
     static void propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store);
     static void propagate_functions(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store);
-    static void propagate_types(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store);
-    static void propagate_types(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store);
+    static void propagate_types(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store,
+        const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types = {});
+    static void propagate_types(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store,
+        const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types = {});
     static void propagate_port_types(std::shared_ptr<hdl_resource_statement> &resource,
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types,
         const std::shared_ptr<data_store> &d_store);
@@ -101,6 +103,14 @@ public:
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types);
     static void remap_keyed_literals(const std::shared_ptr<Expression_base> &expr,
                               const std::shared_ptr<hdl_type> &type);
+    // Annotates bare typedef names used as the direct type operand of a type
+    // query ($bits(T), $size(T), ...) with the typedef from the visible
+    // scope. Only the direct first argument is a type position; everything
+    // else stays a value position. Idempotent.
+    static void annotate_type_queries(
+        const std::shared_ptr<Expression_base> &expr,
+        const std::map<std::string, std::shared_ptr<hdl_type>> &scope_types,
+        const std::shared_ptr<data_store> &d_store);
     static std::map<qualified_identifier, resolved_parameter> solve_complex_overrides(
             work_order &work,
             const std::shared_ptr<data_store> &d_store,
