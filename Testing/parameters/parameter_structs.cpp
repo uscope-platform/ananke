@@ -1298,3 +1298,55 @@ endmodule
             }
     EXPECT_EQ(count, 2);
 }
+
+TEST(parameter_extraction, concat_item_binary_after_composite) {
+    // A composite completing mid-item followed by a binary operator keeps
+    // the composite as the operation's lhs: `{R-X, Y}` is 2 components, not
+    // `{R, -X, Y}` (caliptra prim_count ResetValues, silently scrambled).
+    // The trailing case guards genuine item-initial unaries, which must not
+    // be reclaimed as binary lhs.
+    auto pkg_pattern = R"(
+package fn_pkg;
+    function automatic int fsum(input int n);
+        return n;
+    endfunction
+endpackage
+)";
+    auto test_pattern = R"(
+module test_mod
+    import fn_pkg::*;
+#(
+    parameter int Width = 2,
+    parameter logic [Width-1:0] ResetValue = '0
+)();
+    localparam int NumCnt = 2;
+    localparam logic [NumCnt-1:0][Width-1:0] D = {{Width{1'b1}} - ResetValue, ResetValue};
+    localparam logic [5:0] J = {{2'b11, 2'b00}-1, 2'b0};
+    localparam logic [15:0] Q = {8'd5, -8'd1};
+    localparam logic [5:0] H = {fsum(4)-2'd1, 2'b0};
+endmodule
+module top();
+    test_mod #(.Width(2)) u0();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto pkg_file = analyzer.analyze("/pkg.sv", pkg_pattern).value();
+    auto file = analyzer.analyze("/mod.sv", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/pkg.sv", "hash_pkg", pkg_file});
+    d_store->store_file({"/mod.sv", "hash_mod", file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    ASSERT_EQ(ast->get_dependencies().size(), 1);
+    auto inst = ast->get_dependencies()[0];
+    // D = {2'b11 - 0, 2'b00} = 12; J = {12-1, 0} = {11, 0} = 44.
+    EXPECT_EQ(inst->find_parameter("D")->get_numeric_value().value().get_value(), 12);
+    EXPECT_EQ(inst->find_parameter("J")->get_numeric_value().value().get_value(), 44);
+    // Q = {5, 0xFF} = 0x05FF: the unary second item is untouched.
+    EXPECT_EQ(inst->find_parameter("Q")->get_numeric_value().value().get_value(), 0x05FF);
+    // H = {(4-1), 0} = {3, 0} = 12: user calls behave like replications.
+    EXPECT_EQ(inst->find_parameter("H")->get_numeric_value().value().get_value(), 12);
+}

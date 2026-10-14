@@ -123,7 +123,13 @@ void HDL_parameters_factory::stop_replication() {
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
         expr_factory.pop_level();
-        if (!consumer_stack.empty()) {
+        if (expr_factory.active() && top_as<concatenation_factory>()) {
+            // A composite finishing mid-item (e.g. `{R-X, Y}`) belongs to the
+            // open item expression as the binary operator's lhs, not to the
+            // concatenation as a finished component. A complete item takes
+            // the same path and lands as one component at the item boundary.
+            expr_factory.consume(result);
+        } else if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
         } else if (expr_factory.active()) {
             expr_factory.consume(result);
@@ -146,7 +152,11 @@ void HDL_parameters_factory::stop_replication_assignment() {
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
         expr_factory.pop_level();
-        if (!consumer_stack.empty()) {
+        if (expr_factory.active() && top_as<concatenation_factory>()) {
+            // Same mid-item case as stop_replication: keep the composite in
+            // the open item expression instead of closing a component early.
+            expr_factory.consume(result);
+        } else if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
         } else if (expr_factory.active()) {
             expr_factory.consume(result);
@@ -226,7 +236,14 @@ void HDL_parameters_factory::stop_concatenation() {
         expr_factory.pop_level();
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
-        if (!consumer_stack.empty()) {
+        if (expr_factory.active() && top_as<concatenation_factory>()) {
+            // A nested concatenation finishing mid-item (e.g. `{{a,b}-1, c}`)
+            // belongs to the open item expression as the binary operator's
+            // lhs, not to the outer concatenation as a finished component. A
+            // complete item takes the same path and lands as one component at
+            // the item boundary.
+            expr_factory.consume(result);
+        } else if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
         } else if (expr_factory.active()) {
             expr_factory.consume(result);
@@ -255,7 +272,11 @@ void HDL_parameters_factory::stop_streaming() {
         expr_factory.pop_level();
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
-        if (!consumer_stack.empty()) {
+        if (expr_factory.active() && top_as<concatenation_factory>()) {
+            // Same mid-item case as stop_replication: keep the composite in
+            // the open item expression instead of closing a component early.
+            expr_factory.consume(result);
+        } else if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
         } else if (expr_factory.active()) {
             expr_factory.consume(result);
@@ -303,7 +324,11 @@ void HDL_parameters_factory::stop_ternary(){
     if (top_as<ternary_factory>()) {
         auto result = consumer_stack.top()->result();
         consumer_stack.pop();
-        if (!consumer_stack.empty()) {
+        if (expr_factory.active() && top_as<concatenation_factory>()) {
+            // Same mid-item case as stop_replication: keep the composite in
+            // the open item expression instead of closing a component early.
+            expr_factory.consume(result);
+        } else if (!consumer_stack.empty()) {
             consumer_stack.top()->consume(result);
         } else if (expr_factory.active()) {
             expr_factory.consume(result);
