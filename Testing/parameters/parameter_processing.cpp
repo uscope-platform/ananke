@@ -3011,3 +3011,38 @@ TEST(parameter_processing, package_import_local_param_shadows) {
     ASSERT_NE(f_param, nullptr);
     EXPECT_EQ(f_param->get_numeric_value().value().get_value(), 1);
 }
+
+TEST(parameter_processing, parent_local_enum_member_in_child_override) {
+    // A bare enum member from the parent's local typedef resolves in a
+    // child-instance override written in the parent scope:
+    // `.V($bits(t)'(IDLE))` must see the parent's member instead of
+    // warning as a missing parameter and defaulting to 0.
+    auto test_pattern = R"(
+        module child #(parameter logic [1:0] V = '0)();
+        endmodule
+        module parent();
+            typedef enum logic [1:0] { IDLE = 2'b10, BUSY = 2'b01 } state_e;
+            child #(.V($bits(state_e)'(IDLE))) u();
+        endmodule
+        module top();
+            parent u();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto file = analyzer.analyze("/mod.sv", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/mod.sv", "hash_mod", file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    warn_counter logs;
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    EXPECT_EQ(logs.count("is not defined in the design"), 0u);
+    ASSERT_EQ(ast->get_dependencies().size(), 1);
+    auto parent = ast->get_dependencies()[0];
+    ASSERT_EQ(parent->get_dependencies().size(), 1);
+    auto v_param = parent->get_dependencies()[0]->find_parameter("V");
+    ASSERT_NE(v_param, nullptr);
+    EXPECT_EQ(v_param->get_numeric_value().value().get_value(), 2);
+}
