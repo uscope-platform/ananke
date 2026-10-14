@@ -18,7 +18,7 @@
 #include "data_model/bus_mapping/bus_specs_manager.hpp"
 
 TEST( bus_specs_manager, parsing) {
-    bus_specs_manager manager("axi_lite");
+    bus_specs_manager manager("axi_lite", TEST_SPECS_FOLDER);
     auto res = manager.get_bus_specs();
 
     std::vector<mapper_bus_component> check_vect;

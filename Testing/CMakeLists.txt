@@ -67,6 +67,10 @@ add_executable(tests ${ANANKE_TESTS})
 target_link_libraries(tests PRIVATE ananke_lib gtest::gtest)
 target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(tests PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_BINARY_DIR}")
+# In-tree bus specs so the suite is hermetic in every build type: Release
+# bakes SPECS_FOLDER as the install location, which need not exist when
+# running tests (see ANANKE_SPECS_DIR handling in test_main.cpp).
+target_compile_definitions(tests PRIVATE TEST_SPECS_FOLDER="${CMAKE_SOURCE_DIR}/bus_specs")
 
 # Register with CTest so that `ctest --test-dir build` runs the suite from the
 # correct working directory regardless of where it is invoked.

@@ -16,12 +16,19 @@
 #include <gtest/gtest.h>
 #include <spdlog/spdlog.h>
 
+#include <cstdlib>
+
 int main(int argc, char **argv) {
     // NOTE: the production crash handler (crash_context.hpp) calls _exit(1) on
     // SIGSEGV/SIGABRT, which would kill the whole suite on the first crashing
     // test. It is intentionally NOT installed here: gtest's per-test [ RUN ]
     // lines identify the culprit and the remaining tests still execute.
     spdlog::set_level(spdlog::level::trace);
+    // Point bus spec resolution at the in-tree specs unless the runner
+    // already provided some (e.g. an installed tree under test). Without
+    // this, non-debug builds bake SPECS_FOLDER as the install location and
+    // every spec-dependent test fails on a missing file.
+    setenv("ANANKE_SPECS_DIR", TEST_SPECS_FOLDER, 0);
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

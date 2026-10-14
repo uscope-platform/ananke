@@ -15,13 +15,27 @@
 
 #include "data_model/bus_mapping/bus_specs_manager.hpp"
 
+#include <cstdlib>
+#include <stdexcept>
+
 bus_specs_manager::bus_specs_manager(const bus_specs_manager &b) {
     bus_specs = b.bus_specs;
     port_dir_specs = b.port_dir_specs;
 }
 
-bus_specs_manager::bus_specs_manager(const std::string &bus_type) {
-    std::string spec_file = SPECS_FOLDER;
+bus_specs_manager::bus_specs_manager(const std::string &bus_type) :
+    bus_specs_manager(bus_type, []{
+        // Test and development runs resolve the in-tree specs without
+        // requiring `make install` (which is what the baked SPECS_FOLDER
+        // points at in non-debug builds).
+        if (const char *env = std::getenv("ANANKE_SPECS_DIR"); env && *env)
+            return std::string(env);
+        return std::string(SPECS_FOLDER);
+    }()) {
+}
+
+bus_specs_manager::bus_specs_manager(const std::string &bus_type, const std::string &specs_folder) {
+    std::string spec_file = specs_folder;
     spec_file += "/" + bus_type + ".json";
     load_specs(spec_file);
 }
@@ -29,6 +43,9 @@ bus_specs_manager::bus_specs_manager(const std::string &bus_type) {
 
 void bus_specs_manager::load_specs(std::string &b) {
     std::ifstream ifs(b);
+    if (!ifs.is_open()) {
+        throw std::runtime_error("bus_specs_manager: specification file not found: " + b);
+    }
     nlohmann::json bus_spec_obj = nlohmann::json::parse(ifs);
     std::string name = bus_spec_obj["name"];
 

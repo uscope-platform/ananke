@@ -35,6 +35,7 @@ class bus_specs_manager {
 public:
     bus_specs_manager() = delete;
     explicit bus_specs_manager(const std::string &bus_type);
+    bus_specs_manager(const std::string &bus_type, const std::string &specs_folder);
     bus_specs_manager(const bus_specs_manager &b);
     void load_specs(std::string &b);
     std::vector<mapper_bus_component> get_bus_specs(){return bus_specs;};
