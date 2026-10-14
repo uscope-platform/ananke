@@ -2931,3 +2931,83 @@ TEST(parameter_processing, bits_typedef_owner_scope_shadow_repro) {
     ASSERT_TRUE(w_val.has_value());
     EXPECT_EQ(w_val.value().get_value(), 136);
 }
+
+TEST(parameter_processing, package_wildcard_import_seeds_bare_values) {
+    // Package-to-package value import (caliptra abr_sampler_pkg
+    // `CBD_NUM_SAMPLERS = COEFF_PER_CLK` via `import abr_params_pkg::*`):
+    // the imported package's values must be visible bare when solving the
+    // importing package. Pre-fix the dep missed and defaulted to 0.
+    auto params_file = R"(
+        package abr_params_pkg;
+            parameter COEFF_PER_CLK = 4;
+        endpackage
+    )";
+    auto sampler_file = R"(
+        package abr_sampler_pkg;
+            import abr_params_pkg::*;
+            parameter CBD_NUM_SAMPLERS = COEFF_PER_CLK;
+            parameter CBD_PISO_OUTPUT_RATE = CBD_NUM_SAMPLERS*2;
+        endpackage
+        module top #(
+            parameter int N = abr_sampler_pkg::CBD_NUM_SAMPLERS,
+            parameter int R = abr_sampler_pkg::CBD_PISO_OUTPUT_RATE
+        )();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto res_params = analyzer.analyze("/params.sv", params_file).value();
+    auto res_sampler = analyzer.analyze("/sampler.sv", sampler_file).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/params.sv", "hash_params", res_params});
+    d_store->store_file({"/sampler.sv", "hash_sampler", res_sampler});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    auto n_param = ast->find_parameter("N");
+    ASSERT_NE(n_param, nullptr);
+    EXPECT_EQ(n_param->get_numeric_value().value().get_value(), 4);
+    auto r_param = ast->find_parameter("R");
+    ASSERT_NE(r_param, nullptr);
+    EXPECT_EQ(r_param->get_numeric_value().value().get_value(), 8);
+}
+
+TEST(parameter_processing, package_import_local_param_shadows) {
+    // Own parameters shadow wildcard imports deterministically: BAR must
+    // see the local FOO, and the import must not disturb topological order.
+    auto params_file = R"(
+        package base_pkg;
+            parameter FOO = 2;
+        endpackage
+    )";
+    auto user_file = R"(
+        package user_pkg;
+            import base_pkg::*;
+            parameter FOO = 1;
+            parameter BAR = FOO + 1;
+        endpackage
+        module top #(
+            parameter int B = user_pkg::BAR,
+            parameter int F = user_pkg::FOO
+        )();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto res_params = analyzer.analyze("/params.sv", params_file).value();
+    auto res_user = analyzer.analyze("/user.sv", user_file).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/params.sv", "hash_params", res_params});
+    d_store->store_file({"/user.sv", "hash_user", res_user});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    auto b_param = ast->find_parameter("B");
+    ASSERT_NE(b_param, nullptr);
+    EXPECT_EQ(b_param->get_numeric_value().value().get_value(), 2);
+    auto f_param = ast->find_parameter("F");
+    ASSERT_NE(f_param, nullptr);
+    EXPECT_EQ(f_param->get_numeric_value().value().get_value(), 1);
+}

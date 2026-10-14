@@ -229,6 +229,30 @@ std::map<qualified_identifier, resolved_parameter> package_solver::retrieve(
         // scope of instance overrides instead. Same order as the module flow
         // (functions, imports, types).
         parameter_solver::propagate_types(package, d_store, imported_types);
+        // Bare aliases for values visible through the defining file's
+        // imports, mirroring the module flow (override_parameters):
+        // wildcard imports expose every member bare, selective imports
+        // expose the item. Own parameters shadow imports, so their names
+        // are skipped: local definitions (and their topological edges)
+        // always win deterministically. Entries carrying an instance path
+        // (struct-field reads) are not bare values and stay qualified.
+        {
+            std::set<std::string> own;
+            for (const auto &p : package->get_parameter_statements()) {
+                if (p) own.insert(p->get_name());
+            }
+            for (const auto &imp : get_package_file_imports(package, d_store)) {
+                if (!imp) continue;
+                const std::vector<std::string> prefix{imp->get_package()};
+                for (const auto &[id, val] : ctx) {
+                    if (id.get_package_prefix() != prefix) continue;
+                    if (!id.get_instance().empty()) continue;
+                    if (!imp->is_wildcard() && id.get_name() != imp->get_item()) continue;
+                    if (own.contains(id.get_name())) continue;
+                    ctx.emplace(qualified_identifier(id.get_name()), val);
+                }
+            }
+        }
         auto pkg_solved = parameter_solver::process_parameters(package->get_parameter_statements(), ctx);
 
         for (auto &[pkg_id, pkg_val] : pkg_solved) {
