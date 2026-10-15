@@ -68,6 +68,10 @@ class ananke {
         std::string new_app_name;
         std::string new_app_lang;
         std::vector<std::string> parse_targets;
+        std::vector<std::string> parse_defines;
+        std::vector<std::string> parse_incdirs;
+        std::string parse_top;
+        std::string parse_mode = "parsing";
         bool measure_runtime = true;
         bool no_cache = false;
         bool trace = false;

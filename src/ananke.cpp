@@ -142,43 +142,70 @@ std::optional<int> ananke::generate_new_app() const {
 }
 
 std::expected<std::unordered_map<std::string, std::string>, int> ananke::directed_parsing() const {
-    if (!opts.parse_targets.empty()) {
-        for (auto &target :opts.parse_targets) {
-            if (!std::filesystem::exists(target)) {
-                std::cout << "Target: " << target << " not found" << std::endl;
-                return std::unexpected(50);
+    if (opts.parse_targets.empty()) {
+        return {};
+    }
+    if (opts.parse_mode != "preprocessing" && opts.parse_mode != "parsing" &&
+        opts.parse_mode != "elaboration") {
+        std::cout << "Invalid --parse-mode: " << opts.parse_mode
+                  << " (expected preprocessing, parsing or elaboration)" << std::endl;
+        return std::unexpected(54);
+    }
+    // Stateless per-invocation options: profile/depfile overlays provide the
+    // base (strict flag, profile defines), CLI args merge on top so a single
+    // sv-tests invocation needs no Depfile, cache or settings edit.
+    parse_options base_opts = s_store->get_parse_options();
+    for (auto &d : opts.parse_incdirs) base_opts.include_directories.insert(d);
+    for (auto &d : opts.parse_defines) base_opts.defines.insert(d);
+
+    std::unordered_map<std::string, std::string> res_map;
+    for (auto &target : opts.parse_targets) {
+        if (!std::filesystem::exists(target)) {
+            std::cout << "Target: " << target << " not found" << std::endl;
+            return std::unexpected(50);
+        }
+        try {
+            sv_analyzer analyzer;
+            auto f_opt = mm_file::try_open(target);
+            if (!f_opt.has_value()) {
+                std::cout << "Target: " << target << " not readable" << std::endl;
+                return std::unexpected(51);
             }
-            try {
-                sv_analyzer analyzer;
-                auto f_opt = mm_file::try_open(target);
-                if (!f_opt.has_value()) {
-                    std::cout << "Target: " << target << " not readable" << std::endl;
-                    return std::unexpected(51);
-                }
-                analyzer.set_options(s_store->get_parse_options());
-                auto analysis_result = analyzer.analyze(target, f_opt->view());
-                if (!analysis_result.has_value()) {
-                    std::cout << "Error parsing target: " << target << ": " << analyzer.get_error() << std::endl;
+            analyzer.set_options(base_opts);
+            if (opts.parse_mode == "preprocessing") {
+                analyzer.preprocess(target, f_opt->view());
+                if (analyzer.has_error()) {
+                    std::cout << "Error preprocessing target: " << target << ": " << analyzer.get_error()
+                              << std::endl;
                     return std::unexpected(52);
                 }
-                std::unordered_map<std::string, std::string> res_map;
-                for (auto &res:analysis_result.value().get_content()) {
-                    std::string statement_id;
-                    if (res->is<hdl_resource_statement>()) statement_id = res->as<hdl_resource_statement>().getName();
-                    else if (res->is<hdl_package_statement>()) statement_id = res->as<hdl_package_statement>().getName();
-                    else if (res->is<hdl_interface_statement>()) statement_id = res->as<hdl_interface_statement>().getName();
-                    else if (res->is<hdl_function_statement>()) statement_id = res->as<hdl_function_statement>().get_name();
-                    res_map.insert({statement_id, target});
-                }
-                return res_map;
-            } catch (std::runtime_error &err) {
-                std::cout << err.what();
-                return std::unexpected(53);
+                res_map.insert({target, target});
+                continue;
             }
-
+            auto analysis_result = analyzer.analyze(target, f_opt->view());
+            if (!analysis_result.has_value()) {
+                std::cout << "Error parsing target: " << target << ": " << analyzer.get_error() << std::endl;
+                return std::unexpected(52);
+            }
+            for (auto &res : analysis_result.value().get_content()) {
+                std::string statement_id;
+                if (res->is<hdl_resource_statement>()) statement_id = res->as<hdl_resource_statement>().getName();
+                else if (res->is<hdl_package_statement>()) statement_id = res->as<hdl_package_statement>().getName();
+                else if (res->is<hdl_interface_statement>()) statement_id = res->as<hdl_interface_statement>().getName();
+                else if (res->is<hdl_function_statement>()) statement_id = res->as<hdl_function_statement>().get_name();
+                if (!statement_id.empty()) res_map.insert({statement_id, target});
+            }
+        } catch (std::runtime_error &err) {
+            std::cout << err.what();
+            return std::unexpected(53);
         }
     }
-    return {};
+    if (opts.parse_mode == "elaboration" && !opts.parse_top.empty() &&
+        !res_map.contains(opts.parse_top)) {
+        std::cout << "Top module: " << opts.parse_top << " not found in parsed targets" << std::endl;
+        return std::unexpected(55);
+    }
+    return res_map;
 }
 
 std::optional<int> ananke::load_data_cache() {

@@ -61,6 +61,10 @@ int main(int argc, char *argv[]){
     app.add_flag("--synth_script", opts.generate_synth_script, "Generate Synthesis script for the chosen platform");
     app.add_flag("--dump_ast", opts.dump_ast, "Dump AST to /tmp/ast.json");
     app.add_option("--parse",opts.parse_targets, "Specify a list of files to parse");
+    app.add_option("--parse-define",opts.parse_defines, "Macro defines for --parse (NAME or NAME=value, repeatable)");
+    app.add_option("--parse-incdir",opts.parse_incdirs, "Include directories for --parse (repeatable)");
+    app.add_option("--parse-top",opts.parse_top, "Top module name for --parse elaboration mode");
+    app.add_option("--parse-mode",opts.parse_mode, "Mode for --parse: preprocessing, parsing or elaboration");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -71,7 +75,12 @@ int main(int argc, char *argv[]){
         if (auto rc = engine.clear_cache()) return *rc;
         if (auto rc = engine.generate_new_app()) return *rc;
         auto parsing_result = engine.directed_parsing();
-        if (!parsing_result) return parsing_result.error();
+        if (!opts.parse_targets.empty()) {
+            // Stateless single-shot check (sv-tests adapter): report the
+            // parse result directly without repository walk or Depfile flow.
+            if (!parsing_result) return parsing_result.error();
+            return 0;
+        }
 
         if (auto rc = engine.load_data_cache()) return *rc;
         LOG_TIMEPOINT("Cache loaded");
