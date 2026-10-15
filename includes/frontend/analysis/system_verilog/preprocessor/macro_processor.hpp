@@ -68,7 +68,8 @@ namespace preprocessor {
     inline bool is_structural_directive(const std::string_view &id) {
         return id == "ifdef" || id == "ifndef" || id == "elsif" ||
                id == "else" || id == "endif" || id == "include" ||
-               id == "define" || id == "undef" || id == "undefineall";
+               id == "define" || id == "undef" || id == "undefineall" ||
+               id == "timescale";
     }
 
     static constexpr auto identifier_pattern = ctre::search<R"(`([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()?)">;

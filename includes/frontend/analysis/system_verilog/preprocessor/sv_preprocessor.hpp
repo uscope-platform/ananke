@@ -80,6 +80,10 @@ namespace preprocessor {
         // above; only naked ones reach here. Mirrors line-level semantics.
         std::string evaluate_embedded_directives(const std::string &text);
         void report_error(const std::string &msg);
+        // Validates a `timescale directive line (IEEE 1800 22.7) and reports
+        // a fatal error when malformed. The engine, when given, expands
+        // macro-built arguments first.
+        void check_timescale(std::string_view directive_line, macro_processor *macro_engine);
         // Records a conditional query on a currently-undefined macro.
         // The taken branch may be wrong once repository macros are known,
         // so the file becomes a quarantine candidate.

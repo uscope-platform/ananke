@@ -3006,3 +3006,89 @@ TEST(preprocessor, undefined_macro_before_paren_keeps_arity) {
     EXPECT_THAT(preproc.get_undefined_macros(), testing::Contains(testing::Pair(
         "MISSING_MACRO", testing::ElementsAre(2))));
 }
+
+namespace {
+    // Runs the preprocessor over `src`; returns it so callers can query errors.
+    sv_preprocessor run_timescale_case(const std::string &src) {
+        sv_preprocessor preproc;
+        preproc.set_path("/tmp/file.sv");
+        preproc.preprocess(src);
+        return preproc;
+    }
+}
+
+TEST(preprocessor, timescale_valid_forms_accepted) {
+    for (const char *ts : {
+             "`timescale 1ns/1ps",
+             "`timescale 10 ns / 1 ps",
+             "`timescale 100 fs / 100 fs",
+             "`timescale 1 s / 1 ms",
+             "`timescale 1ns / 1ps // trailing comment",
+             "`timescale 1ns /* inline */ / 1ps"}) {
+        auto preproc = run_timescale_case(std::string(ts) + "\nmodule m; endmodule\n");
+        EXPECT_FALSE(preproc.has_error()) << ts;
+    }
+}
+
+TEST(preprocessor, timescale_invalid_magnitude_is_fatal) {
+    // IEEE 1800 22.7: only 1, 10 and 100 are valid magnitudes.
+    for (const char *ts : {
+             "`timescale 9 ns / 1 ps",
+             "`timescale 1 ns / 5 ps",
+             "`timescale 1000 ns / 1 ps",
+             "`timescale 0 ns / 1 ps"}) {
+        auto preproc = run_timescale_case(std::string(ts) + "\n");
+        EXPECT_TRUE(preproc.has_fatal_error()) << ts;
+        EXPECT_THAT(preproc.get_error(), testing::HasSubstr("Invalid `timescale")) << ts;
+    }
+}
+
+TEST(preprocessor, timescale_invalid_unit_or_shape_is_fatal) {
+    for (const char *ts : {
+             "`timescale 1 us / 100 xs",
+             "`timescale 1 ns",
+             "`timescale 1ns / 1ps junk",
+             "`timescale",
+             "`timescale ns / ps"}) {
+        auto preproc = run_timescale_case(std::string(ts) + "\n");
+        EXPECT_TRUE(preproc.has_fatal_error()) << ts;
+    }
+}
+
+TEST(preprocessor, timescale_macro_built_arguments_are_expanded) {
+    auto good = run_timescale_case("`define TU 10 ns\n`timescale `TU / 1 ps\nmodule m; endmodule\n");
+    EXPECT_FALSE(good.has_error());
+
+    auto bad = run_timescale_case("`define TU 9 ns\n`timescale `TU / 1 ps\nmodule m; endmodule\n");
+    EXPECT_TRUE(bad.has_fatal_error());
+}
+
+TEST(preprocessor, timescale_from_macro_body_is_validated) {
+    auto good = run_timescale_case("`define TS `timescale 1 ns / 1 ps\n`TS\nmodule m; endmodule\n");
+    EXPECT_FALSE(good.has_error());
+
+    auto bad = run_timescale_case("`define TS `timescale 9 ns / 1 ps\n`TS\nmodule m; endmodule\n");
+    EXPECT_TRUE(bad.has_fatal_error());
+}
+
+TEST(preprocessor, timescale_in_inactive_regions_is_not_validated) {
+    auto in_ifdef = run_timescale_case("`ifdef NOPE\n`timescale 9 ns / 1 ps\n`endif\nmodule m; endmodule\n");
+    EXPECT_FALSE(in_ifdef.has_error());
+
+    auto in_translate_off = run_timescale_case(
+        "// pragma translate_off\n`timescale 9 ns / 1 ps\n// pragma translate_on\nmodule m; endmodule\n");
+    EXPECT_FALSE(in_translate_off.has_error());
+}
+
+TEST(preprocessor, timescale_prefix_of_user_macro_is_not_the_directive) {
+    auto preproc = run_timescale_case("`define timescale_foo 1\nmodule m; wire w = `timescale_foo; endmodule\n");
+    EXPECT_FALSE(preproc.has_error());
+}
+
+TEST(preprocessor, timescale_is_removed_from_output) {
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess("`timescale 1ns/1ps\nmodule m; endmodule");
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::Not(testing::HasSubstr("timescale")));
+}

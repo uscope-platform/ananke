@@ -24,6 +24,7 @@ namespace preprocessor {
 
 // Nesting depth shared across instances on a thread (separate objects nest).
 // Defined here so both include sites and the conditional path observe it.
+
 namespace {
 thread_local int pp_depth = 0;
 }
@@ -71,6 +72,46 @@ static std::string_view::size_type define_body_end(std::string_view line) {
     return std::string_view::npos;
 }
 
+// True when `t` starts with directive `name` as a whole word, so a user
+// macro such as `timescale_foo is not mistaken for the directive.
+static bool is_directive(std::string_view t, std::string_view name) {
+    if (!t.starts_with(name)) return false;
+    if (t.size() == name.size()) return true;
+    const unsigned char c = static_cast<unsigned char>(t[name.size()]);
+    return !(std::isalnum(c) || c == '_' || c == '$');
+}
+
+// IEEE 1800 22.7: `timescale time_unit / time_precision, each a magnitude of
+// 1, 10 or 100 followed by one of s, ms, us, ns, ps, fs. Consumes one
+// "<magnitude> <unit>" pair from the front of sv.
+static bool consume_time_value(std::string_view &sv) {
+    auto skip_ws = [&sv] {
+        while (!sv.empty() && (sv.front() == ' ' || sv.front() == '\t')) sv.remove_prefix(1);
+    };
+    skip_ws();
+    size_t n = 0;
+    while (n < sv.size() && sv[n] >= '0' && sv[n] <= '9') ++n;
+    const auto magnitude = sv.substr(0, n);
+    if (magnitude != "1" && magnitude != "10" && magnitude != "100") return false;
+    sv.remove_prefix(n);
+    skip_ws();
+    n = 0;
+    while (n < sv.size() && sv[n] >= 'a' && sv[n] <= 'z') ++n;
+    const auto unit = sv.substr(0, n);
+    if (unit != "s" && unit != "ms" && unit != "us" && unit != "ns" && unit != "ps" && unit != "fs") return false;
+    sv.remove_prefix(n);
+    skip_ws();
+    return true;
+}
+
+// `args` is the text after the directive keyword, comments already stripped.
+static bool valid_timescale_args(std::string_view args) {
+    if (!consume_time_value(args)) return false;
+    if (args.empty() || args.front() != '/') return false;
+    args.remove_prefix(1);
+    return consume_time_value(args) && args.empty();
+}
+
 // Include nesting depth is orthogonal to the cycle guards below: guards catch
 // repeats, but a deep *acyclic* chain (machine-generated file lists) would
 // still smash the stack with no diagnostic. Same backstop pattern as the
@@ -111,6 +152,22 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         spdlog::error(msg);
         if (!error) error = msg;
         fatal_error = true;
+    }
+
+    void sv_preprocessor::check_timescale(std::string_view directive_line, macro_processor *macro_engine) {
+        auto args = directive_line.substr(sizeof("`timescale") - 1);
+        std::string expanded;
+        // Arguments may be macro-built (`timescale `TU / `TP). Text that came
+        // out of an expansion is already fully expanded, so no engine there.
+        if (macro_engine != nullptr && args.find('`') != std::string_view::npos) {
+            expanded = macro_engine->process_macro(args);
+            if (fatal_error) return;
+            args = expanded;
+        }
+        if (!valid_timescale_args(macro_processor::trim(args))) {
+            report_error(fmt::format("Invalid `timescale [{}] at line {} in file: {}",
+                                     macro_processor::trim(directive_line), line_number, path));
+        }
     }
 
     void sv_preprocessor::record_unknown_conditional(const std::string_view &name) {
@@ -194,7 +251,12 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             }
             if (disable_preprocessor) uncommented_line = "";
 
-            if (trimmed_line.starts_with("`define") && c_solver.is_active()) {
+            // Judged on the comment-stripped line so translate_off regions and
+            // trailing comments behave like every other directive.
+            const auto active_line = macro_processor::ltrim(uncommented_line);
+            if (is_directive(active_line, "`timescale") && c_solver.is_active()) {
+                check_timescale(active_line, &macro_engine);
+            } else if (trimmed_line.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed_line, 7);
             } else if (trimmed_line.starts_with("`include") && c_solver.is_active()) {
 
@@ -799,7 +861,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             if (s != std::string_view::npos) {
                 std::string_view t = line.substr(s);
                 if (t.starts_with("`define") || t.starts_with("`undef") ||
-                    t.starts_with("`include")) {
+                    t.starts_with("`include") || is_directive(t, "`timescale")) {
                     return true;
                 }
             }
@@ -847,7 +909,10 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             // every harvestable definition is collected even when the same
             // line also carries an unknown (the file quarantines regardless).
             auto trimmed = macro_processor::ltrim(line_view);
-            if (trimmed.starts_with("`define") && c_solver.is_active()) {
+            if (is_directive(trimmed, "`timescale") && c_solver.is_active()) {
+                check_timescale(trimmed, nullptr);
+                emit_line("");
+            } else if (trimmed.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed, 7);
                 emit_line("");
             } else if (trimmed.starts_with("`undef") && c_solver.is_active()) {
