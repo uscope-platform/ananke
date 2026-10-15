@@ -34,6 +34,7 @@ enum class semantic_error_code {
     builtin_method_override = 1,
     enum_value_size_mismatch = 2,
     enum_unknown_in_two_state = 3,
+    pure_virtual_in_non_virtual_class = 4,
     // Future rules append here.
 };
 
@@ -65,6 +66,14 @@ public:
     // method; returns false when legal.
     [[nodiscard]] bool check_class_method(
         const std::string &file, unsigned int line, const std::string &method_name);
+
+    // IEEE 1800-2017 §8.21: a pure virtual method prototype may only be
+    // declared in an abstract (`virtual class`) class. Logs `file:line:
+    // error: ...`, records the violation and returns true when
+    // `class_is_virtual` is false.
+    [[nodiscard]] bool check_pure_virtual_method(
+        const std::string &file, unsigned int line, const std::string &class_name,
+        bool class_is_virtual);
 
     // IEEE 1800-2017 §6.19: when an enum member value is a sized literal
     // constant, its size shall match the enum base type width, even if the

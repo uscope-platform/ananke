@@ -998,6 +998,19 @@ void sv_visitor::exitClass_declaration(sv2017::Class_declarationContext *ctx) {
     file_finished_class(classes_factory.get_class());
 }
 
+void sv_visitor::enterClass_method(sv2017::Class_methodContext *ctx) {
+    if (!ctx->KW_PURE()) return;
+    // class_method <- class_item <- class_declaration
+    auto *item = dynamic_cast<sv2017::Class_itemContext *>(ctx->parent);
+    auto *cls = item ? dynamic_cast<sv2017::Class_declarationContext *>(item->parent) : nullptr;
+    if (!cls) return;
+    if (semantic_checker.check_pure_virtual_method(
+            current_file, ctx->getStart()->getLine(), cls->identifier(0)->getText(),
+            cls->KW_VIRTUAL() != nullptr)) {
+        had_error = true;
+    }
+}
+
 void sv_visitor::enterInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) {
     classes_factory.new_class(ctx->identifier(0)->getText(), ctx->getStart()->getLine());
 }

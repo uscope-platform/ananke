@@ -78,6 +78,7 @@ public:
 
     void enterClass_declaration(sv2017::Class_declarationContext *ctx) override;
     void exitClass_declaration(sv2017::Class_declarationContext *ctx) override;
+    void enterClass_method(sv2017::Class_methodContext *ctx) override;
     void enterInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) override;
     void exitInterface_class_declaration(sv2017::Interface_class_declarationContext *ctx) override;
     // Task and constructor bodies never activate the function factory, so

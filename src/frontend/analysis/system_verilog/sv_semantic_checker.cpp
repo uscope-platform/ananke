@@ -83,11 +83,24 @@ bool sv_semantic_checker::check_class_method(
     return false;
 }
 
+bool sv_semantic_checker::check_pure_virtual_method(
+    const std::string &file, unsigned int line, const std::string &class_name,
+    bool class_is_virtual) {
+    if (opts_.disable_semantic_checks) return false;
+    if (class_is_virtual) return false;
+    record_violation(
+        file, line, violations_, semantic_error_code::pure_virtual_in_non_virtual_class,
+        "pure virtual method declared in non-virtual class '" + class_name +
+            "'; pure virtual methods are only allowed in virtual classes");
+    return true;
+}
+
 int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     switch (code) {
     case semantic_error_code::builtin_method_override:
     case semantic_error_code::enum_value_size_mismatch:
     case semantic_error_code::enum_unknown_in_two_state:
+    case semantic_error_code::pure_virtual_in_non_virtual_class:
         return 56;
     }
     return 56;

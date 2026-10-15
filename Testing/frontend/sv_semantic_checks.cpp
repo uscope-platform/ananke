@@ -412,3 +412,46 @@ TEST(sv_semantic_checks, enum_unknown_in_four_state_stays_legal) {
     sv_analyzer analyzer;
     EXPECT_TRUE(analyzer.analyze("test.sv", test_pattern).has_value());
 }
+
+TEST(sv_semantic_checks, pure_virtual_in_non_virtual_class_fails_analysis) {
+    auto test_pattern = R"(
+        class myclass;
+            pure virtual task pure_task1;
+            pure virtual task pure_task2(int arg);
+        endclass
+        module test;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("test.sv", test_pattern);
+    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(analyzer.has_error());
+    const auto &violations = analyzer.get_semantic_violations();
+    ASSERT_GE(violations.size(), 1);
+    EXPECT_EQ(violations[0].code, semantic_error_code::pure_virtual_in_non_virtual_class);
+    EXPECT_NE(violations[0].message.find("myclass"), std::string::npos);
+}
+
+TEST(sv_semantic_checks, pure_virtual_in_virtual_class_stays_legal) {
+    auto test_pattern = R"(
+        virtual class myclass;
+            pure virtual task pure_task1;
+            pure virtual function int f(int arg);
+        endclass
+        module test;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("test.sv", test_pattern);
+    EXPECT_TRUE(result.has_value());
+    EXPECT_FALSE(analyzer.has_error());
+}
+
+TEST(sv_semantic_checker, pure_virtual_check_unit) {
+    sv_semantic_checker checker;
+    EXPECT_FALSE(checker.check_pure_virtual_method("test.sv", 3, "c", true));
+    EXPECT_TRUE(checker.check_pure_virtual_method("test.sv", 3, "c", false));
+    EXPECT_EQ(checker.last_violation().code, semantic_error_code::pure_virtual_in_non_virtual_class);
+}
