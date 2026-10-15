@@ -153,7 +153,7 @@ std::string strip_macro_operators(const std::string &in) {
 
 namespace preprocessor {
     static std::optional<std::string> arity_error(
-        const std::vector<std::string_view> &args, const function_macro &macro, bool strict);
+        const std::vector<std::string_view> &args, const function_macro &macro, bool enforce_surplus);
 
     // UVM/OVM macros come from the external simulator library (uvm_macros.svh),
     // which is normally not part of the analyzed repository
@@ -332,7 +332,7 @@ namespace preprocessor {
                     auto macro_text = replace_function_macro(args,std::get<function_macro>(macro));
                     if (!macro_text.has_value()) {
                         report_error(fmt::format("Macro [{}] {} in file {}", id,
-                                                 arity_error(args, std::get<function_macro>(macro), opts.strict)
+                                                 arity_error(args, std::get<function_macro>(macro), opts.strict || opts.explicit_file_mode)
                                                      .value_or("could not be expanded"), path));
                         return "";
                     }
@@ -495,17 +495,19 @@ namespace preprocessor {
     // a single-formal macro expands while `ADD()` for two formals without
     // defaults still errors, matching commercial tools. More actuals than
     // formals is an error too, except the lone empty actual of `m()` against
-    // a formal-less macro; lenient mode tolerates it (trailing blank actuals,
-    // e.g. dv_macros.svh's `WRAP(msg, , )`), so that part is strict-only.
+    // a formal-less macro. Repository runs in lenient mode tolerate it
+    // (trailing blank actuals, e.g. dv_macros.svh's `WRAP(msg, , )`), so that
+    // part is enforced only when `enforce_surplus` (strict or explicit
+    // `--parse` mode).
     static std::optional<std::string> arity_error(
-        const std::vector<std::string_view> &args, const function_macro &macro, bool strict) {
+        const std::vector<std::string_view> &args, const function_macro &macro, bool enforce_surplus) {
         for (size_t i = args.size(); i < macro.arguments.size(); ++i) {
             if (!macro.arguments[i].has_default) {
                 return fmt::format("was called without an actual for formal '{}', which has no default",
                                    macro.arguments[i].name);
             }
         }
-        if (strict && args.size() > macro.arguments.size() &&
+        if (enforce_surplus && args.size() > macro.arguments.size() &&
             !(macro.arguments.empty() && args.size() == 1 && macro_processor::trim(args[0]).empty())) {
             return fmt::format("was called with {} actual argument(s) but has only {} formal(s)",
                                args.size(), macro.arguments.size());
@@ -514,7 +516,7 @@ namespace preprocessor {
     }
 
     std::optional<std::string> macro_processor::replace_function_macro(const std::vector<std::string_view> &args, const function_macro &macro) {
-        if (arity_error(args, macro, opts.strict).has_value()) return std::nullopt;
+        if (arity_error(args, macro, opts.strict || opts.explicit_file_mode).has_value()) return std::nullopt;
 
         std::string_view body = macro.value;
         if (body.empty()) return "";

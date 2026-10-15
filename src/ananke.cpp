@@ -158,6 +158,7 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
     for (auto &d : opts.parse_incdirs) base_opts.include_directories.insert(d);
     for (auto &d : opts.parse_defines) base_opts.defines.insert(d);
     base_opts.disable_semantic_checks = opts.no_semantic_checks;
+    base_opts.explicit_file_mode = true;
 
     std::unordered_map<std::string, std::string> res_map;
     for (auto &target : opts.parse_targets) {

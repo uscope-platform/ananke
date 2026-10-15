@@ -67,6 +67,10 @@ struct parse_options {
     // the names declared anywhere in the repository. Off for single-file
     // parsing, where an unresolved name is an error.
     bool defer_unit_name_errors = false;
+    // `--parse` mode: every file is given explicitly, so rules that lenient
+    // repository runs relax because the surrounding repository may justify
+    // the code (e.g. surplus blank macro actuals) are enforced as in strict.
+    bool explicit_file_mode = false;
 };
 
 #endif //ANANKE_PARSE_OPTIONS_HPP

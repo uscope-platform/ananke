@@ -3202,16 +3202,18 @@ TEST(preprocessor, pragma_with_name_accepted) {
     }
 }
 
-TEST(preprocessor, define_too_many_actuals_is_fatal_in_strict_only) {
-    parse_options strict_opts;
-    strict_opts.strict = true;
+TEST(preprocessor, define_too_many_actuals_is_fatal_in_strict_and_explicit_mode_only) {
     for (const char *src : {"`define D(x,y) x y\n`D(1,2,3)\n", "`define D(x,y) x y\n`D(,,)\n"}) {
-        sv_preprocessor strict_pp;
-        strict_pp.set_options(strict_opts);
-        strict_pp.set_path("/tmp/file.sv");
-        strict_pp.preprocess(src);
-        EXPECT_TRUE(strict_pp.has_fatal_error()) << src;
-        EXPECT_FALSE(run_timescale_case(src).has_error()) << src;
+        for (int mode = 0; mode < 3; ++mode) {
+            parse_options o;
+            o.strict = (mode == 1);
+            o.explicit_file_mode = (mode == 2);
+            sv_preprocessor pp;
+            pp.set_options(o);
+            pp.set_path("/tmp/file.sv");
+            pp.preprocess(src);
+            EXPECT_EQ(pp.has_fatal_error(), mode != 0) << src << " mode " << mode;
+        }
     }
 }
 
