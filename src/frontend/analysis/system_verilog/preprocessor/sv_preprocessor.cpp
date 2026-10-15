@@ -93,8 +93,9 @@ static bool is_directive(std::string_view t, std::string_view name) {
 
 // IEEE 1800 22.7: `timescale time_unit / time_precision, each a magnitude of
 // 1, 10 or 100 followed by one of s, ms, us, ns, ps, fs. Consumes one
-// "<magnitude> <unit>" pair from the front of sv.
-static bool consume_time_value(std::string_view &sv) {
+// "<magnitude> <unit>" pair from the front of sv and returns its value in
+// femtoseconds (at most 100 s = 1e17, so it always fits).
+static std::optional<uint64_t> consume_time_value(std::string_view &sv) {
     auto skip_ws = [&sv] {
         while (!sv.empty() && (sv.front() == ' ' || sv.front() == '\t')) sv.remove_prefix(1);
     };
@@ -102,24 +103,39 @@ static bool consume_time_value(std::string_view &sv) {
     size_t n = 0;
     while (n < sv.size() && sv[n] >= '0' && sv[n] <= '9') ++n;
     const auto magnitude = sv.substr(0, n);
-    if (magnitude != "1" && magnitude != "10" && magnitude != "100") return false;
+    if (magnitude != "1" && magnitude != "10" && magnitude != "100") return std::nullopt;
+    uint64_t femtoseconds = magnitude == "1" ? 1 : magnitude == "10" ? 10 : 100;
     sv.remove_prefix(n);
     skip_ws();
     n = 0;
     while (n < sv.size() && sv[n] >= 'a' && sv[n] <= 'z') ++n;
     const auto unit = sv.substr(0, n);
-    if (unit != "s" && unit != "ms" && unit != "us" && unit != "ns" && unit != "ps" && unit != "fs") return false;
+    uint64_t scale = 0;
+    if (unit == "fs") scale = 1ULL;
+    else if (unit == "ps") scale = 1'000ULL;
+    else if (unit == "ns") scale = 1'000'000ULL;
+    else if (unit == "us") scale = 1'000'000'000ULL;
+    else if (unit == "ms") scale = 1'000'000'000'000ULL;
+    else if (unit == "s") scale = 1'000'000'000'000'000ULL;
+    else return std::nullopt;
     sv.remove_prefix(n);
     skip_ws();
-    return true;
+    return femtoseconds * scale;
 }
 
+struct timescale_args {
+    uint64_t unit_fs;
+    uint64_t precision_fs;
+};
+
 // `args` is the text after the directive keyword, comments already stripped.
-static bool valid_timescale_args(std::string_view args) {
-    if (!consume_time_value(args)) return false;
-    if (args.empty() || args.front() != '/') return false;
+static std::optional<timescale_args> parse_timescale_args(std::string_view args) {
+    auto unit = consume_time_value(args);
+    if (!unit || args.empty() || args.front() != '/') return std::nullopt;
     args.remove_prefix(1);
-    return consume_time_value(args) && args.empty();
+    auto precision = consume_time_value(args);
+    if (!precision || !args.empty()) return std::nullopt;
+    return timescale_args{*unit, *precision};
 }
 
 // IEEE 1800 22.12: `line number "filename" level, with number a positive
@@ -208,9 +224,18 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             if (fatal_error) return;
             args = expanded;
         }
-        if (!valid_timescale_args(macro_processor::trim(args))) {
+        auto parsed = parse_timescale_args(macro_processor::trim(args));
+        if (!parsed.has_value()) {
             report_error(fmt::format("Invalid `timescale [{}] at line {} in file: {}",
                                      macro_processor::trim(directive_line), line_number, path));
+            return;
+        }
+        if (semantic_checker.check_timescale(
+                path, static_cast<unsigned int>(line_number), parsed->unit_fs,
+                parsed->precision_fs, macro_processor::trim(directive_line))) {
+            // Already logged by the checker; only flag the failure.
+            if (!error) error = semantic_checker.last_violation().message;
+            fatal_error = true;
         }
     }
 

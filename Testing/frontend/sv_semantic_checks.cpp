@@ -492,3 +492,44 @@ TEST(sv_semantic_checks, enum_member_and_cast_assignment_stay_legal) {
     sv_analyzer analyzer;
     EXPECT_TRUE(analyzer.analyze("test.sv", test_pattern).has_value());
 }
+
+TEST(sv_semantic_checks, timescale_precision_larger_than_unit_fails_analysis) {
+    auto test_pattern = R"(
+`timescale 1ps / 1ns
+        module top();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("test.sv", test_pattern);
+    EXPECT_FALSE(result.has_value());
+    const auto &violations = analyzer.get_semantic_violations();
+    ASSERT_FALSE(violations.empty());
+    EXPECT_EQ(violations[0].code, semantic_error_code::timescale_precision_exceeds_unit);
+    EXPECT_EQ(analyzer.get_error(), violations[0].message);
+}
+
+TEST(sv_semantic_checks, timescale_precision_not_larger_than_unit_stays_legal) {
+    for (const char *ts : {"`timescale 1ns / 1ps", "`timescale 10ns / 1ns", "`timescale 100 fs / 100 fs",
+                           "`timescale 1 s / 1 fs"}) {
+        sv_analyzer analyzer;
+        auto src = std::string(ts) + "\nmodule top(); endmodule\n";
+        EXPECT_TRUE(analyzer.analyze("test.sv", src).has_value()) << ts;
+    }
+}
+
+TEST(sv_semantic_checks, timescale_precision_mismatch_passes_when_disabled) {
+    parse_options opts;
+    opts.disable_semantic_checks = true;
+    sv_analyzer analyzer;
+    analyzer.set_options(opts);
+    EXPECT_TRUE(analyzer.analyze("test.sv", "`timescale 1ps / 1ns\nmodule top(); endmodule\n").has_value());
+}
+
+TEST(sv_semantic_checker, timescale_check_unit) {
+    sv_semantic_checker checker;
+    EXPECT_FALSE(checker.check_timescale("t.sv", 1, 1000, 1000, "`timescale 1ns / 1ns"));
+    EXPECT_FALSE(checker.check_timescale("t.sv", 1, 1000000, 1000, "`timescale 1ns / 1ps"));
+    EXPECT_TRUE(checker.check_timescale("t.sv", 1, 1000, 1000000, "`timescale 1ps / 1ns"));
+    EXPECT_EQ(checker.last_violation().code, semantic_error_code::timescale_precision_exceeds_unit);
+}

@@ -18,7 +18,9 @@
 
 #include <memory>
 #include <optional>
+#include <cstdint>
 #include <set>
+#include <string_view>
 #include <string>
 #include <vector>
 
@@ -36,6 +38,7 @@ enum class semantic_error_code {
     enum_unknown_in_two_state = 3,
     pure_virtual_in_non_virtual_class = 4,
     enum_assignment_type_mismatch = 5,
+    timescale_precision_exceeds_unit = 6,
     // Future rules append here.
 };
 
@@ -111,6 +114,15 @@ public:
     [[nodiscard]] bool check_assignment(
         const std::string &file, unsigned int line, const std::string &lhs,
         const std::string &rhs_text);
+
+    // IEEE 1800-2017 §22.7: the `timescale time_precision shall be at least
+    // as precise as the time_unit, i.e. its period may not exceed the
+    // unit's (equal is legal). Both values are in femtoseconds; `directive`
+    // is the spelled directive for the message. Logs `file:line: error:
+    // ...`, records the violation and returns true when precision > unit.
+    [[nodiscard]] bool check_timescale(
+        const std::string &file, unsigned int line, uint64_t unit_fs, uint64_t precision_fs,
+        std::string_view directive);
 
     [[nodiscard]] bool has_violations() const { return !violations_.empty(); }
     [[nodiscard]] const std::vector<semantic_violation> &get_violations() const {

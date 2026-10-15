@@ -35,6 +35,7 @@
 #include "data_model/include_dependency.hpp"
 #include "data_model/mm_file.hpp"
 #include "data_model/parse_options.hpp"
+#include "frontend/analysis/system_verilog/sv_semantic_checker.hpp"
 
 namespace preprocessor {
     class sv_preprocessor {
@@ -43,7 +44,10 @@ namespace preprocessor {
         std::string preprocess(const std::string_view &file_content) {return  preprocess(file_content, 1);}
         std::string preprocess(const std::string_view &file_content, unsigned int initial_output_line);
         std::string flatten_source(const std::string_view &file_content);
-        void set_options(const parse_options &o) {opts_ = o;}
+        void set_options(const parse_options &o) {opts_ = o; semantic_checker.set_options(o);}
+        [[nodiscard]] const std::vector<semantic_violation> &get_semantic_violations() const {
+            return semantic_checker.get_violations();
+        }
         void set_repository_index(const std::shared_ptr<repository_index> &idx){repo_idx = idx;}
         void set_path(const std::string &s){path = normalize_include_path(s);}
         // Base definitions learned from the rest of the repository
@@ -130,6 +134,7 @@ namespace preprocessor {
         std::set<std::string> unknown_conditionals;
         bool fatal_error = false;
         parse_options opts_;
+        sv_semantic_checker semantic_checker;
         std::vector<std::string> documentation_comments;
         std::string path;
         std::optional<std::string> error;

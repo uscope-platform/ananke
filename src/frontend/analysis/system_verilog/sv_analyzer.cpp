@@ -86,6 +86,7 @@ std::optional<hdl_file> sv_analyzer::analyze(const std::string &path, const std:
     auto processed_content = preproc.preprocess(file_content);
     if (preproc.has_error()) {
         last_error = preproc.get_error();
+        semantic_violations = preproc.get_semantic_violations();
         capture_preprocessor_state(preproc);
         return std::nullopt;
     }

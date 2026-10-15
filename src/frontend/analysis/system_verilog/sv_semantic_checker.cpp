@@ -106,6 +106,7 @@ int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     case semantic_error_code::enum_unknown_in_two_state:
     case semantic_error_code::pure_virtual_in_non_virtual_class:
     case semantic_error_code::enum_assignment_type_mismatch:
+    case semantic_error_code::timescale_precision_exceeds_unit:
         return 56;
     }
     return 56;
@@ -165,5 +166,17 @@ bool sv_semantic_checker::check_assignment(
         file, line, violations_, semantic_error_code::enum_assignment_type_mismatch,
         "cannot assign integral literal '" + rhs_text + "' to enum variable '" + lhs +
             "' without a cast; enum types are strongly typed");
+    return true;
+}
+
+bool sv_semantic_checker::check_timescale(
+    const std::string &file, unsigned int line, uint64_t unit_fs, uint64_t precision_fs,
+    std::string_view directive) {
+    if (opts_.disable_semantic_checks) return false;
+    if (precision_fs <= unit_fs) return false;
+    record_violation(
+        file, line, violations_, semantic_error_code::timescale_precision_exceeds_unit,
+        "invalid " + std::string(directive) +
+            ": time precision shall not be larger than the time unit");
     return true;
 }
