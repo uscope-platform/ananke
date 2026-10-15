@@ -217,10 +217,16 @@ public:
     // IEEE 1800-2017 §12.7.3: a foreach loop has at most one index per array
     // dimension. The visitor reports declared dimension counts; a name that
     // is not tracked (typedef'd, redeclared in another form) is not checked.
-    void note_array_dims(const std::string &name, int dims) { array_dims_[name] = dims; }
+    // Declared in `scope` (an opaque id for the enclosing scope construct).
+    void note_array_dims(const void *scope, const std::string &name, int dims) {
+        array_dims_[name].emplace_back(scope, dims);
+    }
     void forget_array(const std::string &name) { array_dims_.erase(name); }
+    // `scopes` are the scope constructs enclosing the loop, innermost first;
+    // only a declaration found in one of them counts.
     [[nodiscard]] bool check_foreach(
-        const std::string &file, unsigned int line, const std::string &name, int loop_variables);
+        const std::string &file, unsigned int line, const std::string &name, int loop_variables,
+        const std::vector<const void *> &scopes);
 
     // IEEE 1800-2017 §6.21: automatic variables cannot be written by
     // nonblocking assignments or used in procedural continuous assignments.
@@ -247,7 +253,7 @@ private:
     std::set<std::string> enum_variables_;
     std::map<std::string, typedef_shape> typedefs_;
     std::set<std::string> class_names_;
-    std::map<std::string, int> array_dims_;
+    std::map<std::string, std::vector<std::pair<const void *, int>>> array_dims_;
     std::set<std::string> unit_declared_;
     std::set<std::string> unit_resolved_;
     std::vector<std::pair<std::string, unsigned int>> unit_forwards_;

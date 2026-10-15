@@ -652,15 +652,23 @@ bool sv_semantic_checker::check_assignment_pattern(
 }
 
 bool sv_semantic_checker::check_foreach(
-    const std::string &file, unsigned int line, const std::string &name, int loop_variables) {
+    const std::string &file, unsigned int line, const std::string &name, int loop_variables,
+    const std::vector<const void *> &scopes) {
     if (opts_.disable_semantic_checks) return false;
     auto it = array_dims_.find(name);
-    if (it == array_dims_.end() || loop_variables <= it->second) return false;
-    record_violation(
-        file, line, violations_, semantic_error_code::invalid_type_use,
-        "foreach over '" + name + "' has " + std::to_string(loop_variables) + " loop variables but the array has " +
-            std::to_string(it->second) + " dimension" + (it->second == 1 ? "" : "s"));
-    return true;
+    if (it == array_dims_.end()) return false;
+    for (const void *scope : scopes) {
+        for (const auto &[declared_in, dims] : it->second) {
+            if (declared_in != scope) continue;
+            if (loop_variables <= dims) return false;
+            record_violation(
+                file, line, violations_, semantic_error_code::invalid_type_use,
+                "foreach over '" + name + "' has " + std::to_string(loop_variables) + " loop variables but the array has " +
+                    std::to_string(dims) + " dimension" + (dims == 1 ? "" : "s"));
+            return true;
+        }
+    }
+    return false;
 }
 
 bool sv_semantic_checker::check_automatic_use(const std::string &file, const std::vector<automatic_misuse> &misuses) {

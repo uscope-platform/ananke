@@ -800,3 +800,13 @@ TEST(sv_semantic_checks, automatic_variable_misuse_rules) {
     EXPECT_TRUE(declarations_rejected("module t; reg g; task automatic a; reg l; begin: b assign g = reg'(l); end endtask endmodule"));
     EXPECT_TRUE(declarations_rejected("module t; reg g; task automatic a; reg l; g <= @(l) 0; endtask endmodule"));
 }
+
+TEST(sv_semantic_checks, foreach_ignores_same_name_declared_in_other_scopes) {
+    // uvm_mem.svh shape: `addr` is a scalar in one function and an array `ref`
+    // port in another; the foreach in the second must not see the first.
+    EXPECT_FALSE(declarations_rejected(
+        "package p; function void f(); bit addr; endfunction "
+        "function void g(ref bit [7:0] addr[]); foreach (addr[i]) begin end endfunction endpackage"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; bit addr; function void g(ref bit [7:0] addr[]); foreach (addr[i]) begin end endfunction endmodule"));
+}

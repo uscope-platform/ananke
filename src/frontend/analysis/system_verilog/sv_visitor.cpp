@@ -181,6 +181,31 @@ void sv_visitor::route_expression_component(const std::shared_ptr<Expression_bas
 
 
 // Assignment-pattern arity and foreach dimension bookkeeping for one variable declaration.
+namespace {
+bool is_scope_rule(size_t rule) {
+    switch (rule) {
+    case sv2017::RuleModule_declaration: case sv2017::RuleInterface_declaration: case sv2017::RuleProgram_declaration:
+    case sv2017::RulePackage_declaration: case sv2017::RuleClass_declaration: case sv2017::RuleTask_declaration:
+    case sv2017::RuleFunction_declaration: case sv2017::RuleSeq_block: case sv2017::RulePar_block:
+    case sv2017::RuleGenerate_begin_end_block: case sv2017::RuleChecker_declaration:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Scope constructs around `node`, innermost first (the unit root is the last entry).
+std::vector<const void *> enclosing_scopes(antlr4::tree::ParseTree *node) {
+    std::vector<const void *> scopes;
+    for (auto *p = node->parent; p; p = p->parent) {
+        if (p->getTreeType() != antlr4::tree::ParseTreeType::RULE) continue;
+        auto *rule = static_cast<antlr4::ParserRuleContext *>(p);
+        if (is_scope_rule(rule->getRuleIndex()) || p->parent == nullptr) scopes.push_back(p);
+    }
+    return scopes;
+}
+}  // namespace
+
 void sv_visitor::check_variable_declaration_shapes(sv2017::Data_declarationContext *ctx) {
     auto *dti = ctx->data_type_or_implicit();
     auto *vars = ctx->list_of_variable_decl_assignments();
@@ -193,7 +218,11 @@ void sv_visitor::check_variable_declaration_shapes(sv2017::Data_declarationConte
         auto *primitive = dt ? dt->data_type_primitive() : nullptr;
         const bool integral = primitive && primitive->integer_type();
         if (integral || (primitive && primitive->non_integer_type())) {
-            semantic_checker.note_array_dims(name, static_cast<int>(dt->variable_dimension().size()) + unpacked);
+            const auto scopes = enclosing_scopes(ctx);
+            if (!scopes.empty()) {
+                semantic_checker.note_array_dims(
+                    scopes.front(), name, static_cast<int>(dt->variable_dimension().size()) + unpacked);
+            }
         } else {
             semantic_checker.forget_array(name);
         }
@@ -270,6 +299,16 @@ void sv_visitor::enterEveryRule(antlr4::ParserRuleContext *ctx) {
         }
         break;
     }
+    case sv2017::RuleTf_port_item: {
+        auto *port = static_cast<sv2017::Tf_port_itemContext *>(ctx);
+        if (port->identifier()) semantic_checker.forget_array(port->identifier()->getText());
+        break;
+    }
+    case sv2017::RuleList_of_tf_variable_identifiers_item: {
+        auto *port = static_cast<sv2017::List_of_tf_variable_identifiers_itemContext *>(ctx);
+        if (port->identifier()) semantic_checker.forget_array(port->identifier()->getText());
+        break;
+    }
     case sv2017::RuleData_declaration:
         check_variable_declaration_shapes(static_cast<sv2017::Data_declarationContext *>(ctx));
         break;
@@ -279,7 +318,10 @@ void sv_visitor::enterEveryRule(antlr4::ParserRuleContext *ctx) {
         const auto name = loop->package_or_class_scoped_hier_id_with_select()->getText();
         if (name.find_first_of(".:[") != std::string::npos) break;
         const int variables = static_cast<int>(loop->loop_variables()->COMMA().size()) + 1;
-        if (semantic_checker.check_foreach(current_file, loop->getStart()->getLine(), name, variables)) had_error = true;
+        if (semantic_checker.check_foreach(
+                current_file, loop->getStart()->getLine(), name, variables, enclosing_scopes(ctx))) {
+            had_error = true;
+        }
         break;
     }
     case sv2017::RuleClass_declaration: {
