@@ -27,6 +27,16 @@ namespace preprocessor {
 
 namespace {
 thread_local int pp_depth = 0;
+
+// IEEE 1800 20.14 predefined coverage constants. Lowest-priority seed: any
+// repository or file-local `define of the same name overrides them.
+const std::pair<const char *, const char *> predefined_macros[] = {
+    {"SV_COV_START", "0"},      {"SV_COV_STOP", "1"},       {"SV_COV_RESET", "2"},
+    {"SV_COV_CHECK", "3"},      {"SV_COV_MODULE", "10"},    {"SV_COV_HIER", "11"},
+    {"SV_COV_ASSERTION", "20"}, {"SV_COV_FSM_STATE", "21"}, {"SV_COV_STATEMENT", "22"},
+    {"SV_COV_TOGGLE", "23"},    {"SV_COV_OVERFLOW", "-2"},  {"SV_COV_ERROR", "-1"},
+    {"SV_COV_NOCOV", "0"},      {"SV_COV_OK", "1"},         {"SV_COV_PARTIAL", "2"},
+};
 }
 
 // Position of the first `//` outside a string literal, or npos. A naive
@@ -194,7 +204,9 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         // Seed order: repository base < global defines < file-local `defines.
         // Seeding happens only at the top-level entry: recursive include
         // processing shares this instance and must keep accumulated defines.
-        definitions = base_definitions;
+        definitions.clear();
+        for (const auto &[name, value] : predefined_macros) definitions[name] = value;
+        for (const auto &[name, def] : base_definitions) definitions[name] = def;
         locally_defined.clear();
         top_path = path;
         undefined_macros.clear();

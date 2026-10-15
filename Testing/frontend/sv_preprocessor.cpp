@@ -3092,3 +3092,19 @@ TEST(preprocessor, timescale_is_removed_from_output) {
     EXPECT_FALSE(preproc.has_error());
     EXPECT_THAT(result, testing::Not(testing::HasSubstr("timescale")));
 }
+
+TEST(preprocessor, predefined_coverage_macros) {
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess("module m; int i = `SV_COV_CHECK + `SV_COV_HIER + `SV_COV_ERROR; endmodule\n");
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::HasSubstr("3 + 11 + -1"));
+}
+
+TEST(preprocessor, predefined_coverage_macros_can_be_overridden) {
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess("`define SV_COV_OK 7\nmodule m; int i = `SV_COV_OK; endmodule\n");
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::HasSubstr("int i = 7;"));
+}
