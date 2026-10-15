@@ -152,6 +152,9 @@ std::string strip_macro_operators(const std::string &in) {
 }
 
 namespace preprocessor {
+    static std::optional<std::string> arity_error(
+        const std::vector<std::string_view> &args, const function_macro &macro, bool strict);
+
     // UVM/OVM macros come from the external simulator library (uvm_macros.svh),
     // which is normally not part of the analyzed repository
     // The warning fires once per macro name per process: on UVM-heavy trees
@@ -328,7 +331,9 @@ namespace preprocessor {
                     }
                     auto macro_text = replace_function_macro(args,std::get<function_macro>(macro));
                     if (!macro_text.has_value()) {
-                        report_error(fmt::format("Attempted to call a macro [{}] without enough parameters ", id));
+                        report_error(fmt::format("Macro [{}] {} in file {}", id,
+                                                 arity_error(args, std::get<function_macro>(macro), opts.strict)
+                                                     .value_or("could not be expanded"), path));
                         return "";
                     }
                     result.append(macro_text.value());
@@ -485,15 +490,31 @@ namespace preprocessor {
     }
 
 
-    std::optional<std::string> macro_processor::replace_function_macro(const std::vector<std::string_view> &args, const function_macro &macro) {
-        int required = 0;
-        for (const auto &formal : macro.arguments) if (!formal.has_default) ++required;
-        // `f()` supplies one (empty) actual, so a single-formal macro
-        // expands while `ADD()` for two required formals still errors,
-        // matching commercial tools.
-        if (static_cast<int>(args.size()) < required) {
-            return std::nullopt;
+    // IEEE 1800-2017 22.5.1: actuals bind positionally, and every formal past
+    // the last actual needs a default. `f()` supplies one (empty) actual, so
+    // a single-formal macro expands while `ADD()` for two formals without
+    // defaults still errors, matching commercial tools. More actuals than
+    // formals is an error too, except the lone empty actual of `m()` against
+    // a formal-less macro; lenient mode tolerates it (trailing blank actuals,
+    // e.g. dv_macros.svh's `WRAP(msg, , )`), so that part is strict-only.
+    static std::optional<std::string> arity_error(
+        const std::vector<std::string_view> &args, const function_macro &macro, bool strict) {
+        for (size_t i = args.size(); i < macro.arguments.size(); ++i) {
+            if (!macro.arguments[i].has_default) {
+                return fmt::format("was called without an actual for formal '{}', which has no default",
+                                   macro.arguments[i].name);
+            }
         }
+        if (strict && args.size() > macro.arguments.size() &&
+            !(macro.arguments.empty() && args.size() == 1 && macro_processor::trim(args[0]).empty())) {
+            return fmt::format("was called with {} actual argument(s) but has only {} formal(s)",
+                               args.size(), macro.arguments.size());
+        }
+        return std::nullopt;
+    }
+
+    std::optional<std::string> macro_processor::replace_function_macro(const std::vector<std::string_view> &args, const function_macro &macro) {
+        if (arity_error(args, macro, opts.strict).has_value()) return std::nullopt;
 
         std::string_view body = macro.value;
         if (body.empty()) return "";
@@ -758,6 +779,12 @@ namespace preprocessor {
             auto def = definitions.at(id);
             if (std::holds_alternative<std::string>(def)) {
                 replacement = std::get<std::string>(def);
+            } else {
+                // IEEE 1800-2017 22.5.1: the parentheses are always required
+                // for a macro with formal arguments, even if all have defaults.
+                report_error(fmt::format("Macro [{}] takes arguments and must be called with parentheses in file {}",
+                                         id, path));
+                return std::string(identifier);
             }
         }
         return replacement;

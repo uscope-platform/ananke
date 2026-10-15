@@ -60,6 +60,28 @@ static std::string::size_type find_line_comment(const std::string &line) {
     return std::string::npos;
 }
 
+static bool is_compiler_directive_name(std::string_view id) {
+    static const std::set<std::string_view> directives = {
+        "begin_keywords", "celldefine", "default_nettype", "define", "else", "elsif",
+        "end_keywords", "endcelldefine", "endif", "ifdef", "ifndef", "include", "line",
+        "nounconnected_drive", "pragma", "resetall", "timescale", "unconnected_drive",
+        "undef", "undefineall"};
+    return directives.contains(id);
+}
+
+// True when `text` leaves a string literal open. `\"` inside a string and the
+// `" macro-quote pair are not delimiters.
+static bool has_unterminated_string(std::string_view text) {
+    bool in_string = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (c == '\\' && in_string) { ++i; continue; }
+        if (c == '`' && i + 1 < text.size() && text[i + 1] == '"') { ++i; continue; }
+        if (c == '"') in_string = !in_string;
+    }
+    return in_string;
+}
+
 // End of a `define body: first `//` outside a "..." or `"..."` literal.
 // Per IEEE 1800 comments are stripped before directive processing, so a
 // trailing `//` is never part of the replacement text (all commercial tools
@@ -368,7 +390,16 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 parse_definition(trimmed_line, 7);
             } else if (trimmed_line.starts_with("`include") && c_solver.is_active()) {
 
-                auto included_file = parse_include_path(trimmed_line);
+                // IEEE 1800-2017 22.4/22.5.1: the file name may come from a
+                // macro that expands to a quoted string.
+                std::string expanded_include;
+                std::string_view include_line = trimmed_line;
+                if (auto include_arg = macro_processor::ltrim(trimmed_line.substr(sizeof("`include") - 1));
+                    include_arg.starts_with('`')) {
+                    expanded_include = "`include " + macro_engine.process_macro(include_arg);
+                    include_line = expanded_include;
+                }
+                auto included_file = fatal_error ? std::nullopt : parse_include_path(include_line);
                 if (included_file.has_value()) {
                     includes.insert(included_file.value());
                     {
@@ -752,6 +783,18 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         trimmed_view = trimmed_view.substr(first);
         auto id_last = trimmed_view.find_first_of("\t (");
         auto identifier = trimmed_view.substr(0, id_last);
+        // IEEE 1800-2017 22.5.1: every compiler directive is a predefined
+        // macro name, and macro text shall not be split across string literals.
+        if (is_compiler_directive_name(identifier)) {
+            report_error(fmt::format("Cannot redefine compiler directive `{} as a macro at line {} in file: {}",
+                                     identifier, line_number, path));
+            return;
+        }
+        if (id_last != std::string_view::npos && has_unterminated_string(trimmed_view.substr(id_last))) {
+            report_error(fmt::format("Macro {} text is split across string literals (unterminated string) at line {} in file: {}",
+                                     identifier, line_number, path));
+            return;
+        }
         // Textual-only harvest: defines reached through `include bodies
         // still enter `definitions` (this file's parse needs them) but are
         // not attributed to this file; the included file harvests them when

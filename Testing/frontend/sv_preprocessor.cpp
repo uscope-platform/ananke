@@ -3201,3 +3201,60 @@ TEST(preprocessor, pragma_with_name_accepted) {
         EXPECT_FALSE(preproc.has_error()) << src;
     }
 }
+
+TEST(preprocessor, define_too_many_actuals_is_fatal_in_strict_only) {
+    parse_options strict_opts;
+    strict_opts.strict = true;
+    for (const char *src : {"`define D(x,y) x y\n`D(1,2,3)\n", "`define D(x,y) x y\n`D(,,)\n"}) {
+        sv_preprocessor strict_pp;
+        strict_pp.set_options(strict_opts);
+        strict_pp.set_path("/tmp/file.sv");
+        strict_pp.preprocess(src);
+        EXPECT_TRUE(strict_pp.has_fatal_error()) << src;
+        EXPECT_FALSE(run_timescale_case(src).has_error()) << src;
+    }
+}
+
+TEST(preprocessor, define_missing_actual_without_default_is_fatal) {
+    // IEEE 1800 22.5.1: b has a default but c does not, and c is omitted.
+    auto p = run_timescale_case("`define M(a=5,b=2,c) a b c\n`M(1)\n");
+    EXPECT_TRUE(p.has_fatal_error());
+    auto ok = run_timescale_case("`define M(a=5,b=2,c) a b c\n`M(1,2,3)\n`M(,,3)\n");
+    EXPECT_FALSE(ok.has_error());
+    auto defaults = run_timescale_case("`define M(a=5,b=2) a b\n`M(1)\n`M()\n");
+    EXPECT_FALSE(defaults.has_error());
+}
+
+TEST(preprocessor, define_call_without_parentheses_is_fatal) {
+    auto p = run_timescale_case("`define M(a=5) a\nint x = `M;\n");
+    EXPECT_TRUE(p.has_fatal_error());
+}
+
+TEST(preprocessor, define_split_across_string_literals_is_fatal) {
+    auto p = run_timescale_case("`define first_half \"start of string\n");
+    EXPECT_TRUE(p.has_fatal_error());
+    auto ok = run_timescale_case("`define s \"a \\\" b\"\n`define q(x) `\"x`\"\n");
+    EXPECT_FALSE(ok.has_error());
+}
+
+TEST(preprocessor, redefining_compiler_directive_is_fatal) {
+    for (const char *d : {"define", "include", "ifdef", "timescale", "pragma"}) {
+        auto p = run_timescale_case(std::string("`define ") + d + " \"illegal\"\n");
+        EXPECT_TRUE(p.has_fatal_error()) << d;
+    }
+    EXPECT_FALSE(run_timescale_case("`define defined_ok 1\n").has_error());
+}
+
+TEST(preprocessor, include_with_macro_expanding_to_string) {
+    auto dir = std::filesystem::temp_directory_path() / "ananke_include_macro_test";
+    std::filesystem::create_directories(dir);
+    {
+        std::ofstream(dir / "inc_target.sv") << "wire w;\n";
+    }
+    sv_preprocessor preproc;
+    preproc.set_path((dir / "top.sv").string());
+    auto out = preproc.preprocess("`define foo(the_file) `\"the_file`\"\n`include `foo(inc_target.sv)\n");
+    EXPECT_FALSE(preproc.has_error()) << preproc.get_error();
+    EXPECT_THAT(out, testing::HasSubstr("wire w;"));
+    std::filesystem::remove_all(dir);
+}
