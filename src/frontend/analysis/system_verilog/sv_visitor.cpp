@@ -180,6 +180,119 @@ void sv_visitor::route_expression_component(const std::shared_ptr<Expression_bas
 }
 
 
+// Assignment-pattern arity and foreach dimension bookkeeping for one variable declaration.
+void sv_visitor::check_variable_declaration_shapes(sv2017::Data_declarationContext *ctx) {
+    auto *dti = ctx->data_type_or_implicit();
+    auto *vars = ctx->list_of_variable_decl_assignments();
+    if (!vars || !dti) return;
+    auto *dt = dti->data_type();
+    for (auto *decl : vars->variable_decl_assignment()) {
+        if (!decl->identifier()) continue;
+        const auto name = decl->identifier()->getText();
+        const int unpacked = static_cast<int>(decl->variable_dimension().size());
+        auto *primitive = dt ? dt->data_type_primitive() : nullptr;
+        const bool integral = primitive && primitive->integer_type();
+        if (integral || (primitive && primitive->non_integer_type())) {
+            semantic_checker.note_array_dims(name, static_cast<int>(dt->variable_dimension().size()) + unpacked);
+        } else {
+            semantic_checker.forget_array(name);
+        }
+        if (!decl->expression() || unpacked > 0 || !dt) continue;
+        const int elements = sv_parsing_helpers::positional_pattern_elements(decl->expression()->getText());
+        if (elements < 0) continue;
+        int expected = -1;
+        bool scalar = false;
+        if (integral) {
+            const auto &dims = dt->variable_dimension();
+            if (dims.empty()) scalar = true;
+            else expected = sv_parsing_helpers::first_literal_dimension(dims[0]);
+        } else if (dt->struct_union() && !dt->struct_union()->KW_UNION() && dt->variable_dimension().empty()) {
+            expected = 0;
+            for (auto *member : dt->struct_union_member()) {
+                if (member->list_of_variable_decl_assignments()) {
+                    expected += static_cast<int>(member->list_of_variable_decl_assignments()->variable_decl_assignment().size());
+                }
+            }
+        }
+        if (semantic_checker.check_assignment_pattern(
+                current_file, decl->getStart()->getLine(), name, elements, expected, scalar)) {
+            had_error = true;
+        }
+    }
+}
+
+void sv_visitor::enterEveryRule(antlr4::ParserRuleContext *ctx) {
+    switch (ctx->getRuleIndex()) {
+    case sv2017::RuleSeq_block:
+    case sv2017::RulePar_block:
+    case sv2017::RuleGenerate_begin_end_block:
+    case sv2017::RuleModule_declaration:
+    case sv2017::RuleInterface_declaration:
+    case sv2017::RuleProgram_declaration:
+    case sv2017::RuleUdp_declaration:
+    case sv2017::RulePackage_declaration:
+    case sv2017::RuleInterface_class_declaration:
+    case sv2017::RuleChecker_declaration:
+    case sv2017::RuleTask_declaration:
+    case sv2017::RuleFunction_declaration:
+        if (semantic_checker.check_end_label(current_file, sv_parsing_helpers::end_labels(ctx))) had_error = true;
+        if (semantic_checker.check_automatic_use(current_file, sv_parsing_helpers::find_automatic_misuse(ctx))) had_error = true;
+        break;
+    case sv2017::RuleData_type: {
+        auto *dt = static_cast<sv2017::Data_typeContext *>(ctx);
+        if (dt->KW_ENUM()) {
+            if (semantic_checker.check_enum(current_file, sv_parsing_helpers::describe_enum(dt))) had_error = true;
+        } else if (dt->struct_union() && dt->KW_PACKED()) {
+            if (semantic_checker.check_packed_members(
+                    current_file, dt->struct_union()->KW_UNION() ? "union" : "struct",
+                    sv_parsing_helpers::describe_packed_members(dt))) {
+                had_error = true;
+            }
+        }
+        break;
+    }
+    case sv2017::RuleNet_declaration: {
+        auto *net = static_cast<sv2017::Net_declarationContext *>(ctx);
+        if (!net->net_type() || !net->list_of_net_decl_assignments()) break;
+        auto *dti = net->data_type_or_implicit();
+        auto *dt = dti ? dti->data_type() : nullptr;
+        const bool is_string = dt && dt->KW_STRING();
+        std::string type_name;
+        if (dt && dt->package_or_class_scoped_path()) type_name = dt->package_or_class_scoped_path()->getText();
+        for (auto *a : net->list_of_net_decl_assignments()->net_decl_assignment()) {
+            bool queue = false;
+            for (auto *d : a->unpacked_dimension()) queue = queue || d->getText().starts_with("[$");
+            if (semantic_checker.check_net_type(
+                    current_file, a->getStart()->getLine(), a->identifier() ? a->identifier()->getText() : "", is_string,
+                    type_name, queue)) {
+                had_error = true;
+            }
+        }
+        break;
+    }
+    case sv2017::RuleData_declaration:
+        check_variable_declaration_shapes(static_cast<sv2017::Data_declarationContext *>(ctx));
+        break;
+    case sv2017::RuleLoop_statement: {
+        auto *loop = static_cast<sv2017::Loop_statementContext *>(ctx);
+        if (!loop->KW_FOREACH() || !loop->package_or_class_scoped_hier_id_with_select() || !loop->loop_variables()) break;
+        const auto name = loop->package_or_class_scoped_hier_id_with_select()->getText();
+        if (name.find_first_of(".:[") != std::string::npos) break;
+        const int variables = static_cast<int>(loop->loop_variables()->COMMA().size()) + 1;
+        if (semantic_checker.check_foreach(current_file, loop->getStart()->getLine(), name, variables)) had_error = true;
+        break;
+    }
+    case sv2017::RuleClass_declaration: {
+        auto *cls = static_cast<sv2017::Class_declarationContext *>(ctx);
+        if (!cls->identifier().empty()) semantic_checker.note_class_name(cls->identifier()[0]->getText());
+        if (semantic_checker.check_end_label(current_file, sv_parsing_helpers::end_labels(ctx))) had_error = true;
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 void sv_visitor::enterModule_declaration(sv2017::Module_declarationContext *ctx) {
     current_declaration_type = "module";
     size_t line_number = ctx->getStart()->getLine();
@@ -456,6 +569,7 @@ void sv_visitor::capture_enum_base(sv2017::Data_typeContext *dt) {
 
 void sv_visitor::track_enum_declaration(sv2017::Data_declarationContext *ctx) {
     if (auto *td = ctx->type_declaration()) {
+        if (semantic_checker.check_typedef(current_file, sv_parsing_helpers::describe_typedef(td))) had_error = true;
         if (td->identifier().empty() || !td->data_type()) return;
         semantic_checker.note_typedef(
             td->identifier().back()->getText(), td->data_type()->KW_ENUM() != nullptr);

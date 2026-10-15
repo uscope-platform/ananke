@@ -226,7 +226,7 @@ TEST(sv_semantic_checks, enum_sized_literal_mismatch_fails_analysis) {
 TEST(sv_semantic_checks, enum_sized_literal_match_and_unsized_stay_legal) {
     auto test_pattern = R"(
         module top();
-            enum logic [2:0] {A = 3'h2, B = 3'h3, C = 1, D} myenum;
+            enum logic [2:0] {A = 3'h2, B = 3'h3, C = 4, D} myenum;
         endmodule
     )";
 
@@ -683,4 +683,120 @@ TEST(sv_semantic_checks, tf_port_takes_range_from_later_declaration) {
     EXPECT_FALSE(declarations_rejected(
         "module t; function [4:0] f; input l; reg [4:0] l; f = ~l; endfunction endmodule"));
     EXPECT_TRUE(declarations_rejected("module t; function [4:0] f; input [7:0] l; reg l; f = 0; endfunction endmodule"));
+}
+
+TEST(sv_semantic_checks, matching_end_labels_accepted) {
+    EXPECT_FALSE(declarations_rejected(
+        "module top; initial begin : a end : a initial fork : b join : b "
+        "task t; endtask : t function f; input x; endfunction : f endmodule : top "
+        "package pkg; endpackage : pkg program p; endprogram : p interface i; endinterface : i "
+        "primitive buf1 (out, in); output out; input in; table 0 : 0; endtable endprimitive : buf1"));
+    EXPECT_FALSE(declarations_rejected("module t; initial begin end endmodule"));
+}
+
+TEST(sv_semantic_checks, mismatched_end_labels_rejected) {
+    EXPECT_TRUE(declarations_rejected("module top; initial begin : a end : b endmodule"));
+    EXPECT_TRUE(declarations_rejected("module top; initial fork : a join : b endmodule"));
+    EXPECT_TRUE(declarations_rejected("module top; initial fork : a join_any : b endmodule"));
+    EXPECT_TRUE(declarations_rejected("module top; endmodule : other"));
+    EXPECT_TRUE(declarations_rejected("module top; task t; endtask : u endmodule"));
+    EXPECT_TRUE(declarations_rejected("module top; function f; input x; endfunction : g endmodule"));
+    EXPECT_TRUE(declarations_rejected("package p; endpackage : q"));
+    EXPECT_TRUE(declarations_rejected("program p; class c; endclass : d endprogram"));
+}
+
+TEST(sv_semantic_checks, end_label_on_unnamed_block_rejected) {
+    EXPECT_TRUE(declarations_rejected("module top; initial begin end : label endmodule"));
+    EXPECT_TRUE(declarations_rejected("module top; initial fork join : label endmodule"));
+    EXPECT_TRUE(declarations_rejected("module top; if (1) begin end : label endmodule"));
+}
+
+TEST(sv_semantic_checks, legal_type_shapes_accepted) {
+    EXPECT_FALSE(declarations_rejected(
+        "module t; typedef logic [3:0] nib; typedef int word; typedef enum nib {A, B} e1; "
+        "enum bit [1:0] {C = 0, D, E, F} e2; enum {G = 5, H = 2} e3; "
+        "typedef struct packed { logic [3:0] a; nib b; } s1; union packed { logic [7:0] x; nib [1:0] y; } u1; "
+        "typedef struct { int q[$]; } node; wire logic [3:0] w; wire [7:0] v; endmodule"));
+}
+
+TEST(sv_semantic_checks, enum_base_type_rules) {
+    EXPECT_TRUE(declarations_rejected("module t; typedef logic T[1:0]; enum T {A} e; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef logic T[]; enum T {A} e; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef logic T[$]; enum T {A} e; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef enum {X} T; enum T {A} e; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef int T; enum T [1:0] {A} e; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef bit [1:0][1:0] T; enum T {A} e; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef real T; enum T {A} e; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef string T; enum T {A} e; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef struct packed { int x; } T; enum T {A} e; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef T; typedef enum T {A, B} T; endmodule"));
+}
+
+TEST(sv_semantic_checks, enum_member_value_rules) {
+    EXPECT_TRUE(declarations_rejected("module t; enum bit [4:0] {some[4] = 100} v; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; enum bit [1:0] {nega = -1, b, c} v; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; enum bit [1:0] {a = 3, b, c} v; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; enum {red = 1, green, blue = 2} light; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; enum logic {A, B = A} e; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; enum {VAL4, XX4 = $time} en; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; enum {VAL5, XX5 = 'bx} en; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t; enum logic [1:0] {A = 'bx, B = 2'b11} en; endmodule"));
+}
+
+TEST(sv_semantic_checks, packed_aggregate_member_rules) {
+    EXPECT_TRUE(declarations_rejected("module t; struct packed { int x[]; } s; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; struct packed { int x[$]; } s; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; struct packed { int x[2]; } s; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; struct packed { integer x = 10; } s; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; struct packed { real r; } s; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; union packed { int x[2]; } u; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef real R; struct packed { R r; } s; endmodule"));
+}
+
+TEST(sv_semantic_checks, circular_typedefs_rejected) {
+    EXPECT_TRUE(declarations_rejected("module t; typedef T1; typedef T1 T2; typedef T2 T1; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef T; typedef struct packed { T x; } T; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef T; typedef union packed { T x; } T; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t; typedef T; typedef struct { T q[$]; } T; endmodule"));
+}
+
+TEST(sv_semantic_checks, nets_of_non_net_types_rejected) {
+    EXPECT_TRUE(declarations_rejected("module t; wire string x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; wire x[$]; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; class C; endclass wire C x; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t; wire x[3:0]; endmodule"));
+}
+
+TEST(sv_semantic_checks, enum_signed_sized_literal_wraps_at_its_width) {
+    // ivtest enum_test4: -4'sd1 is the 4-bit pattern 4'b1111.
+    EXPECT_FALSE(declarations_rejected("module t; enum bit [3:0] {first, second, last = -4'sd1} v; endmodule"));
+}
+
+TEST(sv_semantic_checks, assignment_pattern_arity_rules) {
+    EXPECT_FALSE(declarations_rejected(
+        "module t; bit [2:0][3:0] x = '{1, 2, 3}; struct packed { int a; shortint b; } s = '{1, 2}; "
+        "int arr[3] = '{1, 2, 3}; bit [3:0][1:0] d = '{default: 0}; bit [3:0][1:0] r = '{4{2'b01}}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; bit [2:0][3:0] x = '{1, 2}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; bit [2:0][3:0] x = '{1, 2, 3, 4}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; bit x = '{1'b1}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; struct packed { int x; shortint y; byte z; } v = '{1, 2}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; struct packed { int x; shortint y; byte z; } v = '{1, 2, 3, 4}; endmodule"));
+}
+
+TEST(sv_semantic_checks, foreach_loop_variable_count_rules) {
+    EXPECT_FALSE(declarations_rejected("module t; logic a[10]; logic [3:0] b [2]; initial begin foreach (a[i]) begin end foreach (b[i, j]) begin end end endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; logic a[10]; initial begin foreach (a[i, j]) begin end end endmodule"));
+}
+
+TEST(sv_semantic_checks, automatic_variable_misuse_rules) {
+    EXPECT_FALSE(declarations_rejected(
+        "module t; reg g; reg q; task automatic ok; reg l; begin l = 1; g <= l; end endtask "
+        "task st; reg l; begin l <= 1; end endtask "
+        "task automatic with_static; static reg s; begin s <= 1; end endtask endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; task automatic a; struct packed { logic x; } s; s.x <= 10; endtask endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; class C; endclass task automatic a; C c1, c2; c1 <= c2; endtask endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg g; task automatic a; reg l; begin: b assign g = 1'(l); end endtask endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg g; task automatic a; reg l; begin: b assign g = signed'(l); end endtask endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg g; task automatic a; reg l; begin: b assign g = reg'(l); end endtask endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg g; task automatic a; reg l; g <= @(l) 0; endtask endmodule"));
 }

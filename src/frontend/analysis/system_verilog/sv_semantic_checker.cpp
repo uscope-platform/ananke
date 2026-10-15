@@ -113,6 +113,8 @@ int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     case semantic_error_code::undefined_identifier:
     case semantic_error_code::unresolved_forward_typedef:
     case semantic_error_code::conflicting_declaration:
+    case semantic_error_code::end_label_mismatch:
+    case semantic_error_code::invalid_type_use:
         return 56;
     }
     return 56;
@@ -296,4 +298,377 @@ bool sv_semantic_checker::check_scope_declarations(
         }
     }
     return fired;
+}
+
+bool sv_semantic_checker::check_end_label(const std::string &file, const end_label_info &info) {
+    if (opts_.disable_semantic_checks || !info.has_end || info.end == info.name) return false;
+    if (info.name.empty()) {
+        record_violation(
+            file, info.line, violations_, semantic_error_code::end_label_mismatch,
+            "end label '" + info.end + "' on an unnamed " + info.kind + " block");
+    } else {
+        record_violation(
+            file, info.line, violations_, semantic_error_code::end_label_mismatch,
+            "end label '" + info.end + "' does not match the " + info.kind + " name '" + info.name + "'");
+    }
+    return true;
+}
+
+namespace {
+
+using kind_t = typedef_shape::kind_t;
+
+const char *kind_description(kind_t kind) {
+    switch (kind) {
+    case kind_t::enum_type: return "an enum";
+    case kind_t::struct_type: return "a struct";
+    case kind_t::union_type: return "a union";
+    case kind_t::real_type: return "a real type";
+    case kind_t::string_type: return "a string";
+    case kind_t::chandle_or_event: return "a chandle or event";
+    case kind_t::class_type: return "a class";
+    case kind_t::unpacked_array: return "an unpacked array";
+    case kind_t::dynamic_array: return "a dynamic array";
+    case kind_t::queue: return "a queue";
+    default: return "";
+    }
+}
+
+const char *kind_noun(kind_t kind) {
+    switch (kind) {
+    case kind_t::string_type: return "string";
+    case kind_t::chandle_or_event: return "chandle/event";
+    case kind_t::unpacked_array: return "unpacked array";
+    case kind_t::dynamic_array: return "dynamic array";
+    case kind_t::queue: return "queue";
+    default: return "non-net";
+    }
+}
+
+bool is_non_integral(kind_t kind) {
+    switch (kind) {
+    case kind_t::real_type: case kind_t::string_type: case kind_t::chandle_or_event: case kind_t::class_type:
+    case kind_t::unpacked_array: case kind_t::dynamic_array: case kind_t::queue:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Small constant evaluator for enum member values. Returns nullopt when the
+// text uses anything it does not model (identifiers that are not earlier
+// members, function calls, ...); `unknown_digits` reports an x/z literal.
+struct enum_expr_eval {
+    const std::string &s;
+    const std::map<std::string, __int128> &names;
+    size_t i = 0;
+    bool unknown_digits = false;
+    bool non_constant = false;
+    bool failed = false;
+
+    void skip() { while (i < s.size() && std::isspace(static_cast<unsigned char>(s[i]))) ++i; }
+
+    std::optional<__int128> primary() {
+        skip();
+        if (i >= s.size()) { failed = true; return std::nullopt; }
+        if (s[i] == '(') {
+            ++i;
+            auto v = sum();
+            skip();
+            if (i < s.size() && s[i] == ')') ++i; else failed = true;
+            return v;
+        }
+        if (s[i] == '-') { ++i; auto v = primary(); if (v) return -*v; return std::nullopt; }
+        if (s[i] == '+') { ++i; return primary(); }
+        if (s[i] == '$') {
+            size_t j = i + 1;
+            while (j < s.size() && (std::isalnum(static_cast<unsigned char>(s[j])) || s[j] == '_')) ++j;
+            const auto name = s.substr(i, j - i);
+            static const std::set<std::string> runtime = {"$time", "$stime", "$realtime", "$random", "$urandom", "$urandom_range"};
+            if (runtime.contains(name)) non_constant = true;
+            failed = true;
+            return std::nullopt;
+        }
+        if (std::isalpha(static_cast<unsigned char>(s[i])) || s[i] == '_') {
+            size_t j = i;
+            while (j < s.size() && (std::isalnum(static_cast<unsigned char>(s[j])) || s[j] == '_')) ++j;
+            auto it = names.find(s.substr(i, j - i));
+            i = j;
+            if (it == names.end()) { failed = true; return std::nullopt; }
+            return it->second;
+        }
+        if (std::isdigit(static_cast<unsigned char>(s[i])) || s[i] == '\'') return number();
+        failed = true;
+        return std::nullopt;
+    }
+
+    std::optional<__int128> number() {
+        size_t j = i;
+        std::string size_digits;
+        while (j < s.size() && (std::isdigit(static_cast<unsigned char>(s[j])) || s[j] == '_')) {
+            if (s[j] != '_') size_digits += s[j];
+            ++j;
+        }
+        if (j < s.size() && s[j] == '\'') {
+            ++j;
+            if (j < s.size() && (s[j] == 's' || s[j] == 'S')) ++j;
+            if (j >= s.size()) { failed = true; return std::nullopt; }
+            const char base_c = static_cast<char>(std::tolower(static_cast<unsigned char>(s[j++])));
+            int base = base_c == 'b' ? 2 : base_c == 'o' ? 8 : base_c == 'd' ? 10 : base_c == 'h' ? 16 : 0;
+            if (!base) { failed = true; return std::nullopt; }
+            __int128 value = 0;
+            bool any = false, overflow = false;
+            while (j < s.size() && (std::isalnum(static_cast<unsigned char>(s[j])) || s[j] == '_' || s[j] == '?')) {
+                const char c = static_cast<char>(std::tolower(static_cast<unsigned char>(s[j++])));
+                if (c == '_') continue;
+                if (c == 'x' || c == 'z' || c == '?') { unknown_digits = true; any = true; continue; }
+                int d = std::isdigit(static_cast<unsigned char>(c)) ? c - '0' : (c >= 'a' && c <= 'f') ? 10 + c - 'a' : 99;
+                if (d >= base) { failed = true; return std::nullopt; }
+                value = value * base + d;
+                if (value > (static_cast<__int128>(1) << 100)) overflow = true;
+                any = true;
+            }
+            i = j;
+            if (!any || overflow) { failed = true; return std::nullopt; }
+            if (unknown_digits) { failed = true; return std::nullopt; }
+            return value;
+        }
+        if (size_digits.empty() || size_digits.size() > 18) { failed = true; return std::nullopt; }
+        i = j;
+        return static_cast<__int128>(std::stoll(size_digits));
+    }
+
+    std::optional<__int128> product() {
+        auto lhs = primary();
+        while (true) {
+            skip();
+            if (i < s.size() && s[i] == '*' && (i + 1 >= s.size() || s[i + 1] != '*')) {
+                ++i;
+                auto rhs = primary();
+                if (lhs && rhs) lhs = *lhs * *rhs; else lhs = std::nullopt;
+            } else break;
+        }
+        return lhs;
+    }
+
+    std::optional<__int128> sum() {
+        auto lhs = product();
+        while (true) {
+            skip();
+            if (i < s.size() && (s[i] == '+' || s[i] == '-')) {
+                const char op = s[i++];
+                auto rhs = product();
+                if (lhs && rhs) lhs = op == '+' ? *lhs + *rhs : *lhs - *rhs; else lhs = std::nullopt;
+            } else break;
+        }
+        return lhs;
+    }
+
+    std::optional<__int128> run() {
+        auto v = sum();
+        skip();
+        if (i != s.size()) failed = true;
+        return failed ? std::nullopt : v;
+    }
+};
+
+} // namespace
+
+bool sv_semantic_checker::check_typedef(const std::string &file, const typedef_shape &shape) {
+    if (opts_.disable_semantic_checks) return false;
+    // A forward declaration never replaces the real one.
+    if (shape.kind == kind_t::forward) {
+        typedefs_.try_emplace(shape.name, shape);
+        return false;
+    }
+    typedefs_[shape.name] = shape;
+    // Depth-first search for a path from the typedef back to itself.
+    std::set<std::string> visited;
+    std::vector<std::string> stack(shape.depends.begin(), shape.depends.end());
+    while (!stack.empty()) {
+        auto name = stack.back();
+        stack.pop_back();
+        if (name == shape.name) {
+            record_violation(
+                file, shape.line, violations_, semantic_error_code::invalid_type_use,
+                "type '" + shape.name + "' contains or aliases itself (circular type definition)");
+            return true;
+        }
+        if (!visited.insert(name).second) continue;
+        auto it = typedefs_.find(name);
+        if (it != typedefs_.end()) stack.insert(stack.end(), it->second.depends.begin(), it->second.depends.end());
+    }
+    return false;
+}
+
+bool sv_semantic_checker::check_packed_members(
+    const std::string &file, const std::string &aggregate, const std::vector<packed_member_info> &members) {
+    if (opts_.disable_semantic_checks) return false;
+    bool fired = false;
+    for (const auto &m : members) {
+        std::string issue;
+        if (m.has_unpacked_dimension) issue = "has an unpacked, dynamic or queue dimension";
+        else if (m.has_default) issue = "has a default value";
+        else if (!m.builtin_issue.empty()) issue = "has " + m.builtin_issue + " type";
+        else if (!m.type_name.empty()) {
+            if (auto it = typedefs_.find(m.type_name); it != typedefs_.end() && is_non_integral(it->second.kind)) {
+                issue = std::string("has type '") + m.type_name + "' which is " + kind_description(it->second.kind);
+            } else if (class_names_.contains(m.type_name)) {
+                issue = "has class type '" + m.type_name + "'";
+            }
+        }
+        if (issue.empty()) continue;
+        record_violation(
+            file, m.line, violations_, semantic_error_code::invalid_type_use,
+            "member '" + m.name + "' of a packed " + aggregate + " " + issue + "; packed members must be packed integral types");
+        fired = true;
+    }
+    return fired;
+}
+
+bool sv_semantic_checker::check_net_type(
+    const std::string &file, unsigned int line, const std::string &net_name, bool is_string,
+    const std::string &type_name, bool has_queue_dimension) {
+    if (opts_.disable_semantic_checks) return false;
+    std::string issue;
+    if (is_string) issue = "string";
+    else if (has_queue_dimension) issue = "queue";
+    else if (!type_name.empty()) {
+        if (class_names_.contains(type_name)) issue = "class";
+        else if (auto it = typedefs_.find(type_name); it != typedefs_.end() && is_non_integral(it->second.kind) &&
+                                                      it->second.kind != kind_t::real_type) {
+            issue = kind_noun(it->second.kind);
+        }
+    }
+    if (issue.empty()) return false;
+    record_violation(
+        file, line, violations_, semantic_error_code::invalid_type_use,
+        "net '" + net_name + "' cannot have " + issue + " type; nets take 4-state integral types");
+    return true;
+}
+
+bool sv_semantic_checker::check_enum(const std::string &file, const enum_info &info) {
+    if (opts_.disable_semantic_checks) return false;
+    bool fired = false;
+    auto report = [&](unsigned int line, const std::string &message) {
+        record_violation(file, line, violations_, semantic_error_code::invalid_type_use, message);
+        fired = true;
+    };
+    if (!info.base_name.empty()) {
+        if (auto it = typedefs_.find(info.base_name); it != typedefs_.end()) {
+            const auto &base = it->second;
+            if (base.kind == kind_t::enum_type || base.kind == kind_t::struct_type || base.kind == kind_t::union_type ||
+                is_non_integral(base.kind)) {
+                report(info.line, "enum base type '" + info.base_name + "' is " + kind_description(base.kind) +
+                                      "; an enum base must be an integral type");
+            } else if (base.packed_dims >= 2) {
+                report(info.line, "enum base type '" + info.base_name + "' has multiple packed dimensions");
+            } else if (info.has_base_dimension && (base.packed_dims > 0 || base.is_atom)) {
+                report(info.line, "enum base type '" + info.base_name + "' already has packed dimensions");
+            }
+        }
+        return fired;
+    }
+    if (info.width <= 0) return fired;
+
+    std::map<std::string, __int128> names;
+    std::map<__int128, std::string> seen_values;
+    std::optional<__int128> next = 0;
+    const __int128 one = 1;
+    const __int128 lo = info.is_signed ? -(one << (info.width - 1)) : 0;
+    const __int128 hi = info.is_signed ? (one << (info.width - 1)) - 1 : (one << info.width) - 1;
+    for (const auto &m : info.members) {
+        std::optional<__int128> value = next;
+        if (m.expression) {
+            enum_expr_eval eval{*m.expression, names};
+            value = eval.run();
+            if (eval.non_constant) {
+                report(m.line, "enum member '" + m.name + "' value '" + *m.expression + "' is not a constant expression");
+                value = std::nullopt;
+            } else if (eval.unknown_digits) {
+                // Sized literals are judged by check_enum_value; an unsized one is only seen here.
+                static const std::regex unsized(R"((^|[^0-9a-zA-Z_])')");
+                if (info.two_state && std::regex_search(*m.expression, unsized)) {
+                    record_violation(
+                        file, m.line, violations_, semantic_error_code::enum_unknown_in_two_state,
+                        "enum member '" + m.name + "' assigns x/z to an enum with 2-state base type");
+                    fired = true;
+                }
+                if (false) {
+                    report(m.line, "enum member '" + m.name + "' assigns x/z to an enum with 2-state base type");
+                }
+                value = std::nullopt;
+            }
+        }
+        for (int k = 0; k < m.count; ++k) {
+            if (!value) { next = std::nullopt; break; }
+            __int128 v = *value + k;
+            // A sized literal wraps at its own width (`-4'sd1` is 4'b1111), so
+            // only the pattern at the base width is compared.
+            if (m.expression && m.count == 1) {
+                static const std::regex sized(R"([0-9]\s*')");
+                if (std::regex_search(*m.expression, sized)) {
+                    const __int128 modulus = one << info.width;
+                    v = ((v % modulus) + modulus) % modulus;
+                    if (info.is_signed && v > hi) v -= modulus;
+                }
+            }
+            const std::string member = m.count > 1 ? m.name + std::to_string(k) : m.name;
+            if (v < lo || v > hi) {
+                report(m.line, "enum member '" + member + "' value " + std::to_string(static_cast<long long>(v)) +
+                                   " does not fit the " + std::to_string(info.width) + "-bit " +
+                                   (info.is_signed ? "signed" : "unsigned") + " base type");
+            } else if (auto dup = seen_values.find(v); dup != seen_values.end()) {
+                report(m.line, "enum member '" + member + "' has the same value as '" + dup->second + "'");
+            } else {
+                seen_values.emplace(v, member);
+            }
+            names[member] = v;
+            next = v + 1;
+        }
+        if (m.count == 1 && value) names[m.name] = *value;
+        if (!value) next = std::nullopt;
+    }
+    return fired;
+}
+
+bool sv_semantic_checker::check_assignment_pattern(
+    const std::string &file, unsigned int line, const std::string &name, int elements, int expected, bool scalar) {
+    if (opts_.disable_semantic_checks || elements < 0) return false;
+    if (scalar) {
+        record_violation(
+            file, line, violations_, semantic_error_code::invalid_type_use,
+            "assignment pattern used to initialise scalar '" + name + "'");
+        return true;
+    }
+    if (expected >= 0 && elements != expected) {
+        record_violation(
+            file, line, violations_, semantic_error_code::invalid_type_use,
+            "assignment pattern for '" + name + "' has " + std::to_string(elements) + " elements but the type has " +
+                std::to_string(expected));
+        return true;
+    }
+    return false;
+}
+
+bool sv_semantic_checker::check_foreach(
+    const std::string &file, unsigned int line, const std::string &name, int loop_variables) {
+    if (opts_.disable_semantic_checks) return false;
+    auto it = array_dims_.find(name);
+    if (it == array_dims_.end() || loop_variables <= it->second) return false;
+    record_violation(
+        file, line, violations_, semantic_error_code::invalid_type_use,
+        "foreach over '" + name + "' has " + std::to_string(loop_variables) + " loop variables but the array has " +
+            std::to_string(it->second) + " dimension" + (it->second == 1 ? "" : "s"));
+    return true;
+}
+
+bool sv_semantic_checker::check_automatic_use(const std::string &file, const std::vector<automatic_misuse> &misuses) {
+    if (opts_.disable_semantic_checks || misuses.empty()) return false;
+    for (const auto &m : misuses) {
+        record_violation(
+            file, m.line, violations_, semantic_error_code::invalid_type_use,
+            "automatic variable '" + m.variable + "' is " + m.how);
+    }
+    return true;
 }

@@ -170,7 +170,12 @@ TEST(typedef_parsing, struct_with_unpacked_array_of_packed) {
         endpackage
     )";
 
+    // These shapes are not legal in a packed struct (LRM 7.2.1); the test is about
+    // how the data model represents them, so the semantic checks are off.
+    parse_options options;
+    options.disable_semantic_checks = true;
     sv_analyzer analyzer;
+    analyzer.set_options(options);
 
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 
@@ -317,7 +322,12 @@ TEST(typedef_parsing, inline_unpacked_nested_struct) {
         endpackage
     )";
 
+    // These shapes are not legal in a packed struct (LRM 7.2.1); the test is about
+    // how the data model represents them, so the semantic checks are off.
+    parse_options options;
+    options.disable_semantic_checks = true;
     sv_analyzer analyzer;
+    analyzer.set_options(options);
 
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_package_statement>();
 

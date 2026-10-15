@@ -49,6 +49,7 @@ using namespace mgp_sv;
 class sv_visitor : public sv2017BaseListener {
 public:
     sv_visitor();
+    void enterEveryRule(antlr4::ParserRuleContext *ctx) override;
     void enterModule_declaration(sv2017::Module_declarationContext *ctx) override;
     void exitModule_declaration(sv2017::Module_declarationContext *ctx) override;
     void enterInterface_declaration(sv2017::Interface_declarationContext *ctx) override;
@@ -324,6 +325,7 @@ private:
     bool capturing_class_property = false;
     // Port/net/variable conflicts directly inside one module, task or function.
     void check_scope_declarations(antlr4::ParserRuleContext *scope, bool is_tf_scope);
+    void check_variable_declaration_shapes(sv2017::Data_declarationContext *ctx);
 
     bool had_error = false;
     // Parse options (strict mode disables the lenient workarounds); unit

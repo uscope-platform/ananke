@@ -16,6 +16,7 @@
 #ifndef ANANKE_SV_SEMANTIC_CHECKER_HPP
 #define ANANKE_SV_SEMANTIC_CHECKER_HPP
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <cstdint>
@@ -45,6 +46,8 @@ enum class semantic_error_code {
     undefined_identifier = 7,
     unresolved_forward_typedef = 8,
     conflicting_declaration = 9,
+    end_label_mismatch = 10,
+    invalid_type_use = 11,
     // Future rules append here.
 };
 
@@ -68,6 +71,9 @@ public:
         violations_.clear();
         enum_typedefs_.clear();
         enum_variables_.clear();
+        typedefs_.clear();
+        class_names_.clear();
+        array_dims_.clear();
         begin_unit_scope();
     }
 
@@ -170,6 +176,57 @@ public:
     [[nodiscard]] bool check_scope_declarations(
         const std::string &file, const std::vector<scope_declaration> &declarations, bool is_tf_scope = false);
 
+    // IEEE 1800-2017 §9.3.4 / §23.2 / §13.3: a closing label (`end : name`,
+    // `endmodule : name`, ...) shall match the name of the block or
+    // declaration it closes, and an unnamed block cannot carry one. Logs
+    // `file:line: error: ...`, records the violation and returns true on a
+    // mismatch. Constructs without a closing label are legal.
+    [[nodiscard]] bool check_end_label(const std::string &file, const end_label_info &info);
+
+    // Declared types, for the type-shape rules below. Names are tracked
+    // scope-insensitively like the enum tracking above.
+    void note_class_name(const std::string &name) { class_names_.insert(name); }
+    // IEEE 1800-2017 §6.18: a type may not (transitively) contain or alias
+    // itself by value. Records the typedef and returns true on a cycle.
+    [[nodiscard]] bool check_typedef(const std::string &file, const typedef_shape &shape);
+    // IEEE 1800-2017 §6.19: an enum base is an integral type: not an array,
+    // queue, enum, struct, real or string, not a typedef of itself, and a
+    // typedef with packed dimensions or an atom type takes no further
+    // dimension. Member values must be constant, in range for the base and
+    // unique. Returns true if any violation fired.
+    [[nodiscard]] bool check_enum(const std::string &file, const enum_info &info);
+    // IEEE 1800-2017 §7.2.1: members of a packed struct or union are packed
+    // integral types: no unpacked/dynamic/queue dimensions, default values,
+    // real, string, chandle, event or unpacked aggregate types.
+    [[nodiscard]] bool check_packed_members(
+        const std::string &file, const std::string &aggregate,
+        const std::vector<packed_member_info> &members);
+    // IEEE 1800-2017 §6.7: a net has a 4-state integral data type: not
+    // string, class, queue or dynamic array. `type_name` is a named type.
+    [[nodiscard]] bool check_net_type(
+        const std::string &file, unsigned int line, const std::string &net_name,
+        bool is_string, const std::string &type_name, bool has_queue_dimension);
+
+    // IEEE 1800-2017 §10.9.1: a positional assignment pattern has exactly one
+    // element per array element / struct member, and cannot target a
+    // scalar. `expected` is -1 when unknown (not checked); `scalar` marks a
+    // declared non-aggregate. Returns true on a violation.
+    [[nodiscard]] bool check_assignment_pattern(
+        const std::string &file, unsigned int line, const std::string &name, int elements, int expected,
+        bool scalar);
+    // IEEE 1800-2017 §12.7.3: a foreach loop has at most one index per array
+    // dimension. The visitor reports declared dimension counts; a name that
+    // is not tracked (typedef'd, redeclared in another form) is not checked.
+    void note_array_dims(const std::string &name, int dims) { array_dims_[name] = dims; }
+    void forget_array(const std::string &name) { array_dims_.erase(name); }
+    [[nodiscard]] bool check_foreach(
+        const std::string &file, unsigned int line, const std::string &name, int loop_variables);
+
+    // IEEE 1800-2017 §6.21: automatic variables cannot be written by
+    // nonblocking assignments or used in procedural continuous assignments.
+    // Logs and records one violation per misuse; returns true if any.
+    [[nodiscard]] bool check_automatic_use(const std::string &file, const std::vector<automatic_misuse> &misuses);
+
     [[nodiscard]] bool has_violations() const { return !violations_.empty(); }
     [[nodiscard]] const std::vector<semantic_violation> &get_violations() const {
         return violations_;
@@ -188,6 +245,9 @@ private:
     std::vector<semantic_violation> violations_;
     std::set<std::string> enum_typedefs_;
     std::set<std::string> enum_variables_;
+    std::map<std::string, typedef_shape> typedefs_;
+    std::set<std::string> class_names_;
+    std::map<std::string, int> array_dims_;
     std::set<std::string> unit_declared_;
     std::set<std::string> unit_resolved_;
     std::vector<std::pair<std::string, unsigned int>> unit_forwards_;

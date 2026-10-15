@@ -39,6 +39,29 @@ namespace sv_parsing_helpers {
     // function scope, in source order. Nested scopes (blocks, generate
     // constructs, tasks, functions, classes, ...) are not entered.
     std::vector<scope_declaration> collect_scope_declarations(antlr4::ParserRuleContext *scope);
+
+    // Name and closing label of a labelled construct (begin/fork blocks, generate blocks, modules, interfaces,
+    // programs, packages, classes, checkers, primitives, tasks, functions); has_end is false when the context
+    // is none of those or has no closing label.
+    end_label_info end_labels(antlr4::ParserRuleContext *ctx);
+
+    // Number of elements of a positional assignment pattern `'{a, b, c}`; -1 when the text is not one
+    // (named, default or replication patterns, or not a pattern at all).
+    int positional_pattern_elements(const std::string &text);
+    // Number of elements of a literal `[a:b]` dimension, -1 when it is not literal.
+    int first_literal_dimension(mgp_sv::sv2017::Variable_dimensionContext *dim);
+
+    // Misuses of automatic variables in a `task automatic` / `function automatic`: nonblocking
+    // assignments to them (or with them in the event control) and their use in procedural
+    // continuous assignments. Empty for static tasks and functions.
+    std::vector<automatic_misuse> find_automatic_misuse(antlr4::ParserRuleContext *task_or_function);
+
+    // `typedef ...;` as the type-shape rules see it (kind, packed dimensions, named types it contains).
+    typedef_shape describe_typedef(mgp_sv::sv2017::Type_declarationContext *ctx);
+    // An enum `data_type` (KW_ENUM): base type and members.
+    enum_info describe_enum(mgp_sv::sv2017::Data_typeContext *ctx);
+    // Members of a `struct packed` / `union packed` data_type.
+    std::vector<packed_member_info> describe_packed_members(mgp_sv::sv2017::Data_typeContext *ctx);
 }
 
 #endif

@@ -1497,7 +1497,7 @@ TEST(parameter_extraction, interrupt_shaped_uses) {
                 logic [31:0] XLEN;
                 logic [31:0] FETCH_WIDTH;
             } my_cfg_t;
-            typedef enum logic [1:0] {IRQ_S = 3, IRQ_M = 5} irq_t;
+            typedef enum logic [2:0] {IRQ_S = 3, IRQ_M = 5} irq_t;
             parameter my_cfg_t user_cfg = '{32'd32, 32'd2};
         endpackage
 
