@@ -38,6 +38,9 @@
 #include "frontend/analysis/system_verilog/sv_semantic_checker.hpp"
 
 namespace preprocessor {
+    // Line prefix the preprocessor emits for `begin_keywords / `end_keywords.
+    inline constexpr std::string_view KEYWORD_MARKER = "//@ananke_keywords";
+
     class sv_preprocessor {
     public:
         sv_preprocessor() = default;

@@ -91,3 +91,58 @@ TEST(sv_compat_parsing, plain_concatenations_unaffected) {
     ASSERT_TRUE(result.has_value()) << analyzer.get_error();
     EXPECT_FALSE(analyzer.has_syntax_errors());
 }
+
+TEST(sv_compat_parsing, begin_keywords_verilog_region_frees_sv_keywords) {
+    // ivtest pr1978358 / pr2470181b shape: SV-only keywords are plain
+    // identifiers inside a `begin_keywords "1364-2005" region.
+    auto test_pattern = R"(
+`begin_keywords "1364-2005"
+module m;
+  reg bit;
+  reg expect;
+  wire var;
+  assign var = bit & expect;
+endmodule
+`end_keywords
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value()) << analyzer.get_error();
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+}
+
+TEST(sv_compat_parsing, begin_keywords_region_ends_with_end_keywords) {
+    // After `end_keywords the SV keyword set is back: `bit` is a type again.
+    auto test_pattern = R"(
+`begin_keywords "1364-2001"
+module a;
+  reg bit;
+endmodule
+`end_keywords
+module b;
+  bit x;
+endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value()) << analyzer.get_error();
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+}
+
+TEST(sv_compat_parsing, begin_keywords_1995_drops_2001_keywords) {
+    auto test_pattern = R"(
+`begin_keywords "1364-1995"
+module m;
+  integer generate;
+  integer signed;
+endmodule
+`end_keywords
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value()) << analyzer.get_error();
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+}

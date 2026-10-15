@@ -137,6 +137,101 @@ std::optional<hdl_file> sv_analyzer::analyze(const std::string &path, const std:
 }
 
 
+namespace {
+
+// Words that 1364-2005 reserves; older editions drop some of them.
+const std::set<std::string> &verilog_2005_keywords() {
+    static const std::set<std::string> kw = {
+        "always", "and", "assign", "automatic", "begin", "buf", "bufif0", "bufif1", "case", "casex", "casez", "cell",
+        "cmos", "config", "deassign", "default", "defparam", "design", "disable", "edge", "else", "end", "endcase",
+        "endconfig", "endfunction", "endgenerate", "endmodule", "endprimitive", "endspecify", "endtable", "endtask",
+        "event", "for", "force", "forever", "fork", "function", "generate", "genvar", "highz0", "highz1", "if",
+        "ifnone", "incdir", "include", "initial", "inout", "input", "instance", "integer", "join", "large", "liblist",
+        "library", "localparam", "macromodule", "medium", "module", "nand", "negedge", "nmos", "nor",
+        "noshowcancelled", "not", "notif0", "notif1", "or", "output", "parameter", "pmos", "posedge", "primitive",
+        "pull0", "pull1", "pulldown", "pullup", "pulsestyle_onevent", "pulsestyle_ondetect", "rcmos", "real",
+        "realtime", "reg", "release", "repeat", "rnmos", "rpmos", "rtran", "rtranif0", "rtranif1", "scalared",
+        "showcancelled", "signed", "small", "specify", "specparam", "strong0", "strong1", "supply0", "supply1",
+        "table", "task", "time", "tran", "tranif0", "tranif1", "tri", "tri0", "tri1", "triand", "trior", "trireg",
+        "unsigned", "use", "uwire", "vectored", "wait", "wand", "weak0", "weak1", "while", "wire", "wor", "xnor",
+        "xor"};
+    return kw;
+}
+
+// Returns nullptr when the version leaves every SystemVerilog keyword active.
+std::shared_ptr<const std::set<std::string>> keyword_set_for(const std::string &version) {
+    static const std::set<std::string> config_words = {"cell", "config", "design", "endconfig", "incdir", "include",
+                                                       "instance", "liblist", "library", "use"};
+    static const std::set<std::string> v2001_words = {"automatic", "endgenerate", "generate", "genvar", "localparam",
+                                                      "noshowcancelled", "pulsestyle_onevent", "pulsestyle_ondetect",
+                                                      "showcancelled", "signed", "unsigned"};
+    if (version == "1364-2005") return std::make_shared<std::set<std::string>>(verilog_2005_keywords());
+    if (version != "1364-1995" && version != "1364-2001" && version != "1364-2001-noconfig") return nullptr;
+
+    auto kw = verilog_2005_keywords();
+    kw.erase("uwire");
+    if (version == "1364-1995") {
+        for (const auto &w : v2001_words) kw.erase(w);
+    }
+    if (version == "1364-1995" || version == "1364-2001-noconfig") {
+        for (const auto &w : config_words) kw.erase(w);
+    }
+    return std::make_shared<std::set<std::string>>(std::move(kw));
+}
+
+// Honours `begin_keywords / `end_keywords: inside a Verilog keyword region, SV-only
+// keywords are plain identifiers, so their tokens are retyped before parsing.
+// The preprocessor leaves a KEYWORD_MARKER line for each directive.
+void apply_keyword_regions(const std::string &text, antlr4::CommonTokenStream &tok_stream, sv2017Lexer &lexer) {
+    using region_set = std::shared_ptr<const std::set<std::string>>;
+    if (!text.contains(preprocessor::KEYWORD_MARKER)) return;
+
+    struct event { size_t line; bool begin; region_set kw; };
+    std::vector<event> events;
+    {
+        std::istringstream in(text);
+        std::string line;
+        size_t n = 1;
+        while (std::getline(in, line)) {
+            if (line.starts_with(preprocessor::KEYWORD_MARKER)) {
+                std::string_view rest = std::string_view(line).substr(preprocessor::KEYWORD_MARKER.size());
+                rest.remove_prefix(std::min(rest.find_first_not_of(' '), rest.size()));
+                if (rest.starts_with("begin")) {
+                    rest.remove_prefix(5);
+                    rest.remove_prefix(std::min(rest.find_first_not_of(' '), rest.size()));
+                    events.push_back({n, true, keyword_set_for(std::string(rest))});
+                } else {
+                    events.push_back({n, false, nullptr});
+                }
+            }
+            n++;
+        }
+    }
+
+    std::vector<bool> is_keyword_type(lexer.getVocabulary().getMaxTokenType() + 1, false);
+    for (size_t i = 0; i < is_keyword_type.size(); i++) {
+        is_keyword_type[i] = lexer.getVocabulary().getSymbolicName(i).starts_with("KW_");
+    }
+
+    std::vector<region_set> stack;
+    region_set active;
+    size_t next_event = 0;
+    for (auto *tok : tok_stream.getTokens()) {
+        while (next_event < events.size() && events[next_event].line <= tok->getLine()) {
+            if (events[next_event].begin) stack.push_back(events[next_event].kw);
+            else if (!stack.empty()) stack.pop_back();
+            active = stack.empty() ? nullptr : stack.back();
+            next_event++;
+        }
+        if (active && tok->getType() < is_keyword_type.size() && is_keyword_type[tok->getType()]
+            && !active->contains(tok->getText())) {
+            static_cast<antlr4::CommonToken *>(tok)->setType(sv2017Lexer::SIMPLE_IDENTIFIER);
+        }
+    }
+}
+
+}  // namespace
+
 hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &preprocessed_content) {
     hdl_file result;
     std::istringstream istream(preprocessed_content);
@@ -151,6 +246,7 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
     lexer.addErrorListener(&error_listener);
 
     tok_stream.fill();
+    apply_keyword_regions(preprocessed_content, tok_stream, lexer);
 
     // A header that declares a design unit is a real compilation unit, even
     // when broken: never mistake it for a module-body include fragment.

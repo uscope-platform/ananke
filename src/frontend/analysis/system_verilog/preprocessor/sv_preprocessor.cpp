@@ -361,8 +361,6 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             || trimmed_line.starts_with("`endcelldefine")
             || trimmed_line.starts_with("`celldefine")
             || trimmed_line.starts_with("`pragma")
-            || trimmed_line.starts_with("`end_keywords")
-            || trimmed_line.starts_with("`begin_keywords")
             || trimmed_line.starts_with("`line");
             std::string uncommented_line = line;
             // Gate the string-aware comment scan on a raw '/' hit first:
@@ -386,6 +384,21 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 check_line(active_line, &macro_engine);
             } else if (is_directive(active_line, "`pragma") && c_solver.is_active()) {
                 check_pragma(active_line);
+            } else if ((is_directive(active_line, "`begin_keywords") || is_directive(active_line, "`end_keywords"))
+                       && c_solver.is_active()) {
+                // The keyword set is lexer state: leave a marker line for the
+                // analyzer (see sv_analyzer::process_hdl) instead of a directive.
+                std::string marker = std::string(KEYWORD_MARKER) + ' ';
+                if (is_directive(active_line, "`begin_keywords")) {
+                    auto q1 = active_line.find('"');
+                    auto q2 = q1 == std::string_view::npos ? q1 : active_line.find('"', q1 + 1);
+                    marker += "begin " + (q2 == std::string_view::npos ? std::string()
+                                                                       : std::string(active_line.substr(q1 + 1, q2 - q1 - 1)));
+                } else {
+                    marker += "end";
+                }
+                out << marker << '\n';
+                output_line_n++;
             } else if (trimmed_line.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed_line, 7);
             } else if (trimmed_line.starts_with("`include") && c_solver.is_active()) {
