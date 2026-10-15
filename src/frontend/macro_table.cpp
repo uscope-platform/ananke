@@ -106,23 +106,28 @@ void macro_table::add_file_definitions(
     // Drop this file's previous contributions first: re-parses replace,
     // they never accumulate (stale bodies must not linger as conflicts).
     remove_file(path);
+    auto &names = names_by_file_[path];
     for (const auto &[name, def] : defs) {
         bodies_[name][path] = macro_canonical_body(def);
         live_[name][path] = def;
+        names.push_back(name);
     }
 }
 
 void macro_table::remove_file(const std::string &path) {
-    for (auto it = bodies_.begin(); it != bodies_.end();) {
-        it->second.erase(path);
-        if (it->second.empty()) it = bodies_.erase(it);
-        else ++it;
+    const auto owned = names_by_file_.find(path);
+    if (owned == names_by_file_.end()) return;
+    for (const auto &name : owned->second) {
+        if (auto it = bodies_.find(name); it != bodies_.end()) {
+            it->second.erase(path);
+            if (it->second.empty()) bodies_.erase(it);
+        }
+        if (auto it = live_.find(name); it != live_.end()) {
+            it->second.erase(path);
+            if (it->second.empty()) live_.erase(it);
+        }
     }
-    for (auto it = live_.begin(); it != live_.end();) {
-        it->second.erase(path);
-        if (it->second.empty()) it = live_.erase(it);
-        else ++it;
-    }
+    names_by_file_.erase(owned);
 }
 
 std::string macro_table::describe_candidate(const candidate_info &candidate) {

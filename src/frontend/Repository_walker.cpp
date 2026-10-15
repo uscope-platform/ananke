@@ -14,6 +14,8 @@
 // limitations under the License.
 
 
+#include <algorithm>
+#include <system_error>
 #include "frontend/Repository_walker.hpp"
 #include "data_model/mm_file.hpp"
 #include "data_model/include_config.hpp"
@@ -77,7 +79,18 @@ void Repository_walker::analyze_dir() {
     seed_macro_table();
     table_at_seed_ = macro_table_.rendered_by_name();
 
+    // Largest files first: a multi-megabyte file started last would leave one
+    // worker running alone while the rest of the pool idles.
+    std::vector<std::pair<std::uintmax_t, std::filesystem::path>> by_size;
+    by_size.reserve(scanned_files.size());
     for (auto &file: scanned_files) {
+        std::error_code ec;
+        const auto size = std::filesystem::file_size(file, ec);
+        by_size.emplace_back(ec ? 0 : size, file);
+    }
+    std::stable_sort(by_size.begin(), by_size.end(),
+                     [](const auto &a, const auto &b) { return a.first > b.first; });
+    for (auto &[size, file]: by_size) {
         if(working_threads == 2*max_threads){
            this->collect_analysis_results();
         }

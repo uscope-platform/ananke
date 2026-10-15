@@ -476,25 +476,46 @@ void sv_visitor::track_enum_declaration(sv2017::Data_declarationContext *ctx) {
 
 namespace {
 
+// Rule contexts are identified by rule index rather than dynamic_cast: the
+// collectors below visit every node of the unit, and a chain of dynamic_casts
+// per node dominated the profile of large repositories.
+inline antlr4::ParserRuleContext *rule_node(antlr4::tree::ParseTree *node, size_t &rule) {
+    if (node->getTreeType() != antlr4::tree::ParseTreeType::RULE) return nullptr;
+    auto *ctx = static_cast<antlr4::ParserRuleContext *>(node);
+    rule = ctx->getRuleIndex();
+    return ctx;
+}
+
 // Gather the typedefs, identifiers and wildcard imports of a unit-scope
 // description.
 void collect_unit_nodes(
     antlr4::tree::ParseTree *node, std::vector<sv2017::Type_declarationContext *> &typedefs,
     std::vector<sv2017::IdentifierContext *> &identifiers, bool &wildcard_import,
     bool nested = false) {
-    // Typedefs inside a class, function or task see that construct's own
-    // parameters and locals, so only the names they declare are collected.
-    if (auto *td = dynamic_cast<sv2017::Type_declarationContext *>(node); td && !nested)
-        typedefs.push_back(td);
-    if (auto *id = dynamic_cast<sv2017::IdentifierContext *>(node)) identifiers.push_back(id);
-    if (auto *imp = dynamic_cast<sv2017::Package_import_declarationContext *>(node)) {
-        for (auto *item : imp->package_import_item())
+    size_t rule = 0;
+    if (!rule_node(node, rule)) return;
+    switch (rule) {
+    case sv2017::RuleType_declaration:
+        // Typedefs inside a class, function or task see that construct's own
+        // parameters and locals, so only the names they declare are collected.
+        if (!nested) typedefs.push_back(static_cast<sv2017::Type_declarationContext *>(node));
+        break;
+    case sv2017::RuleIdentifier:
+        identifiers.push_back(static_cast<sv2017::IdentifierContext *>(node));
+        break;
+    case sv2017::RulePackage_import_declaration:
+        for (auto *item : static_cast<sv2017::Package_import_declarationContext *>(node)
+                              ->package_import_item())
             if (item->MUL()) wildcard_import = true;
-    }
-    if (dynamic_cast<sv2017::Class_declarationContext *>(node) ||
-        dynamic_cast<sv2017::Function_declarationContext *>(node) ||
-        dynamic_cast<sv2017::Task_declarationContext *>(node))
+        break;
+    case sv2017::RuleClass_declaration:
+    case sv2017::RuleFunction_declaration:
+    case sv2017::RuleTask_declaration:
         nested = true;
+        break;
+    default:
+        break;
+    }
     for (auto *child : node->children)
         collect_unit_nodes(child, typedefs, identifiers, wildcard_import, nested);
 }
@@ -502,23 +523,46 @@ void collect_unit_nodes(
 // Every name the file declares, in any scope, for the repository-wide
 // resolution of names a single file cannot see.
 void collect_declared_names(antlr4::tree::ParseTree *node, std::set<std::string> &out) {
-    if (auto *td = dynamic_cast<sv2017::Type_declarationContext *>(node)) {
+    size_t rule = 0;
+    if (!rule_node(node, rule)) return;
+    switch (rule) {
+    case sv2017::RuleType_declaration: {
+        auto *td = static_cast<sv2017::Type_declarationContext *>(node);
         if (!td->identifier().empty()) out.insert(td->identifier().back()->getText());
-    } else if (auto *e = dynamic_cast<sv2017::Enum_name_declarationContext *>(node)) {
+        break;
+    }
+    case sv2017::RuleEnum_name_declaration: {
+        auto *e = static_cast<sv2017::Enum_name_declarationContext *>(node);
         if (e->identifier()) out.insert(e->identifier()->getText());
-    } else if (auto *p = dynamic_cast<sv2017::Param_assignmentContext *>(node)) {
+        break;
+    }
+    case sv2017::RuleParam_assignment: {
+        auto *p = static_cast<sv2017::Param_assignmentContext *>(node);
         if (p->identifier()) out.insert(p->identifier()->getText());
-    } else if (auto *t = dynamic_cast<sv2017::Type_assignmentContext *>(node)) {
+        break;
+    }
+    case sv2017::RuleType_assignment: {
+        auto *t = static_cast<sv2017::Type_assignmentContext *>(node);
         if (t->identifier()) out.insert(t->identifier()->getText());
-    } else if (auto *c = dynamic_cast<sv2017::Class_declarationContext *>(node)) {
+        break;
+    }
+    case sv2017::RuleClass_declaration: {
+        auto *c = static_cast<sv2017::Class_declarationContext *>(node);
         if (!c->identifier().empty()) out.insert(c->identifier(0)->getText());
+        break;
+    }
+    default:
+        break;
     }
     for (auto *child : node->children) collect_declared_names(child, out);
 }
 
 void collect_scoped_paths(
     antlr4::tree::ParseTree *node, std::vector<sv2017::Package_or_class_scoped_pathContext *> &out) {
-    if (auto *p = dynamic_cast<sv2017::Package_or_class_scoped_pathContext *>(node)) out.push_back(p);
+    size_t rule = 0;
+    if (!rule_node(node, rule)) return;
+    if (rule == sv2017::RulePackage_or_class_scoped_path)
+        out.push_back(static_cast<sv2017::Package_or_class_scoped_pathContext *>(node));
     for (auto *child : node->children) collect_scoped_paths(child, out);
 }
 

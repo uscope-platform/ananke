@@ -213,3 +213,28 @@ TEST(macro_table, conflict_representatives_group_by_body) {
     EXPECT_THAT(table.representative_definers("MSG", judgement.candidates),
                 testing::ElementsAre("pkg_a.sv (+2 same-body)", "custom_macros.svh (+1 same-body)"));
 }
+
+TEST(macro_table, readding_a_file_replaces_its_macros) {
+    macro_table table;
+    macro_definitions_map first = {{"A", std::string("1")}, {"B", std::string("2")}};
+    table.add_file_definitions("a.sv", first);
+    table.add_file_definitions("b.sv", simple_def("B", "2"));
+    table.add_file_definitions("a.sv", simple_def("C", "3"));
+    EXPECT_THAT(table.names(), testing::ElementsAre("B", "C"));
+    EXPECT_THAT(table.bodies_for("B"), testing::ElementsAre(testing::Key("b.sv")));
+    EXPECT_EQ(table.judge("A", {}, "user.sv").state, kind::absent);
+    EXPECT_EQ(table.judge("C", {}, "user.sv").state, kind::unique);
+}
+
+TEST(macro_table, removing_files_drops_empty_names) {
+    macro_table table;
+    table.remove_file("never_added.sv");
+    table.add_file_definitions("a.sv", simple_def("A", "1"));
+    table.add_file_definitions("b.sv", simple_def("A", "1"));
+    table.remove_file("a.sv");
+    EXPECT_THAT(table.names(), testing::ElementsAre("A"));
+    table.remove_file("b.sv");
+    EXPECT_TRUE(table.empty());
+    table.remove_file("b.sv");
+    EXPECT_TRUE(table.empty());
+}

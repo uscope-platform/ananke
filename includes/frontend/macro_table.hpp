@@ -110,6 +110,9 @@ private:
     std::map<std::string, std::map<std::string, std::string>> bodies_;
     std::map<std::string,
              std::map<std::string, preprocessor::macro_definitions_map::mapped_type>> live_;
+    // defining file -> macro names it contributed, so remove_file touches
+    // only those names instead of scanning the whole table.
+    std::map<std::string, std::vector<std::string>> names_by_file_;
 };
 
 // Boundary conversions between live preprocessor definitions and the
