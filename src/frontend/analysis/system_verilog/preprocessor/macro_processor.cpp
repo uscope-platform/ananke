@@ -714,6 +714,14 @@ namespace preprocessor {
                     result.pop_back();
                 }
 
+                // `localparam `` i``a``j`: a paste written with a space after it
+                // in the body, directly after a keyword, separates the keyword
+                // from the fused name instead of destroying it.
+                const bool spaced_keyword_paste = !keyword_paste && !left_word.empty() &&
+                    right_pos != std::string_view::npos && is_sv_keyword(left_word) &&
+                    is_id_char(right_tok[right_pos]) && i + 1 < expanded_tokens.size() &&
+                    next_idx > i + 1 && !expanded_from_arg[next_idx];
+
                 // Skip the `` operator and any immediate whitespace following it
                 while (i + 1 < expanded_tokens.size()) {
                     const auto& next_tok = expanded_tokens[i + 1];
@@ -724,7 +732,7 @@ namespace preprocessor {
                     }
                 }
 
-                if (keyword_paste) result.push_back(' ');
+                if (keyword_paste || spaced_keyword_paste) result.push_back(' ');
             } else {
 
                 const std::string_view token_to_append = expanded_tokens[i];

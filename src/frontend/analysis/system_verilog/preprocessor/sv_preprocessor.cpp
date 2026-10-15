@@ -70,13 +70,14 @@ static bool is_compiler_directive_name(std::string_view id) {
 }
 
 // True when `text` leaves a string literal open. `\"` inside a string and the
-// `" macro-quote pair are not delimiters.
+// `" macro-quote pair (outside a string) are not delimiters; inside a plain
+// string a backtick is ordinary text, so "`" is a complete literal.
 static bool has_unterminated_string(std::string_view text) {
     bool in_string = false;
     for (size_t i = 0; i < text.size(); ++i) {
         const char c = text[i];
         if (c == '\\' && in_string) { ++i; continue; }
-        if (c == '`' && i + 1 < text.size() && text[i + 1] == '"') { ++i; continue; }
+        if (!in_string && c == '`' && i + 1 < text.size() && text[i + 1] == '"') { ++i; continue; }
         if (c == '"') in_string = !in_string;
     }
     return in_string;

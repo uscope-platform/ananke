@@ -3260,3 +3260,34 @@ TEST(preprocessor, include_with_macro_expanding_to_string) {
     EXPECT_THAT(out, testing::HasSubstr("wire w;"));
     std::filesystem::remove_all(dir);
 }
+
+TEST(preprocessor, backtick_inside_string_literal_macro_body) {
+    // ivtest sv_macro3a: a backtick inside a plain string literal is ordinary
+    // text, not a split macro string.
+    auto test_pattern = R"(
+`define BACKTICK "`"
+module test;
+  initial $display(`BACKTICK);
+endmodule
+)";
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_FALSE(preproc.has_error()) << preproc.get_error();
+    EXPECT_THAT(result, testing::HasSubstr("$display(\"`\")"));
+}
+
+TEST(preprocessor, paste_with_space_after_keyword_keeps_keyword) {
+    // ivtest br979: `localparam `` i``a``b``j` must expand to
+    // `localparam i01j`, not the fused `localparami01j`.
+    auto test_pattern = R"(
+`define my_macro(a,b) localparam `` i``a``b``j = 8'h``a``b;
+module test;
+`my_macro(0,1)
+endmodule
+)";
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_THAT(result, testing::HasSubstr("localparam i01j = 8'h01;"));
+}
