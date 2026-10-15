@@ -16,6 +16,7 @@
 #ifndef ANANKE_SV_SEMANTIC_CHECKER_HPP
 #define ANANKE_SV_SEMANTIC_CHECKER_HPP
 
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -23,12 +24,16 @@
 
 #include "data_model/parse_options.hpp"
 
+class hdl_type;
+
 // Stable rule identifiers. The checker owns these, the human-readable text,
 // the recorded violations and the process exit code mapping below, so adding
 // a rule never touches the visitor, the analyzer or the CLI: they just
 // forward what was recorded.
 enum class semantic_error_code {
     builtin_method_override = 1,
+    enum_value_size_mismatch = 2,
+    enum_unknown_in_two_state = 3,
     // Future rules append here.
 };
 
@@ -60,6 +65,20 @@ public:
     // method; returns false when legal.
     [[nodiscard]] bool check_class_method(
         const std::string &file, unsigned int line, const std::string &method_name);
+
+    // IEEE 1800-2017 §6.19: when an enum member value is a sized literal
+    // constant, its size shall match the enum base type width, even if the
+    // value fits; and an x/z value in an enum with no explicit data type or
+    // an explicit 2-state base is a syntax error. Logs `file:line: error:
+    // ...`, records the violation(s) and returns true on any mismatch.
+    // `base_type` is the declared base (nullptr selects the default int
+    // base); unresolvable widths and unsized literals are legal and return
+    // false. `has_unknown_digits` reports x/z/? in the literal digits
+    // (independent of the token value, where X/Z resolve to 0).
+    [[nodiscard]] bool check_enum_value(
+        const std::string &file, unsigned int line, const std::string &member_name,
+        int64_t literal_size, bool sized_explicit, bool has_unknown_digits,
+        const std::shared_ptr<hdl_type> &base_type);
 
     [[nodiscard]] bool has_violations() const { return !violations_.empty(); }
     [[nodiscard]] const std::vector<semantic_violation> &get_violations() const {

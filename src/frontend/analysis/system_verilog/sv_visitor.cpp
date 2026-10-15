@@ -520,6 +520,7 @@ void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
                 params_factory.start_param_assignment();
             } else if (dt->KW_ENUM()) {
                 type_engine.start_composite_type_declaration(Type_engine::enum_type);
+                capture_enum_base(dt);
                 in_anonymous_struct = true;
             }
         }
@@ -703,6 +704,30 @@ void sv_visitor::enterEnum_name_declaration(sv2017::Enum_name_declarationContext
     type_engine.open_composite_member();
 }
 
+// Explicit `N'...` size prefix of a based literal. The token's binary size
+// is 0 for x/z literals, so the declared size is read off the text in
+// that case. Returns -1 when no well-formed prefix is present.
+static int64_t parse_explicit_literal_size(std::string_view text) {    size_t i = 0;
+    while (i < text.size() && text[i] >= '0' && text[i] <= '9') ++i;
+    if (i == 0 || i >= text.size() || text[i] != '\'') return -1;
+    uint64_t size = 0;
+    for (size_t j = 0; j < i; ++j) size = size * 10 + static_cast<uint64_t>(text[j] - '0');
+    return static_cast<int64_t>(size);
+}
+
+// x/z/? in the digit part (at or after the base letter) of a based
+// literal. Scanning from the quote is safe: neither the size prefix nor
+// the base letter can contain these characters.
+static bool literal_has_unknown_digits(std::string_view text) {
+    auto q = text.find('\'');
+    if (q == std::string_view::npos) return false;
+    for (size_t i = q; i < text.size(); ++i) {
+        char c = text[i];
+        if (c == 'x' || c == 'X' || c == 'z' || c == 'Z' || c == '?') return true;
+    }
+    return false;
+}
+
 void sv_visitor::exitEnum_name_declaration(sv2017::Enum_name_declarationContext *ctx) {
     type_engine.close_composite_member(ctx->identifier()->getText());
     if (ctx->expression()) {
@@ -720,6 +745,18 @@ void sv_visitor::exitEnum_name_declaration(sv2017::Enum_name_declarationContext 
         }
         auto tok = sv_parsing_helpers::make_value(std::string(view));
         if (auto num = std::dynamic_pointer_cast<Numeric_token>(tok)) {
+            if (num->is_sized_explicit()) {
+                const unsigned int line = ctx->getStart() ? ctx->getStart()->getLine() : 0;
+                int64_t lit_size = num->get_size();
+                if (lit_size <= 0) lit_size = parse_explicit_literal_size(view);
+                if (semantic_checker.check_enum_value(
+                        current_file, line, ctx->identifier()->getText(), lit_size,
+                        true, literal_has_unknown_digits(view),
+                        type_engine.get_current_enum_base())) {
+                    had_error = true;
+                    return;
+                }
+            }
             if (num->get_size() != 0) {
                 if (auto v = num->get_value(); v.has_value() && v->is_integer()) {
                     uint64_t u = static_cast<uint64_t>(v->get_integer().to_wide());

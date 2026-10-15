@@ -29,8 +29,13 @@ void Type_engine::start_composite_type_declaration(type_kind k) {
     }
 }
 
-void Type_engine::open_composite_member() {
-    if (composite_type_stack.empty()) return;
+std::shared_ptr<hdl_type> Type_engine::get_current_enum_base() const {
+    if (composite_type_stack.empty() || composite_type_stack.back() != enum_type) return nullptr;
+    if (enum_stack.empty()) return nullptr;
+    return enum_stack.back().base_type;
+}
+
+void Type_engine::open_composite_member() {    if (composite_type_stack.empty()) return;
     if (composite_type_stack.back() == enum_type && current_enum().members.empty() &&
         pending_enum_base) {
         auto [packed, unpacked] = r_factory.get_dimensions();

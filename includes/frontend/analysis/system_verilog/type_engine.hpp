@@ -73,6 +73,10 @@ public:
     }
     [[nodiscard]] bool has_type(const std::string &name) const;
     [[nodiscard]] std::shared_ptr<hdl_type> get_type(const std::string &name) const;
+    // Base type of the enum currently being declared (packed dimensions are
+    // attached once the first member opens). Returns nullptr when no enum
+    // declaration is open or no explicit base was given (LRM default is int).
+    [[nodiscard]] std::shared_ptr<hdl_type> get_current_enum_base() const;
     [[nodiscard]] bool is_simple_type()const{ return composite_type_stack.empty(); }
     [[nodiscard]] bool is_nested() const { return composite_type_stack.size() > 1; }
 
