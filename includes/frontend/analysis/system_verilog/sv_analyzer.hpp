@@ -28,6 +28,7 @@
 #include "data_model/parse_options.hpp"
 
 #include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
+#include "frontend/analysis/system_verilog/sv_semantic_checker.hpp"
 #include "frontend/repository_index.hpp"
 #include "documentation_analyzer.hpp"
 
@@ -63,6 +64,11 @@ public:
     // does any header that does declare a unit but fails to parse.
     [[nodiscard]] bool has_syntax_errors() const {return syntax_errors;}
     [[nodiscard]] bool is_include_fragment() const {return is_include_fragment_;}
+    // Semantic violations from the last analyze() call, in visit order.
+    // Empty when the file passed or failed for another reason.
+    [[nodiscard]] const std::vector<semantic_violation> &get_semantic_violations() const {
+        return semantic_violations;
+    }
 private:
 
     hdl_file process_hdl(const std::string &path, const std::string &preprocessed_content);
@@ -78,6 +84,7 @@ private:
     preprocessor::macro_definitions_map harvested;
     bool syntax_errors = false;
     bool is_include_fragment_ = false;
+    std::vector<semantic_violation> semantic_violations;
 };
 
 

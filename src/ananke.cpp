@@ -157,6 +157,7 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
     parse_options base_opts = s_store->get_parse_options();
     for (auto &d : opts.parse_incdirs) base_opts.include_directories.insert(d);
     for (auto &d : opts.parse_defines) base_opts.defines.insert(d);
+    base_opts.disable_semantic_checks = opts.no_semantic_checks;
 
     std::unordered_map<std::string, std::string> res_map;
     for (auto &target : opts.parse_targets) {
@@ -185,6 +186,13 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
             auto analysis_result = analyzer.analyze(target, f_opt->view());
             if (!analysis_result.has_value()) {
                 std::cout << "Error parsing target: " << target << ": " << analyzer.get_error() << std::endl;
+                // The exit code is owned by the checker: rule violations
+                // report their own code, anything else keeps 52.
+                const auto &violations = analyzer.get_semantic_violations();
+                if (!violations.empty()) {
+                    return std::unexpected(
+                        sv_semantic_checker::exit_code_for(violations.front().code));
+                }
                 return std::unexpected(52);
             }
             for (auto &res : analysis_result.value().get_content()) {

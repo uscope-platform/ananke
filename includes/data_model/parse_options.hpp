@@ -47,6 +47,10 @@ struct parse_options {
     // absolute suffix fallback.
     std::string repo_root;
     bool strip_uvm_macros = false;
+    // LRM semantic rule checks (like built-in class methods
+    // that shall not be overridden). On by default; set to
+    // skip them on hot paths that only need dependency information.
+    bool disable_semantic_checks = false;
     // Strict mode: reject out-of-spec code that lenient mode tolerates to
     // get real-world trees (UVM-heavy ones in particular) through the
     // analyzer. Every LRM deviation must consult this flag so strict stays

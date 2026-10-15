@@ -72,6 +72,7 @@ std::optional<hdl_file> sv_analyzer::analyze(const std::string &path, const std:
     last_error.reset();
     syntax_errors = false;
     is_include_fragment_ = false;
+    semantic_violations.clear();
     includes.clear();
     fatal_error = false;
     undefined_macros.clear();
@@ -230,8 +231,13 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
     sv_modules_explorer.set_file(path);
     sv_modules_explorer.set_options(opts_);
     antlr4::tree::ParseTreeWalker::DEFAULT.walk(&sv_modules_explorer, Tree);
+    semantic_violations = sv_modules_explorer.get_semantic_violations();
     if (sv_modules_explorer.is_error()) {
-        last_error = "Unsupported construct while parsing " + path;
+        // Prefer the checker's message when a rule fired; the generic text
+        // stays for failures no rule describes.
+        last_error = semantic_violations.empty()
+            ? "Unsupported construct while parsing " + path
+            : semantic_violations.front().message;
         return result;
     }
     auto content = sv_modules_explorer.get_entities();

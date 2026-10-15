@@ -1,0 +1,82 @@
+//  Copyright 2026 Filippo Savi
+//  Author: Filippo Savi <filssavi@gmail.com>
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
+#ifndef ANANKE_SV_SEMANTIC_CHECKER_HPP
+#define ANANKE_SV_SEMANTIC_CHECKER_HPP
+
+#include <optional>
+#include <set>
+#include <string>
+#include <vector>
+
+#include "data_model/parse_options.hpp"
+
+// Stable rule identifiers. The checker owns these, the human-readable text,
+// the recorded violations and the process exit code mapping below, so adding
+// a rule never touches the visitor, the analyzer or the CLI: they just
+// forward what was recorded.
+enum class semantic_error_code {
+    builtin_method_override = 1,
+    // Future rules append here.
+};
+
+struct semantic_violation {
+    semantic_error_code code;
+    std::string message;
+};
+
+// LRM semantic rule checks for SystemVerilog declarations.
+//
+// The visitor stays a pure model builder: it reports what was declared
+// (with source location) and this class decides whether it is legal,
+// logging the diagnostic and recording the violation internally. No
+// exceptions, so rules get unit tests here instead of golden log files.
+// All checks honor parse_options::disable_semantic_checks for hot paths
+// that only need dependency information.
+class sv_semantic_checker {
+public:
+    void set_options(const parse_options &o) {
+        opts_ = o;
+        violations_.clear();
+    }
+
+    // IEEE 1800-2017 §18: randomize(), rand_mode() and constraint_mode()
+    // are built-in methods of every class and shall not be overridden.
+    // (pre_randomize()/post_randomize() are the sanctioned user hooks and
+    // stay legal.) Logs `file:line: error: ...`, records the violation and
+    // returns true when `method_name` may not be declared as a class
+    // method; returns false when legal.
+    [[nodiscard]] bool check_class_method(
+        const std::string &file, unsigned int line, const std::string &method_name);
+
+    [[nodiscard]] bool has_violations() const { return !violations_.empty(); }
+    [[nodiscard]] const std::vector<semantic_violation> &get_violations() const {
+        return violations_;
+    }
+    // Latest recorded violation; only valid after a check returned true.
+    [[nodiscard]] const semantic_violation &last_violation() const { return violations_.back(); }
+    void clear() { violations_.clear(); }
+
+    // Process exit code for a violation (< 126, so sv-tests counts it as a
+    // tool-detected failure rather than a crash). One mapping for all
+    // rules; extend the switch if a rule ever needs its own code.
+    static int exit_code_for(semantic_error_code code);
+
+private:
+    parse_options opts_;
+    std::vector<semantic_violation> violations_;
+};
+
+#endif //ANANKE_SV_SEMANTIC_CHECKER_HPP

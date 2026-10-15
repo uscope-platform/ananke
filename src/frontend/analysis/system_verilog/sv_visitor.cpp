@@ -69,8 +69,15 @@ void sv_visitor::route_resource_struct_def(const std::string &name, const std::s
     else modules_factory.add_struct_def(name, type);
 }
 
-void sv_visitor::route_resource_function(const hdl_function_statement &f, const std::string &ret_type_name) {
-    if (classes_factory.is_current_valid()) classes_factory.add_function(f, ret_type_name);
+void sv_visitor::route_resource_function(
+    const hdl_function_statement &f, const std::string &ret_type_name, unsigned int line) {
+    if (classes_factory.is_current_valid()) {
+        if (semantic_checker.check_class_method(current_file, line, f.get_name())) {
+            had_error = true;
+            return;
+        }
+        classes_factory.add_function(f, ret_type_name);
+    }
     else if (packages_factory.is_current_valid()) packages_factory.add_function(f, ret_type_name);
     else if (interfaces_factory.is_current_valid()) interfaces_factory.add_function(f, ret_type_name);
     else if (modules_factory.is_current_valid()) modules_factory.add_function(f, ret_type_name);
@@ -2241,7 +2248,8 @@ void sv_visitor::exitFunction_declaration(sv2017::Function_declarationContext *c
     auto func = f_factory.get_function();
     if (classes_factory.is_current_valid() || modules_factory.is_current_valid() ||
         packages_factory.is_current_valid() || interfaces_factory.is_current_valid()) {
-        route_resource_function(func, ret_type_name);
+        const unsigned int line = ctx && ctx->getStart() ? ctx->getStart()->getLine() : 0;
+        route_resource_function(func, ret_type_name, line);
     } else {
         entities.push_back(std::make_shared<hdl_function_statement>(func));
     }

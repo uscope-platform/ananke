@@ -30,6 +30,7 @@
 #include "data_model/HDL/factories/HDL_loops_factory.hpp"
 #include "data_model/HDL/factories/HDL_conditionals_factory.hpp"
 #include "data_model/HDL/factories/HDL_functions_factory.hpp"
+#include "frontend/analysis/system_verilog/sv_semantic_checker.hpp"
 
 #include "data_model/HDL/parameters/components/Parameter_components.hpp"
 #include "data_model/parse_options.hpp"
@@ -57,8 +58,16 @@ public:
     void enterPrimaryTfCall(sv2017::PrimaryTfCallContext *ctx) override;
     bool is_known_system_function(const std::string &name) const;
     [[nodiscard]] bool is_error() const { return had_error; }
+    // Violations recorded by the checker, in visit order. The visitor never
+    // touches this list beyond forwarding the check calls.
+    const std::vector<semantic_violation> &get_semantic_violations() const {
+        return semantic_checker.get_violations();
+    }
     void set_file(const std::string &p) { current_file = p; }
-    void set_options(const parse_options &o) { opts_ = o; }
+    void set_options(const parse_options &o) {
+        opts_ = o;
+        semantic_checker.set_options(o);
+    }
 
     void enterCast_separator(sv2017::Cast_separatorContext *ctx) override;
     void enterPrimaryCast2(sv2017::PrimaryCast2Context *ctx) override;
@@ -326,6 +335,7 @@ private:
     bool skip_current_defparam = false;
 
     Type_engine type_engine;
+    sv_semantic_checker semantic_checker;
     HDL_functions_factory f_factory;
     HDL_modules_factory modules_factory;
     HDL_packages_factory packages_factory;
@@ -336,7 +346,8 @@ private:
     void route_resource_statement(const std::shared_ptr<hdl_statement_base> &s);
     void route_resource_typedef(const std::string &name, const std::shared_ptr<hdl_type> &type);
     void route_resource_struct_def(const std::string &name, const std::shared_ptr<hdl_type> &type);
-    void route_resource_function(const hdl_function_statement &f, const std::string &ret_type_name);
+    void route_resource_function(
+        const hdl_function_statement &f, const std::string &ret_type_name, unsigned int line);
     // File a finished class into its enclosing scope (class, module, package
     // or interface) so declaration scope is preserved; scope-less classes go
     // to the top-level entities.
