@@ -384,6 +384,19 @@ void read_tail_label(antlr4::ParserRuleContext *ctx, end_label_info &info) {
     }
 }
 
+// `name: begin ... end : name`: the block is named by the statement label in front of it (IEEE 1800-2017 9.3.5).
+std::string statement_label(antlr4::ParserRuleContext *block) {
+    auto *item = block->parent;
+    auto *statement = item ? item->parent : nullptr;
+    if (!statement || statement->getTreeType() != antlr4::tree::ParseTreeType::RULE ||
+        static_cast<antlr4::ParserRuleContext *>(statement)->getRuleIndex() != sv2017::RuleStatement) {
+        return {};
+    }
+    auto &children = statement->children;
+    if (children.size() >= 3 && is_colon(children[1])) return text_of(as_identifier(children[0]));
+    return {};
+}
+
 // begin / fork: `KW : name` right after the opening keyword.
 std::string label_after_first(antlr4::ParserRuleContext *ctx, size_t keyword_index) {
     if (ctx->children.size() > keyword_index + 2 && is_colon(ctx->children[keyword_index + 1])) {
@@ -739,10 +752,12 @@ namespace sv_parsing_helpers {
         case sv2017::RuleSeq_block:
             info.kind = "begin";
             info.name = label_after_first(ctx, 0);
+            if (info.name.empty()) info.name = statement_label(ctx);
             break;
         case sv2017::RulePar_block:
             info.kind = "fork";
             info.name = label_after_first(ctx, 0);
+            if (info.name.empty()) info.name = statement_label(ctx);
             break;
         case sv2017::RuleGenerate_begin_end_block: {
             info.kind = "generate begin";

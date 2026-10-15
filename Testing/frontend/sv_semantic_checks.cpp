@@ -883,3 +883,10 @@ TEST(sv_semantic_checks, real_queue_literal_is_not_a_real_concatenation) {
     // ivtest sv_queue_real: `{1.0, 2.0}` initialises a queue of real.
     EXPECT_FALSE(declarations_rejected("module t; real q [$]; initial q = {1.0, 2.0}; endmodule"));
 }
+
+TEST(sv_semantic_checks, statement_label_names_the_block_for_its_end_label) {
+    // sv-tests 9.3.5: `name: begin ... end : name` and `name: fork ... join : name`.
+    EXPECT_FALSE(declarations_rejected("module t; reg a; initial name: begin a = 1; end : name endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t; reg a; initial name: fork a = 1; join : name endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg a; initial name: begin a = 1; end : other endmodule"));
+}
