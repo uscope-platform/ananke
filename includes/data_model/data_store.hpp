@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <filesystem>
 #include <utility>
+#include <map>
 #include <set>
 #include <fstream>
 #include <vector>
@@ -152,6 +153,13 @@ public:
     // for cross-run invalidation, and the persisted table fingerprint used to
     // detect inter-run macro changes.
     std::unordered_map<std::string, std::vector<stored_macro_def>> get_all_macro_definitions() const;
+    // Repository-wide view of the file-level names HDL files declared and
+    // could not resolve themselves (see hdl_file::set_unit_names).
+    struct unit_name_view {
+        std::set<std::string> declared;
+        std::map<std::string, std::vector<unresolved_unit_name>> unresolved_by_file;
+    };
+    [[nodiscard]] unit_name_view get_unit_names() const;
     std::vector<std::string> get_macro_dependencies(const std::string &name) const;
     std::vector<std::string> get_files_with_macro_dependencies() const;
     [[nodiscard]] std::string get_macro_table_fingerprint() const { return active().macro_table_fingerprint; }

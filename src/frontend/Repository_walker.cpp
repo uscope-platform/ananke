@@ -103,6 +103,7 @@ void Repository_walker::analyze_dir() {
     run_macro_fixpoint();
 
     report_quarantine_errors();
+    report_unresolved_unit_names();
     d_store->set_macro_table_fingerprint(macro_table_fingerprint());
 }
 
@@ -590,6 +591,27 @@ std::vector<std::string> Repository_walker::build_quarantine_report(
     return lines;
 }
 
+/// File-level names a file could not resolve are only a problem when no other
+/// file in the repository declares them: the tool has no $unit context
+/// spanning files, so a name declared elsewhere (typically in a package that
+/// `includes this fragment) is taken to resolve. Strict mode never defers,
+/// and reports these as errors at parse time instead.
+void Repository_walker::report_unresolved_unit_names() {
+    auto view = d_store->get_unit_names();
+    for (const auto &[path, names] : view.unresolved_by_file) {
+        for (const auto &n : names) {
+            if (view.declared.contains(n.name)) continue;
+            if (n.forward) {
+                spdlog::warn("{}:{}: forward typedef '{}' is never resolved to a data type in the repository",
+                             path, n.line, n.name);
+            } else {
+                spdlog::warn("{}:{}: '{}' is not declared anywhere in the repository",
+                             path, n.line, n.name);
+            }
+        }
+    }
+}
+
 void Repository_walker::report_quarantine_errors() {
     for (const auto &line : build_quarantine_report(macro_table_, quarantine_)) {
         spdlog::error("{}", line);
@@ -781,7 +803,9 @@ file_analysis_context<hdl_file> analyze_verilog(
             return skipped;
         }
         sv_analyzer file_processor;
-        file_processor.set_options(opts);
+        auto file_opts = opts;
+        file_opts.defer_unit_name_errors = !opts.strict;
+        file_processor.set_options(file_opts);
         file_processor.set_repository_index(idx);
         file_processor.set_injected_definitions(injected);
         auto analysis = file_processor.analyze(file, f_opt->view());

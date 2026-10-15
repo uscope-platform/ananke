@@ -17,6 +17,8 @@
 #include "frontend/analysis/system_verilog/preprocessor/sv_preprocessor.hpp"
 #include "data_model/include_config.hpp"
 
+#include <cctype>
+
 
 
 
@@ -258,6 +260,17 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         remap.file = parsed->file;
     }
 
+    void sv_preprocessor::check_pragma(std::string_view directive_line) {
+        // IEEE 1800-2017 22.11: the pragma is identified by the pragma_name
+        // that follows the `pragma directive.
+        auto args = macro_processor::trim(directive_line.substr(sizeof("`pragma") - 1));
+        const bool has_name = !args.empty() &&
+            (std::isalpha(static_cast<unsigned char>(args.front())) || args.front() == '_');
+        if (has_name) return;
+        report_error(fmt::format("Invalid `pragma [{}] at line {} in file: {}: missing pragma_name",
+                                 macro_processor::trim(directive_line), line_number, path));
+    }
+
     void sv_preprocessor::record_unknown_conditional(const std::string_view &name) {
         auto trimmed = macro_processor::trim(name);
         if (!trimmed.empty()) unknown_conditionals.emplace(trimmed);
@@ -349,6 +362,8 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 check_timescale(active_line, &macro_engine);
             } else if (is_directive(active_line, "`line") && c_solver.is_active()) {
                 check_line(active_line, &macro_engine);
+            } else if (is_directive(active_line, "`pragma") && c_solver.is_active()) {
+                check_pragma(active_line);
             } else if (trimmed_line.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed_line, 7);
             } else if (trimmed_line.starts_with("`include") && c_solver.is_active()) {
@@ -1010,6 +1025,9 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 emit_line("");
             } else if (is_directive(trimmed, "`line") && c_solver.is_active()) {
                 check_line(trimmed, nullptr);
+                emit_line("");
+            } else if (is_directive(trimmed, "`pragma") && c_solver.is_active()) {
+                check_pragma(trimmed);
                 emit_line("");
             } else if (trimmed.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed, 7);

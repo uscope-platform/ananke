@@ -533,3 +533,91 @@ TEST(sv_semantic_checker, timescale_check_unit) {
     EXPECT_TRUE(checker.check_timescale("t.sv", 1, 1000, 1000000, "`timescale 1ps / 1ns"));
     EXPECT_EQ(checker.last_violation().code, semantic_error_code::timescale_precision_exceeds_unit);
 }
+
+namespace {
+
+semantic_error_code first_code(const std::string &src) {
+    sv_analyzer analyzer;
+    auto res = analyzer.analyze("test.sv", src);
+    EXPECT_FALSE(res.has_value());
+    EXPECT_FALSE(analyzer.get_semantic_violations().empty());
+    return analyzer.get_semantic_violations().front().code;
+}
+
+} // namespace
+
+TEST(sv_semantic_checks, typedef_of_undefined_type_rejected) {
+    EXPECT_EQ(
+        first_code("typedef some_other_type myalias;\nmodule test; endmodule\n"),
+        semantic_error_code::undefined_identifier);
+}
+
+TEST(sv_semantic_checks, packed_struct_undefined_bound_rejected) {
+    EXPECT_EQ(
+        first_code("typedef struct packed { reg [A-1:0] addr; reg parity; } req_t;\n"
+                   "module test; endmodule\n"),
+        semantic_error_code::undefined_identifier);
+}
+
+TEST(sv_semantic_checks, unresolved_forward_typedef_rejected) {
+    EXPECT_EQ(
+        first_code("typedef missing_forward_typedef;\nmodule test; endmodule\n"),
+        semantic_error_code::unresolved_forward_typedef);
+}
+
+TEST(sv_semantic_checks, unit_scope_typedefs_with_declared_names_stay_legal) {
+    for (const char *src : {
+             "typedef int base_t;\ntypedef base_t myalias;\nmodule test; endmodule\n",
+             "parameter A = 4;\ntypedef struct packed { reg [A-1:0] addr; } req_t;\n"
+             "module test; endmodule\n",
+             "typedef fwd_t;\ntypedef struct packed { logic a; } fwd_t;\nmodule test; endmodule\n",
+             "import some_pkg::*;\ntypedef from_pkg_t alias_t;\nmodule test; endmodule\n",
+             "typedef some_pkg::item_t alias_t;\nmodule test; endmodule\n",
+         }) {
+        sv_analyzer analyzer;
+        EXPECT_TRUE(analyzer.analyze("test.sv", src).has_value()) << src;
+    }
+}
+
+TEST(sv_semantic_checks, unit_scope_undefined_name_passes_when_disabled) {
+    parse_options opts;
+    opts.disable_semantic_checks = true;
+    sv_analyzer analyzer;
+    analyzer.set_options(opts);
+    EXPECT_TRUE(analyzer.analyze("test.sv", "typedef nope_t a;\nmodule test; endmodule\n").has_value());
+}
+
+TEST(sv_semantic_checks, typedef_inside_class_sees_class_parameters) {
+    // uvm_push_sequencer shape: REQ/RSP are class parameters, not unit names.
+    for (const char *src : {
+             "class seq #(type REQ=int, RSP=REQ) extends base #(REQ, RSP);\n"
+             "  typedef seq #(REQ, RSP) this_type;\nendclass\n",
+             "function void f(); typedef local_t alias_t; endfunction\n",
+         }) {
+        sv_analyzer analyzer;
+        EXPECT_TRUE(analyzer.analyze("test.sv", src).has_value()) << src;
+    }
+}
+
+TEST(sv_semantic_checks, deferred_unit_names_are_exported_not_errors) {
+    // Repository mode: a name the file cannot resolve is judged repo-wide.
+    parse_options opts;
+    opts.defer_unit_name_errors = true;
+    sv_analyzer analyzer;
+    analyzer.set_options(opts);
+    auto res = analyzer.analyze(
+        "test.sv", "typedef uvm_action act_t;\ntypedef fwd_t;\nmodule test; endmodule\n");
+    ASSERT_TRUE(res.has_value());
+    const auto &pending = res->get_unresolved_names();
+    ASSERT_EQ(pending.size(), 2);
+    EXPECT_EQ(pending[0].name, "uvm_action");
+    EXPECT_FALSE(pending[0].forward);
+    EXPECT_EQ(pending[1].name, "fwd_t");
+    EXPECT_TRUE(pending[1].forward);
+    EXPECT_TRUE(res->get_declared_names().contains("act_t"));
+}
+
+TEST(sv_semantic_checks, deferred_unit_names_still_error_in_single_file_mode) {
+    sv_analyzer analyzer;
+    EXPECT_FALSE(analyzer.analyze("test.sv", "typedef uvm_action act_t;\nmodule test; endmodule\n").has_value());
+}

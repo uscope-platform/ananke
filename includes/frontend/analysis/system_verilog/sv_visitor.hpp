@@ -35,6 +35,7 @@
 #include "data_model/HDL/parameters/components/Parameter_components.hpp"
 #include "data_model/parse_options.hpp"
 
+#include <set>
 #include <utility>
 #include <vector>
 #include <string>
@@ -184,6 +185,10 @@ public:
 
     std::vector<std::shared_ptr<hdl_statement_base>> get_entities();
     std::vector<std::shared_ptr<hdl_import_stmt>> get_imports() {return file_imports;}
+    const std::set<std::string> &get_declared_names() const {return declared_names;}
+    const std::vector<unresolved_unit_name> &get_pending_unit_names() const {
+        return semantic_checker.get_pending_unit_names();
+    }
 
     void exitData_type_or_implicit(sv2017::Data_type_or_implicitContext *ctx) override;
 
@@ -265,6 +270,7 @@ public:
     void exitTf_port_list(sv2017::Tf_port_listContext *ctx) override;
 
     void enterData_declaration(sv2017::Data_declarationContext *ctx) override;
+    void exitSource_text(sv2017::Source_textContext *ctx) override;
     void exitData_declaration(sv2017::Data_declarationContext *ctx) override;
 
     void enterStruct_union_member(sv2017::Struct_union_memberContext *ctx) override;
@@ -339,6 +345,8 @@ private:
     Type_engine type_engine;
     sv_semantic_checker semantic_checker;
     void track_enum_declaration(sv2017::Data_declarationContext *ctx);
+    // Compilation-unit scope declarations, in source order (see checker).
+    void check_unit_scope_description(sv2017::DescriptionContext *ctx);
     HDL_functions_factory f_factory;
     HDL_modules_factory modules_factory;
     HDL_packages_factory packages_factory;
@@ -356,6 +364,7 @@ private:
     // to the top-level entities.
     void file_finished_class(const std::shared_ptr<hdl_class_statement> &cls);
     std::vector<std::shared_ptr<hdl_import_stmt>> file_imports;
+    std::set<std::string> declared_names;
     HDL_interfaces_factory interfaces_factory;
     HDL_classes_factory classes_factory;
     HDL_instances_factory deps_factory;

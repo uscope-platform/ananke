@@ -61,6 +61,12 @@ struct parse_options {
     // module/interface/package/program/primitive/config declaration, meant
     // to be `included inside a module, stored as empty resources).
     bool strict = false;
+    // Repository mode, lenient: file-level names that do not resolve inside
+    // the file are not errors on their own (the tool has no $unit context
+    // spanning files). They are exported with the file and judged against
+    // the names declared anywhere in the repository. Off for single-file
+    // parsing, where an unresolved name is an error.
+    bool defer_unit_name_errors = false;
 };
 
 #endif //ANANKE_PARSE_OPTIONS_HPP

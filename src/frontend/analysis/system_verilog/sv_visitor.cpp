@@ -474,6 +474,106 @@ void sv_visitor::track_enum_declaration(sv2017::Data_declarationContext *ctx) {
     }
 }
 
+namespace {
+
+// Gather the typedefs, identifiers and wildcard imports of a unit-scope
+// description.
+void collect_unit_nodes(
+    antlr4::tree::ParseTree *node, std::vector<sv2017::Type_declarationContext *> &typedefs,
+    std::vector<sv2017::IdentifierContext *> &identifiers, bool &wildcard_import,
+    bool nested = false) {
+    // Typedefs inside a class, function or task see that construct's own
+    // parameters and locals, so only the names they declare are collected.
+    if (auto *td = dynamic_cast<sv2017::Type_declarationContext *>(node); td && !nested)
+        typedefs.push_back(td);
+    if (auto *id = dynamic_cast<sv2017::IdentifierContext *>(node)) identifiers.push_back(id);
+    if (auto *imp = dynamic_cast<sv2017::Package_import_declarationContext *>(node)) {
+        for (auto *item : imp->package_import_item())
+            if (item->MUL()) wildcard_import = true;
+    }
+    if (dynamic_cast<sv2017::Class_declarationContext *>(node) ||
+        dynamic_cast<sv2017::Function_declarationContext *>(node) ||
+        dynamic_cast<sv2017::Task_declarationContext *>(node))
+        nested = true;
+    for (auto *child : node->children)
+        collect_unit_nodes(child, typedefs, identifiers, wildcard_import, nested);
+}
+
+// Every name the file declares, in any scope, for the repository-wide
+// resolution of names a single file cannot see.
+void collect_declared_names(antlr4::tree::ParseTree *node, std::set<std::string> &out) {
+    if (auto *td = dynamic_cast<sv2017::Type_declarationContext *>(node)) {
+        if (!td->identifier().empty()) out.insert(td->identifier().back()->getText());
+    } else if (auto *e = dynamic_cast<sv2017::Enum_name_declarationContext *>(node)) {
+        if (e->identifier()) out.insert(e->identifier()->getText());
+    } else if (auto *p = dynamic_cast<sv2017::Param_assignmentContext *>(node)) {
+        if (p->identifier()) out.insert(p->identifier()->getText());
+    } else if (auto *t = dynamic_cast<sv2017::Type_assignmentContext *>(node)) {
+        if (t->identifier()) out.insert(t->identifier()->getText());
+    } else if (auto *c = dynamic_cast<sv2017::Class_declarationContext *>(node)) {
+        if (!c->identifier().empty()) out.insert(c->identifier(0)->getText());
+    }
+    for (auto *child : node->children) collect_declared_names(child, out);
+}
+
+void collect_scoped_paths(
+    antlr4::tree::ParseTree *node, std::vector<sv2017::Package_or_class_scoped_pathContext *> &out) {
+    if (auto *p = dynamic_cast<sv2017::Package_or_class_scoped_pathContext *>(node)) out.push_back(p);
+    for (auto *child : node->children) collect_scoped_paths(child, out);
+}
+
+} // namespace
+
+void sv_visitor::check_unit_scope_description(sv2017::DescriptionContext *ctx) {
+    std::vector<sv2017::Type_declarationContext *> typedefs;
+    std::vector<sv2017::IdentifierContext *> identifiers;
+    bool wildcard = false;
+    collect_unit_nodes(ctx, typedefs, identifiers, wildcard);
+    if (wildcard) semantic_checker.note_unit_wildcard_import();
+
+    // `typedef name;` introduces `name` without defining it: it is usable
+    // from here on, but the identifier itself must not count as a definition.
+    std::set<antlr4::tree::ParseTree *> forward_ids;
+    const bool at_unit_item = ctx->package_item() != nullptr;
+    for (auto *td : typedefs) {
+        const unsigned int line = td->getStart() ? td->getStart()->getLine() : 0;
+        if (!at_unit_item) continue;
+        if (!td->data_type()) {
+            const bool plain_forward = !td->KW_ENUM() && !td->KW_STRUCT() && !td->KW_UNION() &&
+                                       !td->identifier_with_bit_select() && td->identifier().size() == 1;
+            if (plain_forward) {
+                forward_ids.insert(td->identifier(0));
+                semantic_checker.declare_unit_forward(td->identifier(0)->getText(), line);
+            }
+            continue;
+        }
+        std::vector<sv2017::Package_or_class_scoped_pathContext *> paths;
+        collect_scoped_paths(td->data_type(), paths);
+        for (auto *path : paths) {
+            if (!path->DOUBLE_COLON().empty() || path->KW_DOLAR_ROOT() || path->KW_DOLAR_UNIT() ||
+                path->KW_LOCAL() || path->implicit_class_handle() ||
+                path->package_or_class_scoped_path_item().size() != 1)
+                continue;
+            auto *item = path->package_or_class_scoped_path_item(0);
+            if (item->parameter_value_assignment() || !item->identifier()) continue;
+            if (semantic_checker.check_unit_reference(
+                    current_file, line, item->identifier()->getText()))
+                had_error = true;
+        }
+    }
+    for (auto *id : identifiers) {
+        if (forward_ids.contains(id)) continue;
+        semantic_checker.declare_unit_name(id->getText());
+    }
+}
+
+void sv_visitor::exitSource_text(sv2017::Source_textContext *ctx) {
+    for (auto *description : ctx->description()) check_unit_scope_description(description);
+    if (semantic_checker.finish_unit_scope(current_file)) had_error = true;
+    declared_names.clear();
+    collect_declared_names(ctx, declared_names);
+}
+
 void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
     track_enum_declaration(ctx);
     // `import pkg::*;` and net declarations also reduce through

@@ -3183,3 +3183,21 @@ TEST(preprocessor, line_directive_does_not_leak_out_of_an_include) {
     EXPECT_THAT(result, testing::HasSubstr("int inner = 900;"));
     EXPECT_THAT(result, testing::HasSubstr("int outer = 2;"));
 }
+
+TEST(preprocessor, pragma_without_name_is_fatal) {
+    // IEEE 1800 22.11: the pragma_name must follow the `pragma directive.
+    for (const char *src : {"`pragma", "`pragma\nmodule m; endmodule\n", "`pragma // only a comment\n",
+                            "`pragma 42\n"}) {
+        auto preproc = run_timescale_case(src);
+        EXPECT_TRUE(preproc.has_fatal_error()) << src;
+        EXPECT_THAT(preproc.get_error(), testing::HasSubstr("Invalid `pragma")) << src;
+    }
+}
+
+TEST(preprocessor, pragma_with_name_accepted) {
+    for (const char *src : {"`pragma protect begin_protected\n", "`pragma reset\n",
+                            "`pragma foo bar=1, baz\nmodule m; endmodule\n"}) {
+        auto preproc = run_timescale_case(src);
+        EXPECT_FALSE(preproc.has_error()) << src;
+    }
+}

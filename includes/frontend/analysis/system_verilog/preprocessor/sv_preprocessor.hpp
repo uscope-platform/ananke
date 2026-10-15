@@ -89,6 +89,7 @@ namespace preprocessor {
         // macro-built arguments first.
         void check_timescale(std::string_view directive_line, macro_processor *macro_engine);
         void check_line(std::string_view directive_line, macro_processor *macro_engine);
+        void check_pragma(std::string_view directive_line);
         // Records a conditional query on a currently-undefined macro.
         // The taken branch may be wrong once repository macros are known,
         // so the file becomes a quarantine candidate.

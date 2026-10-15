@@ -530,6 +530,17 @@ std::unordered_map<std::string, std::vector<stored_macro_def>> data_store::get_a
     return result;
 }
 
+data_store::unit_name_view data_store::get_unit_names() const {
+    unit_name_view view;
+    for (const auto &[path, file] : active().cache) {
+        const auto *hf = std::get_if<hdl_file>(&file.content);
+        if (!hf) continue;
+        view.declared.insert(hf->get_declared_names().begin(), hf->get_declared_names().end());
+        if (!hf->get_unresolved_names().empty()) view.unresolved_by_file[path] = hf->get_unresolved_names();
+    }
+    return view;
+}
+
 std::vector<std::string> data_store::get_macro_dependencies(const std::string &name) const {
     const auto &c = active().cache;
     if (!c.contains(name)) return {};

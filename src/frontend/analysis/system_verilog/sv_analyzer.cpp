@@ -245,6 +245,8 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
     auto imports = sv_modules_explorer.get_imports();
     content.insert(content.end(), imports.begin(), imports.end());
     result.set_content(content);
+    result.set_unit_names(
+        sv_modules_explorer.get_declared_names(), sv_modules_explorer.get_pending_unit_names());
     return result;
 }
 

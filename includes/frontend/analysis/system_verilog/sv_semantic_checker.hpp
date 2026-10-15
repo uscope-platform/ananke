@@ -22,8 +22,10 @@
 #include <set>
 #include <string_view>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "data_model/hdl_file.hpp"
 #include "data_model/parse_options.hpp"
 
 class hdl_type;
@@ -39,6 +41,8 @@ enum class semantic_error_code {
     pure_virtual_in_non_virtual_class = 4,
     enum_assignment_type_mismatch = 5,
     timescale_precision_exceeds_unit = 6,
+    undefined_identifier = 7,
+    unresolved_forward_typedef = 8,
     // Future rules append here.
 };
 
@@ -62,6 +66,7 @@ public:
         violations_.clear();
         enum_typedefs_.clear();
         enum_variables_.clear();
+        begin_unit_scope();
     }
 
     // IEEE 1800-2017 §18: randomize(), rand_mode() and constraint_mode()
@@ -124,6 +129,30 @@ public:
         const std::string &file, unsigned int line, uint64_t unit_fs, uint64_t precision_fs,
         std::string_view directive);
 
+    // IEEE 1800-2017 §6.18 / §3.12: names used by compilation-unit scope
+    // declarations (typedefs, packed dimensions) must be declared earlier in
+    // that scope, and a forward typedef must resolve to a data type in the
+    // same scope. The visitor reports the unit-scope declarations in source
+    // order. A wildcard import disables the use check, since the name may
+    // come from the package.
+    void begin_unit_scope();
+    void declare_unit_name(const std::string &name);
+    // `typedef name;`: usable immediately, but still owed a real declaration.
+    void declare_unit_forward(const std::string &name, unsigned int line);
+    void note_unit_wildcard_import() { unit_wildcard_import_ = true; }
+    // Logs `file:line: error: ...`, records the violation and returns true
+    // when `name` was never declared in the unit scope.
+    [[nodiscard]] bool check_unit_reference(
+        const std::string &file, unsigned int line, const std::string &name);
+    // End of the source text: returns true if any forward typedef was left
+    // unresolved (one violation per name).
+    [[nodiscard]] bool finish_unit_scope(const std::string &file);
+    // With parse_options::defer_unit_name_errors the two checks above record
+    // here instead of failing, for the repository-wide judgement.
+    [[nodiscard]] const std::vector<unresolved_unit_name> &get_pending_unit_names() const {
+        return pending_unit_names_;
+    }
+
     [[nodiscard]] bool has_violations() const { return !violations_.empty(); }
     [[nodiscard]] const std::vector<semantic_violation> &get_violations() const {
         return violations_;
@@ -142,6 +171,11 @@ private:
     std::vector<semantic_violation> violations_;
     std::set<std::string> enum_typedefs_;
     std::set<std::string> enum_variables_;
+    std::set<std::string> unit_declared_;
+    std::set<std::string> unit_resolved_;
+    std::vector<std::pair<std::string, unsigned int>> unit_forwards_;
+    bool unit_wildcard_import_ = false;
+    std::vector<unresolved_unit_name> pending_unit_names_;
 };
 
 #endif //ANANKE_SV_SEMANTIC_CHECKER_HPP

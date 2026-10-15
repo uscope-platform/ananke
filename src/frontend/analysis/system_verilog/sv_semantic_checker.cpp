@@ -107,6 +107,8 @@ int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     case semantic_error_code::pure_virtual_in_non_virtual_class:
     case semantic_error_code::enum_assignment_type_mismatch:
     case semantic_error_code::timescale_precision_exceeds_unit:
+    case semantic_error_code::undefined_identifier:
+    case semantic_error_code::unresolved_forward_typedef:
         return 56;
     }
     return 56;
@@ -179,4 +181,53 @@ bool sv_semantic_checker::check_timescale(
         "invalid " + std::string(directive) +
             ": time precision shall not be larger than the time unit");
     return true;
+}
+
+void sv_semantic_checker::begin_unit_scope() {
+    unit_declared_.clear();
+    unit_resolved_.clear();
+    unit_forwards_.clear();
+    unit_wildcard_import_ = false;
+    pending_unit_names_.clear();
+}
+
+void sv_semantic_checker::declare_unit_name(const std::string &name) {
+    unit_declared_.insert(name);
+    unit_resolved_.insert(name);
+}
+
+void sv_semantic_checker::declare_unit_forward(const std::string &name, unsigned int line) {
+    unit_declared_.insert(name);
+    unit_forwards_.emplace_back(name, line);
+}
+
+bool sv_semantic_checker::check_unit_reference(
+    const std::string &file, unsigned int line, const std::string &name) {
+    if (opts_.disable_semantic_checks || unit_wildcard_import_) return false;
+    if (unit_declared_.contains(name)) return false;
+    if (opts_.defer_unit_name_errors) {
+        pending_unit_names_.push_back({name, line, false});
+        return false;
+    }
+    record_violation(
+        file, line, violations_, semantic_error_code::undefined_identifier,
+        "'" + name + "' is not declared");
+    return true;
+}
+
+bool sv_semantic_checker::finish_unit_scope(const std::string &file) {
+    if (opts_.disable_semantic_checks) return false;
+    bool fired = false;
+    for (const auto &[name, line] : unit_forwards_) {
+        if (unit_resolved_.contains(name)) continue;
+        if (opts_.defer_unit_name_errors) {
+            pending_unit_names_.push_back({name, line, true});
+            continue;
+        }
+        record_violation(
+            file, line, violations_, semantic_error_code::unresolved_forward_typedef,
+            "forward typedef '" + name + "' is never resolved to a data type");
+        fired = true;
+    }
+    return fired;
 }

@@ -111,6 +111,7 @@ private:
     void run_macro_fixpoint();    void validation_sweep();
     void invalidate_stale_macros();
     void report_quarantine_errors();
+    void report_unresolved_unit_names();
     std::string macro_table_fingerprint() const;
 
     // File type discrimination methods
