@@ -322,6 +322,9 @@ private:
     // Set while walking a class-scope property declaration whose type ranging
     // was opened in enterData_declaration; consumed by the matching exit.
     bool capturing_class_property = false;
+    // Port/net/variable conflicts directly inside one module, task or function.
+    void check_scope_declarations(antlr4::ParserRuleContext *scope, bool is_tf_scope);
+
     bool had_error = false;
     // Parse options (strict mode disables the lenient workarounds); unit
     // tests that drive the visitor directly keep the default lenient set.

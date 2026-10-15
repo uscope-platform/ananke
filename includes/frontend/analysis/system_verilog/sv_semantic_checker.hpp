@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "data_model/hdl_file.hpp"
+#include "frontend/analysis/system_verilog/sv_scope_declaration.hpp"
 #include "data_model/parse_options.hpp"
 
 class hdl_type;
@@ -43,6 +44,7 @@ enum class semantic_error_code {
     timescale_precision_exceeds_unit = 6,
     undefined_identifier = 7,
     unresolved_forward_typedef = 8,
+    conflicting_declaration = 9,
     // Future rules append here.
 };
 
@@ -152,6 +154,21 @@ public:
     [[nodiscard]] const std::vector<unresolved_unit_name> &get_pending_unit_names() const {
         return pending_unit_names_;
     }
+
+    // IEEE 1800-2017 §23.2.2.1 / §13.3: in one module, task or function
+    // scope a name may be declared once as a port and once as a net or
+    // variable. A second port declaration, a second net/variable declaration,
+    // a net/variable declaration for a port that already has a type, a
+    // non-vector type or a different packed range for a port declared with
+    // a range all conflict. Logs `file:line: error: ...` per conflicting
+    // name, records the violations and returns true if any fired. Ranges are
+    // only compared when both are plain literal ranges (`[7:0]`): anything
+    // else needs elaboration, so it is given the benefit of the doubt.
+    // In a task or function (`is_tf_scope`) a port without a range may take
+    // its range from the later declaration (`input n; reg [7:0] n;`); in a
+    // module that is a mismatch.
+    [[nodiscard]] bool check_scope_declarations(
+        const std::string &file, const std::vector<scope_declaration> &declarations, bool is_tf_scope = false);
 
     [[nodiscard]] bool has_violations() const { return !violations_.empty(); }
     [[nodiscard]] const std::vector<semantic_violation> &get_violations() const {

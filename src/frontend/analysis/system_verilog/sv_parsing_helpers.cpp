@@ -208,3 +208,148 @@ namespace sv_parsing_helpers {
     }
 
 }
+
+namespace {
+
+using namespace mgp_sv;
+
+struct type_info {
+    bool explicit_type = false;
+    bool vector_type = true;
+    std::string range;
+};
+
+std::string join_dimensions(const std::vector<sv2017::Packed_dimensionContext *> &dims) {
+    std::string out;
+    for (auto *d : dims) out += d->getText();
+    return out;
+}
+
+std::string join_dimensions(const std::vector<sv2017::Variable_dimensionContext *> &dims) {
+    std::string out;
+    for (auto *d : dims) out += d->getText();
+    return out;
+}
+
+// `integer`, `real`, enums, structs, named types and strings take no
+// packed range; only net/reg/logic/bit (or no type at all) do.
+type_info describe_type(sv2017::Data_type_or_implicitContext *dti) {
+    type_info info;
+    if (!dti) return info;
+    if (auto *implicit = dti->implicit_data_type()) {
+        info.range = join_dimensions(implicit->packed_dimension());
+        return info;
+    }
+    auto *type = dti->data_type();
+    if (!type) return info;
+    info.explicit_type = true;
+    auto *primitive = type->data_type_primitive();
+    info.vector_type = primitive && primitive->integer_type() && primitive->integer_type()->integer_vector_type();
+    if (info.vector_type) info.range = join_dimensions(type->variable_dimension());
+    return info;
+}
+
+void add_declaration(
+    std::vector<scope_declaration> &out, sv2017::IdentifierContext *id, bool is_port, const type_info &type) {
+    if (!id) return;
+    scope_declaration d;
+    d.name = id->getText();
+    d.line = id->getStart()->getLine();
+    d.is_port = is_port;
+    d.explicit_type = is_port && type.explicit_type;
+    d.vector_type = type.vector_type;
+    d.range = type.range;
+    out.push_back(std::move(d));
+}
+
+// A scope the declarations inside belong to someone else.
+bool opens_nested_scope(antlr4::tree::ParseTree *node) {
+    return dynamic_cast<sv2017::Task_declarationContext *>(node) ||
+           dynamic_cast<sv2017::Function_declarationContext *>(node) ||
+           dynamic_cast<sv2017::Class_declarationContext *>(node) ||
+           dynamic_cast<sv2017::Module_declarationContext *>(node) ||
+           dynamic_cast<sv2017::Interface_declarationContext *>(node) ||
+           dynamic_cast<sv2017::Program_declarationContext *>(node) ||
+           dynamic_cast<sv2017::Checker_declarationContext *>(node) ||
+           dynamic_cast<sv2017::Seq_blockContext *>(node) ||
+           dynamic_cast<sv2017::Par_blockContext *>(node) ||
+           dynamic_cast<sv2017::Generate_begin_end_blockContext *>(node) ||
+           dynamic_cast<sv2017::Loop_generate_constructContext *>(node) ||
+           dynamic_cast<sv2017::Conditional_generate_constructContext *>(node) ||
+           dynamic_cast<sv2017::Always_constructContext *>(node) ||
+           dynamic_cast<sv2017::Initial_constructContext *>(node) ||
+           dynamic_cast<sv2017::Final_constructContext *>(node) ||
+           dynamic_cast<sv2017::Specify_blockContext *>(node) ||
+           dynamic_cast<sv2017::Covergroup_declarationContext *>(node) ||
+           dynamic_cast<sv2017::Rs_code_blockContext *>(node);
+}
+
+void collect(antlr4::tree::ParseTree *node, std::vector<scope_declaration> &out) {
+    if (auto *port = dynamic_cast<sv2017::Nonansi_port_declarationContext *>(node)) {
+        type_info type;
+        if (auto *t = port->net_or_var_data_type()) {
+            type = describe_type(t->data_type_or_implicit());
+            if (t->net_type() || t->KW_VAR() || t->KW_INTERCONNECT()) type.explicit_type = true;
+            if (auto *implicit = t->implicit_data_type()) type.range = join_dimensions(implicit->packed_dimension());
+        } else if (auto *t = port->net_port_type()) {
+            type = describe_type(t->data_type_or_implicit());
+            if (t->net_type() || t->KW_INTERCONNECT()) type.explicit_type = true;
+            if (auto *implicit = t->implicit_data_type()) type.range = join_dimensions(implicit->packed_dimension());
+        } else if (port->var_data_type()) {
+            type.explicit_type = true;
+        } else if (port->KW_INPUT() == nullptr && port->KW_OUTPUT() == nullptr && port->KW_INOUT() == nullptr &&
+                   port->KW_REF() == nullptr) {
+            return; // interface port
+        }
+        if (auto *ids = port->list_of_variable_identifiers()) {
+            for (auto *item : ids->list_of_variable_identifiers_item()) add_declaration(out, item->identifier(), true, type);
+        } else if (auto *pids = port->list_of_variable_port_identifiers()) {
+            for (auto *item : pids->list_of_tf_variable_identifiers()->list_of_tf_variable_identifiers_item()) {
+                add_declaration(out, item->identifier(), true, type);
+            }
+        }
+        return;
+    }
+    if (auto *tf = dynamic_cast<sv2017::Tf_port_declarationContext *>(node)) {
+        auto type = describe_type(tf->data_type_or_implicit());
+        if (tf->KW_VAR()) type.explicit_type = true;
+        for (auto *item : tf->list_of_tf_variable_identifiers()->list_of_tf_variable_identifiers_item()) {
+            add_declaration(out, item->identifier(), true, type);
+        }
+        return;
+    }
+    if (auto *net = dynamic_cast<sv2017::Net_declarationContext *>(node)) {
+        if (net->KW_INTERCONNECT() || !net->list_of_net_decl_assignments()) return;
+        type_info type;
+        if (net->net_type()) type = describe_type(net->data_type_or_implicit());
+        else type.vector_type = false; // user-defined nettype
+        for (auto *a : net->list_of_net_decl_assignments()->net_decl_assignment()) {
+            add_declaration(out, a->identifier(), false, type);
+        }
+        return;
+    }
+    if (auto *data = dynamic_cast<sv2017::Data_declarationContext *>(node)) {
+        if (auto *list = data->list_of_variable_decl_assignments()) {
+            auto type = describe_type(data->data_type_or_implicit());
+            for (auto *a : list->variable_decl_assignment()) add_declaration(out, a->identifier(), false, type);
+        }
+        return;
+    }
+    for (auto *child : node->children) {
+        if (!opens_nested_scope(child)) collect(child, out);
+    }
+}
+
+} // namespace
+
+namespace sv_parsing_helpers {
+    std::vector<scope_declaration> collect_scope_declarations(antlr4::ParserRuleContext *scope) {
+        std::vector<scope_declaration> out;
+        if (scope) {
+            for (auto *child : scope->children) {
+                if (!opens_nested_scope(child)) collect(child, out);
+            }
+        }
+        return out;
+    }
+}

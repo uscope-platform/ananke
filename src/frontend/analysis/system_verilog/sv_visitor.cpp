@@ -185,6 +185,7 @@ void sv_visitor::enterModule_declaration(sv2017::Module_declarationContext *ctx)
     size_t line_number = ctx->getStart()->getLine();
     auto module_name = ctx->module_header_common()->identifier()->getText();
     modules_factory.new_module(module_name, line_number);
+    check_scope_declarations(ctx, false);
 }
 
 
@@ -1185,7 +1186,15 @@ void sv_visitor::exitInterface_class_declaration(sv2017::Interface_class_declara
     file_finished_class(classes_factory.get_class());
 }
 
+void sv_visitor::check_scope_declarations(antlr4::ParserRuleContext *scope, bool is_tf_scope) {
+    if (semantic_checker.check_scope_declarations(
+            current_file, sv_parsing_helpers::collect_scope_declarations(scope), is_tf_scope)) {
+        had_error = true;
+    }
+}
+
 void sv_visitor::enterTask_declaration(sv2017::Task_declarationContext *ctx) {
+    check_scope_declarations(ctx, true);
     in_method_body++;
 }
 
@@ -2493,6 +2502,7 @@ void sv_visitor::enterUntyped_function_declaration(sv2017::Untyped_function_decl
 }
 
 void sv_visitor::exitFunction_declaration(sv2017::Function_declarationContext *ctx) {
+    check_scope_declarations(ctx, true);
     auto func_type = ctx->function_data_type_or_implicit();
     std::string ret_type_name;
     if (func_type) {

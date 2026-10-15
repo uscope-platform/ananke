@@ -19,7 +19,10 @@
 #include <memory>
 #include <string>
 
+#include <vector>
+
 #include "mgp_sv/sv2017.h"
+#include "frontend/analysis/system_verilog/sv_scope_declaration.hpp"
 #include "data_model/HDL/parameters/common/qualified_identifier.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
@@ -31,6 +34,11 @@
 namespace sv_parsing_helpers {
     qualified_identifier parse_qualified_identifier(mgp_sv::sv2017::Package_or_class_scoped_pathContext *ctx);
     std::shared_ptr<Expression_base> make_value(const std::string &s);
+
+    // Port, net and variable declarations made directly in a module, task or
+    // function scope, in source order. Nested scopes (blocks, generate
+    // constructs, tasks, functions, classes, ...) are not entered.
+    std::vector<scope_declaration> collect_scope_declarations(antlr4::ParserRuleContext *scope);
 }
 
 #endif

@@ -621,3 +621,66 @@ TEST(sv_semantic_checks, deferred_unit_names_still_error_in_single_file_mode) {
     sv_analyzer analyzer;
     EXPECT_FALSE(analyzer.analyze("test.sv", "typedef uvm_action act_t;\nmodule test; endmodule\n").has_value());
 }
+
+namespace {
+bool declarations_rejected(const std::string &source) {
+    sv_analyzer analyzer;
+    return !analyzer.analyze("test.sv", source).has_value();
+}
+} // namespace
+
+TEST(sv_semantic_checks, nonansi_port_legal_completions_accepted) {
+    // ivtest module_nonansi_*1/2 and vec1/2: a bare port plus one matching
+    // net/variable declaration, in either order.
+    EXPECT_FALSE(declarations_rejected("module t(x); input x; wire x; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t(x); output x; integer x; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t(x); real x; output x; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t(x); output [7:0] x; reg [7:0] x; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t(x); reg [7:0] x; output [7:0] x; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t(x); output [W-1:0] x; reg [W-1:0] x; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t; task t1; input x; string x; endtask endmodule"));
+}
+
+TEST(sv_semantic_checks, nonansi_port_declared_twice_rejected) {
+    EXPECT_TRUE(declarations_rejected("module t(x); input x; input x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(x); output integer x; output integer x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; task t1; input x; input x; endtask endmodule"));
+}
+
+TEST(sv_semantic_checks, net_or_variable_declared_twice_rejected) {
+    EXPECT_TRUE(declarations_rejected("module t(x); input x; wire x; wire x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(x); input x; wire x; reg x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; wire [7:0] v, v; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg [7:0] v, v; endmodule"));
+}
+
+TEST(sv_semantic_checks, typed_port_redeclared_rejected) {
+    EXPECT_TRUE(declarations_rejected("module t(x); output real x; real x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(x); output real x; integer x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(x); wire integer x; input integer x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; task t1; real x; output integer x; endtask endmodule"));
+}
+
+TEST(sv_semantic_checks, port_range_conflicts_with_type_rejected) {
+    EXPECT_TRUE(declarations_rejected("module t(x); output [31:0] x; integer x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(x); output [15:0] x; shortint x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(x); output [3:0] x; reg [7:0] x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(x); output [7:0] x; reg x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(x); output x; reg [7:0] x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; input [1:0] x; wire [3:0] x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; task t1; input [7:0] x; reg x; endtask endmodule"));
+}
+
+TEST(sv_semantic_checks, same_name_in_separate_scopes_accepted) {
+    EXPECT_FALSE(declarations_rejected(
+        "module t; reg x; initial begin integer i; end initial begin integer i; end "
+        "task a; input v; reg w; endtask task b; input v; reg w; endtask endmodule"));
+}
+
+TEST(sv_semantic_checks, tf_port_takes_range_from_later_declaration) {
+    // ivtest br_gh788 / pr1841300: legal in tasks and functions, unlike modules.
+    EXPECT_FALSE(declarations_rejected("module t; task p; input n; reg [7:0] n; endtask endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; function [4:0] f; input l; reg [4:0] l; f = ~l; endfunction endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; function [4:0] f; input [7:0] l; reg l; f = 0; endfunction endmodule"));
+}

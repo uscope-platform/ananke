@@ -17,7 +17,10 @@
 
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <cctype>
+#include <map>
+#include <regex>
 
 #include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
 #include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
@@ -109,6 +112,7 @@ int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     case semantic_error_code::timescale_precision_exceeds_unit:
     case semantic_error_code::undefined_identifier:
     case semantic_error_code::unresolved_forward_typedef:
+    case semantic_error_code::conflicting_declaration:
         return 56;
     }
     return 56;
@@ -228,6 +232,68 @@ bool sv_semantic_checker::finish_unit_scope(const std::string &file) {
             file, line, violations_, semantic_error_code::unresolved_forward_typedef,
             "forward typedef '" + name + "' is never resolved to a data type");
         fired = true;
+    }
+    return fired;
+}
+
+namespace {
+
+bool is_literal_range(const std::string &range) {
+    static const std::regex literal(R"((\[[0-9]+:[0-9]+\])+)");
+    return std::regex_match(range, literal);
+}
+
+} // namespace
+
+bool sv_semantic_checker::check_scope_declarations(
+    const std::string &file, const std::vector<scope_declaration> &declarations, bool is_tf_scope) {
+    if (opts_.disable_semantic_checks) return false;
+
+    struct entry {
+        std::vector<const scope_declaration *> ports;
+        std::vector<const scope_declaration *> objects;
+    };
+    std::map<std::string, entry> by_name;
+    for (const auto &d : declarations) {
+        (d.is_port ? by_name[d.name].ports : by_name[d.name].objects).push_back(&d);
+    }
+
+    bool fired = false;
+    auto report = [&](unsigned int line, const std::string &message) {
+        record_violation(file, line, violations_, semantic_error_code::conflicting_declaration, message);
+        fired = true;
+    };
+    for (const auto &decl : declarations) {
+        const auto &e = by_name[decl.name];
+        // Reported once per name, on the declaration that causes the conflict.
+        const bool is_first_report = (decl.is_port ? e.ports : e.objects).front() == &decl;
+        if (is_first_report) {
+            if (e.ports.size() > 1) {
+                report(e.ports[1]->line, "port '" + decl.name + "' is declared more than once");
+                continue;
+            }
+            if (e.objects.size() > 1) {
+                report(e.objects[1]->line, "'" + decl.name + "' is already declared in this scope");
+                continue;
+            }
+            if (e.ports.empty() || e.objects.empty()) continue;
+            const auto &port = *e.ports.front();
+            const auto &object = *e.objects.front();
+            const unsigned int line = std::max(port.line, object.line);
+            if (port.explicit_type) {
+                report(line, "'" + decl.name + "' is a port declared with a type and cannot be declared again");
+            } else if (!object.vector_type && !port.range.empty()) {
+                report(line, "port '" + decl.name + "' has packed dimensions " + port.range +
+                                 " which conflict with its non-vector type declaration");
+            } else if (object.vector_type && port.range.empty() != object.range.empty() &&
+                       !(is_tf_scope && port.range.empty())) {
+                report(line, "packed dimensions of '" + decl.name + "' differ between its port declaration and its type declaration");
+            } else if (object.vector_type && port.range != object.range &&
+                       is_literal_range(port.range) && is_literal_range(object.range)) {
+                report(line, "packed dimensions " + port.range + " of port '" + decl.name +
+                                 "' do not match its type declaration " + object.range);
+            }
+        }
     }
     return fired;
 }
