@@ -256,6 +256,86 @@ TEST(sv_semantic_checks, enum_parameterized_base_skipped_safely) {
     EXPECT_TRUE(analyzer.analyze("test.sv", test_pattern).has_value());
 }
 
+TEST(sv_semantic_checks, enum_typedef_base_resolves_width) {
+    // uvm_resource.svh shape: an enum over a typedef base with matching
+    // sized literals must resolve the base (bit[1:0]/2) instead of
+    // defaulting to int/32 and misfiring.
+    auto test_pattern = R"(
+        module top();
+            typedef bit[1:0] override_t;
+            typedef enum override_t { TYPE_OVERRIDE = 2'b01,
+                                      NAME_OVERRIDE = 2'b10 } override_e;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    EXPECT_TRUE(analyzer.analyze("test.sv", test_pattern).has_value());
+}
+
+TEST(sv_semantic_checks, enum_unresolvable_typedef_base_skipped_safely) {
+    // A base the single-file parse cannot resolve (another package, or a
+    // qualified pkg::t) gets the benefit of the doubt rather than being
+    // checked against the default int base.
+    auto test_pattern = R"(
+        package other_pkg;
+            typedef bit[1:0] some_t;
+        endpackage
+        module top();
+            typedef enum some_pkg_t { A = 2'b01, B = 2'b10 } my_e;
+            typedef enum other_pkg::some_t { C = 2'b01, D = 2'b10 } my_e2;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    EXPECT_TRUE(analyzer.analyze("test.sv", test_pattern).has_value());
+}
+
+TEST(sv_semantic_checks, enum_in_interface_body_uses_declared_width) {
+    // soc_ifc_cov_if.sv shape: a direction-less enum declaration in an
+    // interface body parses as ansi_port_declaration, not
+    // data_declaration. Its base must still resolve (bit[3:0]/4) instead
+    // of defaulting to int/32.
+    auto test_pattern = R"(
+        interface cov_if;
+            enum bit [3:0] {IDLE = '0, AHB_RD = 4'h8, AHB_WR = 4'h4,
+                            AXI_RD = 4'h2, AXI_WR = 4'h1} bus_event_e;
+        endinterface
+    )";
+
+    sv_analyzer analyzer;
+    EXPECT_TRUE(analyzer.analyze("test.sv", test_pattern).has_value());
+}
+
+TEST(sv_semantic_checks, enum_in_interface_body_mismatch_rejected) {
+    // The interface path must still catch genuine mismatches, reported
+    // against the real base width.
+    auto test_pattern = R"(
+        interface bad_if;
+            enum bit [3:0] {A = 2'b01, B = 4'h2} my_e;
+        endinterface
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("test.sv", test_pattern);
+    EXPECT_FALSE(result.has_value());
+    const auto &violations = analyzer.get_semantic_violations();
+    ASSERT_FALSE(violations.empty());
+    EXPECT_EQ(violations[0].code, semantic_error_code::enum_value_size_mismatch);
+    EXPECT_NE(violations[0].message.find("4"), std::string::npos);
+}
+
+TEST(sv_semantic_checks, enum_header_port_uses_declared_width) {
+    // Enum-typed ANSI header ports take the same path: matching literals
+    // stay legal.
+    auto test_pattern = R"(
+        module m(input enum bit [1:0] {A = 2'b00, B = 2'b01} p, input logic clk);
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    EXPECT_TRUE(analyzer.analyze("test.sv", test_pattern).has_value());
+}
+
 TEST(sv_semantic_checks, enum_mismatch_passes_when_disabled) {
     auto test_pattern = R"(
         module top();

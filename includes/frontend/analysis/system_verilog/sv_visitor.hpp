@@ -103,6 +103,7 @@ public:
     void enterParam_assignment(sv2017::Param_assignmentContext *ctx) override;
     void exitParam_assignment(sv2017::Param_assignmentContext *ctx) override;
     void exitAnsi_port_declaration(sv2017::Ansi_port_declarationContext *ctx) override;
+    void enterAnsi_port_declaration(sv2017::Ansi_port_declarationContext *ctx) override;
 
     void enterExpression(sv2017::ExpressionContext *ctx) override;
     void exitExpression(sv2017::ExpressionContext *ctx) override;
@@ -362,6 +363,12 @@ private:
 
     bool in_anonymous_struct = false;
     bool top_level_struct_started = false;
+    // Set while walking an enum-typed ANSI port declaration whose composite
+    // was opened in enterAnsi_port_declaration; consumed by the matching
+    // exit (covers module header ports and direction-less interface body
+    // declarations, which parse as ansi_port_declaration rather than
+    // data_declaration).
+    bool ansi_port_enum_open = false;
     int do_capture_depth = 0;
 
     std::shared_ptr<HDL_parameter> pending_composite_type_param;

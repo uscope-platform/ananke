@@ -43,8 +43,11 @@ void Type_engine::open_composite_member() {    if (composite_type_stack.empty())
             auto &base = pending_enum_base->as<HDL_simple_type>();
             base.set_packed_dimensions(packed);
             base.set_unpacked_dimensions(unpacked);
-            current_enum().base_type = pending_enum_base;
         }
+        // Assign unconditionally: a non-simple pending base is an external
+        // (unresolvable typedef) reference, which must survive so the
+        // semantic checker skips the enum instead of defaulting to int.
+        current_enum().base_type = pending_enum_base;
         pending_enum_base.reset();
         r_factory.stop();
         r_factory.clear();

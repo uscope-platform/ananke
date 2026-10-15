@@ -417,6 +417,30 @@ void sv_visitor::capture_enum_base(sv2017::Data_typeContext *dt) {
     if (!dt) return;
     auto *eb = dt->enum_base_type();
     if (!eb) return;
+    if (auto *scoped = eb->package_or_class_scoped_id()) {
+        // Typedef base (e.g. `typedef enum override_t` over
+        // `typedef bit[1:0] override_t` in uvm_resource.svh): resolve
+        // through the registry so the enum size check sees the real
+        // width instead of defaulting to int. Qualified (pkg::t) or
+        // not-yet-declared names stay an external reference, which the
+        // semantic checker gives the benefit of the doubt (unresolvable
+        // bases never fire) instead of misfiring against int/32.
+        const bool qualified = !scoped->DOUBLE_COLON().empty();
+        const std::string name = qualified ? "" : scoped->getText();
+        if (!name.empty() && type_engine.has_type(name)) {
+            auto resolved = type_engine.get_type(name);
+            if (resolved && resolved->is<HDL_simple_type>()) {
+                type_engine.set_pending_enum_base(
+                    std::make_shared<HDL_simple_type>(resolved->as<HDL_simple_type>()));
+                type_engine.start_range();
+                return;
+            }
+        }
+        type_engine.set_pending_enum_base(
+            std::make_shared<HDL_external_type>(qualified_identifier(scoped->getText())));
+        type_engine.start_range();
+        return;
+    }
     std::string base;
     if (eb->integer_vector_type()) base = eb->integer_vector_type()->getText();
     else if (eb->integer_atom_type()) base = eb->integer_atom_type()->getText();
@@ -1600,7 +1624,27 @@ void sv_visitor::exitOperator_log_or(sv2017::Operator_log_orContext *ctx) {
     process_operation(Expression_v2::expression_operator::logical_or);
 };
 
+void sv_visitor::enterAnsi_port_declaration(sv2017::Ansi_port_declarationContext *ctx) {
+    // Enum-typed ports (module headers) and direction-less enum declarations
+    // in interface bodies both reduce to ansi_port_declaration instead of
+    // data_declaration. Track the composite like enterData_declaration does
+    // so member checks see the real base; the finished type is discarded on
+    // exit (anonymous) to keep the filed model unchanged.
+    auto *novdt = ctx ? ctx->net_or_var_data_type() : nullptr;
+    auto *dtoi = novdt ? novdt->data_type_or_implicit() : nullptr;
+    auto *dt = dtoi ? dtoi->data_type() : nullptr;
+    if (dt && dt->KW_ENUM()) {
+        type_engine.start_composite_type_declaration(Type_engine::enum_type);
+        capture_enum_base(dt);
+        ansi_port_enum_open = true;
+    }
+}
+
 void sv_visitor::exitAnsi_port_declaration(sv2017::Ansi_port_declarationContext *ctx) {
+    if (ansi_port_enum_open) {
+        ansi_port_enum_open = false;
+        if (type_engine.active()) type_engine.stop_composite_type_declaration("", true);
+    }
     if(current_declaration_type == "module"){
         std::string port_name = ctx->port_identifier()->getText();
         HDL_port port;
