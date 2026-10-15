@@ -810,3 +810,76 @@ TEST(sv_semantic_checks, foreach_ignores_same_name_declared_in_other_scopes) {
     EXPECT_FALSE(declarations_rejected(
         "module t; bit addr; function void g(ref bit [7:0] addr[]); foreach (addr[i]) begin end endfunction endmodule"));
 }
+
+TEST(sv_semantic_checks, legal_constant_expressions_accepted) {
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter W = 8, parameter D = W * 2)(input [W-1:0] a, output reg [D-1:0] y); "
+        "localparam N = $clog2(W); reg [N:0] cnt; wire [W-1:0] w [D-1:0]; integer i; reg [7:0] v; reg q [$]; "
+        "genvar g; generate for (g = 0; g < 2; g = g + 1) begin : b wire [g:0] z; end endgenerate "
+        "initial begin v[i +: 2] = 0; v[3:0] = a[3:0]; end "
+        "assign y = {2{a}}; assign y[7:0] = {D{1'b0}}; "
+        "parameter P = $bits(v); endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t; wire [3:0] a; wire [7:0] b; assign b = {4'b0, {0{a}}, a}; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; int q [$]; int n; initial begin q = {1, 2, 3}; n = q[0:n].size(); end endmodule"));
+}
+
+TEST(sv_semantic_checks, variables_in_constant_contexts_rejected) {
+    EXPECT_TRUE(declarations_rejected("module t; integer v; parameter p = v; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; integer n; (* attr = n *) initial $display(n); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(input [2:0] n, input [7:n] a); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(input [2:0] n); wire [n:0] w [7:0]; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(input [2:0] n); wire [7:0] w [7:n]; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(input [2:0] n, input [7:0] a, output reg [7:0] o); initial o[7:1] = a[7:n]; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(input [2:0] n, input [7:0] a, output reg [7:0] o); initial o[n:0] = a[7:1]; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(input [2:0] n, input [7:0] a); wire [7:0] arr [7:0]; assign arr[n][0] = a[0]; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg [15:0] a; reg [15:0] m; always @(*) a[15*m:0] = 1; endmodule"));
+}
+
+TEST(sv_semantic_checks, invalid_widths_and_counts_rejected) {
+    EXPECT_TRUE(declarations_rejected("module t; localparam integer X = 32'b01x; reg [X:0] r; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg [0] r; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg [] r; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg [$] r; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; typedef logic [-1] T; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t(input [] a); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; localparam integer N = 0; int x, y; initial y = N'(x); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; localparam integer N = -1; int x, y; initial y = N'(x); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; localparam integer N = 32'hx; int x, y; initial y = N'(x); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; localparam wid = 9; wire [31:0] a = {(wid-16){8'b0}}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; localparam rep = 4'bx; wire [31:0] b = {rep{8'hab}}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("package p; parameter wid = 9; wire [31:0] a = {(wid-16){8'b0}}; endpackage"));
+    EXPECT_TRUE(declarations_rejected("module t; reg [7:0] r; initial r = {0{1'b1}}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg [7:0] r; initial r = {{0{1'b1}}}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg [31:0] r; wire s; initial r = {{2{{0{s}}}}, 16'h1}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; localparam o = 1; localparam w = 0; integer v; reg [3:0] a; initial v = a[o +: w]; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; parameter real a = 1.0; parameter real b = 2.0; parameter real c = {a, b}; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; parameter real c = {2.0, 1.0}; endmodule"));
+}
+
+TEST(sv_semantic_checks, module_parameter_defaults_are_not_final_values) {
+    // bsg_* style: a negative or zero default means "must be overridden", so a module parameter's
+    // default is never judged. Only localparams and package parameters are.
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter n_p = -1, parameter w_p = 0, parameter x_p = 4'bx)(input [7:0] a, output [7:0] y); "
+        "wire [7:0] b = {(n_p){a}}; wire [3:0] c = a[3 +: w_p]; wire [3:0] d [x_p:0]; int q; initial q = n_p'(a); endmodule"));
+}
+
+TEST(sv_semantic_checks, dpi_import_formals_do_not_shadow_module_names) {
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter longint cycle_p = 4); "
+        "import \"DPI-C\" function int reg_clock(input longint cycle_p, input string h); "
+        "localparam longint lp = {32'b0, cycle_p[31:0]}; endmodule"));
+}
+
+TEST(sv_semantic_checks, zero_width_in_conditional_generate_is_not_judged) {
+    // scr1: the zero-width select sits in a branch that is not elaborated when RO_BITS == 0.
+    EXPECT_FALSE(declarations_rejected(
+        "module t; localparam RO = 0; logic [31:0] v; wire [3:0] o; "
+        "if (RO > 0) begin : g assign o = v[2 +: RO]; end endmodule"));
+}
+
+TEST(sv_semantic_checks, real_queue_literal_is_not_a_real_concatenation) {
+    // ivtest sv_queue_real: `{1.0, 2.0}` initialises a queue of real.
+    EXPECT_FALSE(declarations_rejected("module t; real q [$]; initial q = {1.0, 2.0}; endmodule"));
+}

@@ -326,6 +326,8 @@ private:
     // Port/net/variable conflicts directly inside one module, task or function.
     void check_scope_declarations(antlr4::ParserRuleContext *scope, bool is_tf_scope);
     void check_variable_declaration_shapes(sv2017::Data_declarationContext *ctx);
+    // Constant-expression and width rules plus the name tables they need (sv_constant_hooks.cpp).
+    void check_constant_context(antlr4::ParserRuleContext *ctx);
 
     bool had_error = false;
     // Parse options (strict mode disables the lenient workarounds); unit

@@ -521,6 +521,25 @@ void find_misuse(antlr4::tree::ParseTree *node, const std::set<std::string> &loc
 }  // namespace
 
 namespace sv_parsing_helpers {
+    std::vector<const void *> enclosing_scopes(antlr4::tree::ParseTree *node) {
+        std::vector<const void *> scopes;
+        for (auto *p = node->parent; p; p = p->parent) {
+            if (p->getTreeType() != antlr4::tree::ParseTreeType::RULE) continue;
+            switch (static_cast<antlr4::ParserRuleContext *>(p)->getRuleIndex()) {
+            case sv2017::RuleModule_declaration: case sv2017::RuleInterface_declaration:
+            case sv2017::RuleProgram_declaration: case sv2017::RulePackage_declaration:
+            case sv2017::RuleClass_declaration: case sv2017::RuleTask_declaration:
+            case sv2017::RuleFunction_declaration: case sv2017::RuleSeq_block: case sv2017::RulePar_block:
+            case sv2017::RuleGenerate_begin_end_block: case sv2017::RuleChecker_declaration:
+                scopes.push_back(p);
+                break;
+            default:
+                if (p->parent == nullptr) scopes.push_back(p);
+            }
+        }
+        return scopes;
+    }
+
     std::vector<automatic_misuse> find_automatic_misuse(antlr4::ParserRuleContext *scope) {
         std::vector<automatic_misuse> out;
         bool automatic = false;

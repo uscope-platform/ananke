@@ -115,6 +115,7 @@ int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     case semantic_error_code::conflicting_declaration:
     case semantic_error_code::end_label_mismatch:
     case semantic_error_code::invalid_type_use:
+    case semantic_error_code::invalid_constant_expression:
         return 56;
     }
     return 56;

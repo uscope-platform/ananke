@@ -48,6 +48,7 @@ enum class semantic_error_code {
     conflicting_declaration = 9,
     end_label_mismatch = 10,
     invalid_type_use = 11,
+    invalid_constant_expression = 12,
     // Future rules append here.
 };
 
@@ -74,6 +75,7 @@ public:
         typedefs_.clear();
         class_names_.clear();
         array_dims_.clear();
+        names_.clear();
         begin_unit_scope();
     }
 
@@ -233,6 +235,47 @@ public:
     // Logs and records one violation per misuse; returns true if any.
     [[nodiscard]] bool check_automatic_use(const std::string &file, const std::vector<automatic_misuse> &misuses);
 
+    // ---- Constant expressions (IEEE 1800-2017 §11.2.1, §11.4.12, §6.9) --------------------------------
+    // Names are recorded per scope construct (an opaque id) as the visitor meets their declarations, so a
+    // lookup walks `chain` (innermost scope first) and a name that was never recorded is simply unknown.
+    using scope_chain = std::vector<const void *>;
+    // parameter / localparam / genvar / enum member. `value_text` may be empty; an evaluable value is kept
+    // so later dimensions, replication counts and casts can use it.
+    void declare_constant_name(
+        const scope_chain &chain, const std::string &name, const std::string &value_text, bool is_real);
+    // Variable, net or port. `plain_vector` is true for a fixed-size integral object (the only kind whose
+    // part-selects need constant bounds; queues and dynamic arrays slice with variables).
+    void declare_variable_name(const scope_chain &chain, const std::string &name, bool plain_vector);
+    // `text` must be a constant expression: no identifier that resolves to a variable, net or port.
+    [[nodiscard]] bool check_constant_use(
+        const std::string &file, unsigned int line, const std::string &text, const scope_chain &chain,
+        const std::string &what);
+    // A declared dimension `[inner]`. Packed ones must be `[msb:lsb]`; bounds must be constant and not x/z.
+    // `judge_values` is false inside conditional generate branches: a width that is zero or negative there may
+    // belong to a branch that is never elaborated, so only structural problems are reported.
+    [[nodiscard]] bool check_dimension(
+        const std::string &file, unsigned int line, const std::string &inner, bool packed, const scope_chain &chain,
+        bool judge_values = true);
+    // A part-select `object[a:b]` / `object[a+:w]` / `object[a-:w]`.
+    [[nodiscard]] bool check_part_select(
+        const std::string &file, unsigned int line, const std::string &object, const std::string &separator,
+        const std::string &first, const std::string &second, const scope_chain &chain, bool judge_values = true);
+    // `{count{...}}`: count may not be x/z or negative; zero only inside a concatenation with other operands.
+    [[nodiscard]] bool check_replication(
+        const std::string &file, unsigned int line, const std::string &count, bool zero_allowed,
+        const scope_chain &chain, bool judge_values = true);
+    // `N'(expr)`: N must be a positive, defined constant.
+    [[nodiscard]] bool check_size_cast(
+        const std::string &file, unsigned int line, const std::string &width, const scope_chain &chain,
+        bool judge_values = true);
+    // Real operands cannot be concatenated.
+    [[nodiscard]] bool check_concatenation_operands(
+        const std::string &file, unsigned int line, const std::vector<std::string> &operands,
+        const scope_chain &chain);
+    // Continuous assignment targets: bit/array indices must be constant.
+    [[nodiscard]] bool check_net_lvalue(
+        const std::string &file, unsigned int line, const std::string &lvalue, const scope_chain &chain);
+
     [[nodiscard]] bool has_violations() const { return !violations_.empty(); }
     [[nodiscard]] const std::vector<semantic_violation> &get_violations() const {
         return violations_;
@@ -254,6 +297,20 @@ private:
     std::map<std::string, typedef_shape> typedefs_;
     std::set<std::string> class_names_;
     std::map<std::string, std::vector<std::pair<const void *, int>>> array_dims_;
+    struct constant_value {
+        bool known = false;
+        bool xz = false;
+        bool real = false;
+        long long value = 0;
+    };
+    struct name_entry {
+        bool variable = false;
+        bool plain_vector = false;
+        constant_value value;
+    };
+    std::map<std::pair<const void *, std::string>, name_entry> names_;
+    [[nodiscard]] const name_entry *lookup_name(const scope_chain &chain, const std::string &name) const;
+    [[nodiscard]] constant_value evaluate_constant(const std::string &text, const scope_chain &chain) const;
     std::set<std::string> unit_declared_;
     std::set<std::string> unit_resolved_;
     std::vector<std::pair<std::string, unsigned int>> unit_forwards_;

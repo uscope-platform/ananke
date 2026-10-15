@@ -181,30 +181,7 @@ void sv_visitor::route_expression_component(const std::shared_ptr<Expression_bas
 
 
 // Assignment-pattern arity and foreach dimension bookkeeping for one variable declaration.
-namespace {
-bool is_scope_rule(size_t rule) {
-    switch (rule) {
-    case sv2017::RuleModule_declaration: case sv2017::RuleInterface_declaration: case sv2017::RuleProgram_declaration:
-    case sv2017::RulePackage_declaration: case sv2017::RuleClass_declaration: case sv2017::RuleTask_declaration:
-    case sv2017::RuleFunction_declaration: case sv2017::RuleSeq_block: case sv2017::RulePar_block:
-    case sv2017::RuleGenerate_begin_end_block: case sv2017::RuleChecker_declaration:
-        return true;
-    default:
-        return false;
-    }
-}
-
-// Scope constructs around `node`, innermost first (the unit root is the last entry).
-std::vector<const void *> enclosing_scopes(antlr4::tree::ParseTree *node) {
-    std::vector<const void *> scopes;
-    for (auto *p = node->parent; p; p = p->parent) {
-        if (p->getTreeType() != antlr4::tree::ParseTreeType::RULE) continue;
-        auto *rule = static_cast<antlr4::ParserRuleContext *>(p);
-        if (is_scope_rule(rule->getRuleIndex()) || p->parent == nullptr) scopes.push_back(p);
-    }
-    return scopes;
-}
-}  // namespace
+using sv_parsing_helpers::enclosing_scopes;
 
 void sv_visitor::check_variable_declaration_shapes(sv2017::Data_declarationContext *ctx) {
     auto *dti = ctx->data_type_or_implicit();
@@ -251,6 +228,7 @@ void sv_visitor::check_variable_declaration_shapes(sv2017::Data_declarationConte
 }
 
 void sv_visitor::enterEveryRule(antlr4::ParserRuleContext *ctx) {
+    check_constant_context(ctx);
     switch (ctx->getRuleIndex()) {
     case sv2017::RuleSeq_block:
     case sv2017::RulePar_block:

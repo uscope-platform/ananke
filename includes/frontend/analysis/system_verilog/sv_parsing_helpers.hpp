@@ -51,6 +51,10 @@ namespace sv_parsing_helpers {
     // Number of elements of a literal `[a:b]` dimension, -1 when it is not literal.
     int first_literal_dimension(mgp_sv::sv2017::Variable_dimensionContext *dim);
 
+    // Scope constructs around `node`, innermost first, ending with the unit root (the scope identity used by
+    // the semantic checker's name tables).
+    std::vector<const void *> enclosing_scopes(antlr4::tree::ParseTree *node);
+
     // Misuses of automatic variables in a `task automatic` / `function automatic`: nonblocking
     // assignments to them (or with them in the event control) and their use in procedural
     // continuous assignments. Empty for static tasks and functions.
