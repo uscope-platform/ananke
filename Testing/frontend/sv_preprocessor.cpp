@@ -3108,3 +3108,78 @@ TEST(preprocessor, predefined_coverage_macros_can_be_overridden) {
     EXPECT_FALSE(preproc.has_error());
     EXPECT_THAT(result, testing::HasSubstr("int i = 7;"));
 }
+
+TEST(preprocessor, line_directive_valid_forms_accepted) {
+    for (const char *ln : {"`line 1 \"somefile\" 2", "`line 123 \"someother\" 1", "`line 8273 \"somefile\" 0",
+                           "  `line 5 \"foo\" 2 // trailing comment"}) {
+        auto preproc = run_timescale_case(std::string(ln) + "\nmodule m; endmodule\n");
+        EXPECT_FALSE(preproc.has_error()) << ln;
+    }
+}
+
+TEST(preprocessor, line_directive_invalid_forms_are_fatal) {
+    // IEEE 1800 22.12 illegal cases.
+    for (const char *ln : {"`line 1 \"somefile\" 3", "`line 1 somefile 2", "`line -12 \"somefile\" 3",
+                           "`line 1 \"somefile\"", "`line 1", "`line", "`line 0 \"f\" 1",
+                           "`line 1 \"f\" 1 2"}) {
+        auto preproc = run_timescale_case(std::string(ln) + "\nmodule m; endmodule\n");
+        EXPECT_TRUE(preproc.has_fatal_error()) << ln;
+    }
+}
+
+TEST(preprocessor, line_directive_in_inactive_region_is_not_validated) {
+    auto preproc = run_timescale_case("`ifdef NOPE\n`line 1\n`endif\nmodule m; endmodule\n");
+    EXPECT_FALSE(preproc.has_error());
+}
+
+TEST(preprocessor, line_prefix_of_user_macro_is_not_the_directive) {
+    auto preproc = run_timescale_case("`define line_foo 1\nmodule m; wire w = `line_foo; endmodule\n");
+    EXPECT_FALSE(preproc.has_error());
+}
+
+TEST(preprocessor, line_directive_remaps_line_and_file_macros) {
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess(
+        "`line 100 \"foo.sv\" 1\n"
+        "int a = `__LINE__; string f = `__FILE__;\n"
+        "int b = `__LINE__;\n"
+        "`line 5 \"bar.sv\" 0\n"
+        "int c = `__LINE__; string g = `__FILE__;\n");
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::HasSubstr("int a = 100; string f = \"foo.sv\";"));
+    EXPECT_THAT(result, testing::HasSubstr("int b = 101;"));
+    EXPECT_THAT(result, testing::HasSubstr("int c = 5; string g = \"bar.sv\";"));
+}
+
+TEST(preprocessor, line_directive_is_not_applied_before_it_and_can_go_backwards) {
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess(
+        "\n\n\nint a = `__LINE__;\n"
+        "`line 1 \"x.sv\" 0\n"
+        "int b = `__LINE__;\n");
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::HasSubstr("int a = 4;"));
+    EXPECT_THAT(result, testing::HasSubstr("int b = 1;"));
+}
+
+TEST(preprocessor, line_directive_does_not_leak_out_of_an_include) {
+    namespace fs = std::filesystem;
+    auto dir = fs::temp_directory_path() / "ananke_line_include_test";
+    fs::create_directories(dir);
+    {
+        std::ofstream inc(dir / "inc.svh");
+        inc << "`line 900 \"inc_remapped.sv\" 1\nint inner = `__LINE__;\n";
+    }
+    sv_preprocessor preproc;
+    parse_options opts;
+    opts.include_directories = {dir.string()};
+    preproc.set_options(opts);
+    preproc.set_path((dir / "top.sv").string());
+    auto result = preproc.preprocess("`include \"inc.svh\"\nint outer = `__LINE__;\n");
+    fs::remove_all(dir);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_THAT(result, testing::HasSubstr("int inner = 900;"));
+    EXPECT_THAT(result, testing::HasSubstr("int outer = 2;"));
+}

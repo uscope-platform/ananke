@@ -122,6 +122,40 @@ static bool valid_timescale_args(std::string_view args) {
     return consume_time_value(args) && args.empty();
 }
 
+// IEEE 1800 22.12: `line number "filename" level, with number a positive
+// integer, filename a string literal and level 0, 1 or 2. `args` is the text
+// after the directive keyword, comments already stripped.
+struct line_args {
+    uint64_t number;
+    std::string file;
+    int level;
+};
+
+static std::optional<line_args> parse_line_args(std::string_view args) {
+    auto skip_ws = [&args] {
+        while (!args.empty() && (args.front() == ' ' || args.front() == '\t')) args.remove_prefix(1);
+    };
+    skip_ws();
+    size_t n = 0;
+    while (n < args.size() && args[n] >= '0' && args[n] <= '9') ++n;
+    // Positive, and short enough that the conversion cannot overflow.
+    if (n == 0 || n > 18 || args.substr(0, n).find_first_not_of('0') == std::string_view::npos) return std::nullopt;
+    line_args result{};
+    result.number = std::stoull(std::string(args.substr(0, n)));
+    args.remove_prefix(n);
+    skip_ws();
+    if (args.empty() || args.front() != '"') return std::nullopt;
+    size_t i = 1;
+    while (i < args.size() && args[i] != '"') i += (args[i] == '\\' ? 2 : 1);
+    if (i >= args.size()) return std::nullopt;
+    result.file = std::string(args.substr(1, i - 1));
+    args.remove_prefix(i + 1);
+    skip_ws();
+    if (args.size() != 1 || args[0] < '0' || args[0] > '2') return std::nullopt;
+    result.level = args[0] - '0';
+    return result;
+}
+
 // Include nesting depth is orthogonal to the cycle guards below: guards catch
 // repeats, but a deep *acyclic* chain (machine-generated file lists) would
 // still smash the stack with no diagnostic. Same backstop pattern as the
@@ -180,6 +214,25 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         }
     }
 
+    void sv_preprocessor::check_line(std::string_view directive_line, macro_processor *macro_engine) {
+        auto args = directive_line.substr(sizeof("`line") - 1);
+        std::string expanded;
+        if (macro_engine != nullptr && args.find('`') != std::string_view::npos) {
+            expanded = macro_engine->process_macro(args);
+            if (fatal_error) return;
+            args = expanded;
+        }
+        auto parsed = parse_line_args(macro_processor::trim(args));
+        if (!parsed.has_value()) {
+            report_error(fmt::format("Invalid `line [{}] at line {} in file: {}",
+                                     macro_processor::trim(directive_line), line_number, path));
+            return;
+        }
+        // The line after the directive becomes line `number` of `file`.
+        remap.offset = static_cast<int64_t>(parsed->number) - static_cast<int64_t>(line_number + 1);
+        remap.file = parsed->file;
+    }
+
     void sv_preprocessor::record_unknown_conditional(const std::string_view &name) {
         auto trimmed = macro_processor::trim(name);
         if (!trimmed.empty()) unknown_conditionals.emplace(trimmed);
@@ -218,8 +271,9 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
     }
 
     std::string sv_preprocessor::preprocess_body(const std::string_view &file_content, unsigned int initial_output_line) {
+        remap = {};
         macro_processor macro_engine(definitions , line_number, path, error, undefined_macros, fatal_error,
-                                       opts_);
+                                       opts_, remap);
 
         install_global_defines();
         auto flat_source= flatten_source(file_content);
@@ -268,6 +322,8 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             const auto active_line = macro_processor::ltrim(uncommented_line);
             if (is_directive(active_line, "`timescale") && c_solver.is_active()) {
                 check_timescale(active_line, &macro_engine);
+            } else if (is_directive(active_line, "`line") && c_solver.is_active()) {
+                check_line(active_line, &macro_engine);
             } else if (trimmed_line.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed_line, 7);
             } else if (trimmed_line.starts_with("`include") && c_solver.is_active()) {
@@ -285,6 +341,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                         // below instead of crashing the stack.
                         auto saved_path = path;
                         auto saved_line = line_number;
+                        auto saved_remap = remap;
                         path = included_file.value().path;
                         active_includes.insert(path);
                         source_map.close_range(output_line_n);
@@ -305,6 +362,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
 
                         active_includes.erase(path);
                         line_number = saved_line;
+                        remap = saved_remap;
                         path = saved_path;
                         source_map.open_range(output_line_n, path);
                     }
@@ -610,10 +668,10 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         std::string_view purged_identifier = {identifier.begin()+1, identifier.end()};
         std::string replacement;
         if (purged_identifier == "__FILE__") {
-            replacement = "\"" + path + "\"";
+            replacement = "\"" + remap.file.value_or(path) + "\"";
 
         } else if (purged_identifier == "__LINE__"){
-            replacement = std::to_string(line_number);
+            replacement = std::to_string(static_cast<int64_t>(line_number) + remap.offset);
         } else {
             auto id = std::string(purged_identifier);
             if (!definitions.contains(id)) {
@@ -873,7 +931,8 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             if (s != std::string_view::npos) {
                 std::string_view t = line.substr(s);
                 if (t.starts_with("`define") || t.starts_with("`undef") ||
-                    t.starts_with("`include") || is_directive(t, "`timescale")) {
+                    t.starts_with("`include") || is_directive(t, "`timescale") ||
+                    is_directive(t, "`line")) {
                     return true;
                 }
             }
@@ -924,6 +983,9 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             if (is_directive(trimmed, "`timescale") && c_solver.is_active()) {
                 check_timescale(trimmed, nullptr);
                 emit_line("");
+            } else if (is_directive(trimmed, "`line") && c_solver.is_active()) {
+                check_line(trimmed, nullptr);
+                emit_line("");
             } else if (trimmed.starts_with("`define") && c_solver.is_active()) {
                 parse_definition(trimmed, 7);
                 emit_line("");
@@ -939,6 +1001,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 includes.insert(included_file.value());
                 auto saved_path = path;
                 auto saved_line = line_number;
+                auto saved_remap = remap;
                 path = included_file.value().path;
                 active_includes.insert(path);
                 source_map.close_range(output_line_n);
@@ -971,6 +1034,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
                 }
                 active_includes.erase(path);
                 line_number = saved_line;
+                remap = saved_remap;
                 path = saved_path;
                 source_map.open_range(output_line_n, path);
             } else {

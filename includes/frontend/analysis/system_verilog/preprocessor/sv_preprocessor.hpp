@@ -84,6 +84,7 @@ namespace preprocessor {
         // a fatal error when malformed. The engine, when given, expands
         // macro-built arguments first.
         void check_timescale(std::string_view directive_line, macro_processor *macro_engine);
+        void check_line(std::string_view directive_line, macro_processor *macro_engine);
         // Records a conditional query on a currently-undefined macro.
         // The taken branch may be wrong once repository macros are known,
         // so the file becomes a quarantine candidate.
@@ -116,6 +117,8 @@ namespace preprocessor {
         void install_global_defines();
         static std::string_view parse_one_arg_directive(const std::string_view &sv, int prefix_length);
         uint64_t line_number = 1;
+        // Effect of the last `line directive on `__LINE__ / `__FILE__.
+        line_remap remap;
         definitions_map definitions;
         definitions_map base_definitions;
         std::set<std::string> locally_defined;

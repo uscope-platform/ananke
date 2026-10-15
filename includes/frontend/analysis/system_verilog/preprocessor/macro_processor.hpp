@@ -74,6 +74,14 @@ namespace preprocessor {
 
     static constexpr auto identifier_pattern = ctre::search<R"(`([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()?)">;
 
+    // State set by `line (IEEE 1800 22.12): the next source line is reported as
+    // line `number` of `file`. Applies to `__LINE__ / `__FILE__ only; the
+    // physical path and line number keep driving diagnostics and source maps.
+    struct line_remap {
+        int64_t offset = 0;
+        std::optional<std::string> file;
+    };
+
     class macro_processor {
     public:
         macro_processor(
@@ -83,7 +91,8 @@ namespace preprocessor {
             std::optional<std::string> &error,
             undefined_uses_map &undefined_macros,
             bool &fatal_error,
-            const parse_options &opts
+            const parse_options &opts,
+            const line_remap &remap
         );
         std::string process_macro(const std::string_view &in);
         // Splits a call's actual list (text after the opening paren) from
@@ -121,6 +130,7 @@ namespace preprocessor {
         undefined_uses_map &undefined_macros;
         bool &fatal_error;
         const parse_options &opts;
+        const line_remap &remap;
     };
 }
 #endif //ANANKE_MACRO_PROCESSOR_HPP

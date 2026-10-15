@@ -186,8 +186,8 @@ namespace preprocessor {
         std::optional<std::string> &e,
         undefined_uses_map &u,
         bool &f,
-        const parse_options &o) : definitions(d), line_number(l_n), path(p), error(e), undefined_macros(u),
-                                  fatal_error(f), opts(o)
+        const parse_options &o, const line_remap &r) : definitions(d), line_number(l_n), path(p), error(e), undefined_macros(u),
+                                  fatal_error(f), opts(o), remap(r)
     {
     }
 
@@ -736,10 +736,10 @@ namespace preprocessor {
         std::string_view purged_identifier = {identifier.begin()+1, identifier.end()};
         std::string replacement;
         if (purged_identifier == "__FILE__") {
-            replacement = "\"" + path + "\"";
+            replacement = "\"" + remap.file.value_or(path) + "\"";
 
         } else if (purged_identifier == "__LINE__"){
-            replacement = std::to_string(line_number);
+            replacement = std::to_string(static_cast<int64_t>(line_number) + remap.offset);
         } else {
             // Prevent embedded structural directives from being evaluated as substitution macros
             if (is_structural_directive(purged_identifier)) {
