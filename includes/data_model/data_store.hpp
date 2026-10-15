@@ -22,6 +22,7 @@
 #include <utility>
 #include <set>
 #include <fstream>
+#include <vector>
 
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/memory.hpp>
@@ -65,12 +66,28 @@ public:
         }
     };
 
-    data_store(bool e, std::string cache_dir_path);
+    // `profile` selects the active profile cache. Empty selects "default".
+    // A single unified_cache file holds every profile's data, so switching
+    // profiles no longer cross-contaminates or wipes other profiles.
+    data_store(bool e, std::string cache_dir_path, std::string profile = "");
+    // Active-profile management: all lookups and mutations below operate on
+    // the active profile's cache. Switching creates the entry on demand.
+    void set_active_profile(const std::string &profile);
+    [[nodiscard]] std::string get_active_profile() const { return active_profile; }
+    [[nodiscard]] std::vector<std::string> get_profiles() const;
+    [[nodiscard]] bool has_profile(const std::string &profile) const;
+    // Drop one profile's data (no-op when absent). Persists on destruction
+    // unless ephemeral.
+    void clear_profile(const std::string &profile);
     // NEW IF
     void store_file(const cached_item &file);
     // Preferred source path per resource name, from the Depfile
     // "deconfliction" section. Used to pick among duplicate resources.
-    void set_deconfliction(const std::unordered_map<std::string, std::string> &d) { deconfliction = d; }
+    // Stored per active profile so one profile's picks never leak into
+    // another's lookups.
+    void set_deconfliction(const std::unordered_map<std::string, std::string> &d) {
+        deconfliction_per_profile[active_profile] = d;
+    }
     void evict_file(const std::string &file);
     template<typename T> std::optional<T> get_file(const std::string &name) const;
     [[nodiscard]] std::string get_hash(const std::string &name) const;
@@ -137,31 +154,36 @@ public:
     std::unordered_map<std::string, std::vector<stored_macro_def>> get_all_macro_definitions() const;
     std::vector<std::string> get_macro_dependencies(const std::string &name) const;
     std::vector<std::string> get_files_with_macro_dependencies() const;
-    [[nodiscard]] std::string get_macro_table_fingerprint() const { return macro_table_fingerprint; }
-    void set_macro_table_fingerprint(const std::string &fp) { macro_table_fingerprint = fp; }
+    [[nodiscard]] std::string get_macro_table_fingerprint() const { return active().macro_table_fingerprint; }
+    void set_macro_table_fingerprint(const std::string &fp) { active().macro_table_fingerprint = fp; }
     // Content hashes of index-only SV include headers (`.h`, see
     // Repository_walker::file_is_sv_include_header). These files are never
     // parsed as top-level HDL, so they have no cache entry of their own; the
     // map lets include-change invalidation notice their edits. Persisted
     // alongside the cache.
     [[nodiscard]] const std::unordered_map<std::string, std::string> &get_include_file_hashes() const {
-        return include_file_hashes;
+        return active().include_file_hashes;
     }
     void set_include_file_hashes(std::unordered_map<std::string, std::string> h) {
-        include_file_hashes = std::move(h);
+        active().include_file_hashes = std::move(h);
     }
     // Fingerprint of the effective `includes` config (ignored +
     // deconfliction, see include_config::fingerprint). A change forces a
     // full re-parse: include warnings/skips are only re-evaluated on parse,
     // so cache-hit files would otherwise keep stale outcomes.
     [[nodiscard]] const std::string &get_include_config_fingerprint() const {
-        return include_config_fingerprint;
+        return active().include_config_fingerprint;
     }
     void set_include_config_fingerprint(std::string fp) {
-        include_config_fingerprint = std::move(fp);
+        active().include_config_fingerprint = std::move(fp);
     }
-    // Drop all cached file entries (used when the include config changed).
-    void clear_contents() { cache.clear(); }
+    // Drop the active profile's cached file entries (used when the include
+    // config changed). Other profiles are untouched.
+    void clear_contents() { active().cache.clear(); }
+    void clear_contents(const std::string &profile) {
+        auto it = profiles_cache.find(normalize_profile(profile));
+        if (it != profiles_cache.end()) it->second.cache.clear();
+    }
     // OLD IF
 
     void remove_stale_info(const std::filesystem::path& p);
@@ -170,6 +192,10 @@ public:
     static void clear_cache(const std::string &cache_dir_path) {
         std::filesystem::remove_all( cache_dir_path + "/unified_cache");
     }
+    // Drop a single profile's data from the persisted file, keeping the
+    // other profiles intact. No-op when the file or profile is absent.
+    // Never throws.
+    static void clear_cache(const std::string &cache_dir_path, const std::string &profile);
     static std::string get_cache_schema_hash() { return ANANKE_CACHE_SCHEMA_HASH; }
     ~data_store();
 private:
@@ -215,14 +241,42 @@ private:
         const std::shared_ptr<hdl_interface_statement> &iface);
 
 
-    std::unordered_map<std::string, cached_item> cache;
-    std::string macro_table_fingerprint;
-    // See get_include_file_hashes: byte hashes of consumed `.h` headers.
-    std::unordered_map<std::string, std::string> include_file_hashes;
-    // See get_include_config_fingerprint.
-    std::string include_config_fingerprint;
-    std::unordered_map<std::string, std::string> deconfliction;
-    std::set<std::string> reported_duplicates;
+    // Per-profile persisted state: one entry per settings profile, all held
+    // in the single unified_cache file. Serialized as a whole.
+    struct profile_cache {
+        std::unordered_map<std::string, cached_item> cache;
+        std::string macro_table_fingerprint;
+        // See get_include_file_hashes: byte hashes of consumed `.h` headers.
+        std::unordered_map<std::string, std::string> include_file_hashes;
+        // See get_include_config_fingerprint.
+        std::string include_config_fingerprint;
+        template<class Archive> void serialize(Archive & ar) {
+            ar(cache, macro_table_fingerprint, include_file_hashes, include_config_fingerprint);
+        }
+    };
+    static std::string normalize_profile(const std::string &p) {
+        return p.empty() ? "default" : p;
+    }
+    profile_cache &active() {
+        return profiles_cache[active_profile];
+    }
+    const profile_cache &active() const {
+        auto it = profiles_cache.find(active_profile);
+        if (it != profiles_cache.end()) return it->second;
+        static const profile_cache empty{};
+        return empty;
+    }
+    const std::unordered_map<std::string, std::string> &active_deconfliction() const {
+        static const std::unordered_map<std::string, std::string> empty{};
+        auto it = deconfliction_per_profile.find(active_profile);
+        return it != deconfliction_per_profile.end() ? it->second : empty;
+    }
+
+    std::unordered_map<std::string, profile_cache> profiles_cache;
+    std::string active_profile = "default";
+    // Transient (never persisted) per-profile state.
+    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> deconfliction_per_profile;
+    std::unordered_map<std::string, std::set<std::string>> reported_duplicates_per_profile;
     bool ephemeral;
 
     std::string store_path;
@@ -252,8 +306,9 @@ private:
 
 template<typename T>
 std::optional<T> data_store::get_file(const std::string &name) const {
-    if (!cache.contains(name)) return std::nullopt;
-    if (const auto* val = std::get_if<T>(&cache.at(name).content)) {
+    const auto &c = active().cache;
+    if (!c.contains(name)) return std::nullopt;
+    if (const auto* val = std::get_if<T>(&c.at(name).content)) {
         return *val;
     }
 

@@ -111,7 +111,13 @@ ananke::~ananke() {
 
 std::optional<int> ananke::clear_cache() const {
     if(opts.clear_cache) {
-        data_store::clear_cache(opts.cache_dir);
+        // Explicit --profile clears just that profile, keeping the others;
+        // bare --clear-cache keeps the legacy clear-everything behavior.
+        if (!opts.profile.empty()) {
+            data_store::clear_cache(opts.cache_dir, opts.profile);
+        } else {
+            data_store::clear_cache(opts.cache_dir);
+        }
         s_store->flush();
         return 0;
     }
@@ -212,8 +218,10 @@ std::optional<int> ananke::load_data_cache() {
                       join(s_store->get_ignored_includes()));
     }
 
-    if (opts.refresh_cache) data_store::clear_cache(opts.cache_dir);
-    d_store = std::make_shared<data_store>(opts.no_cache, opts.cache_dir);
+    // Refresh is per-profile: other profiles' data stays intact. The walker
+    // below then re-parses this profile's repository from scratch.
+    if (opts.refresh_cache) data_store::clear_cache(opts.cache_dir, s_store->get_selected_profile());
+    d_store = std::make_shared<data_store>(opts.no_cache, opts.cache_dir, s_store->get_selected_profile());
 
     // hdl_store fallback for the early Depfile: if no explicit/CWD Depfile
     // was loaded in the constructor, try one at the repository root now that

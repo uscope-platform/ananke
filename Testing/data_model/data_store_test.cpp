@@ -749,3 +749,90 @@ TEST( data_store_test , include_shadowed_package_owner_is_silent) {
 
     delete store;
 }
+
+TEST( data_store_test , multiple_profiles_are_isolated) {
+    // One store holds several profiles: resources, hashes, fingerprints and
+    // deconfliction must not leak across profiles.
+    auto *store = new data_store(true, "/tmp/test_data_store", "prof_a");
+    EXPECT_EQ(store->get_active_profile(), "prof_a");
+
+    hdl_file fa;
+    fa.set_content({make_resource("mod_a")});
+    store->store_file({"/repo/a.sv", "hash_a", fa});
+    store->set_deconfliction({{"dup", "/repo/a.sv"}});
+    store->set_macro_table_fingerprint("fp_a");
+    store->set_include_config_fingerprint("cfg_a");
+    store->set_include_file_hashes({{"/h.h", "aa"}});
+
+    store->set_active_profile("prof_b");
+    EXPECT_TRUE(store->get_HDL_resource("mod_a") == std::nullopt);
+    EXPECT_FALSE(store->contains("/repo/a.sv"));
+    EXPECT_EQ(store->get_hash("/repo/a.sv"), "");
+    EXPECT_TRUE(store->get_macro_table_fingerprint().empty());
+
+    hdl_file fb;
+    fb.set_content({make_resource("mod_b")});
+    store->store_file({"/repo/b.sv", "hash_b", fb});
+    store->set_macro_table_fingerprint("fp_b");
+
+    // Back on A: B's data is invisible and A's fingerprints survived.
+    store->set_active_profile("prof_a");
+    ASSERT_TRUE(store->get_HDL_resource("mod_a").has_value());
+    EXPECT_FALSE(store->get_HDL_resource("mod_b").has_value());
+    EXPECT_EQ(store->get_macro_table_fingerprint(), "fp_a");
+    EXPECT_EQ(store->get_include_config_fingerprint(), "cfg_a");
+    ASSERT_EQ(store->get_include_file_hashes().size(), 1u);
+
+    auto profiles = store->get_profiles();
+    EXPECT_TRUE(std::find(profiles.begin(), profiles.end(), "prof_a") != profiles.end());
+    EXPECT_TRUE(std::find(profiles.begin(), profiles.end(), "prof_b") != profiles.end());
+    EXPECT_TRUE(store->has_profile("prof_b"));
+    EXPECT_FALSE(store->has_profile("nope"));
+
+    delete store;
+}
+
+TEST( data_store_test , multiple_profiles_persist_and_clear_selectively) {
+    const std::string dir = "/tmp/ananke_ds_multiprof";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    // Real files so clean_up_caches does not evict them on reload.
+    const std::string pa = dir + "/a.sv";
+    const std::string pb = dir + "/b.sv";
+    { std::ofstream ofs(pa); ofs << "// a"; }
+    { std::ofstream ofs(pb); ofs << "// b"; }
+    {
+        data_store store(false, dir, "prof_a");
+        hdl_file fa;
+        fa.set_content({make_resource("mod_a")});
+        store.store_file({pa, "hash_a", fa});
+        store.set_active_profile("prof_b");
+        hdl_file fb;
+        fb.set_content({make_resource("mod_b")});
+        store.store_file({pb, "hash_b", fb});
+    }
+    {
+        data_store store(false, dir, "prof_a");
+        ASSERT_TRUE(store.get_HDL_resource("mod_a").has_value());
+        EXPECT_FALSE(store.get_HDL_resource("mod_b").has_value());
+        store.set_active_profile("prof_b");
+        ASSERT_TRUE(store.get_HDL_resource("mod_b").has_value());
+        EXPECT_FALSE(store.get_HDL_resource("mod_a").has_value());
+        // Drop A only: B must survive a reload.
+        store.clear_profile("prof_a");
+        EXPECT_FALSE(store.has_profile("prof_a"));
+        EXPECT_TRUE(store.has_profile("prof_b"));
+    }
+    {
+        data_store store(false, dir, "prof_b");
+        EXPECT_TRUE(store.get_HDL_resource("mod_b").has_value());
+        EXPECT_FALSE(store.has_profile("prof_a"));
+    }
+    // Static per-profile clear keeps the sibling profile.
+    data_store::clear_cache(dir, "prof_b");
+    {
+        data_store store(false, dir, "prof_b");
+        EXPECT_FALSE(store.get_HDL_resource("mod_b").has_value());
+    }
+    std::filesystem::remove_all(dir);
+}

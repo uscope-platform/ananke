@@ -30,7 +30,7 @@ template<class StmtT>
 std::vector<std::pair<std::shared_ptr<StmtT>, std::string>> data_store::find_by_name(
     const std::string &name, const std::string &arch, bool match_arch) {
     std::vector<std::pair<std::shared_ptr<StmtT>, std::string>> hits;
-    for (auto &file: cache | std::views::values) {
+    for (auto &file: active().cache | std::views::values) {
         if (!std::holds_alternative<hdl_file>(file.content)) continue;
         for (auto &res: std::get<hdl_file>(file.content).get_content()) {
             if (!res->is<StmtT>()) continue;
@@ -50,7 +50,7 @@ template<class StmtT>
 void data_store::report_dups(const std::string &kind, const std::string &name,
     const std::vector<std::pair<std::shared_ptr<StmtT>, std::string>> &hits,
     const std::string &picked_path) {
-    if (hits.size() <= 1 || !reported_duplicates.insert(name).second) return;
+    if (hits.size() <= 1 || !reported_duplicates_per_profile[active_profile].insert(name).second) return;
     std::string paths;
     for (const auto &hit : hits) {
         paths += "\n\t";
@@ -72,8 +72,9 @@ bool data_store::paths_match(const std::string &a, const std::string &b) {
 
 std::optional<std::string> data_store::resolve_cache_key(const std::string &p) const {
     if (p.empty()) return std::nullopt;
-    if (cache.contains(p)) return p;
-    for (const auto &key : cache | std::views::keys) {
+    const auto &c = active().cache;
+    if (c.contains(p)) return p;
+    for (const auto &key : c | std::views::keys) {
         if (paths_match(key, p)) return key;
     }
     return std::nullopt;
@@ -141,7 +142,8 @@ std::optional<std::pair<std::shared_ptr<StmtT>, std::string>> data_store::pick_s
     // the defining file.
     auto filtered = drop_include_shadowed(hits);
     if (filtered.size() == 1) return filtered.front();
-    if (auto it = deconfliction.find(name); it != deconfliction.end()) {
+    const auto &decon = active_deconfliction();
+    if (auto it = decon.find(name); it != decon.end()) {
         for (const auto &hit : filtered) {
             const auto &stored = hit.second, &wanted = it->second;
             if (paths_match(stored, wanted)) {
@@ -196,8 +198,9 @@ std::optional<std::shared_ptr<StmtT>> data_store::get_one_path_impl(
 
 
 
-data_store::data_store(bool e, std::string cache_dir_path) {
+data_store::data_store(bool e, std::string cache_dir_path, std::string profile) {
     ephemeral = e;
+    active_profile = normalize_profile(profile);
     store_path = std::move(cache_dir_path);
     std::error_code ec;
     std::filesystem::create_directories(store_path, ec);
@@ -210,7 +213,72 @@ data_store::data_store(bool e, std::string cache_dir_path) {
     if (std::filesystem::exists(unified_cache) && !ephemeral) {
         load_cache();
     }
+    // Ensure the active profile exists even on a fresh cache.
+    profiles_cache.try_emplace(active_profile);
     clean_up_caches();
+}
+
+void data_store::set_active_profile(const std::string &profile) {
+    active_profile = normalize_profile(profile);
+    profiles_cache.try_emplace(active_profile);
+}
+
+std::vector<std::string> data_store::get_profiles() const {
+    std::vector<std::string> out;
+    out.reserve(profiles_cache.size());
+    for (const auto &kv : profiles_cache) out.push_back(kv.first);
+    return out;
+}
+
+bool data_store::has_profile(const std::string &profile) const {
+    return profiles_cache.contains(normalize_profile(profile));
+}
+
+void data_store::clear_profile(const std::string &profile) {
+    profiles_cache.erase(normalize_profile(profile));
+    deconfliction_per_profile.erase(normalize_profile(profile));
+    reported_duplicates_per_profile.erase(normalize_profile(profile));
+    if (normalize_profile(profile) == active_profile) {
+        profiles_cache.try_emplace(active_profile);
+    }
+}
+
+void data_store::clear_cache(const std::string &cache_dir_path, const std::string &profile) {
+    try {
+        const std::string file = cache_dir_path + "/unified_cache";
+        if (!std::filesystem::exists(file)) return;
+        std::ifstream is(file, std::ios_base::binary);
+        if (!is.good()) return;
+        cereal::BinaryInputArchive archive_in(is);
+        std::string schema_hash;
+        archive_in(schema_hash);
+        if (schema_hash != get_cache_schema_hash()) {
+            // Stale schema: single-profile clear would rewrite in the new
+            // schema while discarding everything anyway — just drop the file.
+            is.close();
+            std::error_code ec;
+            std::filesystem::remove(file, ec);
+            return;
+        }
+        std::unordered_map<std::string, profile_cache> all;
+        archive_in(all);
+        is.close();
+        if (all.erase(normalize_profile(profile)) == 0) return;
+        std::error_code ec;
+        std::filesystem::remove(file, ec);
+        std::ofstream os(file, std::ios_base::binary);
+        if (!os.good()) {
+            spdlog::error("Could not write cache file {}", file);
+            return;
+        }
+        cereal::BinaryOutputArchive archive_out(os);
+        archive_out(get_cache_schema_hash(), all);
+    } catch (const std::exception &e) {
+        spdlog::warn("Could not clear profile cache {} ({}), removing whole cache",
+                     cache_dir_path, e.what());
+        std::error_code ec;
+        std::filesystem::remove(cache_dir_path + "/unified_cache", ec);
+    }
 }
 
 // Shared owner policy: explicit deconfliction wins (silent, it was asked
@@ -226,7 +294,7 @@ std::optional<std::shared_ptr<hdl_package_statement>> data_store::pick_owned_pac
     // seen via an `include is not a conflict.
     hits = drop_include_shadowed(hits);
     if (hits.size() == 1) return hits.front().first;
-    if (!deconfliction.contains(name)) {
+    if (!active_deconfliction().contains(name)) {
         std::optional<stmt_hit<hdl_package_statement>> owner;
         for (auto &hit : hits) {
             if (!declares(hit.first)) continue;
@@ -379,7 +447,7 @@ std::optional<std::shared_ptr<hdl_package_statement>> data_store::get_package_me
 std::optional<std::string> data_store::get_package_path(
     const std::shared_ptr<hdl_package_statement> &pkg) const {
     if (!pkg) return std::nullopt;
-    for (const auto &[path, file] : cache) {
+    for (const auto &[path, file] : active().cache) {
         if (!std::holds_alternative<hdl_file>(file.content)) continue;
         for (const auto &stmt : std::get<hdl_file>(file.content).get_content()) {
             if (stmt.get() == pkg.get()) return path;
@@ -389,26 +457,27 @@ std::optional<std::string> data_store::get_package_path(
 }
 
 void data_store::store_file(const cached_item &file) {
-    cache.insert_or_assign(file.path, file);
+    active().cache.insert_or_assign(file.path, file);
 }
 
 void data_store::evict_file(const std::string &file) {
-    cache.erase(file);
+    active().cache.erase(file);
 }
 
 
 std::string data_store::get_hash(const std::string &name) const {
-    if (!cache.contains(name)) return "";
-    return cache.at(name).hash;
+    const auto &c = active().cache;
+    if (!c.contains(name)) return "";
+    return c.at(name).hash;
 }
 
 bool data_store::contains(const std::string &name) const {
-    return cache.contains(name);
+    return active().cache.contains(name);
 }
 
 
 std::optional<Script> data_store::get_script(std::string &name) {
-    for (auto &file: cache | std::views::values) {
+    for (auto &file: active().cache | std::views::values) {
         if (!std::holds_alternative<Script>(file.content)) continue;
         auto scr = std::get<Script>(file.content);
         if (scr.get_name() == name) return scr;
@@ -417,7 +486,7 @@ std::optional<Script> data_store::get_script(std::string &name) {
 }
 
 std::optional<Constraints> data_store::get_constraint(const std::string &name) {
-    for (auto &file: cache | std::views::values) {
+    for (auto &file: active().cache | std::views::values) {
         if (!std::holds_alternative<Constraints>(file.content)) continue;
         auto c = std::get<Constraints>(file.content);
         if (c.get_name() == name) return c;
@@ -427,7 +496,7 @@ std::optional<Constraints> data_store::get_constraint(const std::string &name) {
 
 
  std::optional<DataFile> data_store::get_data_file(const std::string &name) {
-    for (auto &[_, file]: cache) {
+    for (auto &[_, file]: active().cache) {
         if (!std::holds_alternative<DataFile>(file.content)) continue;
         auto df = std::get<DataFile>(file.content);
         if (df.get_name() == name) return df;
@@ -436,8 +505,9 @@ std::optional<Constraints> data_store::get_constraint(const std::string &name) {
     }
 
 std::optional<hdl_function_statement> data_store::get_standalone_function(const std::string &name, const std::string &source_path) {
-    if (!cache.contains(source_path)) return std::nullopt;
-    auto &file = cache.at(source_path);
+    const auto &c = active().cache;
+    if (!c.contains(source_path)) return std::nullopt;
+    auto &file = c.at(source_path);
     if (!std::holds_alternative<hdl_file>(file.content)) return std::nullopt;
     for (auto &stmt : std::get<hdl_file>(file.content).get_content()) {
         auto f = std::dynamic_pointer_cast<hdl_function_statement>(stmt);
@@ -447,26 +517,28 @@ std::optional<hdl_function_statement> data_store::get_standalone_function(const 
 }
 
 std::optional<std::vector<include_dependency>> data_store::get_includes(const std::string &name) const {
-    if (!cache.contains(name)) return std::nullopt;
-    return cache.at(name).includes;
+    const auto &c = active().cache;
+    if (!c.contains(name)) return std::nullopt;
+    return c.at(name).includes;
 }
 
 std::unordered_map<std::string, std::vector<stored_macro_def>> data_store::get_all_macro_definitions() const {
     std::unordered_map<std::string, std::vector<stored_macro_def>> result;
-    for (const auto &[path, file] : cache) {
+    for (const auto &[path, file] : active().cache) {
         if (!file.macro_definitions.empty()) result[path] = file.macro_definitions;
     }
     return result;
 }
 
 std::vector<std::string> data_store::get_macro_dependencies(const std::string &name) const {
-    if (!cache.contains(name)) return {};
-    return cache.at(name).macro_dependencies;
+    const auto &c = active().cache;
+    if (!c.contains(name)) return {};
+    return c.at(name).macro_dependencies;
 }
 
 std::vector<std::string> data_store::get_files_with_macro_dependencies() const {
     std::vector<std::string> result;
-    for (const auto &[path, file] : cache) {
+    for (const auto &[path, file] : active().cache) {
         if (!file.macro_dependencies.empty()) result.push_back(path);
     }
     return result;
@@ -488,14 +560,15 @@ data_store::~data_store() {
 
 
 void data_store::load_cache() {
+    auto clear_all = [&]() {
+        profiles_cache.clear();
+        profiles_cache.try_emplace(active_profile);
+    };
     try {
         std::ifstream is(unified_cache, std::ios_base::binary);
         if (!is.good()) {
             spdlog::warn("Could not open cache file {}, starting with an empty cache", unified_cache);
-            cache.clear();
-            macro_table_fingerprint.clear();
-            include_file_hashes.clear();
-            include_config_fingerprint.clear();
+            clear_all();
             return;
         }
         cereal::BinaryInputArchive archive_in(is);
@@ -503,43 +576,45 @@ void data_store::load_cache() {
         archive_in(schema_hash);
         if (schema_hash != get_cache_schema_hash()) {
             spdlog::warn("Cache schema changed, discarding stale cache {}", unified_cache);
-            cache.clear();
-            macro_table_fingerprint.clear();
-            include_file_hashes.clear();
-            include_config_fingerprint.clear();
+            clear_all();
             return;
         }
-        archive_in(cache);
-        // Fingerprint entry postdates older archives; absence means
-        // "unknown previous table", which conservatively forces macro
-        // dependent revalidation downstream.
         try {
-            archive_in(macro_table_fingerprint);
+            archive_in(profiles_cache);
         } catch (const std::exception &) {
-            macro_table_fingerprint.clear();
+            // Legacy single-profile archive (pre multi-profile): migrate its
+            // contents into the active profile instead of dropping them.
+            try {
+                is.close();
+                std::ifstream legacy_is(unified_cache, std::ios_base::binary);
+                cereal::BinaryInputArchive legacy_in(legacy_is);
+                std::string legacy_hash;
+                legacy_in(legacy_hash);
+                std::unordered_map<std::string, cached_item> legacy_cache;
+                legacy_in(legacy_cache);
+                std::string legacy_macro_fp;
+                try { legacy_in(legacy_macro_fp); } catch (const std::exception &) {}
+                std::unordered_map<std::string, std::string> legacy_headers;
+                try { legacy_in(legacy_headers); } catch (const std::exception &) {}
+                std::string legacy_config_fp;
+                try { legacy_in(legacy_config_fp); } catch (const std::exception &) {}
+                profiles_cache.clear();
+                auto &slot = profiles_cache[active_profile];
+                slot.cache = std::move(legacy_cache);
+                slot.macro_table_fingerprint = std::move(legacy_macro_fp);
+                slot.include_file_hashes = std::move(legacy_headers);
+                slot.include_config_fingerprint = std::move(legacy_config_fp);
+                spdlog::info("Migrated legacy single-profile cache into profile '{}'", active_profile);
+            } catch (const std::exception &e2) {
+                spdlog::warn("Could not parse cache body ({}), starting with an empty cache", e2.what());
+                clear_all();
+            }
+            return;
         }
-        // Header-hash entry postdates older archives; absence just means
-        // "no previously tracked headers" (one conservative re-parse pass
-        // for `.h` consumers), never a reason to discard the cache.
-        try {
-            archive_in(include_file_hashes);
-        } catch (const std::exception &) {
-            include_file_hashes.clear();
-        }
-        // Include-config fingerprint postdates older archives; absence just
-        // means "no previously tracked config" (one conservative full
-        // re-parse when a config is newly set), never cache discard.
-        try {
-            archive_in(include_config_fingerprint);
-        } catch (const std::exception &) {
-            include_config_fingerprint.clear();
-        }
+        profiles_cache.try_emplace(active_profile);
     } catch (const std::exception &e) {
         spdlog::warn("Could not load cache file {} ({}), starting with an empty cache", unified_cache, e.what());
-        cache.clear();
-        macro_table_fingerprint.clear();
-        include_file_hashes.clear();
-        include_config_fingerprint.clear();
+        clear_all();
     }
 }
 
@@ -554,34 +629,40 @@ void data_store::store_cache() {
             return;
         }
         cereal::BinaryOutputArchive archive_out(os);
-        archive_out(get_cache_schema_hash(), cache, macro_table_fingerprint, include_file_hashes,
-                    include_config_fingerprint);
+        archive_out(get_cache_schema_hash(), profiles_cache);
     } catch (const std::exception &e) {
         spdlog::error("Could not save cache file {}: {}", unified_cache, e.what());
     }
 }
 
 void data_store::clean_up_caches() {
-    std::vector<std::string> stale_paths;
-    for (const auto &path : cache | std::views::keys) {
-        std::error_code ec;
-        if (!std::filesystem::exists(path, ec)) {
-            stale_paths.push_back(path);
+    // Evict on-disk-deleted files from every profile: a deleted file must
+    // disappear from all profiles, while files that still exist are kept
+    // everywhere they are referenced.
+    for (auto &[profile, slot] : profiles_cache) {
+        std::vector<std::string> stale_paths;
+        for (const auto &path : slot.cache | std::views::keys) {
+            std::error_code ec;
+            if (!std::filesystem::exists(path, ec)) {
+                stale_paths.push_back(path);
+            }
         }
+        for (const auto &path : stale_paths) {
+            slot.cache.erase(path);
+        }
+        // NOTE: include_file_hashes is deliberately not pruned here. A deleted
+        // header must stay detectable (previous real hash vs current missing),
+        // so its consumers are invalidated once and re-parse with the usual
+        // "include file not found" warning. Unreferenced entries are dropped by
+        // the walker's refresh once nothing consumes them anymore.
     }
-    for (const auto &path : stale_paths) {
-        cache.erase(path);
-    }
-    // NOTE: include_file_hashes is deliberately not pruned here. A deleted
-    // header must stay detectable (previous real hash vs current missing),
-    // so its consumers are invalidated once and re-parse with the usual
-    // "include file not found" warning. Unreferenced entries are dropped by
-    // the walker's refresh once nothing consumes them anymore.
 }
 
 void data_store::remove_stale_info(const std::filesystem::path& p) {
-    std::vector<std::string> evicted_items;
-    cache.erase(p);
+    const std::string key = p.string();
+    for (auto &[profile, slot] : profiles_cache) {
+        slot.cache.erase(key);
+    }
 }
 
 
