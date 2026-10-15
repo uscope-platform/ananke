@@ -338,6 +338,7 @@ private:
 
     Type_engine type_engine;
     sv_semantic_checker semantic_checker;
+    void track_enum_declaration(sv2017::Data_declarationContext *ctx);
     HDL_functions_factory f_factory;
     HDL_modules_factory modules_factory;
     HDL_packages_factory packages_factory;

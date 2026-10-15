@@ -453,7 +453,29 @@ void sv_visitor::capture_enum_base(sv2017::Data_typeContext *dt) {
     type_engine.start_range();
 }
 
+void sv_visitor::track_enum_declaration(sv2017::Data_declarationContext *ctx) {
+    if (auto *td = ctx->type_declaration()) {
+        if (td->identifier().empty() || !td->data_type()) return;
+        semantic_checker.note_typedef(
+            td->identifier().back()->getText(), td->data_type()->KW_ENUM() != nullptr);
+        return;
+    }
+    auto *dtoi = ctx->data_type_or_implicit();
+    auto *vars = ctx->list_of_variable_decl_assignments();
+    if (!dtoi || !dtoi->data_type() || !vars) return;
+    auto *dt = dtoi->data_type();
+    const std::string type_name =
+        dt->package_or_class_scoped_path() ? dt->package_or_class_scoped_path()->getText() : "";
+    for (auto *decl : vars->variable_decl_assignment()) {
+        if (!decl->identifier()) continue;
+        semantic_checker.note_variable(
+            decl->identifier()->getText(), type_name, dt->KW_ENUM() != nullptr,
+            !decl->variable_dimension().empty());
+    }
+}
+
 void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
+    track_enum_declaration(ctx);
     // `import pkg::*;` and net declarations also reduce through
     // data_declaration. They are handled by their own visitors
     // (enterPackage_import_declaration files the dependency); there is
@@ -2464,6 +2486,15 @@ void sv_visitor::enterInc_or_dec_expressionPost(sv2017::Inc_or_dec_expressionPos
 }
 
 void sv_visitor::exitBlocking_assignment(sv2017::Blocking_assignmentContext *ctx) {
+    // Plain `lv = expr` reduces through operator_assignment, not the ASSIGN alternative.
+    auto *op = ctx->operator_assignment();
+    auto *lvalue = op ? op->variable_lvalue() : ctx->variable_lvalue();
+    auto *rvalue = op ? op->expression() : ctx->expression();
+    if (lvalue && rvalue && (!op || op->assignment_operator()->getText() == "=") &&
+        semantic_checker.check_assignment(
+            current_file, ctx->getStart()->getLine(), lvalue->getText(), rvalue->getText())) {
+        had_error = true;
+    }
     if(f_factory.is_active()) {
         f_factory.finish_assignment();
         if (conditionals_factory.is_active()) {

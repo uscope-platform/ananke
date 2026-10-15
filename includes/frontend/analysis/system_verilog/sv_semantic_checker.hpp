@@ -35,6 +35,7 @@ enum class semantic_error_code {
     enum_value_size_mismatch = 2,
     enum_unknown_in_two_state = 3,
     pure_virtual_in_non_virtual_class = 4,
+    enum_assignment_type_mismatch = 5,
     // Future rules append here.
 };
 
@@ -56,6 +57,8 @@ public:
     void set_options(const parse_options &o) {
         opts_ = o;
         violations_.clear();
+        enum_typedefs_.clear();
+        enum_variables_.clear();
     }
 
     // IEEE 1800-2017 §18: randomize(), rand_mode() and constraint_mode()
@@ -89,6 +92,26 @@ public:
         int64_t literal_size, bool sized_explicit, bool has_unknown_digits,
         const std::shared_ptr<hdl_type> &base_type);
 
+    // IEEE 1800-2017 §6.19.3: enum types are strongly typed; a variable of
+    // enum type may only be assigned a member of the same enum or an
+    // expression cast to it, never a plain integral literal. The checker
+    // owns the name tracking: the visitor reports typedefs, variable
+    // declarations and assignments as written, and this class decides.
+    // Names are tracked scope-insensitively and dropped when redeclared
+    // as non-enum, so a miss is possible but a false positive is not.
+    void note_typedef(const std::string &name, bool is_enum);
+    // `type_name` is the spelled type of a named-type declaration (empty
+    // for built-in/anonymous types); `is_anonymous_enum` marks `enum {..} v`.
+    void note_variable(
+        const std::string &name, const std::string &type_name, bool is_anonymous_enum,
+        bool has_dimensions);
+    // Plain `lhs = rhs` blocking assignment. Logs `file:line: error: ...`,
+    // records the violation and returns true when `lhs` is an enum variable
+    // and `rhs_text` is a bare numeric literal.
+    [[nodiscard]] bool check_assignment(
+        const std::string &file, unsigned int line, const std::string &lhs,
+        const std::string &rhs_text);
+
     [[nodiscard]] bool has_violations() const { return !violations_.empty(); }
     [[nodiscard]] const std::vector<semantic_violation> &get_violations() const {
         return violations_;
@@ -105,6 +128,8 @@ public:
 private:
     parse_options opts_;
     std::vector<semantic_violation> violations_;
+    std::set<std::string> enum_typedefs_;
+    std::set<std::string> enum_variables_;
 };
 
 #endif //ANANKE_SV_SEMANTIC_CHECKER_HPP

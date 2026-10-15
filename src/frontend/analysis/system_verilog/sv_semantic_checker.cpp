@@ -17,6 +17,10 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cctype>
+
+#include "frontend/analysis/system_verilog/sv_parsing_helpers.hpp"
+#include "data_model/HDL/parameters/components/token/Numeric_token.hpp"
 #include "data_model/HDL/types/hdl_type.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"
 #include "data_model/HDL/types/resolved_type.hpp"
@@ -101,6 +105,7 @@ int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     case semantic_error_code::enum_value_size_mismatch:
     case semantic_error_code::enum_unknown_in_two_state:
     case semantic_error_code::pure_virtual_in_non_virtual_class:
+    case semantic_error_code::enum_assignment_type_mismatch:
         return 56;
     }
     return 56;
@@ -132,4 +137,33 @@ bool sv_semantic_checker::check_enum_value(
         }
     }
     return fired;
+}
+
+void sv_semantic_checker::note_typedef(const std::string &name, bool is_enum) {
+    if (is_enum) enum_typedefs_.insert(name);
+    else enum_typedefs_.erase(name);
+}
+
+void sv_semantic_checker::note_variable(
+    const std::string &name, const std::string &type_name, bool is_anonymous_enum,
+    bool has_dimensions) {
+    const bool is_enum = is_anonymous_enum || enum_typedefs_.contains(type_name);
+    if (is_enum && !has_dimensions) enum_variables_.insert(name);
+    else enum_variables_.erase(name);
+}
+
+bool sv_semantic_checker::check_assignment(
+    const std::string &file, unsigned int line, const std::string &lhs,
+    const std::string &rhs_text) {
+    if (opts_.disable_semantic_checks) return false;
+    if (!enum_variables_.contains(lhs) || rhs_text.empty()) return false;
+    if (!std::isdigit(static_cast<unsigned char>(rhs_text[0])) && rhs_text[0] != '\'') return false;
+    if (!std::dynamic_pointer_cast<Numeric_token>(sv_parsing_helpers::make_value(rhs_text))) {
+        return false;
+    }
+    record_violation(
+        file, line, violations_, semantic_error_code::enum_assignment_type_mismatch,
+        "cannot assign integral literal '" + rhs_text + "' to enum variable '" + lhs +
+            "' without a cast; enum types are strongly typed");
+    return true;
 }

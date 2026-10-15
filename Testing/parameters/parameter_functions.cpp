@@ -1051,7 +1051,7 @@ TEST(parameter_extraction, anonymous_enum_local_function_parameter) {
         )();
             function integer compute(input integer a);
                 enum {IDLE, RUN, DONE} state;
-                state = 2;
+                state = DONE;
                 compute = state + a;
             endfunction
 

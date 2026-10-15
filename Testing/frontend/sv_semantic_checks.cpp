@@ -455,3 +455,40 @@ TEST(sv_semantic_checker, pure_virtual_check_unit) {
     EXPECT_TRUE(checker.check_pure_virtual_method("test.sv", 3, "c", false));
     EXPECT_EQ(checker.last_violation().code, semantic_error_code::pure_virtual_in_non_virtual_class);
 }
+
+TEST(sv_semantic_checks, enum_literal_assignment_fails_analysis) {
+    auto test_pattern = R"(
+        module top();
+            typedef enum {a, b, c, d} e;
+
+            initial begin
+                e val;
+                val = 1;
+            end
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("test.sv", test_pattern);
+    EXPECT_FALSE(result.has_value());
+    const auto &violations = analyzer.get_semantic_violations();
+    ASSERT_FALSE(violations.empty());
+    EXPECT_EQ(violations[0].code, semantic_error_code::enum_assignment_type_mismatch);
+}
+
+TEST(sv_semantic_checks, enum_member_and_cast_assignment_stay_legal) {
+    auto test_pattern = R"(
+        module top();
+            typedef enum {a, b, c, d} e;
+
+            initial begin
+                e val;
+                val = b;
+                val = e'(2);
+            end
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    EXPECT_TRUE(analyzer.analyze("test.sv", test_pattern).has_value());
+}
