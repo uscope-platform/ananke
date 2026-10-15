@@ -93,6 +93,62 @@ struct paste_depth_guard {
 bool is_blank_token(const std::string_view &t) {
     return t.find_first_not_of(" \t\r\n") == std::string_view::npos;
 }
+
+// IEEE 1800-2017 22.5.1: `" becomes " and `` is deleted when a macro
+// expands. Function-like bodies get this in replace_function_macro, but
+// object-like bodies (e.g. UVM_VERSION_STRING's
+// `"UVM_NAME``-```UVM_MAJOR_REV``.```UVM_MINOR_REV```"`) otherwise leak raw
+// operators to the lexer, which has no backtick rule. String-aware: real
+// "..." contents pass through verbatim so prose like "call `foo()?" keeps
+// its backtick; only operators outside real strings are collapsed.
+std::string strip_macro_operators(const std::string &in) {
+    if (in.find('`') == std::string::npos) return in;
+    std::string out;
+    out.reserve(in.size());
+    bool in_string = false;
+    for (size_t i = 0; i < in.size();) {
+        char c = in[i];
+        if (in_string) {
+            if (c == '\\' && i + 1 < in.size()) {
+                out.push_back(c);
+                out.push_back(in[i + 1]);
+                i += 2;
+                continue;
+            }
+            out.push_back(c);
+            if (c == '"') {
+                // A backtick-quote inside a real string is content
+                // (e.g. "a `" b"), not the closing delimiter.
+                const bool macro_quote = i > 0 && in[i - 1] == '`';
+                if (!macro_quote) in_string = false;
+            }
+            ++i;
+            continue;
+        }
+        if (c == '"') {
+            in_string = true;
+            out.push_back(c);
+            ++i;
+            continue;
+        }
+        if (c == '`' && i + 1 < in.size() && in[i + 1] == '"') {
+            out.push_back('"');
+            i += 2;
+            continue;
+        }
+        if (c == '`' && i + 1 < in.size() && in[i + 1] == '`') {
+            // Delete the paste, trimming surrounding blanks like
+            // replace_function_macro does.
+            while (!out.empty() && (out.back() == ' ' || out.back() == '\t')) out.pop_back();
+            i += 2;
+            while (i < in.size() && (in[i] == ' ' || in[i] == '\t')) ++i;
+            continue;
+        }
+        out.push_back(c);
+        ++i;
+    }
+    return out;
+}
 }
 
 namespace preprocessor {
@@ -176,12 +232,20 @@ namespace preprocessor {
                 for (; quote_scanned < upto; ++quote_scanned) {
                     if (working[quote_scanned] != '"') continue;
                     const bool escaped = quote_scanned > 0 && working[quote_scanned - 1] == '\\';
-                    // A quote right after a backtick while already inside a
-                    // string is literal (e.g. `"a `" b"`); outside strings
-                    // `"..."` pairs still balance by toggling.
-                    const bool literal_paste = in_string && quote_scanned > 0 &&
+                    // A backtick-quote (`") is a macro stringification
+                    // operator, never a real string delimiter: it must not
+                    // toggle string state in either direction. Otherwise an
+                    // object-like body such as
+                    // `"UVM_NAME``-```UVM_MAJOR_REV``..."` enters string
+                    // mode at the opening `" and its inner `IDs are then
+                    // mistaken for prose and never expanded (while the
+                    // closing `" hits the old in_string-only exception and
+                    // never toggles back). Real strings containing `" prose
+                    // (e.g. "a `" b") still balance: the inner `" is
+                    // ignored and the lone closing " toggles out.
+                    const bool macro_quote = quote_scanned > 0 &&
                                                working[quote_scanned - 1] == '`';
-                    if (!escaped && !literal_paste) in_string = !in_string;
+                    if (!escaped && !macro_quote) in_string = !in_string;
                 }
             };
             while (auto match = identifier_pattern(remaining)) {
@@ -294,7 +358,10 @@ namespace preprocessor {
             // while every other exit returns working (which the rotation
             // below keeps pointing at the latest text). Returning working
             // here would hand back the previous cycle state.
-            if (result == prev_working) return result;
+            // Operator cleanup applies on the way out: surviving `" / ``
+            // come from object-like bodies (see strip_macro_operators) and
+            // are removed only after nested `IDs had every pass to expand.
+            if (result == prev_working) return strip_macro_operators(result);
             if (result == working) break;
             // A self-multiplying recursive macro keeps growing every pass and
             // never converges; a legitimate expansion (e.g. UVM field utils)
@@ -319,7 +386,7 @@ namespace preprocessor {
             nesting_counter++;
         }
 
-        return working;
+        return strip_macro_operators(working);
     }
 
 

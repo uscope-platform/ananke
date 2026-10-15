@@ -470,6 +470,36 @@ TEST(preprocessor, backtick_inside_string_is_not_a_macro_use) {
 }
 
 
+TEST(preprocessor, object_macro_stringify_paste_expands) {
+    // UVM 1.2 uvm_version_defines.svh shape: an object-like macro whose
+    // body stringifies and pastes nested macros. The `" / `` operators
+    // must collapse (to "UVM-1.2") instead of leaking raw backticks to
+    // the lexer, which has no backtick rule.
+    auto test_pattern = R"(
+        `define UVM_MAJOR_REV 1
+        `define UVM_MINOR_REV 2
+        `define UVM_NAME UVM
+        `define UVM_VERSION_STRING `"`UVM_NAME``-```UVM_MAJOR_REV``.```UVM_MINOR_REV```"
+        module test_module ();
+            parameter string uvm_revision = `UVM_VERSION_STRING;
+        endmodule
+    )";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+
+    auto result = preproc.preprocess(test_pattern);
+    auto check_string = R"(
+        module test_module ();
+            parameter string uvm_revision = "UVM-1.2";
+        endmodule
+    )";
+    EXPECT_EQ(result, check_string);
+    EXPECT_FALSE(preproc.has_error());
+    EXPECT_TRUE(preproc.get_undefined_macros().empty());
+}
+
+
 TEST(preprocessor, multiline_paste_with_default_severity) {
     // Mirrors dv_macros.svh `DV_CHECK_EQ(..., error, ...) split across lines:
     // continuation-line actuals carry `\n<indent>` which must not defeat
