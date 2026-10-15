@@ -890,3 +890,24 @@ TEST(sv_semantic_checks, statement_label_names_the_block_for_its_end_label) {
     EXPECT_FALSE(declarations_rejected("module t; reg a; initial name: fork a = 1; join : name endmodule"));
     EXPECT_TRUE(declarations_rejected("module t; reg a; initial name: begin a = 1; end : other endmodule"));
 }
+
+TEST(sv_semantic_checks, clocking_signal_assignment_is_not_an_attribute) {
+    // caliptra ahb_if.sv: `output hburst = hburst_driven;` inside a clocking block.
+    EXPECT_FALSE(declarations_rejected(
+        "interface i(input clk); logic [2:0] hburst_driven; logic [2:0] hburst; "
+        "clocking cb @(posedge clk); output hburst = hburst_driven; endclocking endinterface"));
+}
+
+TEST(sv_semantic_checks, single_expression_packed_size_is_lenient_unless_strict) {
+    // caliptra makehint_tb.sv: `reg [NUM_WR-1:0][BUFFER_DATA_W] index_tb;`
+    const std::string source = "module t; parameter W = 8; parameter N = 4; reg [N-1:0][W] x; endmodule";
+    EXPECT_FALSE(declarations_rejected(source));
+    parse_options strict;
+    strict.strict = true;
+    sv_analyzer analyzer;
+    analyzer.set_options(strict);
+    EXPECT_FALSE(analyzer.analyze("test.sv", source).has_value());
+    // Literal sizes and empty/`$` dimensions stay errors in the default mode.
+    EXPECT_TRUE(declarations_rejected("module t; reg [3] x; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg [] x; endmodule"));
+}

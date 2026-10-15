@@ -308,8 +308,13 @@ bool sv_semantic_checker::check_dimension(
     std::string a, b;
     const bool is_range = split_range(inner, a, b);
     if (packed && !is_range) {
-        // `[0]`, `[]`, `[$]`, `[-1]`: a packed dimension needs both bounds.
-        if (inner.find('?') == std::string::npos) {
+        // `[]`, `[$]`, `[0]`, `[-1]`: a packed dimension needs both bounds. A single non-literal size
+        // (`reg [N-1:0][W] x`, common in real testbenches) is not an LRM form either, but simulators take it as
+        // `[W-1:0]`, so only strict mode rejects it.
+        static const std::regex literal_size(R"(-?[0-9]+)");
+        const bool nonsense = inner.empty() || inner[0] == '$' || std::regex_match(inner, literal_size);
+        const bool sloppy_size = !nonsense && inner.find('?') == std::string::npos;
+        if (nonsense || (sloppy_size && opts_.strict)) {
             record_violation(file, line, violations_, "invalid packed dimension [" + inner + "]; expected [msb:lsb]");
             return true;
         }

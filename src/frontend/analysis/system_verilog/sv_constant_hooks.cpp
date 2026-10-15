@@ -143,7 +143,10 @@ void sv_visitor::check_constant_context(antlr4::ParserRuleContext *ctx) {
     }
     case sv2017::RuleAttr_spec: {
         auto *a = static_cast<sv2017::Attr_specContext *>(ctx);
-        if (a->expression()) {
+        // `clocking_decl_assign` reuses attr_spec for `output sig = expr;`: only real attributes `(* name = value *)`.
+        const bool is_attribute = ctx->parent && ctx->parent->getTreeType() == antlr4::tree::ParseTreeType::RULE &&
+                                  static_cast<antlr4::ParserRuleContext *>(ctx->parent)->getRuleIndex() == sv2017::RuleAttribute_instance;
+        if (is_attribute && a->expression()) {
             fired(semantic_checker.check_constant_use(
                 current_file, line_of(ctx), a->expression()->getText(), enclosing_scopes(ctx), "an attribute value"));
         }
