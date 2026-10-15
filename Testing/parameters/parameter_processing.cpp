@@ -3047,6 +3047,47 @@ TEST(parameter_processing, parent_local_enum_member_in_child_override) {
     EXPECT_EQ(v_param->get_numeric_value().value().get_value(), 2);
 }
 
+TEST(parameter_processing, override_package_function_call_links) {
+    // A user call inside an instance override links against its package and
+    // evaluates in the parent scope: .AW(util_pkg::f(W)) with W = 32 gives
+    // 33. Unlinked, the call defaulted to 0 with an "empty body" warning.
+    auto pkg_pattern = R"(
+package util_pkg;
+    function automatic integer f(integer value);
+        return value + 1;
+    endfunction
+endpackage
+)";
+    auto test_pattern = R"(
+module child #(parameter int AW = 0)();
+endmodule
+module parent #(parameter int W = 32)();
+    child #(.AW(util_pkg::f(W))) u();
+endmodule
+module top();
+    parent u();
+endmodule
+)";
+
+    sv_analyzer analyzer;
+    auto pkg_file = analyzer.analyze("/pkg.sv", pkg_pattern).value();
+    auto file = analyzer.analyze("/mod.sv", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/pkg.sv", "hash_pkg", pkg_file});
+    d_store->store_file({"/mod.sv", "hash_mod", file});
+
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast = b2.build_ast(std::vector<std::string>({"top"}))[0];
+    ASSERT_EQ(ast->get_dependencies().size(), 1);
+    auto parent = ast->get_dependencies()[0];
+    ASSERT_EQ(parent->get_dependencies().size(), 1);
+    auto child = parent->get_dependencies()[0];
+    auto aw = child->find_parameter("AW");
+    ASSERT_NE(aw, nullptr);
+    EXPECT_EQ(aw->get_numeric_value().value().get_value(), 33);
+}
+
 TEST(parameter_processing, shadowed_parent_param_stale_value) {
     // A dependent on a bare name must wait for the own-scope definition even
     // when the parent scope seeds the solving context with a same-named

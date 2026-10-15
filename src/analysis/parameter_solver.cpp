@@ -319,6 +319,21 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::override_pa
     }
 
     propagate_functions(node_spec.value(), d_store);
+    // Override expressions are authored in the parent (instantiating) scope,
+    // so user calls in them (e.g. `.AddrWidth(pkg::vbits(W))`) never meet the
+    // child-spec propagation above and stay unlinked (empty_body at solve).
+    // Propagate into the override objects with the parent as the bare-name
+    // scope; package-prefixed calls resolve scope-free via the owner lookup.
+    {
+        std::shared_ptr<hdl_resource_statement> scope = node_spec.value();
+        if (auto parent_node = work.node->get_parent()) {
+            if (auto parent_spec = d_store->get_elaboratable(parent_node->get_type());
+                parent_spec.has_value()) {
+                scope = parent_spec.value();
+            }
+        }
+        propagate_functions_into(node_overrides, scope, d_store);
+    }
     propagate_imports(node_spec.value(), imported_functions, imported_types);
 
     // Flow-scoped package solving via the shared package_solver: every
@@ -1095,6 +1110,13 @@ std::shared_ptr<hdl_function_statement> find_function_def(
 }
 
 void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store) {
+    propagate_functions_into(resource->get_parameter_statements(), resource, d_store);
+}
+
+void parameter_solver::propagate_functions_into(
+    const std::vector<std::shared_ptr<HDL_parameter>> &params,
+    const std::shared_ptr<hdl_resource_statement> &scope,
+    const std::shared_ptr<data_store> &d_store) {
 
     // Bodies populated below can reveal further (nested) calls, so repeat
     // until no new definition is propagated. Each (parameter, function) pair
@@ -1106,7 +1128,7 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
     bool progress = true;
     while (progress) {
         progress = false;
-        for (const auto &param : resource->get_parameter_statements()) {
+        for (const auto &param : params) {
             auto deps = param->get_dependencies();
             for (const auto& fcn:deps.functions) {
                 if (attempted[param.get()].contains(fcn)) continue;
@@ -1147,14 +1169,14 @@ void parameter_solver::propagate_functions(std::shared_ptr<hdl_resource_statemen
                     }
                     progress = true;
                 } else {
-                    if (auto local_fcn = resource->get_function_shared(fcn.get_name())) {
-                        resolve_function_return_type(find_function_def(resource, fcn.get_name()), d_store);
+                    if (auto local_fcn = scope->get_function_shared(fcn.get_name())) {
+                        resolve_function_return_type(find_function_def(scope, fcn.get_name()), d_store);
                         param->propagate_function(local_fcn);
                         progress = true;
                     } else if (d_store) {
                         std::string path;
-                        if (!d_store->get_elaboratable(resource->getName(), path).has_value())
-                            d_store->get_package(resource->getName(), path);
+                        if (!d_store->get_elaboratable(scope->getName(), path).has_value())
+                            d_store->get_package(scope->getName(), path);
                         auto standalone_function = d_store->get_standalone_function(fcn.get_name(), path);
                         if (standalone_function) {
                             // No stable owner exists for standalone copies, so

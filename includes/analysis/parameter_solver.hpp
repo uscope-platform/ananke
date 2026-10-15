@@ -89,6 +89,13 @@ public:
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types = {});
     static void propagate_functions(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store);
     static void propagate_functions(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store);
+    // Same fixpoint over an explicit parameter list with an explicit
+    // bare-name scope: instance overrides are authored in the parent scope,
+    // so their calls resolve against the parent resource, not the child.
+    static void propagate_functions_into(
+        const std::vector<std::shared_ptr<HDL_parameter>> &params,
+        const std::shared_ptr<hdl_resource_statement> &scope,
+        const std::shared_ptr<data_store> &d_store);
     static void propagate_types(std::shared_ptr<hdl_resource_statement> &resource, const std::shared_ptr<data_store> &d_store,
         const std::map<std::string, std::shared_ptr<hdl_type>> &imported_types = {});
     static void propagate_types(std::shared_ptr<hdl_package_statement> &resource, const std::shared_ptr<data_store> &d_store,
