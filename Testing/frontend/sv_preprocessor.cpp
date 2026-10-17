@@ -3291,3 +3291,57 @@ endmodule
     auto result = preproc.preprocess(test_pattern);
     EXPECT_THAT(result, testing::HasSubstr("localparam i01j = 8'h01;"));
 }
+
+TEST(preprocessor, conditional_on_macro_argument_skips_inactive_branch) {
+    auto test_pattern = R"(`define ovr(p, d, def) \
+  `ifdef d \
+  p: `d \
+  `else \
+  p: def \
+  `endif
+localparam x = '{ `ovr(a, UNDEFINED_OVERRIDE, 5) };
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_FALSE(preproc.has_error()) << preproc.get_error();
+    auto check_string = "localparam x = '{ \n   a: 5   \n };";
+    EXPECT_EQ(result, check_string);
+}
+
+TEST(preprocessor, conditional_on_macro_argument_takes_defined_branch) {
+    auto test_pattern = R"(`define OVERRIDE 7
+`define ovr(p, d, def) \
+  `ifdef d \
+  p: `d \
+  `else \
+  p: def \
+  `endif
+localparam x = '{ `ovr(a, OVERRIDE, 5) };
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_FALSE(preproc.has_error()) << preproc.get_error();
+    auto check_string = "localparam x = '{ \n   a: 7   \n };";
+    EXPECT_EQ(result, check_string);
+}
+
+TEST(preprocessor, paste_after_space_keeps_left_token_separate) {
+    auto test_pattern = R"(`define cast_i(s, p) \
+    s ``p``_cast_i;    \
+    assign ``p``_cast_i = ``p``_i
+module m;
+  `cast_i(my_s, hdr);
+endmodule
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_FALSE(preproc.has_error()) << preproc.get_error();
+    EXPECT_THAT(result, ::testing::HasSubstr("my_s hdr_cast_i;"));
+    EXPECT_THAT(result, ::testing::HasSubstr("assign hdr_cast_i =hdr_i"));
+}

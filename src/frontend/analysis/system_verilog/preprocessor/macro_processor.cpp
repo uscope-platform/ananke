@@ -15,6 +15,7 @@
 
 
 #include "frontend/analysis/system_verilog/preprocessor/macro_processor.hpp"
+#include "frontend/analysis/system_verilog/preprocessor/conditional_solver.hpp"
 #include <spdlog/spdlog.h>
 #include <mutex>
 #include <unordered_set>
@@ -251,9 +252,42 @@ namespace preprocessor {
                     if (!escaped && !macro_quote) in_string = !in_string;
                 }
             };
+            // Conditionals embedded in the text being expanded (a macro body
+            // such as `ifdef ARG `ARG `else ... `endif). They are evaluated
+            // later by the caller, but usages in an inactive branch must not
+            // be expanded here or reported undefined.
+            conditional_solver embedded_cond;
+            auto embedded_name = [&](std::string_view after) {
+                size_t i = 0;
+                while (i < after.size() && (after[i] == ' ' || after[i] == '\t')) ++i;
+                size_t j = i;
+                while (j < after.size() && (std::isalnum(static_cast<unsigned char>(after[j])) ||
+                                            after[j] == '_' || after[j] == '$')) ++j;
+                return std::string(after.substr(i, j - i));
+            };
             while (auto match = identifier_pattern(remaining)) {
                 const size_t mstart = static_cast<size_t>(match.begin() - working.data());
                 sync_string_state(mstart);
+                if (!in_string) {
+                    auto mid = match.view().substr(1);
+                    if (!mid.empty() && mid.back() == '(') mid.remove_suffix(1);
+                    mid = trim(mid);
+                    const std::string_view after{match.end(), remaining.end()};
+                    bool handled = true;
+                    if (mid == "ifdef")       embedded_cond.start_loop(definitions.contains(embedded_name(after)));
+                    else if (mid == "ifndef") embedded_cond.start_loop(!definitions.contains(embedded_name(after)));
+                    else if (mid == "elsif")  embedded_cond.advance_elseif(definitions.contains(embedded_name(after)));
+                    else if (mid == "else")   embedded_cond.advance_else();
+                    else if (mid == "endif")  embedded_cond.close_loop();
+                    else handled = false;
+                    if (handled || !embedded_cond.is_active()) {
+                        // Directive, or any usage in a skipped branch: keep verbatim.
+                        result.append(remaining.begin(), match.end());
+                        remaining = std::string_view{match.end(), remaining.end()};
+                        quote_scanned = static_cast<size_t>(remaining.data() - working.data());
+                        continue;
+                    }
+                }
                 if (in_string) {
                     // Literal backtick text: preserve verbatim. A later pass
                     // re-examines it from the line start with fresh state.
@@ -710,9 +744,20 @@ namespace preprocessor {
                     expanded_from_arg[next_idx];
 
                 // Trim trailing whitespace from the result accumulated so far
+                const bool ws_before_paste = !result.empty() &&
+                    (result.back() == ' ' || result.back() == '\t');
                 while (!result.empty() && (result.back() == ' ' || result.back() == '\t')) {
                     result.pop_back();
                 }
+                // IEEE 1800-2017 22.5.1: `` joins the two tokens adjacent to
+                // it. Whitespace written before it in the body separates the
+                // left token from the pasted name (`struct_t ``port``_i`
+                // declares a variable of type struct_t), so keep one space.
+                // A paste after a keyword/identifier tail that is itself
+                // spelled `word ``frag` therefore stays two tokens.
+                const bool separating_paste = ws_before_paste && !left_word.empty() &&
+                    !keyword_paste && right_pos != std::string_view::npos &&
+                    expanded_from_arg[next_idx];
 
                 // `localparam `` i``a``j`: a paste written with a space after it
                 // in the body, directly after a keyword, separates the keyword
@@ -732,7 +777,7 @@ namespace preprocessor {
                     }
                 }
 
-                if (keyword_paste || spaced_keyword_paste) result.push_back(' ');
+                if (keyword_paste || spaced_keyword_paste || separating_paste) result.push_back(' ');
             } else {
 
                 const std::string_view token_to_append = expanded_tokens[i];
