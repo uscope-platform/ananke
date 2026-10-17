@@ -55,7 +55,7 @@ public:
     // Whether lexing or parsing reported any syntax error (listener latch).
     // A file with syntax errors fails analysis (last_error set): partial
     // error-recovered trees are never stored silently.
-    // Lenient-only exception: a `.svh`/`.vh` header that declares no design
+    // Lenient-only exception: a `.svh`/`.vh`/`.vi` header that declares no design
     // unit (no module/interface/package/program/primitive/config keyword)
     // and fails as a standalone compilation unit is treated as a module-body
     // include fragment (e.g. bare `logic` + `assign` meant to be `included

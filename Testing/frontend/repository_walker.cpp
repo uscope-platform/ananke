@@ -184,6 +184,7 @@ TEST_F(repository_walker , file_type_handling) {
     ASSERT_TRUE(Repository_walker::file_is_verilog("test.svh"));
     ASSERT_TRUE(Repository_walker::file_is_verilog("test.v"));
     ASSERT_TRUE(Repository_walker::file_is_verilog("test.vh"));
+    ASSERT_TRUE(Repository_walker::file_is_verilog("test.vi"));
     ASSERT_FALSE(Repository_walker::file_is_verilog("test.xx"));
     ASSERT_FALSE(Repository_walker::file_is_verilog("test.h"));
     //SV INCLUDE HEADERS (index-only: discoverable via `include, never top-level parsed)

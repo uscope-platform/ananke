@@ -57,7 +57,7 @@ struct parse_options {
     // a single switch: no new tolerated construct without a strict gate.
     // Currently gated: empty-parens macro calls (`f()` for a 1-formal
     // macro), streaming-concatenation lvalue approximation, and unit-less
-    // `.svh`/`.vh` include fragments (bare `logic`/`assign` with no
+    // `.svh`/`.vh`/`.vi` include fragments (bare `logic`/`assign` with no
     // module/interface/package/program/primitive/config declaration, meant
     // to be `included inside a module, stored as empty resources).
     bool strict = false;

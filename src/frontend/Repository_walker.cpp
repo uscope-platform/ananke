@@ -740,7 +740,7 @@ void Repository_walker::analyze_file_with_injection(std::filesystem::path &file,
 /// \return True if the file is verilog
 bool Repository_walker::file_is_verilog(const std::filesystem::path &file) {
     std::string extension = file.extension();
-    return extension == ".svh" || extension == ".sv" || extension == ".vh" || extension == ".v";
+    return extension == ".svh" || extension == ".sv" || extension == ".vh" || extension == ".vi" || extension == ".v";
 }
 
 /// Check if the target file is an SV include header that should be indexed

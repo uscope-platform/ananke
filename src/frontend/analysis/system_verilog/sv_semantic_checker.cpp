@@ -116,6 +116,7 @@ int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     case semantic_error_code::end_label_mismatch:
     case semantic_error_code::invalid_type_use:
     case semantic_error_code::invalid_constant_expression:
+    case semantic_error_code::timing_check_missing_argument:
         return 56;
     }
     return 56;
@@ -312,6 +313,14 @@ bool sv_semantic_checker::check_end_label(const std::string &file, const end_lab
             file, info.line, violations_, semantic_error_code::end_label_mismatch,
             "end label '" + info.end + "' does not match the " + info.kind + " name '" + info.name + "'");
     }
+    return true;
+}
+
+bool sv_semantic_checker::check_width_threshold(const std::string &file, unsigned int line, bool has_threshold) {
+    if (opts_.disable_semantic_checks || !opts_.strict || has_threshold) return false;
+    record_violation(
+        file, line, violations_, semantic_error_code::timing_check_missing_argument,
+        "$width timing check is missing its threshold argument");
     return true;
 }
 

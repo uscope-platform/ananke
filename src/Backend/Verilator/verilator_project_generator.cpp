@@ -99,7 +99,7 @@ std::vector<std::string> verilator_project_generator::ordered_units() const {
                 spdlog::warn("Skipping VHDL file {}: Verilator only supports (System)Verilog", f);
                 continue;
             }
-            if (!is_hdl_unit(f)) continue; // headers (.vh/.svh/.h) go via +incdir+
+            if (!is_hdl_unit(f)) continue; // headers (.vh/.vi/.svh/.h) go via +incdir+
             if (std::find(units.begin(), units.end(), f) == units.end()) units.push_back(f);
         }
     };
@@ -188,7 +188,7 @@ std::vector<std::string> verilator_project_generator::resolve_leading_units(
     auto is_compilable = [](const std::string &p) {
         std::string ext = std::filesystem::path(p).extension().string();
         for (auto &c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        return ext == ".v" || ext == ".sv" || ext == ".vh" || ext == ".svh";
+        return ext == ".v" || ext == ".sv" || ext == ".vh" || ext == ".vi" || ext == ".svh";
     };
 
     std::set<std::string> closure_norm;
@@ -243,7 +243,7 @@ std::vector<std::string> verilator_project_generator::resolve_leading_units(
     for (const auto &n : ordered_closure) {
         std::string ext = std::filesystem::path(n).extension().string();
         for (auto &c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        if ((ext == ".vh" || ext == ".svh") && !included_norm.contains(n)) consider(n);
+        if ((ext == ".vh" || ext == ".vi" || ext == ".svh") && !included_norm.contains(n)) consider(n);
     }
     return leading;
 }

@@ -1832,8 +1832,8 @@ dolar_period_timing_check:
 dolar_width_timing_check:
     KW_DOLAR_WIDTH LPAREN
         controlled_reference_event COMMA
-        timing_check_limit COMMA
-        threshold ( COMMA ( notifier )? )?
+        timing_check_limit
+        ( COMMA threshold ( COMMA ( notifier )? )? )?
     RPAREN SEMI;
 dolar_nochange_timing_check:
     KW_DOLAR_NOCHANGE LPAREN

@@ -148,7 +148,7 @@ void Depfile::set_content(const nlohmann::json &file_content) {
             (void)ignored;
             bool file_like = key.find('/') != std::string::npos ||
                              key.find('\\') != std::string::npos;
-            for (const char *ext : {".svh", ".sv", ".vh", ".v", ".h"}) {
+            for (const char *ext : {".svh", ".sv", ".vh", ".vi", ".v", ".h"}) {
                 if (key.size() >= std::strlen(ext) &&
                     key.compare(key.size() - std::strlen(ext), std::strlen(ext), ext) == 0) {
                     file_like = true;

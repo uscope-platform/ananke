@@ -146,3 +146,38 @@ endmodule
     ASSERT_TRUE(result.has_value()) << analyzer.get_error();
     EXPECT_FALSE(analyzer.has_syntax_errors());
 }
+
+TEST(sv_compat_parsing, width_timing_check_without_threshold) {
+    // basejump_stl mobile_ddr.sv shape: Verilog-2001 allows $width with only
+    // the limit argument (threshold and notifier are optional).
+    auto test_pattern = R"(
+        module m(input clk, input a, input b);
+            specify
+                $width (posedge a &&& b, 5);
+                $width (negedge a, 5, 1);
+                $setuphold(posedge clk, a, 1, 2);
+            endspecify
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value()) << analyzer.get_error();
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+}
+
+TEST(sv_compat_parsing, width_timing_check_without_threshold_rejected_in_strict) {
+    auto test_pattern = R"(
+        module m(input a);
+            specify
+                $width (negedge a, 5);
+            endspecify
+        endmodule
+    )";
+
+    parse_options strict;
+    strict.strict = true;
+    sv_analyzer analyzer;
+    analyzer.set_options(strict);
+    EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
+}

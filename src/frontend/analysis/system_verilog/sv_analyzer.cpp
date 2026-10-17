@@ -26,15 +26,15 @@
 #include <filesystem>
 
 namespace {
-// A `.svh`/`.vh` header that cannot parse as a standalone compilation unit
+// A `.svh`/`.vh`/`.vi` header that cannot parse as a standalone compilation unit
 // is assumed to be a module-body include fragment (bare `logic` decls and
 // `assign` statements meant to be `` `include ``d inside a module, e.g. the
-// VeeR `el2_dec_csr_equ_m.svh` shape). Only `.svh`/`.vh` qualify: `.sv`/`.v`
+// VeeR `el2_dec_csr_equ_m.svh` shape). Only `.svh`/`.vh`/`.vi` qualify: `.sv`/`.v`
 // must stay compilation units so genuine errors there keep failing.
 bool is_fragment_header(const std::string &path) {
     if (path.empty()) return false;
     const std::string ext = std::filesystem::path(path).extension().string();
-    return ext == ".svh" || ext == ".vh";
+    return ext == ".svh" || ext == ".vh" || ext == ".vi";
 }
 } // namespace
 
@@ -294,7 +294,7 @@ hdl_file sv_analyzer::process_hdl(const std::string &path, const std::string &pr
         Tree = parser.source_text();
     }
     syntax_errors = error_listener.has_errors;
-    // Lenient-only workaround (strict rejects): a `.svh`/`.vh` header that
+    // Lenient-only workaround (strict rejects): a `.svh`/`.vh`/`.vi` header that
     // declares no design unit and fails as a standalone compilation unit is
     // a module-body include fragment, not a broken file. Its content still
     // reaches the build via `include inlining at each includer, so store an

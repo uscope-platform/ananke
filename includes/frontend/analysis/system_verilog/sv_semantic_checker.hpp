@@ -49,6 +49,7 @@ enum class semantic_error_code {
     end_label_mismatch = 10,
     invalid_type_use = 11,
     invalid_constant_expression = 12,
+    timing_check_missing_argument = 13,
     // Future rules append here.
 };
 
@@ -184,6 +185,11 @@ public:
     // `file:line: error: ...`, records the violation and returns true on a
     // mismatch. Constructs without a closing label are legal.
     [[nodiscard]] bool check_end_label(const std::string &file, const end_label_info &info);
+
+    // IEEE 1800-2017 §31.9.1: `$width` takes a threshold after the limit.
+    // Verilog-2001 (and simulators) accept it without one, so this is an
+    // error only with --strict. Returns true when it records a violation.
+    [[nodiscard]] bool check_width_threshold(const std::string &file, unsigned int line, bool has_threshold);
 
     // Declared types, for the type-shape rules below. Names are tracked
     // scope-insensitively like the enum tracking above.
