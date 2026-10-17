@@ -50,6 +50,7 @@ enum class semantic_error_code {
     invalid_type_use = 11,
     invalid_constant_expression = 12,
     timing_check_missing_argument = 13,
+    bare_generate_block = 14,
     // Future rules append here.
 };
 
@@ -189,6 +190,12 @@ public:
     // IEEE 1800-2017 §31.9.1: `$width` takes a threshold after the limit.
     // Verilog-2001 (and simulators) accept it without one, so this is an
     // error only with --strict. Returns true when it records a violation.
+    // IEEE 1800-2017 §27: a `begin ... end` block at module scope is only
+    // legal inside a generate construct. Simulators/Verilator accept it bare
+    // (BlackParrot's declare_csr macro), so this is an error only with
+    // --strict. Returns true when it records a violation.
+    [[nodiscard]] bool check_bare_generate_block(const std::string &file, unsigned int line);
+
     [[nodiscard]] bool check_width_threshold(const std::string &file, unsigned int line, bool has_threshold);
 
     // Declared types, for the type-shape rules below. Names are tracked

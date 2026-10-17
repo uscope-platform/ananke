@@ -11786,6 +11786,7 @@ public:
     Module_itemContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     Generate_regionContext *generate_region();
+    Generate_begin_end_blockContext *generate_begin_end_block();
     Module_item_itemContext *module_item_item();
     std::vector<Attribute_instanceContext *> attribute_instance();
     Attribute_instanceContext* attribute_instance(size_t i);

@@ -245,6 +245,10 @@ void sv_visitor::enterEveryRule(antlr4::ParserRuleContext *ctx) {
         if (semantic_checker.check_end_label(current_file, sv_parsing_helpers::end_labels(ctx))) had_error = true;
         if (semantic_checker.check_automatic_use(current_file, sv_parsing_helpers::find_automatic_misuse(ctx))) had_error = true;
         break;
+    case sv2017::RuleModule_item:
+        if (auto *item = static_cast<sv2017::Module_itemContext *>(ctx); item->generate_begin_end_block() != nullptr &&
+            semantic_checker.check_bare_generate_block(current_file, item->getStart()->getLine())) had_error = true;
+        break;
     case sv2017::RuleDolar_width_timing_check: {
         auto *width = static_cast<sv2017::Dolar_width_timing_checkContext *>(ctx);
         if (semantic_checker.check_width_threshold(current_file, width->getStart()->getLine(),

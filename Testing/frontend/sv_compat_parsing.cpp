@@ -181,3 +181,28 @@ TEST(sv_compat_parsing, width_timing_check_without_threshold_rejected_in_strict)
     analyzer.set_options(strict);
     EXPECT_FALSE(analyzer.analyze("", test_pattern).has_value());
 }
+
+TEST(sv_compat_parsing, bare_begin_end_block_at_module_scope) {
+    // BlackParrot declare_csr macro shape: a named begin/end block holding an
+    // instance at module scope, with no enclosing generate construct.
+    auto test_pattern = R"(
+        module m(input clk, input [3:0] d);
+            logic [3:0] q;
+            begin : creg_x
+                dff #(.width_p(4)) x_reg (.clk_i(clk), .data_i(d), .data_o(q));
+            end
+            assign d2 = q;
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto result = analyzer.analyze("", test_pattern);
+    ASSERT_TRUE(result.has_value()) << analyzer.get_error();
+    EXPECT_FALSE(analyzer.has_syntax_errors());
+
+    parse_options strict;
+    strict.strict = true;
+    sv_analyzer strict_analyzer;
+    strict_analyzer.set_options(strict);
+    EXPECT_FALSE(strict_analyzer.analyze("", test_pattern).has_value());
+}

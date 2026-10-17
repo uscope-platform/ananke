@@ -117,6 +117,7 @@ int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     case semantic_error_code::invalid_type_use:
     case semantic_error_code::invalid_constant_expression:
     case semantic_error_code::timing_check_missing_argument:
+    case semantic_error_code::bare_generate_block:
         return 56;
     }
     return 56;
@@ -313,6 +314,14 @@ bool sv_semantic_checker::check_end_label(const std::string &file, const end_lab
             file, info.line, violations_, semantic_error_code::end_label_mismatch,
             "end label '" + info.end + "' does not match the " + info.kind + " name '" + info.name + "'");
     }
+    return true;
+}
+
+bool sv_semantic_checker::check_bare_generate_block(const std::string &file, unsigned int line) {
+    if (opts_.disable_semantic_checks || !opts_.strict) return false;
+    record_violation(
+        file, line, violations_, semantic_error_code::bare_generate_block,
+        "begin/end block at module scope outside a generate construct");
     return true;
 }
 

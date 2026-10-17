@@ -2326,6 +2326,7 @@ module_item_item:
 ;
 module_item:
     generate_region
+    | generate_begin_end_block
     | ( attribute_instance )* module_item_item
     | specify_block
     | program_declaration
