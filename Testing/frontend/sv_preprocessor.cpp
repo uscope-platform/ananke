@@ -3345,3 +3345,19 @@ endmodule
     EXPECT_THAT(result, ::testing::HasSubstr("my_s hdr_cast_i;"));
     EXPECT_THAT(result, ::testing::HasSubstr("assign hdr_cast_i =hdr_i"));
 }
+
+TEST(preprocessor, paste_ignores_blanks_inside_actuals) {
+    // ivtest br979: blanks around the actuals must not separate the pasted
+    // fragments of `i``a``b``j`.
+    auto test_pattern = R"(`define my_macro(a,b) localparam `` i``a``b``j = 8'h``a``b;
+module test();
+`my_macro(  4  ,  5  )
+endmodule
+)";
+
+    sv_preprocessor preproc;
+    preproc.set_path("/tmp/file.sv");
+    auto result = preproc.preprocess(test_pattern);
+    EXPECT_FALSE(preproc.has_error()) << preproc.get_error();
+    EXPECT_THAT(result, ::testing::HasSubstr("i45j"));
+}

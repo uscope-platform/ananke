@@ -744,8 +744,13 @@ namespace preprocessor {
                     expanded_from_arg[next_idx];
 
                 // Trim trailing whitespace from the result accumulated so far
+                // Only whitespace spelled in the macro body counts: trailing
+                // blanks inside a substituted actual (`m( 4 , 5 )`) are not a
+                // separator and must still fuse (`i``a``b``j`).
                 const bool ws_before_paste = !result.empty() &&
-                    (result.back() == ' ' || result.back() == '\t');
+                    (result.back() == ' ' || result.back() == '\t') &&
+                    i > 0 && !expanded_from_arg[i - 1] &&
+                    expanded_tokens[i - 1].find_first_not_of(" \t") == std::string_view::npos;
                 while (!result.empty() && (result.back() == ' ' || result.back() == '\t')) {
                     result.pop_back();
                 }
