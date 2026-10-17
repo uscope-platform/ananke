@@ -161,6 +161,11 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
     base_opts.explicit_file_mode = true;
 
     std::unordered_map<std::string, std::string> res_map;
+    // IEEE 1800-2017 22.5.1: a `define is visible to every file compiled
+    // after it, with no `include. Targets are analyzed one by one, so the
+    // macros each file defines are carried forward in command-line order
+    // (e.g. a config header listed before the sources that use its macros).
+    preprocessor::macro_definitions_map carried_definitions;
     for (auto &target : opts.parse_targets) {
         if (!std::filesystem::exists(target)) {
             std::cout << "Target: " << target << " not found" << std::endl;
@@ -174,8 +179,10 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
                 return std::unexpected(51);
             }
             analyzer.set_options(base_opts);
+            analyzer.set_injected_definitions(carried_definitions);
             if (opts.parse_mode == "preprocessing") {
                 analyzer.preprocess(target, f_opt->view());
+                for (const auto &[name, def] : analyzer.get_harvested_definitions()) carried_definitions[name] = def;
                 if (analyzer.has_error()) {
                     std::cout << "Error preprocessing target: " << target << ": " << analyzer.get_error()
                               << std::endl;
@@ -185,6 +192,7 @@ std::expected<std::unordered_map<std::string, std::string>, int> ananke::directe
                 continue;
             }
             auto analysis_result = analyzer.analyze(target, f_opt->view());
+            for (const auto &[name, def] : analyzer.get_harvested_definitions()) carried_definitions[name] = def;
             if (!analysis_result.has_value()) {
                 std::cout << "Error parsing target: " << target << ": " << analyzer.get_error() << std::endl;
                 // The exit code is owned by the checker: rule violations

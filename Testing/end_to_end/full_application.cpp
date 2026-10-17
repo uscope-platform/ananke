@@ -211,6 +211,44 @@ TEST( end_to_end , directed_parsing_preprocessor_error) {
 
 
 
+TEST( end_to_end , directed_parsing_carries_macros_across_targets) {
+    // VeeR shape: a config header listed before the source that uses its
+    // macros, with no `include between them (compilation-unit scope).
+    e2e_setup_settings();
+
+    const std::string defines_file = "/tmp/test_carry_defines.vh";
+    const std::string user_file = "/tmp/test_carry_user.sv";
+    {
+        std::ofstream ofs(defines_file);
+        ofs << "`define CARRY_WIDTH 8\n";
+        std::ofstream ufs(user_file);
+        ufs << "module carry_user(input logic [`CARRY_WIDTH-1:0] a);\nendmodule\n";
+    }
+
+    ananke::CLI_opt opts;
+    opts.no_cache = true;
+    opts.cache_dir = e2e_settings_path;
+    opts.parse_targets = {defines_file, user_file};
+
+    ananke uut(opts);
+    auto rc = uut.directed_parsing();
+    ASSERT_TRUE(rc);
+    EXPECT_TRUE(rc->contains("carry_user"));
+
+    // Reversed order: the macro is not yet defined when the user is compiled.
+    ananke::CLI_opt reversed = opts;
+    reversed.parse_targets = {user_file, defines_file};
+    ananke uut_reversed(reversed);
+    auto bad = uut_reversed.directed_parsing();
+    ASSERT_FALSE(bad);
+    EXPECT_EQ(bad.error(), 52);
+
+    std::filesystem::remove(defines_file);
+    std::filesystem::remove(user_file);
+    e2e_clean_settings();
+}
+
+
 TEST( end_to_end , sim_script_generation) {
     e2e_setup_settings();
     ananke::CLI_opt opts;
