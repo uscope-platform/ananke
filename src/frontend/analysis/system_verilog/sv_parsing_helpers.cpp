@@ -837,3 +837,287 @@ namespace sv_parsing_helpers {
         return out;
     }
 }
+
+namespace {
+
+using namespace mgp_sv;
+
+struct class_constraint_info {
+    sv2017::Class_declarationContext *decl = nullptr;
+    std::string name;
+    std::string base;
+    bool is_virtual = false;
+    std::set<std::string> randc;
+    std::set<std::string> pure;
+    std::set<std::string> externs;
+    std::set<std::string> implemented;
+    bool has_implicit_prototype = false;
+    unsigned int line = 0;
+};
+
+bool rule_of(antlr4::tree::ParseTree *node, size_t &rule) {
+    auto *ctx = dynamic_cast<antlr4::ParserRuleContext *>(node);
+    if (ctx == nullptr) return false;
+    rule = ctx->getRuleIndex();
+    return true;
+}
+
+void gather_nodes(antlr4::tree::ParseTree *node, size_t rule, std::vector<antlr4::ParserRuleContext *> &out) {
+    size_t r = 0;
+    if (!rule_of(node, r)) return;
+    if (r == rule) out.push_back(static_cast<antlr4::ParserRuleContext *>(node));
+    for (auto *child : node->children) gather_nodes(child, rule, out);
+}
+
+bool is_identifier_token(size_t type) {
+    return type == sv2017::C_IDENTIFIER || type == sv2017::SIMPLE_IDENTIFIER || type == sv2017::ESCAPED_IDENTIFIER;
+}
+
+struct flat_token {
+    std::string text;
+    size_t type = 0;
+    unsigned int line = 0;
+    bool in_expression = false;
+    int rs_index = -1;
+};
+
+void flatten(antlr4::tree::ParseTree *node, bool in_expr, int rs_index, const std::map<antlr4::tree::ParseTree *, int> &rs_of,
+             std::vector<flat_token> &out) {
+    if (auto *terminal = dynamic_cast<antlr4::tree::TerminalNode *>(node)) {
+        auto *tok = terminal->getSymbol();
+        if (tok != nullptr) out.push_back({tok->getText(), tok->getType(), static_cast<unsigned int>(tok->getLine()), in_expr, rs_index});
+        return;
+    }
+    size_t rule = 0;
+    if (rule_of(node, rule)) {
+        if (rule == sv2017::RuleExpression || rule == sv2017::RuleConstant_expression) in_expr = true;
+        if (auto it = rs_of.find(node); it != rs_of.end()) rs_index = it->second;
+    }
+    for (auto *child : node->children) flatten(child, in_expr, rs_index, rs_of, out);
+}
+
+// Simple identifier operands of `node` (not member selects or scoped names).
+void simple_names(antlr4::tree::ParseTree *node, std::vector<std::pair<std::string, unsigned int>> &out) {
+    std::vector<flat_token> tokens;
+    flatten(node, false, -1, {}, tokens);
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        if (!is_identifier_token(tokens[i].type)) continue;
+        if (i > 0 && (tokens[i - 1].text == "." || tokens[i - 1].text == "::")) continue;
+        out.emplace_back(tokens[i].text, tokens[i].line);
+    }
+}
+
+std::string class_name_of_scope(sv2017::Class_scopeContext *scope) {
+    std::string name = scope->getText();
+    if (name.ends_with("::")) name.resize(name.size() - 2);
+    if (auto pos = name.find('#'); pos != std::string::npos) name.resize(pos);
+    return name;
+}
+
+} // namespace
+
+namespace sv_parsing_helpers {
+
+std::vector<random_finding> find_random_misuse(antlr4::tree::ParseTree *root, bool check_extern_bodies) {
+    std::vector<random_finding> out;
+    using kind_t = random_finding::kind_t;
+    std::vector<antlr4::ParserRuleContext *> classes, extern_defs, randsequences, imports;
+    gather_nodes(root, sv2017::RuleClass_declaration, classes);
+    gather_nodes(root, sv2017::RuleExtern_constraint_declaration, extern_defs);
+    gather_nodes(root, sv2017::RuleRandsequence_statement, randsequences);
+
+    // ---- constraints ----
+    std::map<std::string, class_constraint_info> info;
+    std::vector<std::string> order;
+    std::map<std::string, std::set<std::string>> extern_bodies;
+    for (auto *def : extern_defs) {
+        auto *e = static_cast<sv2017::Extern_constraint_declarationContext *>(def);
+        if (e->class_scope() != nullptr && e->identifier() != nullptr)
+            extern_bodies[class_name_of_scope(e->class_scope())].insert(e->identifier()->getText());
+    }
+    for (auto *node : classes) {
+        auto *cls = static_cast<sv2017::Class_declarationContext *>(node);
+        if (cls->identifier().empty()) continue;
+        class_constraint_info ci;
+        ci.decl = cls;
+        ci.name = cls->identifier(0)->getText();
+        ci.line = cls->getStart()->getLine();
+        ci.is_virtual = cls->KW_VIRTUAL() != nullptr;
+        if (cls->class_type() != nullptr) {
+            ci.base = cls->class_type()->getText();
+            if (auto pos = ci.base.find_first_of("#("); pos != std::string::npos) ci.base.resize(pos);
+        }
+        for (auto *item : cls->class_item()) {
+            if (auto *prop = item->class_property()) {
+                bool randc = false;
+                for (auto *q : prop->property_qualifier())
+                    if (q->random_qualifier() && q->random_qualifier()->KW_RANDC()) randc = true;
+                if (!randc) continue;
+                std::vector<antlr4::ParserRuleContext *> vars;
+                gather_nodes(prop, sv2017::RuleVariable_decl_assignment, vars);
+                for (auto *v : vars) {
+                    auto *va = static_cast<sv2017::Variable_decl_assignmentContext *>(v);
+                    if (va->identifier() != nullptr) ci.randc.insert(va->identifier()->getText());
+                }
+            } else if (auto *cc = item->class_constraint()) {
+                if (auto *proto = cc->constraint_prototype()) {
+                    auto *q = proto->constraint_prototype_qualifier();
+                    if (q && q->KW_PURE()) ci.pure.insert(proto->identifier()->getText());
+                    else if (q && q->KW_EXTERN()) ci.externs.insert(proto->identifier()->getText());
+                    else ci.has_implicit_prototype = true;
+                } else if (auto *decl = cc->constraint_declaration()) {
+                    ci.implemented.insert(decl->identifier()->getText());
+                }
+            }
+        }
+        if (auto it = extern_bodies.find(ci.name); it != extern_bodies.end())
+            ci.implemented.insert(it->second.begin(), it->second.end());
+        order.push_back(ci.name);
+        info.emplace(ci.name, std::move(ci));
+    }
+
+    for (auto *node : classes) {
+        auto *cls = static_cast<sv2017::Class_declarationContext *>(node);
+        if (cls->identifier().empty()) continue;
+        auto &ci = info.at(cls->identifier(0)->getText());
+        for (const auto &name : ci.pure) {
+            if (!ci.is_virtual)
+                out.push_back({kind_t::constraint, ci.line,
+                               "pure constraint '" + name + "' declared in non-virtual class '" + ci.name + "'"});
+        }
+        // A class that also leaves an implicit `constraint name;` prototype bodiless is a specification
+        // excerpt (IEEE 1800-2017 18.5.1 shows exactly that); only a lone explicit extern is flagged.
+        if (check_extern_bodies && !ci.has_implicit_prototype) {
+            for (const auto &name : ci.externs) {
+                if (!ci.implemented.contains(name))
+                    out.push_back({kind_t::constraint, ci.line,
+                                   "extern constraint '" + name + "' of class '" + ci.name + "' has no body"});
+            }
+        }
+        // inherited pure constraints must be implemented before a non-virtual class
+        if (!ci.is_virtual) {
+            std::set<std::string> implemented = ci.implemented;
+            std::set<std::string> seen{ci.name};
+            for (std::string base = ci.base; !base.empty();) {
+                auto it = info.find(base);
+                if (it == info.end() || !seen.insert(base).second) break;
+                for (const auto &name : it->second.pure) {
+                    if (!implemented.contains(name))
+                        out.push_back({kind_t::constraint, ci.line,
+                                       "class '" + ci.name + "' does not implement pure constraint '" + name +
+                                           "' inherited from '" + base + "'"});
+                }
+                implemented.insert(it->second.implemented.begin(), it->second.implemented.end());
+                base = it->second.base;
+            }
+        }
+    }
+
+    // randc variables in dist / solve before / soft, for constraint bodies of the class and extern bodies
+    auto check_block = [&](const class_constraint_info &ci, antlr4::tree::ParseTree *block) {
+        if (ci.randc.empty() || block == nullptr) return;
+        auto report = [&](antlr4::tree::ParseTree *part, const char *what) {
+            std::vector<std::pair<std::string, unsigned int>> names;
+            simple_names(part, names);
+            for (const auto &[name, line] : names) {
+                if (ci.randc.contains(name))
+                    out.push_back({kind_t::constraint, line, "randc variable '" + name + "' cannot be used " + what});
+            }
+        };
+        std::vector<antlr4::ParserRuleContext *> items, exprs;
+        gather_nodes(block, sv2017::RuleConstraint_block_item, items);
+        gather_nodes(block, sv2017::RuleConstraint_expression, exprs);
+        for (auto *it : items) {
+            auto *item = static_cast<sv2017::Constraint_block_itemContext *>(it);
+            if (item->KW_SOLVE() == nullptr) continue;
+            for (auto *list : item->solve_before_list()) report(list, "in a solve-before constraint");
+        }
+        for (auto *ex : exprs) {
+            auto *ce = static_cast<sv2017::Constraint_expressionContext *>(ex);
+            auto *dist = ce->expression_or_dist();
+            if (dist == nullptr) continue;
+            if (ce->KW_SOFT() != nullptr && ce->KW_DISABLE() == nullptr) report(dist, "in a soft constraint");
+            if (dist->KW_DIST() != nullptr && dist->expression() != nullptr) report(dist->expression(), "with dist");
+        }
+    };
+    for (auto *node : classes) {
+        auto *cls = static_cast<sv2017::Class_declarationContext *>(node);
+        if (cls->identifier().empty()) continue;
+        const auto &ci = info.at(cls->identifier(0)->getText());
+        for (auto *item : cls->class_item())
+            if (auto *cc = item->class_constraint())
+                if (auto *decl = cc->constraint_declaration()) check_block(ci, decl->constraint_block());
+    }
+    for (auto *def : extern_defs) {
+        auto *e = static_cast<sv2017::Extern_constraint_declarationContext *>(def);
+        if (e->class_scope() == nullptr) continue;
+        if (auto it = info.find(class_name_of_scope(e->class_scope())); it != info.end())
+            check_block(it->second, e->constraint_block());
+    }
+
+    // ---- randsequence ----
+    if (randsequences.empty()) return out;
+    gather_nodes(root, sv2017::RulePackage_import_declaration, imports);
+    bool wildcard_import = false;
+    for (auto *imp : imports)
+        for (auto *item : static_cast<sv2017::Package_import_declarationContext *>(imp)->package_import_item())
+            if (item->MUL()) wildcard_import = true;
+
+    std::map<antlr4::tree::ParseTree *, int> rs_of;
+    std::vector<bool> check_names(randsequences.size(), !wildcard_import);
+    for (size_t i = 0; i < randsequences.size(); ++i) {
+        rs_of[randsequences[i]] = static_cast<int>(i);
+        for (auto *p = randsequences[i]->parent; p != nullptr; p = p->parent) {
+            if (auto *c = dynamic_cast<antlr4::ParserRuleContext *>(p);
+                c != nullptr && c->getRuleIndex() == sv2017::RuleClass_declaration &&
+                static_cast<sv2017::Class_declarationContext *>(c)->class_type() != nullptr)
+                check_names[i] = false;
+        }
+        auto *rs = static_cast<sv2017::Randsequence_statementContext *>(randsequences[i]);
+        std::set<std::string> productions;
+        for (auto *prod : rs->production()) productions.insert(prod->identifier()->getText());
+        if (rs->identifier() != nullptr && !productions.contains(rs->identifier()->getText()))
+            out.push_back({kind_t::undeclared_name, static_cast<unsigned int>(rs->identifier()->getStart()->getLine()),
+                           "'" + rs->identifier()->getText() + "' is not a production of the randsequence"});
+        std::vector<antlr4::ParserRuleContext *> items;
+        gather_nodes(rs, sv2017::RuleProduction_item, items);
+        for (auto *it : items) {
+            auto *pi = static_cast<sv2017::Production_itemContext *>(it);
+            if (pi->identifier() == nullptr || productions.contains(pi->identifier()->getText())) continue;
+            // IEEE 1800-2017 18.17 example: `string operator : add := 5 { return "+"; } | ...` names items
+            // that no production defines. Weighted rules are taken as that excerpt shape and left alone.
+            bool weighted = false;
+            for (auto *p = pi->parent; p != nullptr && p != rs; p = p->parent) {
+                auto *rule = dynamic_cast<sv2017::Rs_ruleContext *>(p);
+                if (rule != nullptr) weighted = rule->DIST_WEIGHT_ASSIGN() != nullptr;
+            }
+            if (!weighted)
+                out.push_back({kind_t::undeclared_name, static_cast<unsigned int>(pi->getStart()->getLine()),
+                               "'" + pi->identifier()->getText() + "' is not a production of the randsequence"});
+        }
+    }
+    // identifiers used in expressions of a randsequence and declared nowhere in the text
+    std::vector<flat_token> tokens;
+    flatten(root, false, -1, rs_of, tokens);
+    std::map<std::string, size_t> total, qualifying;
+    std::map<std::string, std::pair<unsigned int, int>> first_use;
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        const auto &t = tokens[i];
+        if (!is_identifier_token(t.type)) continue;
+        ++total[t.text];
+        if (t.rs_index < 0 || !t.in_expression || !check_names[static_cast<size_t>(t.rs_index)]) continue;
+        const bool after_select = i > 0 && (tokens[i - 1].text == "." || tokens[i - 1].text == "::");
+        const bool before_select_or_call = i + 1 < tokens.size() &&
+            (tokens[i + 1].text == "(" || tokens[i + 1].text == "::" || tokens[i + 1].text == "'");
+        if (after_select || before_select_or_call) continue;
+        ++qualifying[t.text];
+        first_use.try_emplace(t.text, std::make_pair(t.line, t.rs_index));
+    }
+    for (const auto &[name, count] : qualifying) {
+        if (total[name] != count) continue;
+        out.push_back({kind_t::undeclared_name, first_use[name].first, "'" + name + "' is not declared"});
+    }
+    return out;
+}
+
+} // namespace sv_parsing_helpers

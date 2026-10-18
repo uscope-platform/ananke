@@ -97,4 +97,12 @@ struct automatic_misuse {
     unsigned int line = 0;
 };
 
+// A misuse of a random construct (constraint, randsequence) found by the tree scan.
+struct random_finding {
+    enum class kind_t { constraint, undeclared_name };
+    kind_t kind = kind_t::constraint;
+    unsigned int line = 0;
+    std::string message;
+};
+
 #endif //ANANKE_SV_SCOPE_DECLARATION_HPP

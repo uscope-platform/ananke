@@ -60,6 +60,17 @@ namespace sv_parsing_helpers {
     // continuous assignments. Empty for static tasks and functions.
     std::vector<automatic_misuse> find_automatic_misuse(antlr4::ParserRuleContext *task_or_function);
 
+    // Misuses of constraints and randsequence in one source text (IEEE 1800-2017 18.5, 18.17):
+    //  - `randc` variables in `dist`, `solve ... before` or `soft` constraints of the same class;
+    //  - `pure constraint` outside a virtual class, and non-virtual classes (extending a class of this
+    //    text) that leave an inherited pure constraint unimplemented;
+    //  - `extern constraint` prototypes with no `constraint cls::name {}` body in this text, only when
+    //    `check_extern_bodies` (a body may live in another file);
+    //  - randsequence: `main`/production items that name no production of that randsequence, and
+    //    identifiers used in its conditions that are declared nowhere in the text (skipped when the text
+    //    has a wildcard import or the randsequence sits in a class with a base class).
+    std::vector<random_finding> find_random_misuse(antlr4::tree::ParseTree *root, bool check_extern_bodies);
+
     // `typedef ...;` as the type-shape rules see it (kind, packed dimensions, named types it contains).
     typedef_shape describe_typedef(mgp_sv::sv2017::Type_declarationContext *ctx);
     // An enum `data_type` (KW_ENUM): base type and members.

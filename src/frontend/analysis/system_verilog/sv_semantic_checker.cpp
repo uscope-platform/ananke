@@ -118,6 +118,7 @@ int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     case semantic_error_code::invalid_constant_expression:
     case semantic_error_code::timing_check_missing_argument:
     case semantic_error_code::bare_generate_block:
+    case semantic_error_code::invalid_constraint:
         return 56;
     }
     return 56;
@@ -315,6 +316,18 @@ bool sv_semantic_checker::check_end_label(const std::string &file, const end_lab
             "end label '" + info.end + "' does not match the " + info.kind + " name '" + info.name + "'");
     }
     return true;
+}
+
+bool sv_semantic_checker::check_random_constructs(const std::string &file, const std::vector<random_finding> &findings) {
+    if (opts_.disable_semantic_checks) return false;
+    for (const auto &f : findings) {
+        record_violation(
+            file, f.line, violations_,
+            f.kind == random_finding::kind_t::undeclared_name ? semantic_error_code::undefined_identifier
+                                                              : semantic_error_code::invalid_constraint,
+            f.message);
+    }
+    return !findings.empty();
 }
 
 bool sv_semantic_checker::check_bare_generate_block(const std::string &file, unsigned int line) {

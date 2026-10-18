@@ -911,3 +911,74 @@ TEST(sv_semantic_checks, single_expression_packed_size_is_lenient_unless_strict)
     EXPECT_TRUE(declarations_rejected("module t; reg [3] x; endmodule"));
     EXPECT_TRUE(declarations_rejected("module t; reg [] x; endmodule"));
 }
+
+namespace {
+bool rejected_with(const std::string &source, const parse_options &opts) {
+    sv_analyzer analyzer;
+    analyzer.set_options(opts);
+    return !analyzer.analyze("test.sv", source).has_value();
+}
+} // namespace
+
+TEST(sv_semantic_checks, randc_rejected_in_dist_solve_and_soft) {
+    // sv-tests 18.5.4 / 18.5.10 / 18.5.14: randc variables take no dist, solve-before or soft constraint.
+    EXPECT_TRUE(declarations_rejected(
+        "class a; randc int b; constraint c { b dist {3 := 0, 10 := 5}; } endclass"));
+    EXPECT_TRUE(declarations_rejected(
+        "class a; rand bit b1; randc int b2; constraint c { solve b1 before b2; } endclass"));
+    EXPECT_TRUE(declarations_rejected(
+        "class a; randc int b; constraint c { soft b > 4; } endclass"));
+    EXPECT_FALSE(declarations_rejected(
+        "class a; rand int b; rand int e; randc int d; constraint c { b dist {3 := 0, 10 := 5}; soft b > 4; "
+        "solve b before e; d inside {[1:3]}; } endclass"));
+}
+
+TEST(sv_semantic_checks, pure_constraint_must_be_implemented_by_non_virtual_class) {
+    EXPECT_TRUE(declarations_rejected(
+        "virtual class a; pure constraint c; endclass class a2 extends a; endclass"));
+    EXPECT_TRUE(declarations_rejected("class a; pure constraint c; endclass"));
+    EXPECT_FALSE(declarations_rejected(
+        "virtual class a; pure constraint c; endclass "
+        "class a2 extends a; rand int x; constraint c { x > 0; } endclass"));
+    EXPECT_FALSE(declarations_rejected(
+        "virtual class a; pure constraint c; endclass virtual class a2 extends a; endclass"));
+    EXPECT_FALSE(declarations_rejected(
+        "virtual class a; pure constraint c; endclass class a2 extends a; extern constraint c; endclass "
+        "constraint a2::c { }"));
+}
+
+TEST(sv_semantic_checks, extern_constraint_needs_a_body_in_explicit_file_mode) {
+    const std::string source = "class a; rand int b; extern constraint c; endclass";
+    parse_options explicit_mode;
+    explicit_mode.explicit_file_mode = true;
+    EXPECT_TRUE(rejected_with(source, explicit_mode));
+    // The body may live in another file when files are analysed one by one.
+    EXPECT_FALSE(declarations_rejected(source));
+    EXPECT_FALSE(rejected_with(source + " constraint a::c { b > 0; }", explicit_mode));
+    // LRM 18.5.1 excerpt shape (implicit and explicit prototype side by side) is left alone.
+    EXPECT_FALSE(rejected_with(
+        "class C; rand int x; constraint proto1; extern constraint proto2; endclass", explicit_mode));
+}
+
+TEST(sv_semantic_checks, randsequence_names_must_resolve) {
+    const std::string head = "function int F(); int x; static int on = 1; randsequence( main ) ";
+    const std::string tail = " endsequence return x; endfunction";
+    EXPECT_FALSE(declarations_rejected(head + "main : a b; a : { x = 1; }; b : { x = 2; };" + tail));
+    // production item that names no production (typo)
+    EXPECT_TRUE(declarations_rejected(head + "main : a bb; a : { x = 1; }; b : { x = 2; };" + tail));
+    // randsequence start symbol that is not a production
+    EXPECT_TRUE(declarations_rejected(
+        "function int F(); randsequence( nope ) main : { }; endsequence endfunction"));
+    // undeclared identifier in an if / case / code block expression
+    EXPECT_TRUE(declarations_rejected(head + "main : a; a : { if (undeclared_sw) x = 1; };" + tail));
+    EXPECT_TRUE(declarations_rejected(head + "main : if (undeclared_sw) a else b; a : { }; b : { };" + tail));
+    // declared locals, module-level names and packaged names are fine
+    EXPECT_FALSE(declarations_rejected(head + "main : a; a : { if (on == 1) x = 1; };" + tail));
+    EXPECT_FALSE(declarations_rejected(
+        "import pkg::*; function int F(); int x; randsequence( main ) main : a; a : { if (from_pkg) x = 1; }; "
+        "endsequence return x; endfunction"));
+    // weighted alternatives that name no production are an LRM excerpt shape and stay accepted
+    EXPECT_FALSE(declarations_rejected(
+        "module m; initial randsequence( op ) string op : add := 5 { return \"+\"; } | dec := 2 { return \"-\"; }; "
+        "endsequence endmodule"));
+}

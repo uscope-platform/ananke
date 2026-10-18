@@ -759,6 +759,11 @@ void sv_visitor::check_unit_scope_description(sv2017::DescriptionContext *ctx) {
 void sv_visitor::exitSource_text(sv2017::Source_textContext *ctx) {
     for (auto *description : ctx->description()) check_unit_scope_description(description);
     if (semantic_checker.finish_unit_scope(current_file)) had_error = true;
+    // A body may live in another compilation file, so a missing extern constraint body is only an error
+    // when the tool is given the whole unit (explicit file mode) or runs strict.
+    if (semantic_checker.check_random_constructs(
+            current_file, sv_parsing_helpers::find_random_misuse(ctx, opts_.strict || opts_.explicit_file_mode)))
+        had_error = true;
     declared_names.clear();
     collect_declared_names(ctx, declared_names);
 }

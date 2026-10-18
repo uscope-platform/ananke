@@ -51,6 +51,7 @@ enum class semantic_error_code {
     invalid_constant_expression = 12,
     timing_check_missing_argument = 13,
     bare_generate_block = 14,
+    invalid_constraint = 15,
     // Future rules append here.
 };
 
@@ -195,6 +196,10 @@ public:
     // (BlackParrot's declare_csr macro), so this is an error only with
     // --strict. Returns true when it records a violation.
     [[nodiscard]] bool check_bare_generate_block(const std::string &file, unsigned int line);
+
+    // IEEE 1800-2017 18.5 / 18.17: findings of the constraint and randsequence scan of a source
+    // text. Logs each as `file:line: error: ...`, records the violation and returns true when any.
+    [[nodiscard]] bool check_random_constructs(const std::string &file, const std::vector<random_finding> &findings);
 
     [[nodiscard]] bool check_width_threshold(const std::string &file, unsigned int line, bool has_threshold);
 
