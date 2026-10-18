@@ -462,6 +462,13 @@ bool sv_semantic_checker::check_system_call(
         record_violation(file, line, violations_, name + " does not take a real value ('" + arg + "')");
         return true;
     }
+    // IEEE 1800-2017 20.6.2 / 6.24.3: $bits takes a bit-stream type or an expression of one; real, shortreal and
+    // realtime are not bit-stream types. Only what the checker can see is judged: real literals, real
+    // parameters and the type keywords (a real *variable* is not tracked here).
+    if (name == "$bits" && (arg == "real" || arg == "shortreal" || arg == "realtime" || evaluate_constant(arg, chain).real)) {
+        record_violation(file, line, violations_, "$bits does not take a real type or value ('" + arg + "')");
+        return true;
+    }
     if (name == "$bits" && !enclosing_unit.empty() && arg == enclosing_unit && !lookup_name(chain, arg)) {
         record_violation(file, line, violations_, "$bits cannot take the scope name '" + arg + "'");
         return true;

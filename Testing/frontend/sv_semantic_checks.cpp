@@ -1011,6 +1011,10 @@ TEST(sv_semantic_checks, system_call_operands) {
     // ivtest br1029c / br_gh1112b: $signed takes no real value, $bits no module name.
     EXPECT_TRUE(declarations_rejected("module test; reg [7:0] v = $signed(1.0); endmodule"));
     EXPECT_TRUE(declarations_rejected("module top; localparam width = $bits(top); endmodule"));
+    // IEEE 1800-2017 20.6.2 / 6.24.3: real is not a bit-stream type (ivtest br_gh1112c)
+    EXPECT_TRUE(declarations_rejected("module top; localparam width = $bits(1.0); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module top; localparam real r = 2.5; localparam width = $bits(r); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module top; localparam width = $bits(real); endmodule"));
     EXPECT_FALSE(declarations_rejected("module test; reg [7:0] v = $signed(8'hff); localparam w = $bits(v); endmodule"));
     EXPECT_FALSE(declarations_rejected("module top; reg top_v; localparam w = $bits(top_v); endmodule"));
 }

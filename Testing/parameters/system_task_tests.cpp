@@ -750,7 +750,6 @@ TEST(system_task, bits_literal) {
             localparam B = $bits(1'b1);
             localparam C = $bits(42);
             localparam D = $bits('h3F);
-            localparam E = $bits(1.0);
         endmodule
     )";
     sv_analyzer analyzer;
@@ -760,7 +759,6 @@ TEST(system_task, bits_literal) {
     EXPECT_EQ(defaults.at(qualified_identifier("B")).get_integer(), 1);
     EXPECT_EQ(defaults.at(qualified_identifier("C")).get_integer(), 32);
     EXPECT_EQ(defaults.at(qualified_identifier("D")).get_integer(), 32);
-    EXPECT_EQ(defaults.at(qualified_identifier("E")).get_integer(), 64);
 }
 
 TEST(system_task, bits_expression) {
