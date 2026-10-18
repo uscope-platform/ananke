@@ -92,6 +92,10 @@ target_sources(ananke_lib
     data_model/HDL/statement/hdl_statement_base.cpp
     data_model/HDL/statement/hdl_instance_statement.cpp
     data_model/HDL/statement/hdl_assignment_statement.cpp
+    data_model/HDL/statement/hdl_lvalue.cpp
+    data_model/HDL/statement/hdl_continuous_assignment.cpp
+    data_model/HDL/statement/hdl_signal_declaration.cpp
+    data_model/HDL/statement/hdl_procedural_block_statement.cpp
     data_model/HDL/factories/HDL_functions_factory.cpp
     data_model/HDL/factories/nets/HDL_range_factory.cpp
     data_model/HDL/factories/nets/HDL_net_factory.cpp

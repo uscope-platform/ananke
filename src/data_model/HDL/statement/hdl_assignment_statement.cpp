@@ -21,79 +21,31 @@
 #include <cereal/types/string.hpp>
 #include <cereal/types/memory.hpp>
 
-#include <algorithm>
+#include <sstream>
 
 CEREAL_REGISTER_TYPE(hdl_assignment_statement)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_assignment_statement)
 
 parameter_deps_t hdl_assignment_statement::get_dependencies() const {
-    parameter_deps_t deps;
+    parameter_deps_t deps = lvalue.get_dependencies();
     if (value) deps.merge(value->get_dependencies());
-    for (const auto &idx : indices) {
-        if (idx) deps.merge(idx->get_dependencies());
-    }
     return deps;
 }
 
 void hdl_assignment_statement::propagate_function(const hdl_function_def_ptr &def) {
     if (value) value->propagate_function(def);
-    for (const auto &idx : indices) {
-        if (idx) idx->propagate_function(def);
-    }
-}
-
-static bool same_index(const std::shared_ptr<Expression_base> &a,
-                       const std::shared_ptr<Expression_base> &b) {
-    return (!a && !b) || (a && b && *a == *b);
+    lvalue.propagate_function(def);
 }
 
 bool hdl_assignment_statement::equals(const hdl_statement_base& other) const {
     const auto& rhs = static_cast<const hdl_assignment_statement&>(other);
-    if (targets.size() != rhs.targets.size()) return false;
-    for (size_t i = 0; i < targets.size(); ++i) {
-        if (!(targets[i] == rhs.targets[i])) return false;
-    }
-    // A missing slot and an explicit null both mean "whole variable": the
-    // factory always populates parallel slots, hand-built statements often
-    // omit them. Same for member bounds (absent ≡ all-absent).
-    size_t n_indices = std::max(indices.size(), rhs.indices.size());
-    for (size_t i = 0; i < n_indices; ++i) {
-        std::shared_ptr<Expression_base> a = i < indices.size() ? indices[i] : nullptr;
-        std::shared_ptr<Expression_base> b = i < rhs.indices.size() ? rhs.indices[i] : nullptr;
-        if (!same_index(a, b)) return false;
-    }
-    size_t n_selects = std::max(member_selects.size(), rhs.member_selects.size());
-    for (size_t i = 0; i < n_selects; ++i) {
-        concat_member_select a = i < member_selects.size() ? member_selects[i] : concat_member_select{};
-        concat_member_select b = i < rhs.member_selects.size() ? rhs.member_selects[i] : concat_member_select{};
-        if (a.has_bounds() != b.has_bounds() || a.hi != b.hi || a.lo != b.lo) return false;
-        if (a.dynamic_select != b.dynamic_select) return false;
-    }
-    bool res = (!value && !rhs.value) || (value && rhs.value && *value == *rhs.value);
-    return res;
+    if (!lvalue.equals(rhs.lvalue)) return false;
+    return (!value && !rhs.value) || (value && rhs.value && *value == *rhs.value);
 }
 
 std::string hdl_assignment_statement::print() const {
-    auto print_bounds = [this](size_t i, std::ostringstream &out) {
-        if (i < member_selects.size() && member_selects[i].has_bounds())
-            out << "[" << member_selects[i].hi << ":" << member_selects[i].lo << "]";
-    };
     std::ostringstream oss;
-    if (targets.size() == 1) {
-        oss << targets.front().print();
-        if (!indices.empty() && indices.front()) oss << "[" << indices.front()->print() << "]";
-        print_bounds(0, oss);
-    } else if (!targets.empty()) {
-        oss << "{";
-        for (size_t i = 0; i < targets.size(); ++i) {
-            if (i != 0) oss << ", ";
-            oss << targets[i].print();
-            if (i < indices.size() && indices[i]) oss << "[" << indices[i]->print() << "]";
-            print_bounds(i, oss);
-        }
-        oss << "}";
-    }
-    oss << " = ";
+    oss << lvalue.print() << " = ";
     if (value) oss << value->print();
     return oss.str();
 }

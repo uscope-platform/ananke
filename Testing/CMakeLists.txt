@@ -36,6 +36,7 @@ set(ANANKE_TESTS
         data_model/Script_test.cpp
         data_model/Constraints_test.cpp
         data_model/hdl_resource_testing.cpp
+        data_model/signal_statements.cpp
         data_model/initialization_list.cpp
         data_model/settings_store_test.cpp
         data_model/data_store_test.cpp

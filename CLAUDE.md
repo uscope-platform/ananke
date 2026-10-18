@@ -85,4 +85,4 @@ shared semantics in the factories.
   the `target_sources` list in `src/CMakeLists.txt` (and headers in `includes/CMakeLists.txt` if listed there).
 - Bug fixes come with a regression test in the matching `Testing/` subdirectory (recent history is mostly small
   "fix X" + "add test for X" commits). Commit messages are short, lowercase, imperative.
-- Untracked scratch files at the repo root (`profile_points.csv`, `sim.tcl`) are run artifacts; don't commit them.
+- Don't commit code by yourself, or ask for code to be committed, the developer will do it
