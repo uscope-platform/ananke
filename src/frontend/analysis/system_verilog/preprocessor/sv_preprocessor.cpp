@@ -283,6 +283,55 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         remap.file = parsed->file;
     }
 
+    void sv_preprocessor::check_unconnected_drive(std::string_view directive_line, macro_processor *macro_engine) {
+        const bool negated = is_directive(directive_line, "`nounconnected_drive");
+        auto args = directive_line.substr(negated ? sizeof("`nounconnected_drive") - 1 : sizeof("`unconnected_drive") - 1);
+        std::string expanded;
+        if (macro_engine != nullptr && args.find('`') != std::string_view::npos) {
+            expanded = macro_engine->process_macro(args);
+            if (fatal_error) return;
+            args = expanded;
+        }
+        args = macro_processor::trim(args);
+        const bool valid = negated ? args.empty() : (args == "pull0" || args == "pull1");
+        if (valid) return;
+        report_error(fmt::format("Invalid {} [{}] at line {} in file: {}: {}",
+                                 negated ? "`nounconnected_drive" : "`unconnected_drive",
+                                 macro_processor::trim(directive_line), line_number, path,
+                                 negated ? "takes no argument" : "expected pull0 or pull1"));
+    }
+
+    void sv_preprocessor::track_design_elements(std::string_view line) {
+        auto starts_word = [](std::string_view t, std::string_view w) {
+            if (!t.starts_with(w)) return false;
+            if (t.size() == w.size()) return true;
+            const unsigned char c = static_cast<unsigned char>(t[w.size()]);
+            return !(std::isalnum(c) || c == '_' || c == '$');
+        };
+        // `interface class` is a class, not a design element.
+        if (starts_word(line, "module") || starts_word(line, "macromodule") || starts_word(line, "program") ||
+            starts_word(line, "package") || starts_word(line, "primitive") || starts_word(line, "config") ||
+            (starts_word(line, "interface") &&
+             !starts_word(macro_processor::ltrim(line.substr(sizeof("interface") - 1)), "class"))) {
+            ++design_element_depth;
+        }
+        // Closers may share the line with the opener (`module m; endmodule`).
+        for (size_t pos = line.find("end"); pos != std::string_view::npos; pos = line.find("end", pos + 3)) {
+            if (pos > 0) {
+                const unsigned char p = static_cast<unsigned char>(line[pos - 1]);
+                if (std::isalnum(p) || p == '_' || p == '$' || p == '`') continue;
+            }
+            auto rest = line.substr(pos);
+            for (std::string_view closer : {"endmodule", "endinterface", "endprogram", "endpackage",
+                                            "endprimitive", "endconfig"}) {
+                if (starts_word(rest, closer) && design_element_depth > 0) {
+                    --design_element_depth;
+                    break;
+                }
+            }
+        }
+    }
+
     void sv_preprocessor::check_pragma(std::string_view directive_line) {
         // IEEE 1800-2017 22.11: the pragma is identified by the pragma_name
         // that follows the `pragma directive.
@@ -323,6 +372,7 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
         for (const auto &[name, def] : base_definitions) definitions[name] = def;
         locally_defined.clear();
         top_path = path;
+        design_element_depth = 0;
         undefined_macros.clear();
         unknown_conditionals.clear();
         deferred_error.clear();
@@ -379,6 +429,19 @@ static constexpr int MAX_INCLUDE_DEPTH = 256;
             // Judged on the comment-stripped line so translate_off regions and
             // trailing comments behave like every other directive.
             const auto active_line = macro_processor::ltrim(uncommented_line);
+            if (c_solver.is_active() && !active_line.empty() && path == top_path) {
+                if (is_directive(active_line, "`resetall")) {
+                    if (design_element_depth > 0) {
+                        report_error(fmt::format("Illegal `resetall inside a design element at line {} in file: {}",
+                                                 line_number, path));
+                    }
+                } else if (is_directive(active_line, "`unconnected_drive") ||
+                           is_directive(active_line, "`nounconnected_drive")) {
+                    check_unconnected_drive(active_line, &macro_engine);
+                } else if (active_line.front() != '`') {
+                    track_design_elements(active_line);
+                }
+            }
             if (is_directive(active_line, "`timescale") && c_solver.is_active()) {
                 check_timescale(active_line, &macro_engine);
             } else if (is_directive(active_line, "`line") && c_solver.is_active()) {

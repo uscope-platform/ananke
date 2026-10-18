@@ -3361,3 +3361,35 @@ endmodule
     EXPECT_FALSE(preproc.has_error()) << preproc.get_error();
     EXPECT_THAT(result, ::testing::HasSubstr("i45j"));
 }
+
+TEST(preprocessor, unconnected_drive_requires_pull_argument) {
+    for (const auto *directive : {"`unconnected_drive pull0", "`unconnected_drive pull1  // ok",
+                                  "`unconnected_drive pull1\n`nounconnected_drive"}) {
+        sv_preprocessor preproc;
+        preproc.set_path("/tmp/file.sv");
+        preproc.preprocess(std::string(directive) + "\nmodule m; endmodule\n");
+        EXPECT_FALSE(preproc.has_error()) << directive << ": " << preproc.get_error();
+    }
+    for (const auto *directive : {"`unconnected_drive", "`unconnected_drive pull2",
+                                  "`unconnected_drive pull0 pull1", "`nounconnected_drive pull0"}) {
+        sv_preprocessor preproc;
+        preproc.set_path("/tmp/file.sv");
+        preproc.preprocess(std::string(directive) + "\nmodule m; endmodule\n");
+        EXPECT_TRUE(preproc.has_error()) << directive;
+    }
+}
+
+TEST(preprocessor, resetall_illegal_inside_design_element) {
+    auto run = [](const std::string &source) {
+        sv_preprocessor preproc;
+        preproc.set_path("/tmp/file.sv");
+        preproc.preprocess(source);
+        return preproc.has_error();
+    };
+    EXPECT_FALSE(run("`resetall\nmodule top ();\nendmodule\n`resetall\n"));
+    EXPECT_FALSE(run("`resetall\n`resetall\nmodule top (); endmodule\n`resetall\nmodule b (); endmodule\n"));
+    EXPECT_FALSE(run("interface class ic;\nendclass\n`resetall\n"));
+    EXPECT_TRUE(run("`resetall\nmodule top ();\n`resetall\nendmodule\n"));
+    EXPECT_TRUE(run("package p;\n`resetall\nendpackage\n"));
+    EXPECT_TRUE(run("interface i;\n`resetall\nendinterface\n"));
+}

@@ -93,6 +93,14 @@ namespace preprocessor {
         void check_timescale(std::string_view directive_line, macro_processor *macro_engine);
         void check_line(std::string_view directive_line, macro_processor *macro_engine);
         void check_pragma(std::string_view directive_line);
+        // IEEE 1800-2017 22.9: `unconnected_drive takes pull0 or pull1 and
+        // `nounconnected_drive takes no argument.
+        void check_unconnected_drive(std::string_view directive_line, macro_processor *macro_engine);
+        // IEEE 1800-2017 22.3: `resetall shall not appear inside a design
+        // element. Textual nesting count of module/interface/program/
+        // package/primitive/config bodies seen in the top-level file.
+        void track_design_elements(std::string_view line);
+        int design_element_depth = 0;
         // Records a conditional query on a currently-undefined macro.
         // The taken branch may be wrong once repository macros are known,
         // so the file becomes a quarantine candidate.
