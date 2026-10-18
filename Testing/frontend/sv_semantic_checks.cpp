@@ -982,3 +982,63 @@ TEST(sv_semantic_checks, randsequence_names_must_resolve) {
         "module m; initial randsequence( op ) string op : add := 5 { return \"+\"; } | dec := 2 { return \"-\"; }; "
         "endsequence endmodule"));
 }
+
+TEST(sv_semantic_checks, body_parameter_defaults_are_judged_for_counts_and_widths) {
+    // ivtest pr1971662 / pr1925363 / sv-tests variable-slice-zero: a body-declared `parameter` of a top
+    // module keeps its default, so x/z and negative counts and zero widths are errors.
+    EXPECT_TRUE(declarations_rejected(
+        "module top; parameter rep = 4'bx; wire [31:0] b = {rep{8'hab}}; endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module top; parameter wid = 9; wire [31:0] a = {(wid-16){8'b0}}; endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module top; parameter integer c = 0; reg [7:0] a, b; initial b[4+:c] = a[1+:c]; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module top; parameter wid = 20; wire [31:0] a = {(wid-16){8'b0}}; endmodule"));
+    // The `#(...)` header marks a parameter meant to be overridden: its default is never judged.
+    EXPECT_FALSE(declarations_rejected(
+        "module top #(parameter wid = 9, parameter rep = 4'bx); wire [31:0] a = {(wid-16){8'b0}}; "
+        "wire [31:0] b = {rep{8'hab}}; endmodule"));
+}
+
+TEST(sv_semantic_checks, x_or_z_array_sizes_rejected) {
+    // ivtest br_gh1140c
+    EXPECT_TRUE(declarations_rejected("module top; localparam integer LPX = 32'b01x; reg [LPX] r; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module top; localparam integer LPZ = 32'b01z; reg a [LPZ]; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module top; localparam integer N = 4; reg a [N]; endmodule"));
+}
+
+TEST(sv_semantic_checks, system_call_operands) {
+    // ivtest br1029c / br_gh1112b: $signed takes no real value, $bits no module name.
+    EXPECT_TRUE(declarations_rejected("module test; reg [7:0] v = $signed(1.0); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module top; localparam width = $bits(top); endmodule"));
+    EXPECT_FALSE(declarations_rejected("module test; reg [7:0] v = $signed(8'hff); localparam w = $bits(v); endmodule"));
+    EXPECT_FALSE(declarations_rejected("module top; reg top_v; localparam w = $bits(top_v); endmodule"));
+}
+
+TEST(sv_semantic_checks, genvar_loops) {
+    // ivtest br_gh1225a/c, br_gh533, pr2809288
+    EXPECT_TRUE(declarations_rejected("module t; genvar a; for (genvar b = 0; b < 2; a = a + 1); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; for (genvar g = 1'bx; g <= 1; g = g + 1); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; for (genvar g = 0; 1'bx; g = g + 1); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; for (genvar g = 0; g <= 1; g = g + 1'bx); endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; for (genvar g = g + 1; g <= 1; g = g + 1); endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t; genvar i; for (i = 0; i < 2; i = i + 1) for (i = 0; i < 2; i = i + 1) initial $display(i); endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t; integer i = 0; generate for (i = 0; i < 4; i = i + 1) begin : u reg a; end endgenerate endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; genvar i, j; for (i = 0; i < 2; i = i + 1) begin : o for (j = 0; j < 2; j = j + 1) begin : n "
+        "end end for (genvar k = 0; k < 2; k++) begin : p end endmodule"));
+}
+
+TEST(sv_semantic_checks, generate_block_names) {
+    // ivtest br_gh1225b
+    EXPECT_TRUE(declarations_rejected(
+        "module t; reg named; for (genvar g = 0; g < 1; g = g + 1) begin : named end endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t; for (genvar g = 0; g < 1; g = g + 1) begin : m end "
+        "for (genvar h = 0; h < 1; h = h + 1) begin : m end endmodule"));
+    // sibling branches of a conditional generate may share a name
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter A = 1); if (A) begin : g wire x; end else begin : g wire y; end endmodule"));
+}

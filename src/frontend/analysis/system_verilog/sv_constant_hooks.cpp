@@ -88,6 +88,7 @@ void sv_visitor::check_constant_context(antlr4::ParserRuleContext *ctx) {
         }
         bool is_real = false;
         bool is_local = false;
+        bool in_header = false;
         int hops = 0;
         for (auto *p = ctx->parent; p && hops < 4; p = p->parent, ++hops) {
             if (p->getTreeType() != antlr4::tree::ParseTreeType::RULE) break;
@@ -99,6 +100,7 @@ void sv_visitor::check_constant_context(antlr4::ParserRuleContext *ctx) {
                 is_local = true;
                 type = static_cast<sv2017::Local_parameter_declarationContext *>(rule)->data_type_or_implicit();
             } else if (rule->getRuleIndex() == sv2017::RuleParameter_port_declaration) {
+                in_header = true;
                 type = static_cast<sv2017::Parameter_port_declarationContext *>(rule)->data_type();
                 if (!type) continue;  // `localparam`/`parameter` declaration nested inside
             } else {
@@ -109,6 +111,10 @@ void sv_visitor::check_constant_context(antlr4::ParserRuleContext *ctx) {
         }
         // A `parameter` of a module, interface, program or class can be overridden at instantiation, so its
         // default is not its value. Only localparams and package/unit parameters are final.
+        for (auto *p = ctx->parent; p && !in_header; p = p->parent) {
+            in_header = p->getTreeType() == antlr4::tree::ParseTreeType::RULE &&
+                        static_cast<antlr4::ParserRuleContext *>(p)->getRuleIndex() == sv2017::RuleParameter_port_list;
+        }
         bool definitive = is_local;
         if (!definitive && !chain.empty()) {
             auto *scope = static_cast<antlr4::tree::ParseTree *>(const_cast<void *>(chain.front()));
@@ -119,8 +125,47 @@ void sv_visitor::check_constant_context(antlr4::ParserRuleContext *ctx) {
         if (!value.empty()) {
             fired(semantic_checker.check_constant_use(current_file, line_of(ctx), value, chain, "a parameter value"));
         }
-        if (!definitive) value.clear();
-        semantic_checker.declare_constant_name(chain, pa->identifier()->getText(), value, is_real);
+        semantic_checker.declare_constant_name(
+            chain, pa->identifier()->getText(), value, is_real, !definitive, in_header);
+        break;
+    }
+    case sv2017::RuleLoop_generate_construct: {
+        auto *loop = static_cast<sv2017::Loop_generate_constructContext *>(ctx);
+        auto *init = loop->genvar_initialization();
+        auto *iter = loop->genvar_iteration();
+        if (!init || !init->identifier()) break;
+        sv_semantic_checker::genvar_loop info;
+        info.init_var = init->identifier()->getText();
+        info.init_expr = init->constant_expression() ? init->constant_expression()->getText() : "";
+        info.condition = loop->genvar_expression() ? loop->genvar_expression()->getText() : "";
+        info.declares_genvar = init->KW_GENVAR() != nullptr;
+        if (iter) {
+            info.step_var = iter->identifier() ? iter->identifier()->getText() : "";
+            info.step_expr = iter->genvar_expression() ? iter->genvar_expression()->getText() : "";
+        }
+        for (auto *p = ctx->parent; p; p = p->parent) {
+            if (p->getTreeType() != antlr4::tree::ParseTreeType::RULE) continue;
+            auto *rule = static_cast<antlr4::ParserRuleContext *>(p);
+            if (rule->getRuleIndex() != sv2017::RuleLoop_generate_construct) continue;
+            auto *outer = static_cast<sv2017::Loop_generate_constructContext *>(rule)->genvar_initialization();
+            if (outer && outer->identifier() && outer->identifier()->getText() == info.init_var) info.nested_reuse = true;
+        }
+        fired(semantic_checker.check_genvar_loop(current_file, line_of(ctx), info, enclosing_scopes(ctx)));
+        break;
+    }
+    case sv2017::RuleGenerate_begin_end_block: {
+        auto *block = static_cast<sv2017::Generate_begin_end_blockContext *>(ctx);
+        if (block->identifier().empty()) break;
+        // Sibling branches of an if/case generate may reuse a name; loops and plain blocks may not.
+        bool conditional = false;
+        const auto chain = enclosing_scopes(ctx);
+        for (auto *p = ctx->parent; p && !chain.empty() && p != chain.front(); p = p->parent) {
+            if (p->getTreeType() != antlr4::tree::ParseTreeType::RULE) continue;
+            const auto rule = static_cast<antlr4::ParserRuleContext *>(p)->getRuleIndex();
+            if (rule == sv2017::RuleIf_generate_construct || rule == sv2017::RuleCase_generate_construct) conditional = true;
+        }
+        fired(semantic_checker.check_generate_block_name(
+            current_file, line_of(ctx), block->identifier(0)->getText(), chain, conditional));
         break;
     }
     case sv2017::RuleGenvar_declaration: {
@@ -208,6 +253,26 @@ void sv_visitor::check_constant_context(antlr4::ParserRuleContext *ctx) {
         break;
     }
     case sv2017::RulePrimary:
+        if (auto *call = dynamic_cast<sv2017::PrimaryTfCallContext *>(ctx); call && call->any_system_tf_identifier()) {
+            std::vector<std::string> args;
+            if (call->list_of_arguments()) {
+                for (auto *a : call->list_of_arguments()->expression()) args.push_back(a->getText());
+            } else if (call->data_type()) {
+                args.push_back(call->data_type()->getText());  // `$bits(top)` parses its name as a data type
+            }
+            std::string unit;
+            for (auto *p = ctx->parent; p && unit.empty(); p = p->parent) {
+                if (p->getTreeType() != antlr4::tree::ParseTreeType::RULE) continue;
+                auto *rule = static_cast<antlr4::ParserRuleContext *>(p);
+                if (rule->getRuleIndex() == sv2017::RuleModule_declaration) {
+                    auto *m = static_cast<sv2017::Module_declarationContext *>(rule);
+                    if (m->module_header_common() && m->module_header_common()->identifier())
+                        unit = m->module_header_common()->identifier()->getText();
+                }
+            }
+            fired(semantic_checker.check_system_call(
+                current_file, line_of(ctx), call->any_system_tf_identifier()->getText(), args, unit, enclosing_scopes(ctx)));
+        }
         // `N'(expr)`: primary cast_separator expression ')'
         if (ctx->children.size() == 4 && ctx->children[1]->getTreeType() == antlr4::tree::ParseTreeType::RULE &&
             static_cast<antlr4::ParserRuleContext *>(ctx->children[1])->getRuleIndex() == sv2017::RuleCast_separator) {

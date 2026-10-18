@@ -79,6 +79,7 @@ public:
         class_names_.clear();
         array_dims_.clear();
         names_.clear();
+        generate_labels_.clear();
         begin_unit_scope();
     }
 
@@ -259,8 +260,13 @@ public:
     using scope_chain = std::vector<const void *>;
     // parameter / localparam / genvar / enum member. `value_text` may be empty; an evaluable value is kept
     // so later dimensions, replication counts and casts can use it.
+    // `overridable` marks a module/interface/program parameter: its default is not necessarily its value (an
+    // instance can override it). Checks that opt in (x/z and negative counts, zero part-select widths) still
+    // read the default of a parameter declared in the module body, which legacy top-level modules rely on,
+    // but never of one in the `#(...)` header (`header`), where an invalid default means "must be overridden".
     void declare_constant_name(
-        const scope_chain &chain, const std::string &name, const std::string &value_text, bool is_real);
+        const scope_chain &chain, const std::string &name, const std::string &value_text, bool is_real,
+        bool overridable = false, bool header = false);
     // Variable, net or port. `plain_vector` is true for a fixed-size integral object (the only kind whose
     // part-selects need constant bounds; queues and dynamic arrays slice with variables).
     void declare_variable_name(const scope_chain &chain, const std::string &name, bool plain_vector);
@@ -290,6 +296,27 @@ public:
     [[nodiscard]] bool check_concatenation_operands(
         const std::string &file, unsigned int line, const std::vector<std::string> &operands,
         const scope_chain &chain);
+    // IEEE 1800-2017 §20.6.2 / §20.5: `$bits` takes a data type or expression (not a real value, not a
+    // module name) and `$signed`/`$unsigned` take an integral expression. `args` are the argument texts;
+    // `enclosing_unit` is the module/interface/program being declared.
+    [[nodiscard]] bool check_system_call(
+        const std::string &file, unsigned int line, const std::string &name, const std::vector<std::string> &args,
+        const std::string &enclosing_unit, const scope_chain &chain);
+    // IEEE 1800-2017 §27.4: `for (genvar i = init; cond; i = step)`. All three expressions are constant and
+    // defined, the iteration assigns the initialised genvar, the initial value does not read it, the
+    // variable really is a genvar (not an `integer`) and an enclosing loop does not use the same one.
+    struct genvar_loop {
+        std::string init_var, init_expr, condition, step_var, step_expr;
+        bool declares_genvar = false;     // `for (genvar i = ...`
+        bool nested_reuse = false;        // an enclosing generate loop uses the same genvar
+    };
+    [[nodiscard]] bool check_genvar_loop(
+        const std::string &file, unsigned int line, const genvar_loop &loop, const scope_chain &chain);
+    // IEEE 1800-2017 §27.6: a generate block name is unique in its scope and cannot reuse a variable's name.
+    // `conditional` is true inside an if/case generate, where sibling branches may share a name.
+    [[nodiscard]] bool check_generate_block_name(
+        const std::string &file, unsigned int line, const std::string &label, const scope_chain &chain,
+        bool conditional);
     // Continuous assignment targets: bit/array indices must be constant.
     [[nodiscard]] bool check_net_lvalue(
         const std::string &file, unsigned int line, const std::string &lvalue, const scope_chain &chain);
@@ -324,11 +351,16 @@ private:
     struct name_entry {
         bool variable = false;
         bool plain_vector = false;
+        bool overridable = false;
+        bool header = false;
         constant_value value;
     };
+    std::set<std::pair<const void *, std::string>> generate_labels_;
     std::map<std::pair<const void *, std::string>, name_entry> names_;
     [[nodiscard]] const name_entry *lookup_name(const scope_chain &chain, const std::string &name) const;
-    [[nodiscard]] constant_value evaluate_constant(const std::string &text, const scope_chain &chain) const;
+    // With `trust_defaults` a parameter that an instance may override still resolves to its default.
+    [[nodiscard]] constant_value evaluate_constant(
+        const std::string &text, const scope_chain &chain, bool trust_defaults = false) const;
     std::set<std::string> unit_declared_;
     std::set<std::string> unit_resolved_;
     std::vector<std::pair<std::string, unsigned int>> unit_forwards_;

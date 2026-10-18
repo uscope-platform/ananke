@@ -255,10 +255,12 @@ const sv_semantic_checker::name_entry *sv_semantic_checker::lookup_name(
 }
 
 sv_semantic_checker::constant_value sv_semantic_checker::evaluate_constant(
-    const std::string &text, const scope_chain &chain) const {
+    const std::string &text, const scope_chain &chain, bool trust_defaults) const {
     evaluator ev{text, [&](const std::string &name) -> std::optional<std::tuple<bool, bool, bool, long long>> {
                      const auto *entry = lookup_name(chain, name);
                      if (!entry || entry->variable) return std::nullopt;
+                     if (entry->overridable && (!trust_defaults || entry->header))
+                         return std::make_tuple(false, false, entry->value.real, 0LL);
                      return std::make_tuple(entry->value.known, entry->value.xz, entry->value.real, entry->value.value);
                  }};
     auto r = ev.run();
@@ -271,9 +273,12 @@ sv_semantic_checker::constant_value sv_semantic_checker::evaluate_constant(
 }
 
 void sv_semantic_checker::declare_constant_name(
-    const scope_chain &chain, const std::string &name, const std::string &value_text, bool is_real) {
+    const scope_chain &chain, const std::string &name, const std::string &value_text, bool is_real,
+    bool overridable, bool header) {
     if (chain.empty()) return;
     name_entry entry;
+    entry.overridable = overridable;
+    entry.header = header;
     if (!value_text.empty()) entry.value = evaluate_constant(value_text, chain);
     if (is_real) { entry.value.real = true; entry.value.known = false; }
     names_[{chain.front(), name}] = entry;
@@ -318,6 +323,10 @@ bool sv_semantic_checker::check_dimension(
             record_violation(file, line, violations_, "invalid packed dimension [" + inner + "]; expected [msb:lsb]");
             return true;
         }
+        if (sloppy_size && judge_values && evaluate_constant(inner, chain, true).xz) {
+            record_violation(file, line, violations_, "dimension [" + inner + "] is x or z");
+            return true;
+        }
         if (sloppy_size) {
             spdlog::warn("{}:{}: warning: packed dimension [{}] is not [msb:lsb]; read as [{}-1:0]", file, line, inner, inner);
         }
@@ -326,7 +335,12 @@ bool sv_semantic_checker::check_dimension(
     if (!is_range) {
         // unpacked size `[N]`: N constant (a type name or `*` is not an identifier in the table)
         if (inner.empty() || inner[0] == '$') return false;
-        return check_constant_use(file, line, inner, chain, "an array dimension");
+        if (check_constant_use(file, line, inner, chain, "an array dimension")) return true;
+        if (judge_values && evaluate_constant(inner, chain, true).xz) {
+            record_violation(file, line, violations_, "array size [" + inner + "] is x or z");
+            return true;
+        }
+        return false;
     }
     if (a.starts_with('$') || b.starts_with('$') || a.empty()) return false;  // queue bound
     bool fired = check_constant_use(file, line, a, chain, "a dimension bound");
@@ -365,7 +379,7 @@ bool sv_semantic_checker::check_part_select(
     }
     // `+:` / `-:`: the width must be a positive constant.
     fired = check_constant_use(file, line, second, chain, "an indexed part-select width");
-    auto width = evaluate_constant(second, chain);
+    auto width = evaluate_constant(second, chain, true);
     if (judge_values && (width.xz || (width.known && width.value <= 0))) {
         record_violation(file, line, violations_, "indexed part-select width '" + second + "' must be a positive defined constant");
         fired = true;
@@ -377,7 +391,8 @@ bool sv_semantic_checker::check_replication(
     const std::string &file, unsigned int line, const std::string &count, bool zero_allowed, const scope_chain &chain,
     bool judge_values) {
     if (opts_.disable_semantic_checks || !judge_values) return false;
-    auto v = evaluate_constant(count, chain);
+    // x/z and negative counts are wrong whatever an instance overrides; zero is judged on settled values only.
+    auto v = evaluate_constant(count, chain, true);
     if (v.xz) {
         record_violation(file, line, violations_, "replication count '" + count + "' is x or z");
         return true;
@@ -386,6 +401,7 @@ bool sv_semantic_checker::check_replication(
         record_violation(file, line, violations_, "replication count '" + count + "' is negative");
         return true;
     }
+    v = evaluate_constant(count, chain);
     if (v.known && v.value == 0 && !zero_allowed) {
         record_violation(file, line, violations_, "zero replication '{" + count + "{...}}' must be an operand of a concatenation with other operands");
         return true;
@@ -433,6 +449,65 @@ bool sv_semantic_checker::check_net_lvalue(
                 if (check_constant_use(file, line, index, chain, "a continuous assignment target index")) return true;
             }
         }
+    }
+    return false;
+}
+
+bool sv_semantic_checker::check_system_call(
+    const std::string &file, unsigned int line, const std::string &name, const std::vector<std::string> &args,
+    const std::string &enclosing_unit, const scope_chain &chain) {
+    if (opts_.disable_semantic_checks || args.empty()) return false;
+    const auto &arg = args.front();
+    if ((name == "$signed" || name == "$unsigned") && evaluate_constant(arg, chain).real) {
+        record_violation(file, line, violations_, name + " does not take a real value ('" + arg + "')");
+        return true;
+    }
+    if (name == "$bits" && !enclosing_unit.empty() && arg == enclosing_unit && !lookup_name(chain, arg)) {
+        record_violation(file, line, violations_, "$bits cannot take the scope name '" + arg + "'");
+        return true;
+    }
+    return false;
+}
+
+bool sv_semantic_checker::check_genvar_loop(
+    const std::string &file, unsigned int line, const genvar_loop &loop, const scope_chain &chain) {
+    if (opts_.disable_semantic_checks) return false;
+    auto fail = [&](const std::string &message) {
+        record_violation(file, line, violations_, message);
+        return true;
+    };
+    if (!loop.step_var.empty() && loop.step_var != loop.init_var) {
+        return fail("generate loop iterates '" + loop.step_var + "' but initialises '" + loop.init_var + "'");
+    }
+    if (loop.nested_reuse) return fail("genvar '" + loop.init_var + "' is already used by an enclosing generate loop");
+    if (!loop.declares_genvar) {
+        if (const auto *entry = lookup_name(chain, loop.init_var); entry && entry->variable)
+            return fail("generate loop variable '" + loop.init_var + "' is not a genvar");
+    }
+    for (const auto &id : identifiers_in(loop.init_expr)) {
+        if (id == loop.init_var) return fail("genvar '" + id + "' is used in its own initial value");
+    }
+    for (const auto &[what, text] : {std::pair<const char *, const std::string &>{"initial value", loop.init_expr},
+                                      {"condition", loop.condition},
+                                      {"iteration", loop.step_expr}}) {
+        if (!text.empty() && evaluate_constant(text, chain).xz)
+            return fail(std::string("generate loop ") + what + " '" + text + "' is x or z");
+    }
+    return false;
+}
+
+bool sv_semantic_checker::check_generate_block_name(
+    const std::string &file, unsigned int line, const std::string &label, const scope_chain &chain,
+    bool conditional) {
+    if (opts_.disable_semantic_checks || chain.empty() || label.empty()) return false;
+    if (auto it = names_.find({chain.front(), label}); it != names_.end() && it->second.variable) {
+        record_violation(file, line, violations_, "generate block name '" + label + "' is already used by a variable");
+        return true;
+    }
+    if (conditional) return false;
+    if (!generate_labels_.insert({chain.front(), label}).second) {
+        record_violation(file, line, violations_, "duplicate generate block name '" + label + "'");
+        return true;
     }
     return false;
 }
