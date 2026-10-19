@@ -119,6 +119,7 @@ int sv_semantic_checker::exit_code_for(semantic_error_code code) {
     case semantic_error_code::timing_check_missing_argument:
     case semantic_error_code::bare_generate_block:
     case semantic_error_code::invalid_constraint:
+    case semantic_error_code::illegal_driver:
         return 56;
     }
     return 56;

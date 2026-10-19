@@ -126,6 +126,7 @@ target_sources(ananke_lib
     frontend/analysis/system_verilog/sv_visitor.cpp
     frontend/analysis/system_verilog/sv_semantic_checker.cpp
     frontend/analysis/system_verilog/sv_constant_checks.cpp
+    frontend/analysis/system_verilog/sv_logic_checks.cpp
     frontend/analysis/system_verilog/sv_constant_hooks.cpp
     frontend/analysis/system_verilog/sv_parsing_helpers.cpp
     frontend/analysis/system_verilog/sv_analyzer.cpp

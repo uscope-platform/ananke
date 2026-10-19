@@ -57,6 +57,9 @@ public:
     void add_component(const std::shared_ptr<Expression_base> &c);
     void add_value(const std::shared_ptr<Expression_base> &v);
     void close_lvalue();
+    // The lvalue being closed carries a [...] select (bit, range or indexed
+    // part select), whether or not an index expression was recorded for it.
+    void mark_lvalue_selected() { if (!in_concat) pending_lhs_select = true; }
     void start_body(){phase = body;}
     void finish_assignment();
     void add_loop(const std::shared_ptr<hdl_loop_statement> &ls) {
@@ -141,6 +144,11 @@ private:
     int selection_depth = 0;
     bool lvalue_open = false;
     std::shared_ptr<Expression_base> pending_lhs_index;
+    // A [...] select was seen on the single-target lvalue, whether or not its
+    // index survived as an expression (range selects with non-literal bounds
+    // leave none): the write is partial, never the whole variable.
+    bool pending_lhs_select = false;
+    bool current_lhs_select = false;
     std::stack<std::unique_ptr<factory_base>> consumer_stack;
     hdl_function_statement f;
     std::string return_type_name;

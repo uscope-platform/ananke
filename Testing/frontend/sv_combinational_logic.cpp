@@ -239,6 +239,35 @@ TEST(sv_combinational_logic, continuous_assign_lvalue_forms) {
     ASSERT_EQ(resource, check_res);
 }
 
+TEST(sv_combinational_logic, range_select_lvalues_are_partial_writes) {
+    auto resource = analyze_module(R"(
+        module m #(parameter W = 4)();
+            assign f[W-1:0] = a;
+            assign g[W] = a;
+        endmodule
+    )");
+
+    // a range select with parametric bounds keeps no index, but must not read as a write of the whole variable
+    auto range_driver = make_driver("f", id("a"));
+    hdl_lvalue range_lv;
+    range_lv.set_target("f");
+    range_lv.set_member_selects({concat_member_select{-1, -1, true}});
+    range_driver->set_lvalue(range_lv);
+
+    auto bit_driver = make_driver("g", id("a"));
+    hdl_lvalue bit_lv;
+    bit_lv.set_target("g");
+    bit_lv.set_index(id("W"));
+    bit_driver->set_lvalue(bit_lv);
+
+    auto check_res = make_check_res();
+    check_res.add_statement(make_param("W", "4"));
+    check_res.add_statement(range_driver);
+    check_res.add_statement(bit_driver);
+
+    ASSERT_EQ(resource, check_res);
+}
+
 TEST(sv_combinational_logic, always_comb_body_keeps_control_flow) {
     auto resource = analyze_module(R"(
         module m();
@@ -295,17 +324,42 @@ TEST(sv_combinational_logic, always_star_and_case) {
     ASSERT_EQ(resource, check_res);
 }
 
-TEST(sv_combinational_logic, only_combinational_blocks_are_recorded) {
+TEST(sv_combinational_logic, other_blocks_are_recorded_by_their_writes) {
     auto resource = analyze_module(R"(
         module m(input clk);
-            reg a, b, c;
+            reg a, b, c, d;
             always @(posedge clk) a <= b;
             always_ff @(posedge clk) b <= c;
             always_latch if (clk) c = a;
             initial a = 1'b0;
-            always @(a or b) c = a & b;
+            always @(a or b) d = a & b;
         endmodule
     )");
+
+    auto write = [](const std::string &name) {
+        hdl_lvalue lv;
+        lv.set_target(name);
+        return lv;
+    };
+
+    auto flop_a = std::make_shared<hdl_procedural_block_statement>(procedural_block_kind_t::always);
+    flop_a->add_sensitivity(sensitivity_edge_t::posedge, id("clk"));
+    flop_a->add_written(write("a"));
+
+    auto flop_b = std::make_shared<hdl_procedural_block_statement>(procedural_block_kind_t::always_ff);
+    flop_b->add_sensitivity(sensitivity_edge_t::posedge, id("clk"));
+    flop_b->add_written(write("b"));
+
+    auto latch = std::make_shared<hdl_procedural_block_statement>(procedural_block_kind_t::always_latch);
+    latch->add_written(write("c"));
+
+    auto init = std::make_shared<hdl_procedural_block_statement>(procedural_block_kind_t::initial);
+    init->add_written(write("a"));
+
+    auto level = std::make_shared<hdl_procedural_block_statement>(procedural_block_kind_t::always);
+    level->add_sensitivity(sensitivity_edge_t::level, id("a"));
+    level->add_sensitivity(sensitivity_edge_t::level, id("b"));
+    level->add_written(write("d"));
 
     std::unordered_map<std::string, HDL_port> check_ports;
     check_ports["clk"] = {input_port};
@@ -315,6 +369,50 @@ TEST(sv_combinational_logic, only_combinational_blocks_are_recorded) {
     check_res.add_statement(make_var("a", make_type("reg")));
     check_res.add_statement(make_var("b", make_type("reg")));
     check_res.add_statement(make_var("c", make_type("reg")));
+    check_res.add_statement(make_var("d", make_type("reg")));
+    check_res.add_statement(flop_a);
+    check_res.add_statement(flop_b);
+    check_res.add_statement(latch);
+    check_res.add_statement(init);
+    check_res.add_statement(level);
+
+    ASSERT_EQ(resource, check_res);
+}
+
+TEST(sv_combinational_logic, write_sets_keep_selects_partial_and_skip_locals) {
+    auto resource = analyze_module(R"(
+        module m();
+            reg [7:0] v, w, x;
+            always @(posedge clk) begin
+                reg [7:0] w;
+                v[3:0] <= 4'd1;
+                w = 8'd2;
+                {x, y} <= z;
+            end
+        endmodule
+    )");
+
+    hdl_lvalue part;
+    part.set_target("v");
+    part.set_member_selects({concat_member_select{-1, -1, true}});
+    hdl_lvalue x_write;
+    x_write.set_target("x");
+    hdl_lvalue y_write;
+    y_write.set_target("y");
+
+    auto block = std::make_shared<hdl_procedural_block_statement>(procedural_block_kind_t::always);
+    block->add_sensitivity(sensitivity_edge_t::posedge, id("clk"));
+    block->add_written(part);
+    block->add_written(x_write);
+    block->add_written(y_write);
+    block->add_local_name("w");
+
+    auto t = make_type("reg", {range("7", "0")});
+    auto check_res = make_check_res();
+    check_res.add_statement(make_var("v", t));
+    check_res.add_statement(make_var("w", t));
+    check_res.add_statement(make_var("x", t));
+    check_res.add_statement(block);
 
     ASSERT_EQ(resource, check_res);
 }

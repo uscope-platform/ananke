@@ -334,7 +334,9 @@ void sv_visitor::enterModule_declaration(sv2017::Module_declarationContext *ctx)
 
 void sv_visitor::exitModule_declaration(sv2017::Module_declarationContext *ctx) {
     type_engine.clear_type_params();
-    entities.push_back(modules_factory.get_module());
+    auto module_resource = modules_factory.get_module();
+    if (semantic_checker.check_module_logic(current_file, *module_resource)) had_error = true;
+    entities.push_back(module_resource);
 }
 
 void sv_visitor::enterInterface_declaration(sv2017::Interface_declarationContext *ctx) {
@@ -1048,12 +1050,22 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
 }
 
 namespace {
-bool in_generate_scope(antlr4::tree::ParseTree *node) {
+// Scopes in which a declaration or assignment is not a plain module-body item: generate constructs
+// (which would need their condition attached) and procedural blocks, tasks and functions (whose
+// declarations are local).
+bool in_untracked_scope(antlr4::tree::ParseTree *node) {
     for (auto *p = node ? node->parent : nullptr; p; p = p->parent) {
         if (dynamic_cast<sv2017::Loop_generate_constructContext *>(p) ||
             dynamic_cast<sv2017::If_generate_constructContext *>(p) ||
             dynamic_cast<sv2017::Case_generate_constructContext *>(p) ||
-            dynamic_cast<sv2017::Generate_begin_end_blockContext *>(p))
+            dynamic_cast<sv2017::Generate_begin_end_blockContext *>(p) ||
+            dynamic_cast<sv2017::Always_constructContext *>(p) ||
+            dynamic_cast<sv2017::Initial_constructContext *>(p) ||
+            dynamic_cast<sv2017::Final_constructContext *>(p) ||
+            dynamic_cast<sv2017::Seq_blockContext *>(p) ||
+            dynamic_cast<sv2017::Par_blockContext *>(p) ||
+            dynamic_cast<sv2017::Task_declarationContext *>(p) ||
+            dynamic_cast<sv2017::Function_declarationContext *>(p))
             return true;
     }
     return false;
@@ -1076,7 +1088,7 @@ net_type_t net_type_from_keyword(const std::string &kw) {
 bool sv_visitor::module_logic_scope_open(antlr4::ParserRuleContext *ctx) {
     return modules_factory.is_current_valid() && !classes_factory.is_current_valid() &&
            !packages_factory.is_current_valid() && !interfaces_factory.is_current_valid() &&
-           !f_factory.is_active() && in_method_body == 0 && !in_generate_scope(ctx);
+           !f_factory.is_active() && in_method_body == 0 && !in_untracked_scope(ctx);
 }
 
 void sv_visitor::emit_module_signals(const std::vector<std::string> &names, signal_storage_t storage,
@@ -1179,8 +1191,143 @@ void sv_visitor::enterAlways_construct(sv2017::Always_constructContext *ctx) {
     module_logic_failed = false;
 }
 
+namespace {
+
+// A write target the logic tracking can name: a plain identifier of this module, possibly selected or
+// part of a concatenation. Hierarchical, package-scoped, pattern and streaming targets are not named.
+void collect_lvalue_targets(sv2017::Variable_lvalueContext *lv, std::vector<hdl_lvalue> &out) {
+    if (!lv) return;
+    if (!lv->variable_lvalue().empty()) {
+        for (auto *member : lv->variable_lvalue()) collect_lvalue_targets(member, out);
+        return;
+    }
+    auto *hier = lv->package_or_class_scoped_hier_id_with_select();
+    if (!hier || !hier->package_or_class_scoped_path()) return;
+    auto *path = hier->package_or_class_scoped_path();
+    if (!path->DOUBLE_COLON().empty() || !hier->DOT().empty() || path->package_or_class_scoped_path_item().size() != 1)
+        return;
+    auto *item = path->package_or_class_scoped_path_item(0);
+    if (!item->identifier()) return;
+    hdl_lvalue target;
+    target.set_target(item->identifier()->getText());
+    if (hier->getText().find('[') != std::string::npos)
+        target.set_member_selects({concat_member_select{-1, -1, true}});
+    out.push_back(std::move(target));
+}
+
+// Statement-level assignments of a procedural body, and the names it declares (which shadow the module's).
+void collect_block_writes(antlr4::tree::ParseTree *node, std::vector<hdl_lvalue> &writes, std::set<std::string> &locals) {
+    size_t rule = 0;
+    if (!rule_node(node, rule)) return;
+    switch (rule) {
+    case sv2017::RuleBlocking_assignment: {
+        auto *a = static_cast<sv2017::Blocking_assignmentContext *>(node);
+        collect_lvalue_targets(a->operator_assignment() ? a->operator_assignment()->variable_lvalue() : a->variable_lvalue(),
+                               writes);
+        break;
+    }
+    case sv2017::RuleNonblocking_assignment:
+        collect_lvalue_targets(static_cast<sv2017::Nonblocking_assignmentContext *>(node)->variable_lvalue(), writes);
+        break;
+    case sv2017::RuleData_declaration: {
+        auto *d = static_cast<sv2017::Data_declarationContext *>(node);
+        if (auto *list = d->list_of_variable_decl_assignments())
+            for (auto *decl : list->variable_decl_assignment())
+                if (decl && decl->identifier()) locals.insert(decl->identifier()->getText());
+        break;
+    }
+    case sv2017::RuleFor_variable_declaration_var_assign: {
+        auto *d = static_cast<sv2017::For_variable_declaration_var_assignContext *>(node);
+        if (d->identifier()) locals.insert(d->identifier()->getText());
+        break;
+    }
+    default:
+        break;
+    }
+    for (auto *child : node->children) collect_block_writes(child, writes, locals);
+}
+
+bool is_plain_name(const std::string &text) {
+    if (text.empty() || !(std::isalpha(static_cast<unsigned char>(text[0])) || text[0] == '_')) return false;
+    return std::all_of(text.begin(), text.end(), [](char c) {
+        return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '$';
+    });
+}
+
+// Plain-signal items of a sensitivity list. Anything fancier (selects, expressions, `iff` guards) is left
+// out rather than recorded as a misleading name.
+void collect_sensitivity(sv2017::Event_expressionContext *list, hdl_procedural_block_statement &block) {
+    if (!list) return;
+    for (auto *item : list->event_expression_item()) {
+        if (item->event_expression()) {
+            collect_sensitivity(item->event_expression(), block);
+            continue;
+        }
+        if (item->expression().size() != 1) continue;
+        const auto text = item->expression(0)->getText();
+        if (!is_plain_name(text)) continue;
+        auto edge = sensitivity_edge_t::level;
+        if (auto *e = item->edge_identifier()) {
+            if (e->KW_POSEDGE()) edge = sensitivity_edge_t::posedge;
+            else if (e->KW_NEGEDGE()) edge = sensitivity_edge_t::negedge;
+            else edge = sensitivity_edge_t::any_edge;
+        }
+        block.add_sensitivity(edge, sv_parsing_helpers::make_value(text));
+    }
+}
+
+// The event control that directly opens an always body (`always @(...) stmt`), not one nested in it.
+sv2017::Event_controlContext *top_event_control(sv2017::StatementContext *statement) {
+    if (!statement || !statement->statement_item()) return nullptr;
+    auto *timed = statement->statement_item()->procedural_timing_control_statement();
+    if (!timed || !timed->procedural_timing_control()) return nullptr;
+    return timed->procedural_timing_control()->event_control();
+}
+
+} // namespace
+
+// Blocks that are not combinational are recorded by what they write, not by their body: enough for the
+// driver rules, and free of the expression machinery that clocked and testbench code would otherwise exercise.
+// Blocks that write no signal of this module are not recorded.
+void sv_visitor::record_write_set_block(
+    procedural_block_kind_t kind, antlr4::ParserRuleContext *construct, antlr4::tree::ParseTree *body,
+    sv2017::Event_controlContext *sensitivity) {
+    if (!module_logic_scope_open(construct)) return;
+    std::vector<hdl_lvalue> writes;
+    std::set<std::string> locals;
+    collect_block_writes(body, writes, locals);
+    auto block = std::make_shared<hdl_procedural_block_statement>(kind);
+    for (const auto &w : writes) {
+        if (locals.contains(w.get_targets().front().get_name())) continue;
+        block->add_written(w);
+    }
+    if (block->get_written().empty()) return;
+    block->set_line_n(construct->getStart() ? static_cast<int>(construct->getStart()->getLine()) : 0);
+    if (sensitivity) {
+        if (sensitivity->event_expression()) collect_sensitivity(sensitivity->event_expression(), *block);
+        else if (auto *bare = sensitivity->package_or_class_scoped_hier_id_with_select()) {
+            const auto text = bare->getText();
+            if (is_plain_name(text)) block->add_sensitivity(sensitivity_edge_t::level, sv_parsing_helpers::make_value(text));
+        }
+    }
+    for (const auto &local : locals) block->add_local_name(local);
+    route_resource_statement(block);
+}
+
+void sv_visitor::exitInitial_construct(sv2017::Initial_constructContext *ctx) {
+    record_write_set_block(procedural_block_kind_t::initial, ctx, ctx->statement_or_null(), nullptr);
+}
+
 void sv_visitor::exitAlways_construct(sv2017::Always_constructContext *ctx) {
-    if (!in_comb_block) return;
+    if (!in_comb_block) {
+        if (!ctx->always_keyword() || !ctx->statement()) return;
+        const auto keyword = ctx->always_keyword()->getText();
+        auto kind = procedural_block_kind_t::always;
+        if (keyword == "always_ff") kind = procedural_block_kind_t::always_ff;
+        else if (keyword == "always_latch") kind = procedural_block_kind_t::always_latch;
+        record_write_set_block(kind, ctx, ctx->statement(), top_event_control(ctx->statement()));
+        return;
+    }
     in_comb_block = false;
     auto scratch = f_factory.get_function();
     if (module_logic_failed) {
@@ -1192,6 +1339,7 @@ void sv_visitor::exitAlways_construct(sv2017::Always_constructContext *ctx) {
     auto block = std::make_shared<hdl_procedural_block_statement>(comb_block_kind);
     block->set_line_n(ctx->getStart() ? static_cast<int>(ctx->getStart()->getLine()) : 0);
     for (const auto &stmt : scratch.get_body()) block->add_statement(stmt);
+    for (const auto &local : scratch.get_local_variables()) block->add_local_name(local->get_name());
     route_resource_statement(block);
 }
 
@@ -3299,6 +3447,8 @@ void sv_visitor::exitVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
     // their per-member index slots must be stashed on exit regardless.
     const bool loop_header = loops_factory.in_loop() && !loops_factory.in_body();
     if(f_factory.is_active() && (!loop_header || f_factory.in_concat_lvalue())) {
+        if (!f_factory.in_concat_lvalue() && ctx->getText().find('[') != std::string::npos)
+            f_factory.mark_lvalue_selected();
         f_factory.close_lvalue();
     }
 }

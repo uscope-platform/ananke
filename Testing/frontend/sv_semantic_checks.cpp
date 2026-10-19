@@ -1046,3 +1046,85 @@ TEST(sv_semantic_checks, generate_block_names) {
     EXPECT_FALSE(declarations_rejected(
         "module t #(parameter A = 1); if (A) begin : g wire x; end else begin : g wire y; end endmodule"));
 }
+
+TEST(sv_semantic_checks, variable_continuous_drivers) {
+    // sv-tests 6.5 variable_multiple_assignments
+    EXPECT_TRUE(declarations_rejected("module t; int v; assign v = 12; assign v = 13; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; logic v; assign v = 1'b0, v = 1'b1; endmodule"));
+    // a net is resolved, so several drivers are fine; so are bit-wise drivers of one variable
+    EXPECT_FALSE(declarations_rejected("module t; wire w; assign w = 1'b0; assign w = 1'b1; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; logic [7:0] v; assign v[3:0] = 4'd1; assign v[7:4] = 4'd2; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; logic [1:0] v; assign v[0] = 1'b0; assign v[1] = 1'b1; endmodule"));
+    // part-selects with parametric bounds are partial writes too (cva6 fmalza)
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter W = 8); logic [W:0] f; logic [W-1:0] a; "
+        "assign f[W] = 1'b0; assign f[W-1:0] = a; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter W = 8); logic [W:0] f; logic [1:0] a; "
+        "assign f[0+:2] = a; assign f[W-:2] = a; endmodule"));
+    // a port is not tracked, so it is never judged
+    EXPECT_FALSE(declarations_rejected("module t(output logic o); assign o = 1'b0; assign o = 1'b1; endmodule"));
+}
+
+TEST(sv_semantic_checks, variable_continuous_and_procedural_drivers) {
+    EXPECT_TRUE(declarations_rejected("module t; logic v, a; assign v = a; always_comb v = a; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; logic [3:0] v; wire a; assign v[0] = a; always @* v = 4'd0; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; logic [3:0] v; wire a; assign v[0] = a; always_comb v[1] = a; endmodule"));
+    // §9.2.2.2.2: always_comb is the only writer of its variables
+    EXPECT_TRUE(declarations_rejected(
+        "module t; logic v, a; always_comb v = a; always_comb v = ~a; endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t; logic v, a; always_comb v = a; always @* v = ~a; endmodule"));
+    // a block writing the same variable repeatedly is a single process
+    EXPECT_FALSE(declarations_rejected(
+        "module t; logic v, a; always_comb begin v = a; if (a) v = ~a; end endmodule"));
+}
+
+TEST(sv_semantic_checks, procedural_assignment_to_net) {
+    EXPECT_TRUE(declarations_rejected("module t; wire w; logic a; always_comb w = a; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; wire [3:0] w; logic a; always @* begin if (a) w = 4'd1; else w = 4'd0; end endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t; wire w; logic a; assign w = a; endmodule"));
+    // a name declared inside the block shadows the module's net
+    EXPECT_FALSE(declarations_rejected(
+        "module t; wire w; logic a, o; always_comb begin logic w; w = a; o = w; end endmodule"));
+}
+
+TEST(sv_semantic_checks, assignment_to_parameter) {
+    // ivtest br_gh1174b
+    EXPECT_TRUE(declarations_rejected("module t #(parameter P = 1)(); assign P = 1; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; localparam L = 1; logic a; always_comb L = a; endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t #(parameter P = 1)(); logic [P-1:0] v; assign v = P; endmodule"));
+}
+
+TEST(sv_semantic_checks, sequential_blocks_are_judged_by_their_writes) {
+    // sv-tests 6.5 variable_mixed_assignments
+    EXPECT_TRUE(declarations_rejected(
+        "module t; wire clk = 0; int v; assign v = 12; always @(posedge clk) v <= ~v; endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t; logic clk, v, d; assign v = d; always_ff @(posedge clk) v <= d; endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; logic v, d; assign v = d; initial v = 1'b0; endmodule"));
+    // sv-tests 10.3 proc_assignment__bad, ivtest pr2597278b: nets are not procedural targets
+    EXPECT_TRUE(declarations_rejected("module t(input a, input b); wire w; initial w = #10 a & b; endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t; reg [1:0] q; wire [4:0] n[1:0]; always @(q) begin n[0] <= #1 0 + 8 * (0 >> q); end endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; wire w; logic clk; always_ff @(posedge clk) w <= 1'b0; endmodule"));
+    // §9.2.2.4: an always_ff variable has no other writer (always_ff and initial seeding stays accepted)
+    EXPECT_TRUE(declarations_rejected(
+        "module t; logic clk, q, d; always_ff @(posedge clk) q <= d; always_ff @(negedge clk) q <= ~d; endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t; logic clk, q, d; always_ff @(posedge clk) q <= d; always @(d) q = d; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; logic clk, q, d; initial q = 1'b0; always_ff @(posedge clk) q <= d; endmodule"));
+    // plain always blocks may share a variable, and bit-wise continuous drivers beside a block are fine
+    EXPECT_FALSE(declarations_rejected(
+        "module t; logic clk, q, d; always @(posedge clk) q <= d; always @(negedge clk) q <= ~d; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; logic clk; logic [1:0] v; wire d; assign v[0] = d; always @(posedge clk) v[1] <= d; endmodule"));
+    // a name declared inside the block shadows the module's net, a read is not a write
+    EXPECT_FALSE(declarations_rejected(
+        "module t; wire w; logic clk, o; always @(posedge clk) begin logic w; w = 1'b1; o <= w; end endmodule"));
+    EXPECT_FALSE(declarations_rejected("module t; wire w; logic clk, o; always @(posedge clk) o <= w; endmodule"));
+}

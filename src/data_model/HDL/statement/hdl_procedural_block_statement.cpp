@@ -22,6 +22,7 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
 
 CEREAL_REGISTER_TYPE(hdl_procedural_block_statement)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(hdl_statement_base, hdl_procedural_block_statement)
@@ -57,7 +58,7 @@ void hdl_procedural_block_statement::propagate_function(const hdl_function_def_p
 
 bool hdl_procedural_block_statement::equals(const hdl_statement_base& other) const {
     const auto& rhs = static_cast<const hdl_procedural_block_statement&>(other);
-    if (kind != rhs.kind) return false;
+    if (kind != rhs.kind || local_names != rhs.local_names || written != rhs.written) return false;
     auto same_expr = [](const auto &a, const auto &b) { return (!a && !b) || (a && b && *a == *b); };
     if (!std::ranges::equal(sensitivity, rhs.sensitivity,
         [&](const sensitivity_item &a, const sensitivity_item &b) {
@@ -82,6 +83,7 @@ std::string hdl_procedural_block_statement::print() const {
             if (i != 0) oss << " or ";
             if (sensitivity[i].edge == sensitivity_edge_t::posedge) oss << "posedge ";
             if (sensitivity[i].edge == sensitivity_edge_t::negedge) oss << "negedge ";
+            if (sensitivity[i].edge == sensitivity_edge_t::any_edge) oss << "edge ";
             if (sensitivity[i].signal) oss << sensitivity[i].signal->print();
         }
         oss << ")";
@@ -89,6 +91,7 @@ std::string hdl_procedural_block_statement::print() const {
     oss << " begin\n";
     for (const auto &s : body)
         if (s) oss << s->print() << "\n";
+    for (const auto &w : written) oss << "writes " << w.print() << "\n";
     oss << "end";
     return oss.str();
 }

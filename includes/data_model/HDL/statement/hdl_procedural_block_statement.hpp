@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "data_model/HDL/statement/hdl_statement_base.hpp"
+#include "data_model/HDL/statement/hdl_lvalue.hpp"
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 
 enum class procedural_block_kind_t : uint8_t {
@@ -36,7 +37,8 @@ enum class procedural_block_kind_t : uint8_t {
 enum class sensitivity_edge_t : uint8_t {
     level,
     posedge,
-    negedge
+    negedge,
+    any_edge   // SystemVerilog `edge`: either transition
 };
 
 struct sensitivity_item {
@@ -77,14 +79,30 @@ public:
     void add_statement(const std::shared_ptr<hdl_statement_base> &s) { body.push_back(s); }
     [[nodiscard]] const hdl_statement_body &get_body() const { return body; }
 
+    // Targets written by a block whose body is not modeled (clocked, latch
+    // and initial blocks): one lvalue per write, in source order. A select on
+    // the target is flagged as a partial write (concat_member_select
+    // dynamic_select), never recorded as the whole variable. Combinational
+    // blocks keep their full body instead and leave this empty.
+    void add_written(const hdl_lvalue &lv) { written.push_back(lv); }
+    [[nodiscard]] const std::vector<hdl_lvalue> &get_written() const { return written; }
+
+    // Names declared inside the block (locals, which shadow module-scope
+    // signals of the same name); the body's assignments to them are not
+    // writes to the module's signals.
+    void add_local_name(const std::string &n) { local_names.push_back(n); }
+    [[nodiscard]] const std::vector<std::string> &get_local_names() const { return local_names; }
+
     void set_line_n(int l) { line_n = l; }
     [[nodiscard]] int get_line_n() const { return line_n; }
 
     template<class Archive>
     void serialize( Archive & ar ) {
-        ar(kind, sensitivity, body, line_n);
+        ar(kind, sensitivity, body, written, local_names, line_n);
     }
 private:
+    std::vector<hdl_lvalue> written;
+    std::vector<std::string> local_names;
     procedural_block_kind_t kind = procedural_block_kind_t::always_comb;
     std::vector<sensitivity_item> sensitivity;
     hdl_statement_body body;

@@ -27,6 +27,8 @@ void HDL_functions_factory::start_assignment(const qualified_identifier &n) {
     pending_concat_targets.clear();
     in_concat = false;
     current_assigned_variable = n;
+    pending_lhs_select = false;
+    current_lhs_select = false;
     lvalue_open = true;
 }
 
@@ -93,6 +95,8 @@ void HDL_functions_factory::close_lvalue() {
     lvalue_open = false;
     current_lhs_index = pending_lhs_index;
     pending_lhs_index = nullptr;
+    current_lhs_select = pending_lhs_select;
+    pending_lhs_select = false;
 }
 
 void HDL_functions_factory::finish_assignment() {
@@ -136,10 +140,14 @@ void HDL_functions_factory::finish_assignment() {
     } else {
         stmt->set_target(current_assigned_variable);
         if (current_lhs_index) stmt->set_index(current_lhs_index);
+        // A select without a recorded index (range select, non-literal bounds)
+        // is flagged so the write is not mistaken for the whole variable.
+        else if (current_lhs_select) stmt->set_member_selects({concat_member_select{-1, -1, true}});
     }
     stmt->set_value(val);
     f.add_statement(stmt);
     current_lhs_index = nullptr;
+    current_lhs_select = false;
 }
 
 hdl_function_statement HDL_functions_factory::get_function() {

@@ -278,6 +278,10 @@ public:
     void exitContinuous_assign(sv2017::Continuous_assignContext *ctx) override;
     void enterAlways_construct(sv2017::Always_constructContext *ctx) override;
     void exitAlways_construct(sv2017::Always_constructContext *ctx) override;
+    void exitInitial_construct(sv2017::Initial_constructContext *ctx) override;
+    void record_write_set_block(
+        procedural_block_kind_t kind, antlr4::ParserRuleContext *construct, antlr4::tree::ParseTree *body,
+        sv2017::Event_controlContext *sensitivity);
     void exitSource_text(sv2017::Source_textContext *ctx) override;
     void exitData_declaration(sv2017::Data_declarationContext *ctx) override;
 

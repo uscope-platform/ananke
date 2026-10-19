@@ -225,9 +225,16 @@ TEST( analysis_test , sv_module) {
     memory_decl->set_storage(signal_storage_t::variable);
     memory_decl->set_type(memory_type);
 
+    // `initial memory = $readmemh(...)` is tracked as a block that writes `memory`.
+    hdl_lvalue memory_write;
+    memory_write.set_target("memory");
+    auto init_block = std::make_shared<hdl_procedural_block_statement>(procedural_block_kind_t::initial);
+    init_block->add_written(memory_write);
+
     check_res.add_statement(if_array);
     check_res.add_statement(memory_decl);
     check_res.add_statement(init_file);
+    check_res.add_statement(init_block);
     check_res.add_statement(pkg_stmt);
     check_res.add_statement(sc);
 

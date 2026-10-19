@@ -52,6 +52,7 @@ enum class semantic_error_code {
     timing_check_missing_argument = 13,
     bare_generate_block = 14,
     invalid_constraint = 15,
+    illegal_driver = 16,
     // Future rules append here.
 };
 
@@ -320,6 +321,20 @@ public:
     // Continuous assignment targets: bit/array indices must be constant.
     [[nodiscard]] bool check_net_lvalue(
         const std::string &file, unsigned int line, const std::string &lvalue, const scope_chain &chain);
+
+    // IEEE 1800-2017 §6.5, §9.2.2.2.2, §10.3, Table 10-1: legality of what the module's tracked
+    // combinational logic (continuous assignments and always_comb / always @* bodies) writes:
+    //  - a variable has at most one continuous assignment, and cannot be driven both continuously and
+    //    procedurally; a variable written by an always_comb, always_latch or always_ff is written by no
+    //    other process (initial blocks, which commonly seed such variables, are not counted against it);
+    //  - a net cannot be assigned procedurally;
+    //  - a parameter cannot be assigned at all.
+    // Only module-scope declarations are known here, and two writes are only judged to collide when one of
+    // them covers the whole variable (selects are not analysed, so disjoint bit or element writes pass).
+    // Ports and generate scopes are outside the tracked set; clocked, latch and initial blocks contribute
+    // their recorded write sets. Logs `file:line: error: ...`
+    // per finding, records the violations and returns true if any fired.
+    [[nodiscard]] bool check_module_logic(const std::string &file, const hdl_resource_statement &module);
 
     [[nodiscard]] bool has_violations() const { return !violations_.empty(); }
     [[nodiscard]] const std::vector<semantic_violation> &get_violations() const {
