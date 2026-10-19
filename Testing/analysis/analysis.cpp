@@ -214,7 +214,19 @@ TEST( analysis_test , sv_module) {
     pkg_stmt->set_type("test_package");
     pkg_stmt->set_dependency_class(package);
 
+    // Module-scope variables are tracked as signal declarations.
+    auto memory_type = std::make_shared<HDL_simple_type>(
+        Type_engine::create_primitive_type("reg")->as<HDL_simple_type>());
+    memory_type->set_packed_dimensions({dimension_t{std::make_shared<Numeric_token>("31"),
+                                                    std::make_shared<Numeric_token>("0"), true}});
+    memory_type->set_unpacked_dimensions({dimension_t{std::make_shared<Numeric_token>("5"),
+                                                      std::make_shared<Numeric_token>("0"), false}});
+    auto memory_decl = std::make_shared<hdl_signal_declaration>("memory");
+    memory_decl->set_storage(signal_storage_t::variable);
+    memory_decl->set_type(memory_type);
+
     check_res.add_statement(if_array);
+    check_res.add_statement(memory_decl);
     check_res.add_statement(init_file);
     check_res.add_statement(pkg_stmt);
     check_res.add_statement(sc);
@@ -337,7 +349,10 @@ TEST(analysis_test, parameter_array_assignment) {
     sv_analyzer analyzer;
     auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
 
-    auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[0]);
+    // `integer i;` is tracked as a signal declaration ahead of the instance.
+    std::shared_ptr<hdl_instance_statement> stmt;
+    for (const auto &s : resource.get_statements())
+        if (auto candidate = std::dynamic_pointer_cast<hdl_instance_statement>(s)) stmt = candidate;
     ASSERT_NE(stmt, nullptr);
     auto param = stmt->find_parameter("TEST_PARAM");
     ASSERT_NE(param, nullptr);

@@ -617,7 +617,11 @@ TEST(port_extraction, port_extraction_with_declarations) {
     sv_analyzer analyzer;
 
     auto res = analyzer.analyze("",test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
-    auto stmt = std::dynamic_pointer_cast<hdl_instance_statement>(res.get_statements()[1]);
+    // The `reg` declaration is tracked as its own statement; the instance follows it.
+    std::shared_ptr<hdl_instance_statement> stmt;
+    for (const auto &s : res.get_statements())
+        if (auto candidate = std::dynamic_pointer_cast<hdl_instance_statement>(s)) stmt = candidate;
+    ASSERT_NE(stmt, nullptr);
     auto ports = stmt->get_ports();
     std::unordered_map<std::string, std::vector<HDL_net>> check_ports;
     check_ports["clock"] = {HDL_net("clock")};

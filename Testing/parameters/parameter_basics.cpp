@@ -1868,7 +1868,12 @@ TEST(parameter_extraction, unrelated_wire_dependency_conflict) {
 
     ASSERT_TRUE(resource.get_statements()[0]->is<HDL_parameter>());
     ASSERT_EQ(resource.get_statements()[0]->as<HDL_parameter>().get_name(), "DECIMATE");
-    auto inst = std::dynamic_pointer_cast<hdl_instance_statement>(resource.get_statements()[1]);
+    // The unrelated continuous assign is tracked as a statement of its own;
+    // it must not interfere with the instance's parameter.
+    std::shared_ptr<hdl_instance_statement> inst;
+    for (const auto &stmt : resource.get_statements())
+        if (auto candidate = std::dynamic_pointer_cast<hdl_instance_statement>(stmt)) inst = candidate;
+    ASSERT_NE(inst, nullptr);
     auto parameter = inst->find_parameter("DECIMATED");
     ASSERT_NE(parameter, nullptr);
 

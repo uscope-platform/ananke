@@ -271,6 +271,13 @@ public:
     void exitTf_port_list(sv2017::Tf_port_listContext *ctx) override;
 
     void enterData_declaration(sv2017::Data_declarationContext *ctx) override;
+    void enterNet_declaration(sv2017::Net_declarationContext *ctx) override;
+    void exitNet_declaration(sv2017::Net_declarationContext *ctx) override;
+    void enterContinuous_assign(sv2017::Continuous_assignContext *ctx) override;
+    void exitVariable_assignment(sv2017::Variable_assignmentContext *ctx) override;
+    void exitContinuous_assign(sv2017::Continuous_assignContext *ctx) override;
+    void enterAlways_construct(sv2017::Always_constructContext *ctx) override;
+    void exitAlways_construct(sv2017::Always_constructContext *ctx) override;
     void exitSource_text(sv2017::Source_textContext *ctx) override;
     void exitData_declaration(sv2017::Data_declarationContext *ctx) override;
 
@@ -323,6 +330,23 @@ private:
     // Set while walking a class-scope property declaration whose type ranging
     // was opened in enterData_declaration; consumed by the matching exit.
     bool capturing_class_property = false;
+
+    // Module-scope logic tracking (wire/reg declarations, `assign`, comb
+    // always blocks). Declarations reuse the type-engine flow of class
+    // properties; assignments and comb bodies borrow f_factory as a scratch
+    // statement collector (the same machinery function bodies use) and are
+    // converted into logic statements on exit.
+    bool module_logic_scope_open(antlr4::ParserRuleContext *ctx);
+    void emit_module_signals(const std::vector<std::string> &names, signal_storage_t storage,
+                             net_type_t net, unsigned int line);
+    bool capturing_module_signal = false;
+    bool in_continuous_assign = false;
+    bool in_comb_block = false;
+    // Set when something inside the open logic construct could not be
+    // modeled (e.g. an unsupported lvalue); the construct is then dropped
+    // instead of being recorded half-built, and the file is NOT rejected.
+    bool module_logic_failed = false;
+    procedural_block_kind_t comb_block_kind = procedural_block_kind_t::always_comb;
     // Port/net/variable conflicts directly inside one module, task or function.
     void check_scope_declarations(antlr4::ParserRuleContext *scope, bool is_tf_scope);
     void check_variable_declaration_shapes(sv2017::Data_declarationContext *ctx);

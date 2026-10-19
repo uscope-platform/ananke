@@ -798,6 +798,18 @@ void sv_visitor::enterData_declaration(sv2017::Data_declarationContext *ctx) {
             capturing_class_property = true;
         }
     }
+    // Module-scope reg/logic/bit/... declarations. Composite types keep their
+    // existing flows below and are not tracked here yet.
+    capturing_module_signal = false;
+    if (!ctx->type_declaration() && module_logic_scope_open(ctx)) {
+        auto *dtoi = ctx->data_type_or_implicit();
+        auto *dt = dtoi && dtoi->data_type() ? dtoi->data_type() : nullptr;
+        if (!(dt && (dt->struct_union() || dt->KW_ENUM()))) {
+            setup_data_type(dtoi);
+            type_engine.start_range();
+            capturing_module_signal = true;
+        }
+    }
     if (f_factory.is_active() && !ctx->type_declaration()) {
         auto dtoi = ctx->data_type_or_implicit();
         auto dt = dtoi && dtoi->data_type() ? dtoi->data_type() : nullptr;
@@ -965,6 +977,17 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
             route_resource_struct_def(name, type_engine.stop_composite_type_declaration(name, false));
         }
     } else {
+        if (capturing_module_signal) {
+            capturing_module_signal = false;
+            std::vector<std::string> names;
+            if (auto *decls = ctx->list_of_variable_decl_assignments()) {
+                for (auto *decl : decls->variable_decl_assignment())
+                    if (decl && decl->identifier()) names.push_back(decl->identifier()->getText());
+            }
+            emit_module_signals(names, signal_storage_t::variable, net_type_t::none,
+                                ctx->getStart() ? ctx->getStart()->getLine() : 0);
+            return;
+        }
         if (capturing_class_property) {
             // Property default values (e.g. `int x = 5;`) are not captured:
             // the matching expressions were never routed to a factory, so
@@ -1022,6 +1045,154 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
             }
         }
     }
+}
+
+namespace {
+bool in_generate_scope(antlr4::tree::ParseTree *node) {
+    for (auto *p = node ? node->parent : nullptr; p; p = p->parent) {
+        if (dynamic_cast<sv2017::Loop_generate_constructContext *>(p) ||
+            dynamic_cast<sv2017::If_generate_constructContext *>(p) ||
+            dynamic_cast<sv2017::Case_generate_constructContext *>(p) ||
+            dynamic_cast<sv2017::Generate_begin_end_blockContext *>(p))
+            return true;
+    }
+    return false;
+}
+
+net_type_t net_type_from_keyword(const std::string &kw) {
+    static const std::unordered_map<std::string, net_type_t> table = {
+        {"wire", net_type_t::wire},     {"tri", net_type_t::tri},       {"wand", net_type_t::wand},
+        {"wor", net_type_t::wor},       {"triand", net_type_t::triand}, {"trior", net_type_t::trior},
+        {"tri0", net_type_t::tri0},     {"tri1", net_type_t::tri1},     {"trireg", net_type_t::trireg},
+        {"uwire", net_type_t::uwire},   {"supply0", net_type_t::supply0}, {"supply1", net_type_t::supply1}};
+    auto it = table.find(kw);
+    return it == table.end() ? net_type_t::none : it->second;
+}
+}
+
+// Logic is tracked only for plain module bodies. Generate constructs would
+// need their condition/loop context attached to every statement, which the
+// logic statements do not carry yet, so anything inside one is skipped.
+bool sv_visitor::module_logic_scope_open(antlr4::ParserRuleContext *ctx) {
+    return modules_factory.is_current_valid() && !classes_factory.is_current_valid() &&
+           !packages_factory.is_current_valid() && !interfaces_factory.is_current_valid() &&
+           !f_factory.is_active() && in_method_body == 0 && !in_generate_scope(ctx);
+}
+
+void sv_visitor::emit_module_signals(const std::vector<std::string> &names, signal_storage_t storage,
+                                     net_type_t net, unsigned int line) {
+    auto t = type_engine.finalize_type();
+    if (!t) t = Type_engine::create_primitive_type("implicit");
+    // The type engine accumulates the unpacked dimensions of every declarator
+    // into one list. They only mean something for a lone declarator; with
+    // several, per-name shapes cannot be told apart, so keep packed only.
+    if (names.size() > 1 && t->is<HDL_simple_type>() && !t->as<HDL_simple_type>().get_unpacked_dimensions().empty()) {
+        // set_*_dimensions append, so rebuild the type instead of clearing it.
+        const auto &full = t->as<HDL_simple_type>();
+        auto packed_only = std::make_shared<HDL_simple_type>();
+        packed_only->set_signed(full.get_signed());
+        packed_only->set_real(full.get_real());
+        packed_only->set_implicit(full.get_implicit());
+        packed_only->set_type_name(full.get_type_name());
+        packed_only->set_packed_dimensions(full.get_packed_dimensions());
+        t = packed_only;
+    }
+    for (const auto &name : names) {
+        auto decl = std::make_shared<hdl_signal_declaration>(name);
+        decl->set_storage(storage);
+        decl->set_net_type(net);
+        decl->set_type(t);
+        decl->set_line_n(static_cast<int>(line));
+        route_resource_statement(decl);
+    }
+}
+
+void sv_visitor::enterNet_declaration(sv2017::Net_declarationContext *ctx) {
+    capturing_module_signal = false;
+    if (!ctx->net_type() || !ctx->list_of_net_decl_assignments() || !module_logic_scope_open(ctx)) return;
+    auto *dtoi = ctx->data_type_or_implicit();
+    auto *dt = dtoi && dtoi->data_type() ? dtoi->data_type() : nullptr;
+    if (dt && (dt->struct_union() || dt->KW_ENUM())) return;
+    setup_data_type(dtoi);
+    type_engine.start_range();
+    capturing_module_signal = true;
+}
+
+void sv_visitor::exitNet_declaration(sv2017::Net_declarationContext *ctx) {
+    if (!capturing_module_signal) return;
+    capturing_module_signal = false;
+    std::vector<std::string> names;
+    for (auto *decl : ctx->list_of_net_decl_assignments()->net_decl_assignment())
+        if (decl && decl->identifier()) names.push_back(decl->identifier()->getText());
+    emit_module_signals(names, signal_storage_t::net, net_type_from_keyword(ctx->net_type()->getText()),
+                        ctx->getStart() ? ctx->getStart()->getLine() : 0);
+}
+
+void sv_visitor::enterContinuous_assign(sv2017::Continuous_assignContext *ctx) {
+    if (!module_logic_scope_open(ctx)) return;
+    f_factory.set_name("__continuous_assign__");
+    f_factory.start_body();
+    in_continuous_assign = true;
+    module_logic_failed = false;
+}
+
+void sv_visitor::exitVariable_assignment(sv2017::Variable_assignmentContext *ctx) {
+    if (!in_continuous_assign) return;
+    f_factory.finish_assignment();
+    auto last = f_factory.pop_last();
+    auto assignment = std::dynamic_pointer_cast<hdl_assignment_statement>(last);
+    if (module_logic_failed || !assignment) {
+        module_logic_failed = false;
+        return;
+    }
+    auto stmt = std::make_shared<hdl_continuous_assignment>();
+    stmt->set_lvalue(assignment->get_lvalue());
+    stmt->set_value(assignment->get_value());
+    stmt->set_line_n(ctx->getStart() ? static_cast<int>(ctx->getStart()->getLine()) : 0);
+    route_resource_statement(stmt);
+}
+
+void sv_visitor::exitContinuous_assign(sv2017::Continuous_assignContext *) {
+    if (!in_continuous_assign) return;
+    in_continuous_assign = false;
+    module_logic_failed = false;
+    f_factory.get_function();  // releases the scratch collector
+}
+
+void sv_visitor::enterAlways_construct(sv2017::Always_constructContext *ctx) {
+    if (!ctx->always_keyword() || !ctx->statement() || !module_logic_scope_open(ctx)) return;
+    const auto keyword = ctx->always_keyword()->getText();
+    if (keyword == "always_comb") {
+        comb_block_kind = procedural_block_kind_t::always_comb;
+    } else if (keyword == "always") {
+        // Only the wildcard sensitivity is modeled; explicit lists and edge
+        // controls are left for the sequential/latch work.
+        const auto body = ctx->statement()->getText();
+        if (!body.starts_with("@*") && !body.starts_with("@(*)")) return;
+        comb_block_kind = procedural_block_kind_t::always_star;
+    } else {
+        return;
+    }
+    f_factory.set_name("__comb_block__");
+    f_factory.start_body();
+    in_comb_block = true;
+    module_logic_failed = false;
+}
+
+void sv_visitor::exitAlways_construct(sv2017::Always_constructContext *ctx) {
+    if (!in_comb_block) return;
+    in_comb_block = false;
+    auto scratch = f_factory.get_function();
+    if (module_logic_failed) {
+        module_logic_failed = false;
+        spdlog::debug("Dropping combinational block at line {}: contains constructs that are not modeled",
+                      ctx->getStart() ? ctx->getStart()->getLine() : 0);
+        return;
+    }
+    auto block = std::make_shared<hdl_procedural_block_statement>(comb_block_kind);
+    block->set_line_n(ctx->getStart() ? static_cast<int>(ctx->getStart()->getLine()) : 0);
+    for (const auto &stmt : scratch.get_body()) block->add_statement(stmt);
+    route_resource_statement(block);
 }
 
 void sv_visitor::enterStruct_union_member(sv2017::Struct_union_memberContext *ctx) {
@@ -1593,7 +1764,9 @@ void sv_visitor::exitParameter_override(sv2017::Parameter_overrideContext *ctx) 
 
 bool sv_visitor::expression_in_decl_dimensions(antlr4::tree::ParseTree *node) {
     for (auto *p = node ? node->parent : nullptr; p; p = p->parent) {
-        if (dynamic_cast<sv2017::Variable_dimensionContext *>(p))
+        if (dynamic_cast<sv2017::Variable_dimensionContext *>(p) ||
+            dynamic_cast<sv2017::Packed_dimensionContext *>(p) ||
+            dynamic_cast<sv2017::Unpacked_dimensionContext *>(p))
             return true;
     }
     return false;
@@ -1619,6 +1792,9 @@ bool sv_visitor::is_package_typedef(const std::string &prefix, const std::string
 }
 
 void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
+    // Initializers of module-scope signals are not tracked yet; only the
+    // [...] dimension bounds feed the type engine.
+    if (capturing_module_signal && !expression_in_decl_dimensions(ctx)) return;
     // Initializers of function-local variables belong to the function, even
     // though ranging is still active for the declaration: only [...] dimension
     // bounds stay on the type-engine path.
@@ -1647,6 +1823,7 @@ void sv_visitor::enterExpression(sv2017::ExpressionContext *ctx) {
 }
 
 void sv_visitor::exitExpression(sv2017::ExpressionContext *ctx) {
+    if (capturing_module_signal && !expression_in_decl_dimensions(ctx)) return;
     bool function_local_init = (in_function_var_decl || in_function_composite_decl) && !expression_in_decl_dimensions(ctx);
     if ((type_engine.active() || type_engine.is_ranging()) && !function_local_init) {
         type_engine.stop_expression();
@@ -3013,6 +3190,11 @@ void sv_visitor::enterVariable_lvalue(sv2017::Variable_lvalueContext *ctx) {
         if (!hier || !hier->package_or_class_scoped_path()) {
             if (!opts_.strict && handle_streaming_lvalue(ctx)) return;
             if (!opts_.strict && handle_concatenation_lvalue(ctx)) return;
+            if (in_continuous_assign || in_comb_block) {
+                // Logic tracking is best effort: drop just this construct.
+                module_logic_failed = true;
+                return;
+            }
             // Graceful degradation: the grammar accepts concatenation,
             // assignment-pattern and streaming-concatenation lvalues, but the
             // write path only models hierarchical identifiers. Warn once per

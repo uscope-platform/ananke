@@ -25,6 +25,7 @@ set(ANANKE_TESTS
         frontend/macro_quarantine.cpp
         frontend/sv_class_tracking.cpp
         frontend/sv_semantic_checks.cpp
+        frontend/sv_combinational_logic.cpp
         frontend/sv_coverage_parsing.cpp
         frontend/sv_compat_parsing.cpp
         frontend/typedef_parsing.cpp
@@ -36,7 +37,6 @@ set(ANANKE_TESTS
         data_model/Script_test.cpp
         data_model/Constraints_test.cpp
         data_model/hdl_resource_testing.cpp
-        data_model/signal_statements.cpp
         data_model/initialization_list.cpp
         data_model/settings_store_test.cpp
         data_model/data_store_test.cpp
