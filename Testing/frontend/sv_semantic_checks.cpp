@@ -1128,3 +1128,21 @@ TEST(sv_semantic_checks, sequential_blocks_are_judged_by_their_writes) {
         "module t; wire w; logic clk, o; always @(posedge clk) begin logic w; w = 1'b1; o <= w; end endmodule"));
     EXPECT_FALSE(declarations_rejected("module t; wire w; logic clk, o; always @(posedge clk) o <= w; endmodule"));
 }
+
+TEST(sv_semantic_checks, typedef_typed_variables_are_judged) {
+    // `type_t v;` reads as a user-nettype declaration to the grammar; it still declares a variable
+    EXPECT_TRUE(declarations_rejected(
+        "module t; typedef logic [3:0] nib_t; nib_t v; assign v = 4'd1; assign v = 4'd2; endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t; typedef logic [3:0] nib_t; nib_t v; logic [3:0] a; assign v = a; always_comb v = a; endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t; typedef enum logic [1:0] {A, B} e_t; e_t e; assign e = A; assign e = B; endmodule"));
+    // an imported type is an unresolved name here, and still a variable
+    EXPECT_TRUE(declarations_rejected("module t; import p::*; p_t v; assign v = 1; assign v = 2; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; typedef logic [3:0] nib_t; nib_t v; logic [3:0] a; assign v = a; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; typedef logic [3:0] nib_t; nib_t v; logic [3:0] a; assign v[0] = a[0]; assign v[1] = a[1]; endmodule"));
+    // a net of a declared nettype is a net, not a variable
+    EXPECT_FALSE(declarations_rejected("module t; nettype real real_net; real_net n; assign n = 1.0; endmodule"));
+}

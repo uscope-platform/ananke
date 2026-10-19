@@ -1119,9 +1119,30 @@ void sv_visitor::emit_module_signals(const std::vector<std::string> &names, sign
     }
 }
 
+void sv_visitor::enterNet_type_declaration(sv2017::Net_type_declarationContext *ctx) {
+    if (ctx->identifier()) declared_nettypes.insert(ctx->identifier()->getText());
+}
+
 void sv_visitor::enterNet_declaration(sv2017::Net_declarationContext *ctx) {
     capturing_module_signal = false;
-    if (!ctx->net_type() || !ctx->list_of_net_decl_assignments() || !module_logic_scope_open(ctx)) return;
+    if (ctx->KW_INTERCONNECT() || !ctx->list_of_net_decl_assignments() || !module_logic_scope_open(ctx)) return;
+    if (!ctx->net_type()) {
+        // The grammar reads `type_name var;` as the user-defined-nettype form of a net declaration
+        // (`identifier list_of_net_decl_assignments`). When the identifier is a data type it is a variable
+        // declaration. A delay control, or a name declared by `nettype`, makes it a real net of that nettype,
+        // which is not tracked.
+        if (ctx->identifier().size() != 1 || ctx->delay_control()) return;
+        const auto type_name = ctx->identifier(0)->getText();
+        if (declared_nettypes.contains(type_name)) return;
+        // A type that is not declared in this file (imported by a wildcard, for instance) stays an external
+        // reference for later passes, like a port or parameter type.
+        type_engine.set_base_type(type_engine.has_type(type_name)
+            ? type_engine.get_type(type_name)
+            : std::make_shared<HDL_external_type>(qualified_identifier(type_name)));
+        type_engine.start_range();
+        capturing_module_signal = true;
+        return;
+    }
     auto *dtoi = ctx->data_type_or_implicit();
     auto *dt = dtoi && dtoi->data_type() ? dtoi->data_type() : nullptr;
     if (dt && (dt->struct_union() || dt->KW_ENUM())) return;
@@ -1136,7 +1157,9 @@ void sv_visitor::exitNet_declaration(sv2017::Net_declarationContext *ctx) {
     std::vector<std::string> names;
     for (auto *decl : ctx->list_of_net_decl_assignments()->net_decl_assignment())
         if (decl && decl->identifier()) names.push_back(decl->identifier()->getText());
-    emit_module_signals(names, signal_storage_t::net, net_type_from_keyword(ctx->net_type()->getText()),
+    const bool typed_variable = ctx->net_type() == nullptr;
+    emit_module_signals(names, typed_variable ? signal_storage_t::variable : signal_storage_t::net,
+                        typed_variable ? net_type_t::none : net_type_from_keyword(ctx->net_type()->getText()),
                         ctx->getStart() ? ctx->getStart()->getLine() : 0);
 }
 

@@ -24,6 +24,7 @@
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/statement/hdl_statements.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"
+#include "data_model/HDL/types/HDL_external_type.hpp"
 
 namespace {
 
@@ -173,6 +174,69 @@ TEST(sv_combinational_logic, multiple_declarators_become_separate_signals) {
     // type, so they are dropped rather than misattributed
     check_res.add_statement(make_var("x", make_type("reg")));
     check_res.add_statement(make_var("y", make_type("reg")));
+
+    ASSERT_EQ(resource, check_res);
+}
+
+TEST(sv_combinational_logic, typedef_typed_variables_are_signals) {
+    auto resource = analyze_module(R"(
+        module m();
+            typedef logic [3:0] nib_t;
+            typedef enum logic [1:0] {A, B} e_t;
+            nib_t n, k;
+            e_t e;
+            logic z;
+        endmodule
+    )");
+
+    // A name followed by a declarator parses as a user-defined-nettype declaration; it is a variable of that type.
+    ASSERT_TRUE(resource.get_typedefs().contains("nib_t"));
+    ASSERT_TRUE(resource.get_typedefs().contains("e_t"));
+    auto nib = make_type("logic", {range("3", "0")});
+    EXPECT_TRUE(resource.get_typedefs().at("nib_t")->is_equal(*nib));
+
+    auto check_res = make_check_res();
+    check_res.add_typedef("nib_t", resource.get_typedefs().at("nib_t"));
+    check_res.add_typedef("e_t", resource.get_typedefs().at("e_t"));
+    check_res.add_statement(make_var("n", nib));
+    check_res.add_statement(make_var("k", nib));
+    check_res.add_statement(make_var("e", resource.get_typedefs().at("e_t")));
+    check_res.add_statement(make_var("z", make_type("logic")));
+
+    ASSERT_EQ(resource, check_res);
+}
+
+TEST(sv_combinational_logic, unknown_type_names_stay_external_references) {
+    auto resource = analyze_module(R"(
+        module m();
+            imported_t x [1:0];
+            imported_t y, w;
+        endmodule
+    )");
+
+    auto external = std::make_shared<HDL_external_type>(qualified_identifier("imported_t"));
+    auto external_array = std::make_shared<HDL_external_type>(qualified_identifier("imported_t"));
+    external_array->set_unpacked_dimensions({dimension_t{num("1"), num("0"), false}});
+
+    auto check_res = make_check_res();
+    check_res.add_statement(make_var("x", external_array));
+    check_res.add_statement(make_var("y", external));
+    check_res.add_statement(make_var("w", external));
+
+    ASSERT_EQ(resource, check_res);
+}
+
+TEST(sv_combinational_logic, declared_nettypes_are_not_variables) {
+    auto resource = analyze_module(R"(
+        module m();
+            nettype real real_net;
+            real_net rn;
+            logic z;
+        endmodule
+    )");
+
+    auto check_res = make_check_res();
+    check_res.add_statement(make_var("z", make_type("logic")));
 
     ASSERT_EQ(resource, check_res);
 }

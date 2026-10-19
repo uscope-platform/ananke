@@ -271,6 +271,7 @@ public:
     void exitTf_port_list(sv2017::Tf_port_listContext *ctx) override;
 
     void enterData_declaration(sv2017::Data_declarationContext *ctx) override;
+    void enterNet_type_declaration(sv2017::Net_type_declarationContext *ctx) override;
     void enterNet_declaration(sv2017::Net_declarationContext *ctx) override;
     void exitNet_declaration(sv2017::Net_declarationContext *ctx) override;
     void enterContinuous_assign(sv2017::Continuous_assignContext *ctx) override;
@@ -344,6 +345,9 @@ private:
     void emit_module_signals(const std::vector<std::string> &names, signal_storage_t storage,
                              net_type_t net, unsigned int line);
     bool capturing_module_signal = false;
+    // `nettype` names declared in this file: `name x;` declares a net of that kind, whereas the same shape with a
+    // data type name declares a variable (see enterNet_declaration).
+    std::set<std::string> declared_nettypes;
     bool in_continuous_assign = false;
     bool in_comb_block = false;
     // Set when something inside the open logic construct could not be
