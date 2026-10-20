@@ -24,6 +24,7 @@
 #include "frontend/analysis/system_verilog/type_engine.hpp"
 #include "data_model/HDL/statement/hdl_statements.hpp"
 #include "data_model/HDL/types/HDL_simple_type.hpp"
+#include "data_model/HDL/parameters/components/token/LoopVar_token.hpp"
 #include "data_model/HDL/types/HDL_external_type.hpp"
 
 namespace {
@@ -481,21 +482,178 @@ TEST(sv_combinational_logic, write_sets_keep_selects_partial_and_skip_locals) {
     ASSERT_EQ(resource, check_res);
 }
 
-TEST(sv_combinational_logic, generate_scopes_are_skipped) {
+TEST(sv_combinational_logic, generate_if_keeps_logic_in_its_branches) {
     auto resource = analyze_module(R"(
         module m #(parameter EN = 1)();
             wire top_level;
             if (EN) begin : g
                 wire inner;
                 assign inner = top_level;
-                always_comb inner = top_level;
+            end else begin : h
+                wire other;
+                assign other = top_level;
+            end
+        endmodule
+    )");
+
+    auto check_cond = std::make_shared<hdl_conditional_statement>();
+    check_cond->add_branch(id("EN"));
+    check_cond->add_to_branch(make_net("inner", net_type_t::wire, make_type("implicit")));
+    check_cond->add_to_branch(make_driver("inner", id("top_level")));
+    check_cond->add_to_else(make_net("other", net_type_t::wire, make_type("implicit")));
+    check_cond->add_to_else(make_driver("other", id("top_level")));
+
+    auto check_res = make_check_res();
+    check_res.add_statement(make_param("EN", "1"));
+    check_res.add_statement(make_net("top_level", net_type_t::wire, make_type("implicit")));
+    check_res.add_statement(check_cond);
+
+    ASSERT_EQ(resource, check_res);
+}
+
+TEST(sv_combinational_logic, generate_branches_without_a_block_keep_their_single_item) {
+    auto resource = analyze_module(R"(
+        module m #(parameter A = 1)();
+            wire v;
+            if (A) assign v = 1'b0; else assign v = 1'b1;
+        endmodule
+    )");
+
+    auto check_cond = std::make_shared<hdl_conditional_statement>();
+    check_cond->add_branch(id("A"));
+    check_cond->add_to_branch(make_driver("v", num("1'b0")));
+    check_cond->add_to_else(make_driver("v", num("1'b1")));
+
+    auto check_res = make_check_res();
+    check_res.add_statement(make_param("A", "1"));
+    check_res.add_statement(make_net("v", net_type_t::wire, make_type("implicit")));
+    check_res.add_statement(check_cond);
+
+    ASSERT_EQ(resource, check_res);
+}
+
+TEST(sv_combinational_logic, generate_for_keeps_logic_in_the_loop_body) {
+    auto resource = analyze_module(R"(
+        module m();
+            wire t;
+            for (genvar n = 0; n < 4; n = n + 1) begin : g
+                wire x;
+                assign x = t;
+            end
+        endmodule
+    )");
+
+    hdl_loop_statement check_loop;
+    auto init = std::make_shared<HDL_parameter>();
+    init->set_name("n");
+    init->set_raw_value(num("0"));
+    check_loop.set_init(init);
+    check_loop.set_end_condition(binary(std::make_shared<LoopVar_token>("n"), Expression_v2::less, num("4")));
+    check_loop.set_iteration(binary(std::make_shared<LoopVar_token>("n"), Expression_v2::add, num("1")));
+    check_loop.add_body_stmt(make_net("x", net_type_t::wire, make_type("implicit")));
+    check_loop.add_body_stmt(make_driver("x", id("t")));
+
+    auto check_res = make_check_res();
+    check_res.add_statement(make_net("t", net_type_t::wire, make_type("implicit")));
+    check_res.add_statement(std::make_shared<hdl_loop_statement>(check_loop));
+
+    ASSERT_EQ(resource, check_res);
+}
+
+TEST(sv_combinational_logic, procedural_if_stays_inside_a_block_in_a_generate_branch) {
+    auto resource = analyze_module(R"(
+        module m #(parameter EN = 1)();
+            reg y, s;
+            if (EN) begin : g
+                always_comb begin
+                    y = 1'b0;
+                    if (s) y = 1'b1;
+                end
+            end
+        endmodule
+    )");
+
+    auto procedural_if = std::make_shared<hdl_conditional_statement>();
+    procedural_if->add_branch(id("s"));
+    procedural_if->add_to_branch(make_assign("y", num("1'b1")));
+
+    auto block = std::make_shared<hdl_procedural_block_statement>(procedural_block_kind_t::always_comb);
+    block->add_statement(make_assign("y", num("1'b0")));
+    block->add_statement(procedural_if);
+
+    auto generate_if = std::make_shared<hdl_conditional_statement>();
+    generate_if->add_branch(id("EN"));
+    generate_if->add_to_branch(block);
+
+    auto check_res = make_check_res();
+    check_res.add_statement(make_param("EN", "1"));
+    check_res.add_statement(make_var("y", make_type("reg")));
+    check_res.add_statement(make_var("s", make_type("reg")));
+    check_res.add_statement(generate_if);
+
+    ASSERT_EQ(resource, check_res);
+}
+
+TEST(sv_combinational_logic, nested_generate_constructs_nest_their_logic) {
+    auto resource = analyze_module(R"(
+        module m #(parameter A = 1)();
+            reg y;
+            for (genvar n = 0; n < 2; n = n + 1) begin : g
+                if (A) begin : h
+                    reg q;
+                    always_comb q = y;
+                end
+            end
+        endmodule
+    )");
+
+    auto block = std::make_shared<hdl_procedural_block_statement>(procedural_block_kind_t::always_comb);
+    block->add_statement(make_assign("q", id("y")));
+
+    auto inner_if = std::make_shared<hdl_conditional_statement>();
+    inner_if->add_branch(id("A"));
+    inner_if->add_to_branch(make_var("q", make_type("reg")));
+    inner_if->add_to_branch(block);
+
+    hdl_loop_statement check_loop;
+    auto init = std::make_shared<HDL_parameter>();
+    init->set_name("n");
+    init->set_raw_value(num("0"));
+    check_loop.set_init(init);
+    check_loop.set_end_condition(binary(std::make_shared<LoopVar_token>("n"), Expression_v2::less, num("2")));
+    check_loop.set_iteration(binary(std::make_shared<LoopVar_token>("n"), Expression_v2::add, num("1")));
+    check_loop.add_body_stmt(inner_if);
+
+    auto check_res = make_check_res();
+    check_res.add_statement(make_param("A", "1"));
+    check_res.add_statement(make_var("y", make_type("reg")));
+    check_res.add_statement(std::make_shared<hdl_loop_statement>(check_loop));
+
+    ASSERT_EQ(resource, check_res);
+}
+
+TEST(sv_combinational_logic, case_generate_and_stray_blocks_stay_untracked) {
+    auto resource = analyze_module(R"(
+        module m #(parameter A = 1)();
+            wire v;
+            case (A)
+                0: begin : c0 wire in_case; assign v = 1'b0; end
+                default: assign v = 1'b1;
+            endcase
+            begin : bare
+                wire in_bare;
+            end
+            if (A) begin : outer
+                begin : nested
+                    wire in_nested;
+                end
             end
         endmodule
     )");
 
     auto check_res = make_check_res();
-    check_res.add_statement(make_param("EN", "1"));
-    check_res.add_statement(make_net("top_level", net_type_t::wire, make_type("implicit")));
+    check_res.add_statement(make_param("A", "1"));
+    check_res.add_statement(make_net("v", net_type_t::wire, make_type("implicit")));
 
     ASSERT_EQ(resource, check_res);
 }

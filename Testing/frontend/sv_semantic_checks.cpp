@@ -1146,3 +1146,76 @@ TEST(sv_semantic_checks, typedef_typed_variables_are_judged) {
     // a net of a declared nettype is a net, not a variable
     EXPECT_FALSE(declarations_rejected("module t; nettype real real_net; real_net n; assign n = 1.0; endmodule"));
 }
+
+TEST(sv_semantic_checks, generate_writes_collide_only_under_the_same_path) {
+    // branches of one conditional, sibling conditionals and nested ones are not elaborated together as a rule
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter A = 1); logic v; if (A) assign v = 1'b0; else assign v = 1'b1; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter A = 1, B = 1); logic v; "
+        "if (A) assign v = 1'b0; else if (B) assign v = 1'b1; else assign v = 1'bx; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter A = 1, B = 1); logic v; "
+        "if (A) begin if (B) assign v = 1'b0; else assign v = 1'b1; end else assign v = 1'bx; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter N = 2); logic v; if (N == 2) assign v = 1'b0; if (N == 3) assign v = 1'b1; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter A = 1); logic v, a; if (A) begin always_comb v = a; end else begin always_comb v = ~a; end endmodule"));
+    // a write in a branch and one outside it only collide for some parameter values
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter A = 1); logic v; if (A) assign v = 1'b0; assign v = 1'b1; endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter A = 1); logic v, a; if (A) assign v = a; always_comb v = a; endmodule"));
+    // two writes under one path exist together or not at all
+    EXPECT_TRUE(declarations_rejected(
+        "module t #(parameter A = 1); logic v; if (A) begin assign v = 1'b0; assign v = 1'b1; end endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t #(parameter A = 1); logic v, a; if (A) begin always_comb v = a; always_comb v = ~a; end endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t #(parameter A = 1); logic v, a; if (A) begin assign v = a; always_comb v = a; end endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t #(parameter A = 1); logic v; if (A) begin assign v = 1'b0; end else begin assign v = 1'b0; assign v = 1'b1; end endmodule"));
+}
+
+TEST(sv_semantic_checks, generate_scopes_shadow_outer_names) {
+    // a name declared in the branch is a different object from the module's
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter A = 1); wire w; logic a; if (A) begin : g logic w; always_comb w = a; end endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t #(parameter A = 1); wire w; logic a; if (A) begin : g always_comb w = a; end endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t #(parameter A = 1); logic a; if (A) begin : g wire w; always_comb w = a; end endmodule"));
+    // sibling branches may declare the same name, and so may sibling loop bodies
+    EXPECT_TRUE(declarations_rejected(
+        "module t #(parameter A = 1); logic a; "
+        "if (A) begin : g logic q; assign q = a; assign q = a; end "
+        "else begin : h logic q; assign q = a; end endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter A = 1); logic a; "
+        "if (A) begin : g logic q; assign q = a; end else begin : h logic q; assign q = a; end endmodule"));
+    // a parameter declared at module level cannot be assigned from a branch
+    EXPECT_TRUE(declarations_rejected(
+        "module t #(parameter P = 1, A = 1); if (A) begin : g assign P = 1; end endmodule"));
+}
+
+TEST(sv_semantic_checks, generate_loops_are_judged_per_body) {
+    // one driver per iteration of a loop-local or indexed signal is fine
+    EXPECT_FALSE(declarations_rejected(
+        "module t; logic [3:0] a, v; for (genvar i = 0; i < 4; i = i + 1) begin : g assign v[i] = a[i]; end endmodule"));
+    EXPECT_FALSE(declarations_rejected(
+        "module t; logic [3:0] a; for (genvar i = 0; i < 4; i = i + 1) begin : g logic t; assign t = a[i]; end endmodule"));
+    // two drivers inside one body collide
+    EXPECT_TRUE(declarations_rejected(
+        "module t; logic a; for (genvar i = 0; i < 4; i = i + 1) begin : g logic t; assign t = a; assign t = ~a; end endmodule"));
+    // a loop and a process outside it collide only if the loop runs
+    EXPECT_FALSE(declarations_rejected(
+        "module t; logic [3:0] a; logic v; for (genvar i = 0; i < 4; i = i + 1) begin : g assign v = a[i]; end "
+        "always_comb v = a[0]; endmodule"));
+    EXPECT_TRUE(declarations_rejected(
+        "module t; wire w; logic a; for (genvar i = 0; i < 4; i = i + 1) begin : g always_comb w = a; end endmodule"));
+}
+
+TEST(sv_semantic_checks, case_generate_is_not_judged) {
+    EXPECT_FALSE(declarations_rejected(
+        "module t #(parameter A = 1); logic v; case (A) 0: assign v = 1'b0; default: assign v = 1'b1; endcase endmodule"));
+}

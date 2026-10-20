@@ -987,7 +987,7 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
                     if (decl && decl->identifier()) names.push_back(decl->identifier()->getText());
             }
             emit_module_signals(names, signal_storage_t::variable, net_type_t::none,
-                                ctx->getStart() ? ctx->getStart()->getLine() : 0);
+                                ctx->getStart() ? ctx->getStart()->getLine() : 0, ctx);
             return;
         }
         if (capturing_class_property) {
@@ -1050,15 +1050,21 @@ void sv_visitor::exitData_declaration(sv2017::Data_declarationContext *ctx) {
 }
 
 namespace {
-// Scopes in which a declaration or assignment is not a plain module-body item: generate constructs
-// (which would need their condition attached) and procedural blocks, tasks and functions (whose
-// declarations are local).
+// Scopes in which a declaration or assignment is not a module-body or generate-body item the logic
+// tracking can place: case generate (no per-branch capture exists), a begin..end block that is not the
+// direct body of a generate if / for (a bare block, or a block inside a block), and procedural blocks,
+// tasks and functions (whose declarations are local).
 bool in_untracked_scope(antlr4::tree::ParseTree *node) {
     for (auto *p = node ? node->parent : nullptr; p; p = p->parent) {
-        if (dynamic_cast<sv2017::Loop_generate_constructContext *>(p) ||
-            dynamic_cast<sv2017::If_generate_constructContext *>(p) ||
-            dynamic_cast<sv2017::Case_generate_constructContext *>(p) ||
-            dynamic_cast<sv2017::Generate_begin_end_blockContext *>(p) ||
+        if (auto *block = dynamic_cast<sv2017::Generate_begin_end_blockContext *>(p)) {
+            auto *owner = block->parent && block->parent->parent ? block->parent->parent : nullptr;
+            if (!dynamic_cast<sv2017::Generate_itemContext *>(block->parent) ||
+                !(dynamic_cast<sv2017::If_generate_constructContext *>(owner) ||
+                  dynamic_cast<sv2017::Loop_generate_constructContext *>(owner)))
+                return true;
+            continue;
+        }
+        if (dynamic_cast<sv2017::Case_generate_constructContext *>(p) ||
             dynamic_cast<sv2017::Always_constructContext *>(p) ||
             dynamic_cast<sv2017::Initial_constructContext *>(p) ||
             dynamic_cast<sv2017::Final_constructContext *>(p) ||
@@ -1092,7 +1098,7 @@ bool sv_visitor::module_logic_scope_open(antlr4::ParserRuleContext *ctx) {
 }
 
 void sv_visitor::emit_module_signals(const std::vector<std::string> &names, signal_storage_t storage,
-                                     net_type_t net, unsigned int line) {
+                                     net_type_t net, unsigned int line, antlr4::tree::ParseTree *at) {
     auto t = type_engine.finalize_type();
     if (!t) t = Type_engine::create_primitive_type("implicit");
     // The type engine accumulates the unpacked dimensions of every declarator
@@ -1115,8 +1121,35 @@ void sv_visitor::emit_module_signals(const std::vector<std::string> &names, sign
         decl->set_net_type(net);
         decl->set_type(t);
         decl->set_line_n(static_cast<int>(line));
-        route_resource_statement(decl);
+        route_logic_statement(decl, at);
     }
+}
+
+void sv_visitor::route_logic_statement(const std::shared_ptr<hdl_statement_base> &stmt, antlr4::tree::ParseTree *at) {
+    for (auto *p = at ? at->parent : nullptr; p; p = p->parent) {
+        if (dynamic_cast<sv2017::Loop_generate_constructContext *>(p)) {
+            if (loops_factory.in_loop()) loops_factory.add_statement(stmt);
+            return;
+        }
+        if (dynamic_cast<sv2017::If_generate_constructContext *>(p)) {
+            if (conditionals_factory.is_active()) conditionals_factory.add_statement(stmt);
+            return;
+        }
+    }
+    route_resource_statement(stmt);
+}
+
+void sv_visitor::suspend_generate_state() {
+    suspended_generate.emplace_back(std::move(conditionals_factory), std::move(loops_factory));
+    conditionals_factory = HDL_conditionals_factory();
+    loops_factory = HDL_loops_factory();
+}
+
+void sv_visitor::resume_generate_state() {
+    if (suspended_generate.empty()) return;
+    conditionals_factory = std::move(suspended_generate.back().first);
+    loops_factory = std::move(suspended_generate.back().second);
+    suspended_generate.pop_back();
 }
 
 void sv_visitor::enterNet_type_declaration(sv2017::Net_type_declarationContext *ctx) {
@@ -1160,11 +1193,12 @@ void sv_visitor::exitNet_declaration(sv2017::Net_declarationContext *ctx) {
     const bool typed_variable = ctx->net_type() == nullptr;
     emit_module_signals(names, typed_variable ? signal_storage_t::variable : signal_storage_t::net,
                         typed_variable ? net_type_t::none : net_type_from_keyword(ctx->net_type()->getText()),
-                        ctx->getStart() ? ctx->getStart()->getLine() : 0);
+                        ctx->getStart() ? ctx->getStart()->getLine() : 0, ctx);
 }
 
 void sv_visitor::enterContinuous_assign(sv2017::Continuous_assignContext *ctx) {
     if (!module_logic_scope_open(ctx)) return;
+    suspend_generate_state();
     f_factory.set_name("__continuous_assign__");
     f_factory.start_body();
     in_continuous_assign = true;
@@ -1184,14 +1218,17 @@ void sv_visitor::exitVariable_assignment(sv2017::Variable_assignmentContext *ctx
     stmt->set_lvalue(assignment->get_lvalue());
     stmt->set_value(assignment->get_value());
     stmt->set_line_n(ctx->getStart() ? static_cast<int>(ctx->getStart()->getLine()) : 0);
-    route_resource_statement(stmt);
+    pending_logic.push_back(stmt);
 }
 
-void sv_visitor::exitContinuous_assign(sv2017::Continuous_assignContext *) {
+void sv_visitor::exitContinuous_assign(sv2017::Continuous_assignContext *ctx) {
     if (!in_continuous_assign) return;
     in_continuous_assign = false;
     module_logic_failed = false;
     f_factory.get_function();  // releases the scratch collector
+    resume_generate_state();
+    for (const auto &stmt : pending_logic) route_logic_statement(stmt, ctx);
+    pending_logic.clear();
 }
 
 void sv_visitor::enterAlways_construct(sv2017::Always_constructContext *ctx) {
@@ -1208,6 +1245,7 @@ void sv_visitor::enterAlways_construct(sv2017::Always_constructContext *ctx) {
     } else {
         return;
     }
+    suspend_generate_state();
     f_factory.set_name("__comb_block__");
     f_factory.start_body();
     in_comb_block = true;
@@ -1334,7 +1372,7 @@ void sv_visitor::record_write_set_block(
         }
     }
     for (const auto &local : locals) block->add_local_name(local);
-    route_resource_statement(block);
+    route_logic_statement(block, construct);
 }
 
 void sv_visitor::exitInitial_construct(sv2017::Initial_constructContext *ctx) {
@@ -1353,6 +1391,7 @@ void sv_visitor::exitAlways_construct(sv2017::Always_constructContext *ctx) {
     }
     in_comb_block = false;
     auto scratch = f_factory.get_function();
+    resume_generate_state();
     if (module_logic_failed) {
         module_logic_failed = false;
         spdlog::debug("Dropping combinational block at line {}: contains constructs that are not modeled",
@@ -1363,7 +1402,7 @@ void sv_visitor::exitAlways_construct(sv2017::Always_constructContext *ctx) {
     block->set_line_n(ctx->getStart() ? static_cast<int>(ctx->getStart()->getLine()) : 0);
     for (const auto &stmt : scratch.get_body()) block->add_statement(stmt);
     for (const auto &local : scratch.get_local_variables()) block->add_local_name(local->get_name());
-    route_resource_statement(block);
+    route_logic_statement(block, ctx);
 }
 
 void sv_visitor::enterStruct_union_member(sv2017::Struct_union_memberContext *ctx) {

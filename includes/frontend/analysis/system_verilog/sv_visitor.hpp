@@ -343,7 +343,18 @@ private:
     // converted into logic statements on exit.
     bool module_logic_scope_open(antlr4::ParserRuleContext *ctx);
     void emit_module_signals(const std::vector<std::string> &names, signal_storage_t storage,
-                             net_type_t net, unsigned int line);
+                             net_type_t net, unsigned int line, antlr4::tree::ParseTree *at);
+    // Files a logic statement where its construct sits: in the enclosing generate if / for (which already
+    // collect instances the same way), or in the module. Generate state is left alone.
+    void route_logic_statement(const std::shared_ptr<hdl_statement_base> &stmt, antlr4::tree::ParseTree *at);
+    // Procedural capture (assign, comb blocks) reuses the conditional and loop factories for if/case/for in
+    // the body, so the generate constructs around it are parked while it runs and put back afterwards.
+    void suspend_generate_state();
+    void resume_generate_state();
+    std::vector<std::pair<HDL_conditionals_factory, HDL_loops_factory>> suspended_generate;
+    // Continuous assignments of the open `assign`, filed once the generate state is back (one construct can
+    // hold several: `assign a = x, b = y;`).
+    std::vector<std::shared_ptr<hdl_statement_base>> pending_logic;
     bool capturing_module_signal = false;
     // `nettype` names declared in this file: `name x;` declares a net of that kind, whereas the same shape with a
     // data type name declares a variable (see enterNet_declaration).

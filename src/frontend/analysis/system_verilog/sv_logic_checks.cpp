@@ -18,7 +18,10 @@
 #include <spdlog/spdlog.h>
 
 #include <map>
+#include <memory>
 #include <set>
+#include <utility>
+#include <vector>
 
 #include "data_model/HDL/parameters/HDL_parameter.hpp"
 #include "data_model/HDL/statement/hdl_statements.hpp"
@@ -33,7 +36,26 @@ void record_violation(
     violations.push_back(semantic_violation{semantic_error_code::illegal_driver, message});
 }
 
-// One write to a module-scope name by the tracked logic.
+// A name scope: the module body, or the body of one generate branch or loop. Declarations are local to the
+// scope that holds them; a write finds its target by walking outwards.
+struct scope {
+    const scope *parent = nullptr;
+    std::map<std::string, std::shared_ptr<hdl_signal_declaration>> signals;
+    std::set<std::string> parameters;
+};
+
+// One step of the generate path to a statement: branch `branch` of a generate conditional, or the body of a
+// generate loop (branch 0). Whether a branch exists depends on parameters this pass does not evaluate, so two
+// writes are only known to be elaborated together when their paths are identical: sibling constructs
+// (`if (N == 2) ... if (N == 3) ...`) usually exclude each other, and a write inside a branch next to one outside
+// it only collides for some parameter values.
+struct branch_step {
+    const void *construct = nullptr;
+    size_t branch = 0;
+    bool operator==(const branch_step &o) const { return construct == o.construct && branch == o.branch; }
+};
+
+// One write to a name by the tracked logic.
 struct logic_write {
     std::string name;
     bool whole = true;          // no index or select: covers the entire variable
@@ -41,6 +63,8 @@ struct logic_write {
     int process = -1;           // -1: continuous assignment, otherwise the block's position
     bool single_writer = false; // written from an always_comb / always_latch / always_ff (single-writer rule)
     bool initial = false;       // written from an initial block
+    const scope *where = nullptr;
+    std::vector<branch_step> path;
 };
 
 struct collector {
@@ -50,6 +74,8 @@ struct collector {
     bool single_writer = false;
     bool initial = false;
     unsigned int line = 0;
+    const scope *where = nullptr;
+    std::vector<branch_step> path;
 
     void add_lvalue(const hdl_lvalue &lv) {
         const auto &targets = lv.get_targets();
@@ -68,6 +94,8 @@ struct collector {
             w.process = process;
             w.single_writer = single_writer;
             w.initial = initial;
+            w.where = where;
+            w.path = path;
             writes.push_back(std::move(w));
         }
     }
@@ -95,50 +123,97 @@ struct collector {
     }
 };
 
-// A whole-variable write collides with any other write; two partial ones are not analysed further.
-bool overlap(const logic_write &a, const logic_write &b) { return a.whole || b.whole; }
+// Builds the scope tree of a module (generate branches and loop bodies are child scopes) and collects every
+// write with the scope it sits in and the generate branches that lead to it.
+struct module_walk {
+    std::vector<std::unique_ptr<scope>> scopes;
+    collector col;
+    int process = 0;
+
+    scope *new_scope(const scope *parent) {
+        scopes.push_back(std::make_unique<scope>());
+        scopes.back()->parent = parent;
+        return scopes.back().get();
+    }
+
+    void walk(const hdl_statement_body &body, scope *sc, std::vector<branch_step> &path) {
+        // Declarations first: a write may precede the declaration it resolves to.
+        for (const auto &stmt : body) {
+            if (auto decl = std::dynamic_pointer_cast<hdl_signal_declaration>(stmt)) {
+                sc->signals.emplace(decl->get_name(), decl);
+            } else if (auto param = std::dynamic_pointer_cast<HDL_parameter>(stmt)) {
+                // A struct or union initialised at module scope is filed as a parameter although it is a variable.
+                auto type = param->get_type();
+                const bool composite_variable = type && (type->is<HDL_struct_type>() || type->is<HDL_union_type>());
+                if (!composite_variable) sc->parameters.insert(param->get_name());
+            }
+        }
+        for (const auto &stmt : body) {
+            if (!stmt) continue;
+            if (auto driver = std::dynamic_pointer_cast<hdl_continuous_assignment>(stmt)) {
+                col.process = -1;
+                col.single_writer = false;
+                col.initial = false;
+                col.line = static_cast<unsigned int>(driver->get_line_n());
+                col.shadowed.clear();
+                col.where = sc;
+                col.path = path;
+                col.add_lvalue(driver->get_lvalue());
+            } else if (auto block = std::dynamic_pointer_cast<hdl_procedural_block_statement>(stmt)) {
+                col.process = process++;
+                const auto kind = block->get_kind();
+                col.single_writer = kind == procedural_block_kind_t::always_comb ||
+                                    kind == procedural_block_kind_t::always_latch ||
+                                    kind == procedural_block_kind_t::always_ff;
+                col.initial = kind == procedural_block_kind_t::initial;
+                col.line = static_cast<unsigned int>(block->get_line_n());
+                col.shadowed = std::set<std::string>(block->get_local_names().begin(), block->get_local_names().end());
+                col.where = sc;
+                col.path = path;
+                col.add_body(block->get_body());
+                for (const auto &written : block->get_written()) col.add_lvalue(written);
+            } else if (auto cond = std::dynamic_pointer_cast<hdl_conditional_statement>(stmt)) {
+                const auto &branches = cond->get_branches();
+                for (size_t i = 0; i < branches.size(); ++i) {
+                    path.push_back({cond.get(), i});
+                    walk(branches[i].body, new_scope(sc), path);
+                    path.pop_back();
+                }
+                path.push_back({cond.get(), branches.size()});
+                walk(cond->get_else_body(), new_scope(sc), path);
+                path.pop_back();
+            } else if (auto loop = std::dynamic_pointer_cast<hdl_loop_statement>(stmt)) {
+                path.push_back({loop.get(), 0});
+                walk(loop->get_body(), new_scope(sc), path);
+                path.pop_back();
+            }
+        }
+    }
+};
+
+// What a written name refers to: the nearest enclosing declaration or parameter of that name.
+struct resolved_target {
+    std::shared_ptr<hdl_signal_declaration> signal;
+    const scope *parameter_scope = nullptr;
+};
+
+resolved_target resolve(const scope *from, const std::string &name) {
+    for (const scope *sc = from; sc; sc = sc->parent) {
+        if (auto it = sc->signals.find(name); it != sc->signals.end()) return {it->second, nullptr};
+        if (sc->parameters.contains(name)) return {nullptr, sc};
+    }
+    return {};
+}
 
 } // namespace
 
 bool sv_semantic_checker::check_module_logic(const std::string &file, const hdl_resource_statement &module) {
     if (opts_.disable_semantic_checks) return false;
 
-    std::map<std::string, std::shared_ptr<hdl_signal_declaration>> signals;
-    std::set<std::string> parameters;
-    for (const auto &stmt : module.get_statements()) {
-        if (auto decl = std::dynamic_pointer_cast<hdl_signal_declaration>(stmt)) {
-            signals.emplace(decl->get_name(), decl);
-        } else if (auto param = std::dynamic_pointer_cast<HDL_parameter>(stmt)) {
-            // A struct or union initialised at module scope is filed as a parameter although it is a variable.
-            auto type = param->get_type();
-            const bool composite_variable = type && (type->is<HDL_struct_type>() || type->is<HDL_union_type>());
-            if (!composite_variable) parameters.insert(param->get_name());
-        }
-    }
-
-    collector col;
-    int process = 0;
-    for (const auto &stmt : module.get_statements()) {
-        if (auto driver = std::dynamic_pointer_cast<hdl_continuous_assignment>(stmt)) {
-            col.process = -1;
-            col.single_writer = false;
-            col.initial = false;
-            col.line = static_cast<unsigned int>(driver->get_line_n());
-            col.shadowed.clear();
-            col.add_lvalue(driver->get_lvalue());
-        } else if (auto block = std::dynamic_pointer_cast<hdl_procedural_block_statement>(stmt)) {
-            col.process = process++;
-            const auto kind = block->get_kind();
-            col.single_writer = kind == procedural_block_kind_t::always_comb ||
-                                kind == procedural_block_kind_t::always_latch ||
-                                kind == procedural_block_kind_t::always_ff;
-            col.initial = kind == procedural_block_kind_t::initial;
-            col.line = static_cast<unsigned int>(block->get_line_n());
-            col.shadowed = std::set<std::string>(block->get_local_names().begin(), block->get_local_names().end());
-            col.add_body(block->get_body());
-            for (const auto &written : block->get_written()) col.add_lvalue(written);
-        }
-    }
+    module_walk walk;
+    scope *root = walk.new_scope(nullptr);
+    std::vector<branch_step> path;
+    walk.walk(module.get_statements(), root, path);
 
     bool fired = false;
     auto report = [&](unsigned int line, const std::string &message) {
@@ -146,18 +221,32 @@ bool sv_semantic_checker::check_module_logic(const std::string &file, const hdl_
         fired = true;
     };
 
-    std::map<std::string, std::vector<const logic_write *>> by_name;
-    for (const auto &w : col.writes) by_name[w.name].push_back(&w);
+    // Group the writes by what they resolve to, in first-write order: a signal by its declaration, a
+    // parameter by its scope and name.
+    using target_key = std::pair<const void *, std::string>;
+    std::vector<target_key> order;
+    std::map<target_key, std::vector<const logic_write *>> by_target;
+    std::map<target_key, resolved_target> resolved;
+    for (const auto &w : walk.col.writes) {
+        const auto target = resolve(w.where, w.name);
+        if (!target.signal && !target.parameter_scope) continue;
+        const target_key key = target.signal ? target_key{target.signal.get(), ""}
+                                             : target_key{target.parameter_scope, w.name};
+        if (!by_target.contains(key)) order.push_back(key);
+        by_target[key].push_back(&w);
+        resolved.emplace(key, target);
+    }
 
-    for (const auto &[name, writes] : by_name) {
-        if (parameters.contains(name)) {
+    for (const auto &key : order) {
+        const auto &writes = by_target[key];
+        const auto &target = resolved[key];
+        const std::string &name = writes.front()->name;
+
+        if (!target.signal) {
             report(writes.front()->line, "cannot assign to parameter '" + name + "'");
             continue;
         }
-        auto it = signals.find(name);
-        if (it == signals.end()) continue;
-
-        if (it->second->get_storage() == signal_storage_t::net) {
+        if (target.signal->get_storage() == signal_storage_t::net) {
             for (const auto *w : writes) {
                 if (w->process < 0) continue;
                 report(w->line, "net '" + name + "' cannot be assigned in a procedural block");
@@ -165,16 +254,18 @@ bool sv_semantic_checker::check_module_logic(const std::string &file, const hdl_
             }
             continue;
         }
-        if (it->second->get_storage() != signal_storage_t::variable) continue;
+        if (target.signal->get_storage() != signal_storage_t::variable) continue;
 
-        // Report each variable once, with the most specific rule that applies.
+        // Report each variable once, with the most specific rule that applies. Only writes under the same
+        // generate path are known to be elaborated together (see branch_step).
         std::string finding;
         unsigned int line = writes.front()->line;
         for (size_t i = 0; i < writes.size() && finding.empty(); ++i) {
             for (size_t j = i + 1; j < writes.size(); ++j) {
                 const auto &a = *writes[i];
                 const auto &b = *writes[j];
-                if (!overlap(a, b)) continue;
+                if (a.path != b.path) continue;
+                if (!(a.whole || b.whole)) continue;
                 if (a.process < 0 && b.process < 0) {
                     finding = "variable '" + name + "' has multiple continuous assignments";
                 } else if ((a.process < 0) != (b.process < 0)) {
