@@ -165,7 +165,6 @@ void application_definition_generator::construct_application(const std::string &
     application["pl_clocks"]["1"] = 100e6;
     application["pl_clocks"]["2"] = 100e6;
     application["pl_clocks"]["3"] = 100e6;
-    application["initial_registers_values"] = std::vector<nlohmann::json>();
     application["macro"] = std::vector<nlohmann::json>();
     application["parameters"] = std::vector<nlohmann::json>();
     application["peripherals"] = peripherals;

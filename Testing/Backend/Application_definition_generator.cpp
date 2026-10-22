@@ -88,6 +88,6 @@ TEST( app_def_generation , generate_app_def) {
     app_def_gen.construct_application("test_app");
 
     auto res = app_def_gen.get_definition_string();
-    std::string check_string = R"({"application_name":"test_app_new","bitstream":"","channel_groups":[],"channels":[],"clock_frequency":100000000.0,"filters":[],"initial_registers_values":[],"macro":[],"miscellaneous":{"n_enables":0,"timebase_address":""},"parameters":[],"peripherals":[{"base_address":"0x0","hdl_parameters":{},"name":"TL","peripheral_id":"TL","proxied":false,"proxy_address":"0","spec_id":1}],"pl_clocks":{"0":100000000.0,"1":100000000.0,"2":100000000.0,"3":100000000.0},"programs":[],"scripts":[],"soft_cores":[]})";
+    std::string check_string = R"({"application_name":"test_app_new","bitstream":"","channel_groups":[],"channels":[],"clock_frequency":100000000.0,"filters":[],"macro":[],"miscellaneous":{"n_enables":0,"timebase_address":""},"parameters":[],"peripherals":[{"base_address":"0x0","hdl_parameters":{},"name":"TL","peripheral_id":"TL","proxied":false,"proxy_address":"0","spec_id":1}],"pl_clocks":{"0":100000000.0,"1":100000000.0,"2":100000000.0,"3":100000000.0},"programs":[],"scripts":[],"soft_cores":[]})";
     ASSERT_EQ(res, check_string);
 }
