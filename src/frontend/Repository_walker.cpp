@@ -19,6 +19,7 @@
 #include "frontend/Repository_walker.hpp"
 #include "data_model/mm_file.hpp"
 #include "data_model/include_config.hpp"
+#include "frontend/cmake_target_scanner.hpp"
 
 
 
@@ -169,7 +170,7 @@ void Repository_walker::scan_repository() {
                 // at zero cost; a C header actually `` `include ``d from SV is
                 // user error and follows the normal inline+parse error path.
                 if (repository_index_p) repository_index_p->add_file(path);
-            } else if(file_is_vhdl(path) || file_is_script(path) || file_is_constraint(path) || file_is_data(path)){
+            } else if(file_is_vhdl(path) || file_is_script(path) || file_is_constraint(path) || file_is_data(path) || file_is_cmake(path)){
                 scanned_files.push_back(path);
             }
         }
@@ -265,6 +266,7 @@ void Repository_walker::collect_analysis_results() {
     store(scripts_futures);
     store(constraints_futures);
     store(data_futures);
+    store(cmake_futures);
 
     working_threads =0;
 }
@@ -694,7 +696,7 @@ bool Repository_walker::is_ignored(const std::filesystem::path &path, bool is_di
 ///
 /// This method is a simple dispatcher that based on the file type calls the appropriate analysis method.
 void Repository_walker::analyze_file(std::filesystem::path &file) {
-    if(!(file_is_verilog(file) || file_is_vhdl(file) || file_is_constraint(file)|| file_is_script(file) || file_is_data(file))) return;
+    if(!(file_is_verilog(file) || file_is_vhdl(file) || file_is_constraint(file)|| file_is_script(file) || file_is_data(file) || file_is_cmake(file))) return;
 
     spdlog::trace("Analizing file: {}", file.string());
     if(file_is_verilog(file)){
@@ -719,6 +721,11 @@ void Repository_walker::analyze_file(std::filesystem::path &file) {
         std::set<std::string> includes;
         auto old_hash = d_store->get_hash(file);
         data_futures.push_back(pool.submit(analyze_data, file, includes, old_hash));
+        working_threads++;
+    } else if(file_is_cmake(file)){
+        std::set<std::string> includes;
+        auto old_hash = d_store->get_hash(file);
+        cmake_futures.push_back(pool.submit(analyze_cmake, file, includes, old_hash));
         working_threads++;
     }
 
@@ -781,6 +788,17 @@ bool Repository_walker::file_is_data(const std::filesystem::path &file) {
     return extension == ".dat" || extension == ".mem" || extension == ".hex";
 }
 
+
+bool Repository_walker::file_is_cmake(const std::filesystem::path &file) const {
+    if (file.filename() != "CMakeLists.txt") return false;
+    const std::filesystem::path root(target_repository);
+    std::error_code ec;
+    for (auto dir = file.parent_path(); !dir.empty(); dir = dir.parent_path()) {
+        if (std::filesystem::exists(dir / "CMakeCache.txt", ec)) return false;
+        if (dir == root || dir == dir.parent_path()) break;
+    }
+    return true;
+}
 
 /// Analyze the target verilog-type file to extract declared and used instantiated design elements
 /// \param file Target file
@@ -989,6 +1007,42 @@ file_analysis_context<Script> analyze_script(
         Script scr(s);
         scr.set_path(file);
         return {file.string(), hash, scr};
+    } catch (const std::exception &err) {
+        spdlog::error("Error analyzing {}: {}", file.string(), err.what());
+        return {};
+    } catch (...) {
+        spdlog::error("Unknown error analyzing {}", file.string());
+        return {};
+    }
+}
+
+/// Analyze a CMakeLists.txt extracting the library targets it declares
+/// \param file Target file
+file_analysis_context<cmake_project> analyze_cmake(
+    const std::filesystem::path &file,
+    std::set<std::string> i_d,
+    const std::string &old_hash
+) {
+    try {
+        auto f_opt = mm_file::try_open(file.string());
+        if (!f_opt.has_value()) {
+            spdlog::error("Error analyzing {}: could not open file", file.string());
+            return {};
+        }
+        auto hash_opt = hash_file(f_opt->view());
+        if (!hash_opt.has_value()) {
+            spdlog::error("Error analyzing {}: could not calculate file hash", file.string());
+            return {};
+        }
+        std::string hash = hash_opt.value();
+        if (old_hash == hash) {
+            return {file.string(), hash, std::nullopt};
+        }
+
+        std::vector<std::string> names;
+        for (const auto &t : cmake_target_scanner::parse(std::string(f_opt->view()), file.parent_path()))
+            names.push_back(t.name);
+        return {file.string(), hash, cmake_project(file.string(), std::move(names))};
     } catch (const std::exception &err) {
         spdlog::error("Error analyzing {}: {}", file.string(), err.what());
         return {};

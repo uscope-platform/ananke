@@ -31,6 +31,7 @@ set(ANANKE_TESTS
         frontend/typedef_parsing.cpp
         frontend/source_mapping.cpp
         frontend/ignore_matcher.cpp
+        frontend/cmake_target_scanner.cpp
         frontend/repository_walker.cpp
         frontend/vhdl_analyzer.cpp
         data_model/Depfile_test.cpp

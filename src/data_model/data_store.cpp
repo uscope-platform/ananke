@@ -15,6 +15,8 @@
 
 #include "data_model/data_store.hpp"
 #include <spdlog/spdlog.h>
+#include <algorithm>
+#include <tuple>
 
 #include <cereal/types/polymorphic.hpp>
 #include <type_traits>
@@ -494,6 +496,20 @@ std::optional<Constraints> data_store::get_constraint(const std::string &name) {
     return std::nullopt;
 }
 
+
+std::vector<cmake_target> data_store::get_cmake_targets() {
+    std::vector<cmake_target> targets;
+    for (auto &[path, file]: active().cache) {
+        const auto *project = std::get_if<cmake_project>(&file.content);
+        if (!project) continue;
+        const auto dir = std::filesystem::path(path).parent_path();
+        for (const auto &name : project->get_targets()) targets.push_back({name, dir});
+    }
+    std::sort(targets.begin(), targets.end(), [](const cmake_target &a, const cmake_target &b) {
+        return std::tie(a.dir, a.name) < std::tie(b.dir, b.name);
+    });
+    return targets;
+}
 
  std::optional<DataFile> data_store::get_data_file(const std::string &name) {
     for (auto &[_, file]: active().cache) {

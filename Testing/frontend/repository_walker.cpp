@@ -328,6 +328,52 @@ TEST_F(repository_walker, mkignore_patterns) {
     std::filesystem::remove_all(root);
 }
 
+TEST_F(repository_walker, cmake_library_targets) {
+    // CMakeLists.txt files go through the normal walk: exclusion rules apply, build trees are not mistaken for
+    // sources, and a second run over an unchanged tree keeps the cached targets.
+    const std::string root = "/tmp/ananke_cmake_targets_test";
+    const std::string settings_dir = root + "/settings";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(settings_dir);
+
+    auto write = [](const std::string &path, const std::string &content) {
+        std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+        std::ofstream ofs(path, std::ios::trunc);
+        ofs << content;
+    };
+    write(root + "/systemc/CMakeLists.txt", "add_library(sctb STATIC a.cpp)\nadd_library(helper INTERFACE)\n");
+    write(root + "/app/CMakeLists.txt", "add_executable(app main.cpp)\nadd_library(imported_one SHARED IMPORTED)\n");
+    write(root + "/vendor/CMakeLists.txt", "add_library(vendored STATIC a.cpp)\n");
+    write(root + "/.mkignore", "vendor/\n");
+    // generated output of a CMake configure: the cache file marks the whole tree
+    write(root + "/out/CMakeCache.txt", "");
+    write(root + "/out/CMakeLists.txt", "add_library(in_build_tree STATIC a.cpp)\n");
+    write(root + "/out/_deps/dep-src/CMakeLists.txt", "add_library(fetched STATIC a.cpp)\n");
+    write(settings_dir + "/settings", "{\"profiles\": {\"cm\": {\"hdl_store\":\"" + root + "\"}}}");
+
+    auto s = std::make_shared<settings_store>(false, settings_dir, "cm");
+    auto d = std::make_shared<data_store>(true, root + "/data_store");
+    {
+        Repository_walker walker(s, d, true);
+    }
+    auto names = [](const std::vector<cmake_target> &targets) {
+        std::vector<std::string> out;
+        for (const auto &t : targets) out.push_back(t.name);
+        return out;
+    };
+    auto targets = d->get_cmake_targets();
+    EXPECT_EQ(names(targets), (std::vector<std::string>{"helper", "sctb"}));
+    EXPECT_EQ(targets.back().dir, std::filesystem::path(root) / "systemc");
+
+    // unchanged tree: the cache-hit path must still report them
+    {
+        Repository_walker walker(s, d, true);
+    }
+    EXPECT_EQ(names(d->get_cmake_targets()), (std::vector<std::string>{"helper", "sctb"}));
+
+    std::filesystem::remove_all(root);
+}
+
 TEST_F(repository_walker, h_include_invalidation) {
     // Editing a consumed index-only `.h` must invalidate its (cache-hit)
     // consumers on the next run even though the consumers' own bytes are

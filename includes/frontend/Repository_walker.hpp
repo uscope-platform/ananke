@@ -35,6 +35,7 @@
 #include "data_model/Constraints.hpp"
 #include "data_model/data_store.hpp"
 #include "data_model/DataFile.hpp"
+#include "data_model/cmake_project.hpp"
 #include "data_model/include_dependency.hpp"
 #include "analysis/system_verilog/sv_analyzer.hpp"
 #include "analysis/vhdl/vhdl_analyzer.hpp"
@@ -69,6 +70,7 @@ static file_analysis_context<hdl_file> analyze_verilog(const std::filesystem::pa
 static file_analysis_context<hdl_file> analyze_vhdl(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
 static file_analysis_context<Script>  analyze_script(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
 static file_analysis_context<DataFile>  analyze_data(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
+static file_analysis_context<cmake_project>  analyze_cmake(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
 static file_analysis_context<Constraints>  analyze_constraint(const std::filesystem::path &file, std::set<std::string> i_d, const std::string &old_hash);
 static std::optional<std::string> hash_file(const std::string_view &file_content);
 
@@ -122,6 +124,9 @@ private:
     static bool file_is_script(const std::filesystem::path &file);
     static bool file_is_constraint(const std::filesystem::path &file);
     static bool file_is_data(const std::filesystem::path &file);
+    // A CMakeLists.txt outside any CMake build tree (a directory with a CMakeCache.txt is generated output: it holds
+    // copies of fetched dependencies that must not be taken for the project's own libraries).
+    bool file_is_cmake(const std::filesystem::path &file) const;
     // Gitignore-style exclusion: `.mkignore` markers hold ordered patterns
     // (see ignore_matcher); nested markers extend their subtree's rule set.
 
@@ -145,6 +150,7 @@ private:
     std::vector<std::future<file_analysis_context<Script>>> scripts_futures;
     std::vector<std::future<file_analysis_context<Constraints>>> constraints_futures;
     std::vector<std::future<file_analysis_context<DataFile>>> data_futures;
+    std::vector<std::future<file_analysis_context<cmake_project>>> cmake_futures;
 
     thread_pool pool;
     int working_threads = 0;

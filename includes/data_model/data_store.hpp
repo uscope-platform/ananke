@@ -34,6 +34,7 @@
 #include "Script.hpp"
 #include "Constraints.hpp"
 #include "DataFile.hpp"
+#include "cmake_project.hpp"
 #include "hdl_file.hpp"
 #include "include_dependency.hpp"
 #include "macro_definition.hpp"
@@ -47,6 +48,7 @@ public:
     using source_content = std::variant<
         Script,
         DataFile,
+        cmake_project,
         Constraints,
         hdl_file
     >;
@@ -145,6 +147,8 @@ public:
     std::optional<std::shared_ptr<hdl_resource_statement>> get_HDL_resource(const std::string& name, std::string &path);
     std::optional<Script> get_script(std::string& name);
     std::optional<DataFile> get_data_file(const std::string& name);
+    // Library targets declared by the CMakeLists.txt files of the repository, in deterministic order.
+    std::vector<cmake_target> get_cmake_targets();
     std::optional<Constraints> get_constraint(const std::string& name);
     std::optional<hdl_function_statement> get_standalone_function(const std::string &name, const std::string &source_path);
     std::optional<std::vector<include_dependency>> get_includes(const std::string &name) const;
