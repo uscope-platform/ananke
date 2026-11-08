@@ -285,6 +285,11 @@ TEST( hdl_ast_builder, interface_parameter) {
 
     EXPECT_EQ(struct_s, reference_structure);
 
+    // interface instances are classified as interfaces (not modules), the module itself stays a module
+    EXPECT_EQ(synth_ast->get_dependency_class(), module);
+    ASSERT_EQ(synth_ast->get_dependencies().size(), 2);
+    for (const auto &c : synth_ast->get_dependencies()) EXPECT_EQ(c->get_dependency_class(), interface);
+
     auto ast_dump = synth_ast->dump();
 
     std::string res_str = R"lit({"children":[{"children":[],"instance_name":"test_defaults","instance_type":"axi_stream","parameters":{"CLOCK_PERIOD":{"name":"CLOCK_PERIOD","type":"numeric_parameter","value":[1]},"DATA_WIDTH":{"name":"DATA_WIDTH","type":"numeric_parameter","value":[32]},"DEST_WIDTH":{"name":"DEST_WIDTH","type":"numeric_parameter","value":[32]},"USER_WIDTH":{"name":"USER_WIDTH","type":"numeric_parameter","value":[32]}},"ports_map":{},"wildcard_assignment":false},{"children":[],"instance_name":"test_overload_params","instance_type":"axi_stream","parameters":{"CLOCK_PERIOD":{"name":"CLOCK_PERIOD","type":"numeric_parameter","value":[1]},"DATA_WIDTH":{"name":"DATA_WIDTH","type":"numeric_parameter","value":[15]},"DEST_WIDTH":{"name":"DEST_WIDTH","type":"numeric_parameter","value":[32]},"USER_WIDTH":{"name":"USER_WIDTH","type":"numeric_parameter","value":[3]}},"ports_map":{},"wildcard_assignment":false}],"instance_name":"TL","instance_type":"test_mod","parameters":{"test_param":{"name":"test_param","type":"numeric_parameter","value":[3]}},"ports_map":{},"wildcard_assignment":false})lit";
@@ -297,6 +302,38 @@ TEST( hdl_ast_builder, interface_parameter) {
 
     auto struct_v2 = ast_v2->dump_structure();
     ASSERT_EQ(struct_v2, struct_s);
+}
+
+// Interfaces are stored apart from resources: processor detection (run by the build_ast passes) must not
+// report them as modules missing from the repository.
+TEST( hdl_ast_builder, interface_instance_skips_processor_detection) {
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    auto test_pattern = R"(
+        interface test_if #(W = 8)();
+            logic [W-1:0] data;
+        endinterface
+        module leaf();
+        endmodule
+        module test_mod();
+            test_if #(.W(4)) i0();
+            leaf l0();
+        endmodule
+    )";
+
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value();
+    d_store->store_file({"/dev/zero", "file_hash", resource});
+
+    log_capture logs;
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto ast = b.build_ast(std::vector<std::string>({"test_mod"}))[0];
+
+    ASSERT_EQ(ast->get_dependencies().size(), 2);
+    for (const auto &c : ast->get_dependencies())
+        EXPECT_EQ(c->get_dependency_class(), c->get_type() == "test_if" ? interface : module);
+    EXPECT_EQ(logs.count("Skipping processor detection"), 0u);
 }
 
 TEST( hdl_ast_builder, package_dependency) {

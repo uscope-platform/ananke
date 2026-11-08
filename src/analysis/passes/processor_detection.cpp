@@ -23,8 +23,8 @@ processor_detection::processor_detection(const std::shared_ptr<data_store> &d) {
 
 void processor_detection::process_node(const std::shared_ptr<hdl_ast_node> &node) {
     if (node->get_dependency_class() == primitive) return;
-    // Interfaces carry no processor documentation: skip silently instead of
-    // warning about a missing module definition.
+    // Interfaces carry no processor documentation (and are not stored as resources): skip silently
+    // instead of warning about a missing module definition. The AST builder classifies them.
     if (node->get_dependency_class() == interface) return;
     auto node_spec_opt = d_store->get_HDL_resource(node->get_type());
     if (!node_spec_opt.has_value()) {

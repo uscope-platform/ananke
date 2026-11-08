@@ -263,6 +263,10 @@ std::expected<std::vector<work_order>, solver_errors> HDL_ast_builder_v2::proces
         return std::unexpected{recursive_module};
     }
     if (dep_file.is_module_excluded(type) || d_store->is_primitive(type)) child->set_dependency_class(primitive);
+    // Instantiation syntax cannot tell a module from an interface: the instance is always recorded as `module`.
+    // Reclassify it once the type resolves to an interface (get_elaboratable prefers a resource over an interface).
+    else if (!d_store->get_HDL_resource(type).has_value() && d_store->get_interface(type).has_value())
+        child->set_dependency_class(interface);
     // The node shares the quantifier pointer with the resource statement: detach
     // to a node-owned shallow copy (shares raw_value, own solved_value) before
     // evaluating, so per-iteration values never alias each other or the stmt.
