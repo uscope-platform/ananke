@@ -799,6 +799,11 @@ TEST(sv_semantic_checks, automatic_variable_misuse_rules) {
     EXPECT_TRUE(declarations_rejected("module t; reg g; task automatic a; reg l; begin: b assign g = signed'(l); end endtask endmodule"));
     EXPECT_TRUE(declarations_rejected("module t; reg g; task automatic a; reg l; begin: b assign g = reg'(l); end endtask endmodule"));
     EXPECT_TRUE(declarations_rejected("module t; reg g; task automatic a; reg l; g <= @(l) 0; endtask endmodule"));
+    // a local used only as an index / on the right-hand side is not written
+    EXPECT_FALSE(declarations_rejected("module t; reg [31:0] d [199:0]; task automatic a; integer i; "
+                                       "for (i = 0; i < 200; i = i + 1) d[i] <= i; endtask endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg [31:0] d [199:0]; task automatic a; integer i; i <= 1; endtask endmodule"));
+    EXPECT_TRUE(declarations_rejected("module t; reg g; task automatic a; reg [3:0] l; l[1] <= 1; endtask endmodule"));
 }
 
 TEST(sv_semantic_checks, foreach_ignores_same_name_declared_in_other_scopes) {

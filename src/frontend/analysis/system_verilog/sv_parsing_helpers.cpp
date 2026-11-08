@@ -490,6 +490,30 @@ std::string first_local_in(antlr4::tree::ParseTree *node, const std::set<std::st
     return {};
 }
 
+// First identifier in the subtree, whether or not it is a local.
+std::string first_identifier_in(antlr4::tree::ParseTree *node) {
+    if (node->getTreeType() != antlr4::tree::ParseTreeType::RULE) return {};
+    auto *ctx = static_cast<antlr4::ParserRuleContext *>(node);
+    if (ctx->getRuleIndex() == sv2017::RuleIdentifier) return ctx->getText();
+    for (auto *child : node->children) {
+        if (auto found = first_identifier_in(child); !found.empty()) return found;
+    }
+    return {};
+}
+
+// The local variable actually written by an l-value: only the base identifier counts (`a[i]` writes `a`, not `i`);
+// concatenations `{a, b}` write each of their members.
+std::string written_local_in(sv2017::Variable_lvalueContext *lv, const std::set<std::string> &locals) {
+    if (!lv->variable_lvalue().empty()) {
+        for (auto *member : lv->variable_lvalue()) {
+            if (auto found = written_local_in(member, locals); !found.empty()) return found;
+        }
+        return {};
+    }
+    auto base = first_identifier_in(lv);
+    return locals.contains(base) ? base : std::string();
+}
+
 void find_misuse(antlr4::tree::ParseTree *node, const std::set<std::string> &locals, std::vector<automatic_misuse> &out) {
     if (node->getTreeType() != antlr4::tree::ParseTreeType::RULE) return;
     auto *ctx = static_cast<antlr4::ParserRuleContext *>(node);
@@ -498,8 +522,7 @@ void find_misuse(antlr4::tree::ParseTree *node, const std::set<std::string> &loc
         auto *nb = static_cast<sv2017::Nonblocking_assignmentContext *>(ctx);
         // The written variable is the first identifier of the l-value (`s.x`, `a[i]` write `s`, `a`).
         if (nb->variable_lvalue()) {
-            if (auto name = first_local_in(nb->variable_lvalue()->children.empty() ? node : nb->variable_lvalue()->children[0], locals);
-                !name.empty()) {
+            if (auto name = written_local_in(nb->variable_lvalue(), locals); !name.empty()) {
                 out.push_back({name, "written by a nonblocking assignment", static_cast<unsigned int>(ctx->getStart()->getLine())});
                 return;
             }
