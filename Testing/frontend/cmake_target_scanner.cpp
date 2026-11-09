@@ -112,6 +112,20 @@ TEST(cmake_target_scanner, resolve_reports_unknown_targets_with_the_known_ones) 
     EXPECT_NE(none.error().find("no add_library()"), std::string::npos);
 }
 
+TEST(cmake_target_scanner, resolve_all_keeps_the_order_and_reports_every_problem) {
+    const std::vector<cmake_target> targets = {{"a", "/r/a"}, {"b", "/r/b"}, {"dup", "/r/one"}, {"dup", "/r/two"}};
+    auto ok = cmake_target_scanner::resolve_all(targets, {"b", "a"});
+    ASSERT_TRUE(ok.has_value());
+    EXPECT_EQ(names(ok.value()), (std::vector<std::string>{"b", "a"}));
+
+    EXPECT_TRUE(cmake_target_scanner::resolve_all(targets, {}).value().empty());
+
+    auto bad = cmake_target_scanner::resolve_all(targets, {"a", "missing", "dup"});
+    ASSERT_FALSE(bad.has_value());
+    EXPECT_NE(bad.error().find("'missing' not found"), std::string::npos);
+    EXPECT_NE(bad.error().find("'dup' is declared in more than one place"), std::string::npos);
+}
+
 TEST(cmake_target_scanner, resolve_reports_ambiguous_targets_with_every_location) {
     const std::vector<cmake_target> targets = {{"dup", "/r/one"}, {"dup", "/r/two"}, {"other", "/r/o"}};
     auto r = cmake_target_scanner::resolve(targets, "dup");

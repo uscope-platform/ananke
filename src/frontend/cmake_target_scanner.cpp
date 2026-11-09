@@ -176,3 +176,20 @@ std::expected<cmake_target, std::string> cmake_target_scanner::resolve(const std
     }
     return std::unexpected(msg.str());
 }
+
+std::expected<std::vector<cmake_target>, std::string> cmake_target_scanner::resolve_all(
+    const std::vector<cmake_target> &targets, const std::vector<std::string> &names) {
+    std::vector<cmake_target> resolved;
+    std::string errors;
+    for (const auto &name : names) {
+        auto target = resolve(targets, name);
+        if (target.has_value()) {
+            resolved.push_back(std::move(target.value()));
+        } else {
+            if (!errors.empty()) errors += "\n";
+            errors += target.error();
+        }
+    }
+    if (!errors.empty()) return std::unexpected(errors);
+    return resolved;
+}

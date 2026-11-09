@@ -391,6 +391,37 @@ TEST(verilator_project_gen, missing_data_stimulus_check_emitted) {
     vpg_clean_settings();
 }
 
+TEST(verilator_project_gen, unresolved_sim_libs_are_rejected_before_any_output) {
+    auto s_store = vpg_setup_settings();
+    verilator_project_generator gen(s_store);
+
+    project_data d = vpg_base_data();
+    d.cmake_targets = {{"known", "/r/known"}, {"dup", "/r/one"}, {"dup", "/r/two"}};
+    d.sim_libs = {"known", "missing", "dup"};
+    try {
+        gen.set_data(d);
+        FAIL() << "set_data accepted unresolvable sim_libs";
+    } catch (const std::runtime_error &e) {
+        const std::string msg = e.what();
+        EXPECT_NE(msg.find("CMake library target 'missing' not found"), std::string::npos);
+        EXPECT_NE(msg.find("CMake library target 'dup' is declared in more than one place"), std::string::npos);
+    }
+    vpg_clean_settings();
+}
+
+TEST(verilator_project_gen, resolved_sim_libs_are_accepted) {
+    auto s_store = vpg_setup_settings();
+    verilator_project_generator gen(s_store);
+
+    project_data d = vpg_base_data();
+    d.cmake_targets = {{"known", "/r/known"}};
+    d.sim_libs = {"known"};
+    EXPECT_NO_THROW(gen.set_data(d));
+    d.sim_libs = {};
+    EXPECT_NO_THROW(gen.set_data(d));
+    vpg_clean_settings();
+}
+
 TEST(verilator_project_gen, custom_tool_options) {
     auto s_store = vpg_setup_settings();
     verilator_project_generator gen(s_store);

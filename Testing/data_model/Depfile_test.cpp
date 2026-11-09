@@ -55,6 +55,7 @@ TEST_F( DepfileTest , general_section_parsing) {
     ASSERT_THAT(file->general.synth_modules, testing::ElementsAre("test_synth_module_add_1", "test_synth_module_add_2"));
     ASSERT_TRUE(file->general.sim_harness.empty());
     ASSERT_TRUE(file->general.sim_defines.empty());
+    ASSERT_TRUE(file->general.sim_libs.empty());
 
 
 }
@@ -117,7 +118,8 @@ TEST( DepfileHarnessTest , sim_harness_parsing) {
             "synth_tl": "dut",
             "sim_tl": "tb_top",
             "sim_harness": ["testbench/test_tb_top.cpp", "/abs/harness.cpp"],
-            "sim_defines": ["snapshots/default/common_defines.vh"]
+            "sim_defines": ["snapshots/default/common_defines.vh"],
+            "sim_libs": ["sctb", "other_lib"]
         }
     })");
     Depfile f(ss);
@@ -126,6 +128,20 @@ TEST( DepfileHarnessTest , sim_harness_parsing) {
                 testing::ElementsAre("testbench/test_tb_top.cpp", "/abs/harness.cpp"));
     ASSERT_THAT(f.general.sim_defines,
                 testing::ElementsAre("snapshots/default/common_defines.vh"));
+    ASSERT_THAT(f.general.sim_libs, testing::ElementsAre("sctb", "other_lib"));
+}
+
+TEST(DepfileHarnessTest, sim_libs_rejects_non_string_entries) {
+    std::stringstream ss(R"({
+        "general": {
+            "project_name": "p",
+            "synth_tl": "dut",
+            "sim_tl": "tb_top",
+            "sim_libs": [1]
+        }
+    })");
+    Depfile f(ss);
+    ASSERT_TRUE(f.has_error());
 }
 
 TEST(DepfileVerilatorTest, tool_section_parsing) {

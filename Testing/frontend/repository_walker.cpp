@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "frontend/Repository_walker.hpp"
+#include "frontend/cmake_target_scanner.hpp"
 #include <gtest/gtest.h>
 
 #include "test_paths.hpp"
@@ -370,6 +371,13 @@ TEST_F(repository_walker, cmake_library_targets) {
         Repository_walker walker(s, d, true);
     }
     EXPECT_EQ(names(d->get_cmake_targets()), (std::vector<std::string>{"helper", "sctb"}));
+
+    // what a Depfile sim_libs entry resolves through
+    auto found = cmake_target_scanner::resolve(d->get_cmake_targets(), "sctb");
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found->dir, std::filesystem::path(root) / "systemc");
+    EXPECT_FALSE(cmake_target_scanner::resolve(d->get_cmake_targets(), "vendored").has_value());
+    EXPECT_FALSE(cmake_target_scanner::resolve(d->get_cmake_targets(), "in_build_tree").has_value());
 
     std::filesystem::remove_all(root);
 }

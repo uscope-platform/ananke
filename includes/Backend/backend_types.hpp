@@ -22,6 +22,8 @@
 #include <vector>
 #include <unordered_set>
 
+#include "data_model/cmake_project.hpp"
+
 struct script_source {
     std::string name;
     std::string path;
@@ -68,6 +70,10 @@ struct project_data {
     // convention as sim_harness. When non-empty the generator emits exactly
     // these first and skips automatic define-header resolution.
     std::vector<std::string> sim_defines;
+    // CMake library targets the harness links against (Depfile sim_libs, by name) and every library target the
+    // repository declares; the backend resolves the names against the targets.
+    std::vector<std::string> sim_libs;
+    std::vector<cmake_target> cmake_targets;
     // Flow-resolved leading compile units (see resolve_leading_units):
     // standalone macro define-headers the closure needs but nothing includes.
     // Resolved absolute paths, set by the flow (never by hand).

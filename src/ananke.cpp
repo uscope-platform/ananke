@@ -512,6 +512,8 @@ std::optional<int> ananke::build_flow() {
             data.synth_tl = dep.general.synth_tl;
             data.sim_harness = dep.general.sim_harness;
             data.sim_defines = dep.general.sim_defines;
+            data.sim_libs = dep.general.sim_libs;
+            data.cmake_targets = d_store->get_cmake_targets();
             data.verilator = dep.verilator;
             data.commons_dir = commons_dir;
             data.repo_dir = std::filesystem::current_path();

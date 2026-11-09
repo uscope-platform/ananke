@@ -12,7 +12,8 @@ Planned content:
 
 * The ``general`` section (``project_name``, ``synth_tl``, ``sim_tl``,
   ``target_part``, ``board``, additional modules, include paths,
-  ``sim_harness`` C++ harness sources and the ``sim_defines`` leading-units
+  ``sim_harness`` C++ harness sources, ``sim_libs`` CMake library targets
+  the harness links against, and the ``sim_defines`` leading-units
   override for the Verilator backend).
 * The ``verilator`` tool section (``cflags``, ``waivers``, ``make_args``,
   ``autoflush``, ``extra_args``) and its defaults.

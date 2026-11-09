@@ -18,6 +18,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <stdexcept>
+
+#include "frontend/cmake_target_scanner.hpp"
 #include <filesystem>
 
 namespace {
@@ -246,6 +249,13 @@ std::vector<std::string> verilator_project_generator::resolve_leading_units(
         if ((ext == ".vh" || ext == ".vi" || ext == ".svh") && !included_norm.contains(n)) consider(n);
     }
     return leading;
+}
+
+void verilator_project_generator::set_data(const project_data &d) {
+    project_generator_base::set_data(d);
+    auto resolved = cmake_target_scanner::resolve_all(data.cmake_targets, data.sim_libs);
+    if (!resolved.has_value()) throw std::runtime_error("sim_libs:\n" + resolved.error());
+    libs = std::move(resolved.value());
 }
 
 void verilator_project_generator::write_makefile(std::ostream &output) {

@@ -66,6 +66,11 @@ constexpr std::string_view depfile_schema = R"~(
           "type": "array",
           "description": "C++ simulation harness sources (e.g. Verilator --exe files), as paths relative to the repository base"
         },
+        "sim_libs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Names of the CMake library targets (add_library) the simulation harness links against, found in the CMakeLists.txt files of the repository"
+        },
         "sim_defines": {
           "type": "array",
           "description": "Explicit leading compile units for simulation (overrides automatic define-header resolution, e.g. for explicit conflict resolution), as paths relative to the repository base"

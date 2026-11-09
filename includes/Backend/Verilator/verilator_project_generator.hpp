@@ -26,6 +26,8 @@
 class verilator_project_generator : public project_generator_base {
 public:
     verilator_project_generator(const std::shared_ptr<settings_store> &s_store) : project_generator_base(s_store) {};
+    // Throws std::runtime_error when a Depfile `sim_libs` name matches no CMake library target, or several.
+    void set_data(const project_data &d) override;
     void write_makefile(std::ostream &output) override;
     void generate_sim_script(std::ostream &output) override;
     void generate_synth_script(std::ostream &output) override;
@@ -69,6 +71,8 @@ private:
     // convention sibling (test_tb_top.cpp / <tb_tl>.cpp next to the tb).
     std::vector<std::string> harness_sources(const std::vector<std::string> &units) const;
     std::string verilator_bin() const;
+    // `sim_libs` resolved against the repository's CMake targets by set_data.
+    std::vector<cmake_target> libs;
 };
 
 #endif //ANANKE_VERILATOR_PROJECT_GENERATOR_HPP

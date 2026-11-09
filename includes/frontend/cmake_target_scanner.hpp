@@ -42,6 +42,11 @@ public:
     // alternatives so the Depfile can be fixed.
     static std::expected<cmake_target, std::string> resolve(const std::vector<cmake_target> &targets,
                                                             const std::string &name);
+
+    // Every name of `names` resolved, in order. All the problems are reported at once (one line per name), so a
+    // Depfile with several wrong entries is fixed in one go.
+    static std::expected<std::vector<cmake_target>, std::string> resolve_all(const std::vector<cmake_target> &targets,
+                                                                             const std::vector<std::string> &names);
 };
 
 #endif //ANANKE_CMAKE_TARGET_SCANNER_HPP

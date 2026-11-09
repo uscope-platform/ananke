@@ -69,6 +69,9 @@ struct  general_settings {
     // define-header resolution (e.g. to force one side of a macro conflict
     // the tool refuses to guess). Consumed by the Verilator backend.
     std::vector<std::string> sim_defines = {};
+    // CMake library targets, by name, that the simulation harness links against (e.g. a SystemC testbench library).
+    // The name is looked up among the add_library() targets of the CMakeLists.txt files found in the repository.
+    std::vector<std::string> sim_libs = {};
 };
 
 
