@@ -71,6 +71,12 @@ private:
     // convention sibling (test_tb_top.cpp / <tb_tl>.cpp next to the tb).
     std::vector<std::string> harness_sources(const std::vector<std::string> &units) const;
     std::string verilator_bin() const;
+    // The CMake flow, used when the Depfile names `sim_libs`: the SystemC testbench (the harness) and the libraries
+    // are built by a generated CMake project that verilates the sources with `verilate(... SYSTEMC ...)`, so the
+    // include directories, link libraries and language standard of the libraries come from their own CMake targets.
+    // Emits phases 1 to 3 of the script in place of the Verilator + make ones.
+    void emit_cmake_flow(std::ostream &output, const std::vector<std::string> &sources,
+                         const std::vector<std::string> &defines, const std::vector<std::string> &harness) const;
     // `sim_libs` resolved against the repository's CMake targets by set_data.
     std::vector<cmake_target> libs;
 };
