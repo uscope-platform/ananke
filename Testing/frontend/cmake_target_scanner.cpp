@@ -104,12 +104,11 @@ TEST(cmake_target_scanner, resolve_reports_unknown_targets_with_the_known_ones) 
     const std::vector<cmake_target> targets = {{"a", "/r/a"}, {"b", "/r/b"}};
     auto r = cmake_target_scanner::resolve(targets, "missing");
     ASSERT_FALSE(r.has_value());
-    EXPECT_NE(r.error().find("'missing' not found"), std::string::npos);
-    EXPECT_NE(r.error().find("a b"), std::string::npos);
+    EXPECT_EQ(r.error(), "CMake library target 'missing' not found in the repository; known targets: a b");
 
     auto none = cmake_target_scanner::resolve({}, "x");
     ASSERT_FALSE(none.has_value());
-    EXPECT_NE(none.error().find("no add_library()"), std::string::npos);
+    EXPECT_EQ(none.error(), "CMake library target 'x' not found in the repository (no add_library() declarations were found)");
 }
 
 TEST(cmake_target_scanner, resolve_all_keeps_the_order_and_reports_every_problem) {
@@ -122,15 +121,14 @@ TEST(cmake_target_scanner, resolve_all_keeps_the_order_and_reports_every_problem
 
     auto bad = cmake_target_scanner::resolve_all(targets, {"a", "missing", "dup"});
     ASSERT_FALSE(bad.has_value());
-    EXPECT_NE(bad.error().find("'missing' not found"), std::string::npos);
-    EXPECT_NE(bad.error().find("'dup' is declared in more than one place"), std::string::npos);
+    EXPECT_EQ(bad.error(),
+              "CMake library target 'missing' not found in the repository; known targets: a b dup dup\n"
+              "CMake library target 'dup' is declared in more than one place: /r/one /r/two");
 }
 
 TEST(cmake_target_scanner, resolve_reports_ambiguous_targets_with_every_location) {
     const std::vector<cmake_target> targets = {{"dup", "/r/one"}, {"dup", "/r/two"}, {"other", "/r/o"}};
     auto r = cmake_target_scanner::resolve(targets, "dup");
     ASSERT_FALSE(r.has_value());
-    EXPECT_NE(r.error().find("more than one place"), std::string::npos);
-    EXPECT_NE(r.error().find("/r/one"), std::string::npos);
-    EXPECT_NE(r.error().find("/r/two"), std::string::npos);
+    EXPECT_EQ(r.error(), "CMake library target 'dup' is declared in more than one place: /r/one /r/two");
 }
