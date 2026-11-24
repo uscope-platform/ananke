@@ -124,6 +124,12 @@ static void annotate_identifier_types(
     }
 }
 
+namespace {
+std::shared_ptr<hdl_type> with_fused_unpacked_dims(
+    const std::shared_ptr<hdl_type> &def,
+    const std::vector<dimension_t> &dims);
+}
+
 std::map<qualified_identifier, resolved_parameter> parameter_solver::process_parameters(
     const std::vector<std::shared_ptr<HDL_parameter>> &params_in,
     const std::map<qualified_identifier, resolved_parameter> &context,
@@ -174,6 +180,17 @@ std::map<qualified_identifier, resolved_parameter> parameter_solver::process_par
             solved_parameters[next.value()] = 0;
             s.purge(next.value());
             continue;
+        }
+
+        // a parameter declared with a type parameter (`T X = ...`) takes the type the type parameter resolved to,
+        // which already includes the type an instance overrides it with
+        if (param->get_type() && param->get_type()->is<HDL_external_type>()) {
+            auto &ext = param->get_type()->as<HDL_external_type>();
+            auto it = type_ctx.find(ext.get_value());
+            if (it != type_ctx.end() && it->second) {
+                param->set_type(with_fused_unpacked_dims(it->second, ext.get_unpacked_dimensions()));
+                type_map[qualified_identifier(param->get_name())] = param->get_type();
+            }
         }
 
         if (param->get_expression()) {

@@ -1627,3 +1627,45 @@ endmodule
     ASSERT_TRUE(w->get_numeric_value().has_value());
     EXPECT_EQ(w->get_numeric_value().value().get_value(), 3);
 }
+
+// Regression: a parameter declared with a type parameter keeps the default of that type parameter instead of the
+// type the instance overrides it with
+TEST( hdl_ast_builder, parameter_typed_by_overridden_type_parameter) {
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    auto child = R"(
+        module child #(
+            parameter type axi_address_t = logic [31:0],
+            axi_address_t BASE_ADDRESS = 'h43c00000
+        )();
+        endmodule
+    )";
+    auto top = R"(
+        module top_mod();
+            localparam AXI_ADDR_WIDTH = 49;
+            typedef logic[AXI_ADDR_WIDTH-1:0] axi_address_t;
+            localparam axi_address_t BASE_ADDRESS = 'h443c00000;
+            child #(.axi_address_t(axi_address_t), .BASE_ADDRESS(BASE_ADDRESS)) c();
+        endmodule
+    )";
+
+    sv_analyzer child_analyzer;
+    d_store->store_file({"/dev/zero/child", "file_hash", child_analyzer.analyze("", child).value()});
+    sv_analyzer top_analyzer;
+    d_store->store_file({"/dev/zero/top", "file_hash", top_analyzer.analyze("", top).value()});
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto synth_ast = b.build_ast(std::vector<std::string>({"top_mod"}))[0];
+
+    ASSERT_EQ(synth_ast->get_dependencies().size(), 1);
+    auto param = synth_ast->get_dependencies()[0]->find_parameter("BASE_ADDRESS");
+    ASSERT_NE(param, nullptr);
+
+    auto dump = param->dump();
+    EXPECT_EQ(dump["value"][0], 0x443c00000);
+    EXPECT_EQ(dump["size"], 49);
+    ASSERT_EQ(dump["data_type"]["packed_dimensions"].size(), 1u);
+    EXPECT_EQ(dump["data_type"]["packed_dimensions"][0]["first_bound"], "48");
+}

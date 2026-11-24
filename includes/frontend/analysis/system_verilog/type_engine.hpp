@@ -80,6 +80,7 @@ public:
     [[nodiscard]] bool is_simple_type()const{ return composite_type_stack.empty(); }
     [[nodiscard]] bool is_nested() const { return composite_type_stack.size() > 1; }
 
+    bool is_type_param(const std::string &name) const { return type_param_names.contains(name); }
     void add_type_param(const std::string &name, const std::shared_ptr<hdl_type> &t);
     void clear_type_params();
     void set_pending_enum_base(const std::shared_ptr<hdl_type> &t) { pending_enum_base = t; }

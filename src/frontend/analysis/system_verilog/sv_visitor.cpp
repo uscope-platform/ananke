@@ -452,6 +452,13 @@ std::shared_ptr<hdl_type> sv_visitor::setup_data_type(sv2017::Data_typeContext *
     std::string type;
     if (dt->package_or_class_scoped_path())
         type = dt->package_or_class_scoped_path()->getText();
+    if (type_engine.is_type_param(type)) {
+        // keep a reference to the type parameter instead of a copy of its default: the type an instance overrides
+        // it with has to reach the parameters declared with it
+        auto ref = std::make_shared<HDL_external_type>(qualified_identifier(type));
+        type_engine.set_base_type(ref);
+        return ref;
+    }
     auto resolved = type_engine.resolve_type(type);
     type_engine.set_base_type(resolved);
     return resolved;
