@@ -27,6 +27,25 @@ void control_bus_analysis::analyze_bus(std::shared_ptr<hdl_ast_node> &ast) {
     auto bus = dfile.get_bus_section("control").value();
     std::string bus_if = bus.bus_interface;
 
+    bool interface_found = false;
+    std::string children;
+    for (auto &d : ast->get_dependencies()) {
+        if (!children.empty()) children += ", ";
+        children += d->get_name();
+        for (auto &[port_name, nets] : d->get_ports()) {
+            for (auto &item : nets) {
+                if (item.get_base_name() == bus_if) interface_found = true;
+            }
+        }
+    }
+    if (!interface_found) {
+        spdlog::error("Control bus interface '{}' specified in the Depfile was not found in top level module '{}' (instance '{}'): "
+                      "no instantiated module has a port connected to a signal or interface with that name. "
+                      "Check the 'bus' -> 'control' -> 'bus_interface' entry of the Depfile. 'bus_interface' must be the name of a signal or interface in the synthesis top level module that is connected to the bus master side. Instances in the top level: [{}]",
+                      bus_if, ast->get_type(), ast->get_name(), children);
+        return;
+    }
+
     analysis_context top = {ast, bus.bus_interface, 0, "",
         {}, "","",-1};
     analize_node({top});

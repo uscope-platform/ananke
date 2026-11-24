@@ -25,6 +25,8 @@
 
 #include "test_paths.hpp"
 
+#include <spdlog/sinks/ostream_sink.h>
+
 TEST( bus_analysis, simple_bus_analysis) {
 
 
@@ -93,4 +95,68 @@ TEST( bus_analysis, simple_bus_analysis) {
 TEST( bus_analysis, parametric_interconnect) {
     // TODO: Find a way to test this, because the pwm was the last parametric interconnect instance in the test repo
     EXPECT_TRUE(true);
+
+
+TEST( bus_analysis, missing_control_bus_interface_reports_error) {
+
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+
+    std::vector<std::string> paths = {
+            "Components/ExternalDrivers/AD2S1210/rtl",
+            "Components/system/axi_lite/crossbar/rtl",
+            "Components/comms/SPI/rtl",
+            "Components/comms/SPI/rtl/master",
+            "Components/Common",
+            "Components/system/axi_stream/combiner/rtl",
+            "Components/system/EnableGenerator/rtl",
+            "Components/system/axi_lite/simple_register_cu/rtl",
+            "Components/system/axi_lite/skid_buffer/rtl"
+    };
+
+    auto prefix = td_file("check_files/test_data/");
+    for(auto &p:paths){
+        for(auto &f:std::filesystem::directory_iterator(prefix + p)){
+            if(f.path().extension() == ".v" || f.path().extension() == ".sv"|| f.path().extension() == ".svh"){
+                auto test_file =  mm_file(f.path());
+                sv_analyzer analyzer;
+                parse_options analyzer_opts;
+                analyzer_opts.include_directories = {std::string(prefix) + "Components/Common"};
+                analyzer.set_options(analyzer_opts);
+                auto resources = analyzer.analyze(prefix, test_file.view()).value();
+                d_store->store_file({f.path(), "file_hash", resources});
+            }
+        }
+    }
+
+    nlohmann::json df_content;
+    df_content["general"] = nlohmann::json();
+    df_content["general"]["project_name"] = "project";
+    df_content["general"]["sim_tl"] = "ad2s1210";
+    df_content["general"]["synth_tl"] = "ad2s1210";
+    df_content["general"]["board"] = "test";
+    df_content["bus"] = nlohmann::json();
+    df_content["bus"]["control"] = nlohmann::json();
+    df_content["bus"]["control"]["bus_interface"] = "not_an_interface";
+    df_content["bus"]["control"]["type"] = "axi_lite";
+
+    Depfile df;
+    df.set_content(df_content);
+
+    HDL_ast_builder_v2 b(s_store, d_store, Depfile());
+    auto synth_ast = b.build_ast(std::vector<std::string>({"ad2s1210"}))[0];
+
+    std::ostringstream stream;
+    auto sink = std::make_shared<spdlog::sinks::ostream_sink_mt>(stream);
+    spdlog::default_logger()->sinks().push_back(sink);
+
+    control_bus_analysis bus_analyzer(df);
+    ASSERT_NO_THROW(bus_analyzer.analyze_bus(synth_ast));
+
+    auto &sinks = spdlog::default_logger()->sinks();
+    sinks.erase(std::remove(sinks.begin(), sinks.end(), sink), sinks.end());
+
+    const auto out = stream.str();
+    EXPECT_NE(out.find("Control bus interface 'not_an_interface' specified in the Depfile was not found in top level module 'ad2s1210'"), std::string::npos) << out;
+}
 }
