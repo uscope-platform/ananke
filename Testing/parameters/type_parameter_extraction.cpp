@@ -343,3 +343,39 @@ TEST(type_parameter_extraction, packed_type) {
         ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 }
+
+// Regression: a parameter port declared with a data type (`T X = 1` in a parameter port list) does not set up its
+// own type, and inherits the one left over by the previous declaration
+TEST(type_parameter_extraction, typed_parameter_port_after_type_parameter) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter type T = logic [7:0],
+            int X = 1
+        )();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto parameters = resource.get_parameter_statements();
+
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
+    auto t_type = Type_engine::create_primitive_type("logic");
+    t_type->as<HDL_simple_type>().set_packed_dimensions(
+        {dimension_t{std::make_shared<Numeric_token>("7"), std::make_shared<Numeric_token>("0"), true}});
+    auto t = std::make_shared<HDL_parameter>();
+    t->set_name("T");
+    t->is_type_param = true;
+    t->set_type(t_type);
+    check_params.push_back(t);
+
+    auto x = std::make_shared<HDL_parameter>();
+    x->set_name("X");
+    x->set_raw_value(std::make_shared<Numeric_token>("1"));
+    x->set_type(Type_engine::create_primitive_type("int"));
+    check_params.push_back(x);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
+    }
+}

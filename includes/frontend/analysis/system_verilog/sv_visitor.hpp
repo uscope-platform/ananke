@@ -313,6 +313,7 @@ private:
     bool is_package_typedef(const std::string &prefix, const std::string &name);
     void process_operation(Expression_v2::expression_operator op);
     std::shared_ptr<hdl_type> setup_data_type(sv2017::Data_type_or_implicitContext *dtoi);
+    std::shared_ptr<hdl_type> setup_data_type(sv2017::Data_typeContext *dt);
     std::shared_ptr<hdl_type> resolve_data_type(sv2017::Data_typeContext *dt);
     // Atom type with optional explicit signing (`int unsigned`, ...):
     // getText() concatenates the tokens spaceless ("intunsigned"), so split

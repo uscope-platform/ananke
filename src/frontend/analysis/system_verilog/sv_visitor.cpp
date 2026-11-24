@@ -425,34 +425,36 @@ std::shared_ptr<hdl_type> sv_visitor::resolve_atom_type(sv2017::Data_type_primit
 }
 
 std::shared_ptr<hdl_type> sv_visitor::setup_data_type(sv2017::Data_type_or_implicitContext *dtoi) {
-    type_engine.set_base_type(std::make_shared<HDL_simple_type>());
-    if (dtoi && dtoi->data_type()) {
-        if (dtoi->data_type()->package_or_class_scoped_path() &&
-            !dtoi->data_type()->package_or_class_scoped_path()->DOUBLE_COLON().empty()) {
-            auto pkg_ctx = dtoi->data_type()->package_or_class_scoped_path();
-            auto qi = sv_parsing_helpers::parse_qualified_identifier(pkg_ctx);
-            auto ext_type = std::make_shared<HDL_external_type>(qi);
-            type_engine.set_base_type(ext_type);
-            return ext_type;
-        }
-        if (dtoi->data_type()->data_type_primitive()) {
-            auto resolved = resolve_atom_type(dtoi->data_type()->data_type_primitive());
-            type_engine.set_base_type(resolved);
-            return resolved;
-        }
-        std::string type;
-        if (dtoi->data_type()->package_or_class_scoped_path())
-            type = dtoi->data_type()->package_or_class_scoped_path()->getText();
-        auto resolved = type_engine.resolve_type(type);
-        type_engine.set_base_type(resolved);
-        return resolved;
-    }
+    if (dtoi && dtoi->data_type()) return setup_data_type(dtoi->data_type());
     if (!dtoi) {
         auto implicit = Type_engine::create_primitive_type("implicit");
         type_engine.set_base_type(implicit);
         return implicit;
     }
+    type_engine.set_base_type(std::make_shared<HDL_simple_type>());
     return std::make_shared<HDL_simple_type>();
+}
+
+std::shared_ptr<hdl_type> sv_visitor::setup_data_type(sv2017::Data_typeContext *dt) {
+    type_engine.set_base_type(std::make_shared<HDL_simple_type>());
+    if (dt->package_or_class_scoped_path() && !dt->package_or_class_scoped_path()->DOUBLE_COLON().empty()) {
+        auto pkg_ctx = dt->package_or_class_scoped_path();
+        auto qi = sv_parsing_helpers::parse_qualified_identifier(pkg_ctx);
+        auto ext_type = std::make_shared<HDL_external_type>(qi);
+        type_engine.set_base_type(ext_type);
+        return ext_type;
+    }
+    if (dt->data_type_primitive()) {
+        auto resolved = resolve_atom_type(dt->data_type_primitive());
+        type_engine.set_base_type(resolved);
+        return resolved;
+    }
+    std::string type;
+    if (dt->package_or_class_scoped_path())
+        type = dt->package_or_class_scoped_path()->getText();
+    auto resolved = type_engine.resolve_type(type);
+    type_engine.set_base_type(resolved);
+    return resolved;
 }
 
 std::shared_ptr<hdl_type> sv_visitor::resolve_data_type(sv2017::Data_typeContext *dt) {
@@ -1910,6 +1912,14 @@ void sv_visitor::exitParameter_declaration(sv2017::Parameter_declarationContext 
 }
 
 void sv_visitor::enterParameter_port_declaration(sv2017::Parameter_port_declarationContext *ctx) {
+    if (ctx->data_type()) {
+        // `T X = 1` in a parameter port list: set up the declared type, like parameter_declaration does
+        in_param_declaration = true;
+        auto resolved = setup_data_type(ctx->data_type());
+        type_engine.start_range();
+        params_factory.set_type(resolved);
+        return;
+    }
     if (ctx->KW_TYPE()) {
         auto tas = ctx->list_of_type_assignments()->type_assignment();
         for (auto *ta : tas) {
@@ -1948,6 +1958,7 @@ void sv_visitor::enterParameter_port_declaration(sv2017::Parameter_port_declarat
 }
 
 void sv_visitor::exitParameter_port_declaration(sv2017::Parameter_port_declarationContext *ctx) {
+    if (ctx->data_type()) in_param_declaration = false;
     finalize_pending_composite_type_param();
 }
 
