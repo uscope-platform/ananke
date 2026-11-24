@@ -68,11 +68,9 @@ peripheral_definition_generator::peripheral_definition_generator(std::shared_ptr
     }
 
     std::vector<nlohmann::json> periph_buffer;
-    int i = 1;
+    // no id: the applications refer to the definitions by name, the client numbers them when it imports them
     for(auto &item:peripheral_defs){
-        item["id"] = i;
         periph_buffer.push_back(item);
-        i++;
     }
     peripheral_defs = periph_buffer;
 }
