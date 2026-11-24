@@ -232,11 +232,17 @@ nlohmann::json HDL_parameter::dump() {
         ret["type"] = "numeric_parameter";
         ret["value"]= std::vector<int64_t>();
         if(solved_value.has_value()) ret["value"].push_back(solved_value.value().get_integer().get_value());
+        // width and signedness of the solved value, next to the declared type
+        ret["size"] = solved_value.value().get_integer().get_size();
+        ret["signed"] = solved_value.value().get_integer().get_signed();
     }
     else if (solved_value.value().is_int_array()) {
         ret["type"] = "array_parameter";
         ret["value"] = solved_value.value().get_int_array().dump();
     }
+
+    // declared type of the parameter (dimensions are the declared, unevaluated expressions)
+    if (!is_type_param && type) ret["data_type"] = type->dump();
 
     return ret;
 }
