@@ -60,6 +60,12 @@ void topological_sorter::analyze(const std::vector<std::shared_ptr<HDL_parameter
                     }
                 }
                 if (!by_name.contains(effective_dep.get_name())) continue;
+                // A parent-scoped override of X referencing a bare X (.X(X))
+                // names the parent's X, never itself. When the parent value
+                // is not in the context it must not self-loop the sort into a
+                // false "circular dependency"; it falls through to the
+                // unresolved-value path instead.
+                if (!own_scoped && effective_dep.get_name() == name && effective_dep.get_instance().empty()) continue;
                 topo_map[effective_dep].dependents.insert(qualified_identifier(name));
                 topo_map[qualified_identifier(name)].dependencies.insert(effective_dep);
             }

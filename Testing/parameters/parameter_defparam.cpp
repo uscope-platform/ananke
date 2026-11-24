@@ -173,3 +173,34 @@ TEST(parameter_defparam, unit_hierarchical_defparam_rejected) {
     EXPECT_TRUE(analyzer.has_error());
     EXPECT_TRUE(analyzer.has_syntax_errors());
 }
+
+TEST(parameter_defparam, same_name_override_with_unresolved_parent_value_is_not_circular) {
+    // `localparamaxi_address_t` lexes as a single type identifier, so the
+    // parent's BASE is a plain variable, never a parameter. The `.BASE(BASE)`
+    // override must not self-loop the sort into a false circular dependency.
+    auto test_pattern = R"(
+        module child #(
+            parameter BASE = 'h10,
+            parameter OTHER = BASE + 1
+        )();
+        endmodule
+
+        module test_mod ();
+            localparamaxi_address_t BASE = 5;
+            child #(.BASE(BASE)) u1();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
+    testing::internal::CaptureStderr();
+    testing::internal::CaptureStdout();
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"test_mod"}))[0];
+    auto out = testing::internal::GetCapturedStdout() + testing::internal::GetCapturedStderr();
+
+    EXPECT_EQ(out.find("circular dependency"), std::string::npos) << out;
+    ASSERT_FALSE(ast_v2->get_dependencies().empty());
+}
