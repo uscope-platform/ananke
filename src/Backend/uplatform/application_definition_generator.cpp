@@ -112,7 +112,8 @@ void application_definition_generator::process_ast(const std::shared_ptr<hdl_ast
                 continue;
             }
 
-            periph["spec_id"] = spec["id"];
+            // the name of the specification (the module type) is the key, the numeric ids are positional and differ between exports
+            periph["spec_id"] = spec["name"];
 
 
             periph["hdl_parameters"] = get_parameters(spec, current_node);
