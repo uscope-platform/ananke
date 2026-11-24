@@ -74,7 +74,6 @@ TEST( bus_analysis, simple_bus_analysis) {
     df_content["bus"] = nlohmann::json();
     df_content["bus"]["control"] = nlohmann::json();
     df_content["bus"]["control"]["bus_interface"] = "axi_in";
-    df_content["bus"]["control"]["starting_module"] = "ad2s1210";
     df_content["bus"]["control"]["type"] = "axi_lite";
 
     Depfile df;
@@ -95,6 +94,7 @@ TEST( bus_analysis, simple_bus_analysis) {
 TEST( bus_analysis, parametric_interconnect) {
     // TODO: Find a way to test this, because the pwm was the last parametric interconnect instance in the test repo
     EXPECT_TRUE(true);
+}
 
 
 TEST( bus_analysis, missing_control_bus_interface_reports_error) {
@@ -158,5 +158,4 @@ TEST( bus_analysis, missing_control_bus_interface_reports_error) {
 
     const auto out = stream.str();
     EXPECT_NE(out.find("Control bus interface 'not_an_interface' specified in the Depfile was not found in top level module 'ad2s1210'"), std::string::npos) << out;
-}
 }

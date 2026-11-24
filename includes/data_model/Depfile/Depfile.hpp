@@ -77,7 +77,6 @@ struct  general_settings {
 
 struct bus_specs {
     std::string type;
-    std::string starting_module;
     std::string bus_interface;
 };
 

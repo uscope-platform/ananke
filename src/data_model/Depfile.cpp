@@ -133,7 +133,7 @@ void Depfile::set_content(const nlohmann::json &file_content) {
         for (auto &[bus_name, bus_obj]:file_content["bus"].items()) {
             bus.insert({
                 bus_name,
-                {bus_obj["type"], bus_obj["starting_module"], bus_obj["bus_interface"]}
+                {bus_obj["type"], bus_obj["bus_interface"]}
             });
         }
     }

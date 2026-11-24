@@ -63,7 +63,6 @@ TEST( app_def_generation , generate_app_def) {
     df_content["bus"] = nlohmann::json();
     df_content["bus"]["control"] = nlohmann::json();
     df_content["bus"]["control"]["bus_interface"] = "axil";
-    df_content["bus"]["control"]["starting_module"] = "PID";
     df_content["bus"]["control"]["type"] = "axi_lite";
 
     Depfile df;

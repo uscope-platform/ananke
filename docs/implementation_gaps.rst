@@ -226,7 +226,7 @@ Generalize bus and scope analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * The depfile ``bus`` section only consumes the ``"control"`` key; ``type``
-  and ``starting_module`` are parsed but unused
+  is parsed but unused
   (:file:`src/data_model/Depfile.cpp:79-86`).
 * Bus spec files are hardcoded: ``control_bus_analysis`` always loads
   ``axi_lite`` and ``data_acquisition_analysis`` always loads ``axi_stream``

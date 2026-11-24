@@ -25,7 +25,7 @@ Planned content:
 * The ``includes`` section (``ignored`` exact-basename silent skips for
   quoted includes, and ``deconfliction`` ambiguous-header resolution with
   global-string or per-folder scoped-object values, all paths repo-relative).
-* The ``bus`` section (``type``, ``starting_module``, ``bus_interface``) and
+* The ``bus`` section (``type``, ``bus_interface``) and
   how it drives bus analysis.
 
 The current schema lives in
