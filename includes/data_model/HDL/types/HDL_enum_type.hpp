@@ -56,6 +56,19 @@ public:
 
     [[nodiscard]] std::string to_print() const override;
 
+    [[nodiscard]] nlohmann::json dump() const override {
+        auto m_json = nlohmann::json::array();
+        for (const auto &m : members) {
+            m_json.push_back({{"name", m.name}, {"value", m.value ? nlohmann::json(*m.value) : nlohmann::json()}});
+        }
+        return {
+            {"kind", "enum"},
+            {"base_type", base_type ? base_type->dump() : nlohmann::json()},
+            {"members", m_json},
+            {"unpacked_dimensions", dimensions_to_json(unpacked_dimensions)}
+        };
+    }
+
     [[nodiscard]] bool is_equal(const hdl_type &other) const override {
         if (auto *o = dynamic_cast<const HDL_enum_type *>(&other)) {
             return *this == *o;

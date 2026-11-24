@@ -21,6 +21,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 #include "data_model/HDL/types/resolved_type.hpp"
 #include "data_model/HDL/parameters/common/resolved_parameter.hpp"
@@ -81,6 +82,8 @@ public:
     [[nodiscard]] virtual bool is_scalar()const = 0;
      virtual std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) = 0;
     [[nodiscard]] virtual std::string to_print() const = 0;
+    // structured description of the declared (unevaluated) type, used for AST dumps
+    [[nodiscard]] virtual nlohmann::json dump() const = 0;
     [[nodiscard]] virtual bool is_equal(const hdl_type &other) const = 0;
 };
 

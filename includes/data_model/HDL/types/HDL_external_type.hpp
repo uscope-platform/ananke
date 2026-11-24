@@ -33,6 +33,13 @@ public:
     [[nodiscard]] bool is_scalar()const override;
     std::optional<resolved_type> evaluate_type(const std::map<qualified_identifier, resolved_parameter> &context) override;
     [[nodiscard]] std::string to_print() const override;
+    [[nodiscard]] nlohmann::json dump() const override {
+        return {
+            {"kind", "external"},
+            {"name", value.print()},
+            {"unpacked_dimensions", dimensions_to_json(unpacked_dimensions)}
+        };
+    }
     qualified_identifier get_value() {return value;}
     bool operator==(const HDL_external_type & hdl_external) const;
 

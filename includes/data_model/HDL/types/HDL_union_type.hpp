@@ -92,6 +92,14 @@ public:
         return result;
     }
 
+    [[nodiscard]] nlohmann::json dump() const override {
+        auto m_json = nlohmann::json::array();
+        for (const auto &m : members) {
+            m_json.push_back({{"name", m.name}, {"type", m.type ? m.type->dump() : nlohmann::json()}});
+        }
+        return {{"kind", "union"}, {"packed", packed}, {"members", m_json}};
+    }
+
     [[nodiscard]] std::string to_print() const override {
         std::string result = "union {";
         for (size_t i = 0; i < members.size(); ++i) {

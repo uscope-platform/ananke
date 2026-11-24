@@ -17,6 +17,7 @@
 #ifndef ANANKE_DIMENSION_HPP
 #define ANANKE_DIMENSION_HPP
 
+#include <nlohmann/json.hpp>
 #include "data_model/HDL/parameters/components/Expression_base.hpp"
 
 typedef struct dims_struct{
@@ -45,5 +46,17 @@ typedef struct dims_struct{
     }
 
 } dimension_t;
+
+inline nlohmann::json dimensions_to_json(const std::vector<dimension_t> &dims) {
+    auto ret = nlohmann::json::array();
+    for (const auto &d : dims) {
+        ret.push_back({
+            {"first_bound", d.first_bound ? d.first_bound->print() : ""},
+            {"second_bound", d.second_bound ? d.second_bound->print() : ""},
+            {"packed", d.packed}
+        });
+    }
+    return ret;
+}
 
 #endif //ANANKE_DIMENSION_HPP

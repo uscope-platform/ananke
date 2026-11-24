@@ -291,3 +291,27 @@ TEST(type_parameter_extraction, used_in_port_declaration) {
     EXPECT_TRUE(t->get_type()->is<HDL_simple_type>());
     EXPECT_TRUE(t->get_type()->as<HDL_simple_type>().get_signed());
 }
+
+TEST(type_parameter_extraction, dump_type_parameter) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter type T = logic,
+            parameter type U
+        )();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto parameters = resource.get_parameter_statements();
+    ASSERT_EQ(parameters.size(), 2u);
+
+    auto with_default = parameters[0]->dump();
+    EXPECT_EQ(with_default["name"], "T");
+    EXPECT_EQ(with_default["type"], "type_parameter");
+    ASSERT_TRUE(with_default["value"].is_object());
+    EXPECT_EQ(with_default["value"]["kind"], "simple");
+    EXPECT_EQ(with_default["value"]["type_name"], "logic");
+
+    auto no_default = parameters[1]->dump();
+    EXPECT_EQ(no_default["type"], "type_parameter");
+}

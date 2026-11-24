@@ -102,6 +102,18 @@ public:
 
     [[nodiscard]] std::string to_print() const override;
 
+    [[nodiscard]] nlohmann::json dump() const override {
+        return {
+            {"kind", "simple"},
+            {"type_name", type_name},
+            {"signed", is_signed},
+            {"real", is_real},
+            {"implicit", is_implicit},
+            {"packed_dimensions", dimensions_to_json(packed_dimensions)},
+            {"unpacked_dimensions", dimensions_to_json(unpacked_dimensions)}
+        };
+    }
+
     [[nodiscard]] bool is_equal(const hdl_type &other) const override {
         if (auto* o = dynamic_cast<const HDL_simple_type*>(&other)) {
             return *this == *o;

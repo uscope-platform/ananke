@@ -74,6 +74,19 @@ public:
 
     [[nodiscard]] std::string to_print() const override;
 
+    [[nodiscard]] nlohmann::json dump() const override {
+        auto members = nlohmann::json::array();
+        for (const auto &m : member) {
+            members.push_back({{"name", m.name}, {"type", m.type ? m.type->dump() : nlohmann::json()}});
+        }
+        return {
+            {"kind", "struct"},
+            {"packed", packed},
+            {"members", members},
+            {"unpacked_dimensions", dimensions_to_json(unpacked_dimensions)}
+        };
+    }
+
     [[nodiscard]] bool is_equal(const hdl_type &other) const override {
         if (auto* o = dynamic_cast<const HDL_struct_type*>(&other)) {
             return *this == *o;

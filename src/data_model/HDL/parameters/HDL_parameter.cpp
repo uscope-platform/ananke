@@ -198,7 +198,13 @@ nlohmann::json HDL_parameter::dump() {
 
     ret["name"] = name;
 
-    if (!solved_value.has_value())  ret["type"] = "unknown parameter type";
+    if (is_type_param) {
+        // type parameters carry a type, not a value: dump the declared/overridden type
+        ret["type"] = "type_parameter";
+        ret["value"] = type ? type->dump() : nlohmann::json();
+        if (raw_value) ret["expression"] = raw_value->print();
+    }
+    else if (!solved_value.has_value())  ret["type"] = "unknown parameter type";
     else if (solved_value.value().is_string()) {
         ret["type"] = "string_parameter";
         std::vector<std::string> values_s;
