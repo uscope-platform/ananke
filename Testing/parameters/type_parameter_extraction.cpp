@@ -315,3 +315,31 @@ TEST(type_parameter_extraction, dump_type_parameter) {
     auto no_default = parameters[1]->dump();
     EXPECT_EQ(no_default["type"], "type_parameter");
 }
+
+// Regression: packed dimensions on a type parameter default are dropped by the parser
+TEST(type_parameter_extraction, packed_type) {
+    auto test_pattern = R"(
+        module test_mod #(
+            parameter type T = logic [31:0]
+        )();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resource = analyzer.analyze("", test_pattern).value().get_content()[0]->as<hdl_resource_statement>();
+    auto parameters = resource.get_parameter_statements();
+
+    std::vector<std::shared_ptr<HDL_parameter>> check_params;
+    auto p = std::make_shared<HDL_parameter>();
+    p->set_name("T");
+    p->is_type_param = true;
+    auto t = Type_engine::create_primitive_type("logic");
+    t->as<HDL_simple_type>().set_packed_dimensions(
+        {dimension_t{std::make_shared<Numeric_token>("31"), std::make_shared<Numeric_token>("0"), true}});
+    p->set_type(t);
+    check_params.push_back(p);
+
+    ASSERT_EQ(check_params.size(), parameters.size());
+    for (size_t i = 0; i < check_params.size(); ++i) {
+        ASSERT_EQ(*check_params[i], *parameters[i]);
+    }
+}
