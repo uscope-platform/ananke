@@ -379,3 +379,44 @@ TEST(type_parameter_extraction, typed_parameter_port_after_type_parameter) {
         ASSERT_EQ(*check_params[i], *parameters[i]);
     }
 }
+
+TEST(type_parameter_extraction, override_type_param_of_typed_parameter) {
+    auto test_pattern = R"(
+        module child #(
+            parameter type T = logic [3:0],
+            T X = 5
+        )();
+        endmodule
+
+        module parent #(
+            parameter type U = logic [7:0]
+        )();
+            child #(.T(U)) inst();
+        endmodule
+    )";
+    sv_analyzer analyzer;
+    auto resources = analyzer.analyze("", test_pattern).value();
+    std::shared_ptr<data_store> d_store = std::make_shared<data_store>(true, "/tmp/test_data_store");
+    std::shared_ptr<settings_store> s_store = std::make_shared<settings_store>(true, "/tmp/test_data_store", "test_profile");
+    d_store->store_file({"/dev/zero", "file_hash", resources});
+    HDL_ast_builder_v2 b2(s_store, d_store, Depfile());
+    auto ast_v2 = b2.build_ast(std::vector<std::string>({"parent"}))[0];
+
+    auto child = ast_v2->get_dependencies()[0];
+    ASSERT_TRUE(child->has_parameter("X"));
+    auto x = child->find_parameter("X");
+    ASSERT_NE(x, nullptr);
+
+    // X takes the type U overrides T with, not the default of T
+    auto x_type = Type_engine::create_primitive_type("logic");
+    x_type->as<HDL_simple_type>().set_packed_dimensions(
+        {dimension_t{std::make_shared<Numeric_token>("7"), std::make_shared<Numeric_token>("0"), true}});
+    HDL_parameter check_x;
+    check_x.set_name("X");
+    check_x.set_raw_value(std::make_shared<Numeric_token>("5"));
+    check_x.set_type(x_type);
+    check_x.set_value(resolved_parameter(5));
+    EXPECT_EQ(check_x, *x);
+    EXPECT_EQ(x->get_numeric_value(), 5);
+    EXPECT_EQ(x->dump()["size"], 8);
+}
