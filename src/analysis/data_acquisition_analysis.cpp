@@ -29,6 +29,10 @@ void data_acquisition_analysis::analyze(std::shared_ptr<hdl_ast_node> &ast) {
         spdlog::error("Multiple sinks are not supported for data acquisition analysis");
         return;
     }
+    if (sinks[0]->get_address().empty()) {
+        spdlog::error("Scope base address not found");
+        return;
+    }
     auto scope_address = sinks[0]->get_address()[0];
 
      scope.mux_address = scope_address;
