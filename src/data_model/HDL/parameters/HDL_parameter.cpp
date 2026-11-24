@@ -162,6 +162,18 @@ std::string HDL_parameter::print() const {
 }
 
 std::string HDL_parameter::to_string() const {
+    if (is_type_param) {
+        // a type parameter holds a type, not an expression: print it as `type T = <type>`
+        std::string result = "type " + name;
+        if (raw_value) {
+            result += " = " + raw_value->print();
+        } else if (type) {
+            result += " = ";
+            if (type->is<HDL_simple_type>()) result += type->as<HDL_simple_type>().get_type_name();
+            result += type->to_print();
+        }
+        return result;
+    }
     std::string result = name;
 
    if (type) result += type->to_print();
