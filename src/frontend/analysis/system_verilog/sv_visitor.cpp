@@ -500,6 +500,32 @@ void sv_visitor::maybe_open_composite_type_default(sv2017::Data_typeContext *dt,
     pending_composite_type_param = p;
 }
 
+void sv_visitor::track_type_param_dimensions(sv2017::Type_assignmentContext *ta,
+                                             const std::shared_ptr<HDL_parameter> &p) {
+    auto *dt = ta->data_type();
+    if (!dt || dt->variable_dimension().empty()) return;
+    if (!p->get_type() || !p->get_type()->is<HDL_simple_type>()) return;
+    type_params_with_dimensions[ta] = p;
+}
+
+void sv_visitor::enterType_assignment(sv2017::Type_assignmentContext *ctx) {
+    auto it = type_params_with_dimensions.find(ctx);
+    if (it == type_params_with_dimensions.end()) return;
+    type_engine.set_base_type(it->second->get_type());
+    type_engine.start_range();
+}
+
+void sv_visitor::exitType_assignment(sv2017::Type_assignmentContext *ctx) {
+    auto it = type_params_with_dimensions.find(ctx);
+    if (it == type_params_with_dimensions.end()) return;
+    auto p = it->second;
+    type_params_with_dimensions.erase(it);
+    if (auto t = type_engine.finalize_type()) {
+        p->set_type(t);
+        type_engine.add_type_param(p->get_name(), t);
+    }
+}
+
 void sv_visitor::finalize_pending_composite_type_param() {
     if (!pending_composite_type_param) return;
     if (type_engine.active()) {
@@ -1858,6 +1884,7 @@ void sv_visitor::enterParameter_declaration(sv2017::Parameter_declarationContext
                 }
             }
             route_resource_statement(p);
+            track_type_param_dimensions(ta, p);
             if (p->get_type() && p->get_type()->is<HDL_simple_type>()
                 && (p->get_type()->as<HDL_simple_type>().get_signed()
                     || !p->get_type()->as<HDL_simple_type>().get_packed_dimensions().empty()))
@@ -1911,6 +1938,7 @@ void sv_visitor::enterParameter_port_declaration(sv2017::Parameter_port_declarat
                 }
             }
             route_resource_statement(p);
+            track_type_param_dimensions(ta, p);
             if (p->get_type() && p->get_type()->is<HDL_simple_type>()
                 && (p->get_type()->as<HDL_simple_type>().get_signed()
                     || !p->get_type()->as<HDL_simple_type>().get_packed_dimensions().empty()))
@@ -2896,6 +2924,7 @@ void sv_visitor::enterLocal_parameter_declaration(sv2017::Local_parameter_declar
                 }
             }
             route_resource_statement(p);
+            track_type_param_dimensions(ta, p);
             if (p->get_type() && p->get_type()->is<HDL_simple_type>()
                 && (p->get_type()->as<HDL_simple_type>().get_signed()
                     || !p->get_type()->as<HDL_simple_type>().get_packed_dimensions().empty()))

@@ -100,6 +100,8 @@ public:
     void enterParameter_declaration(sv2017::Parameter_declarationContext *ctx) override;
     void exitParameter_declaration(sv2017::Parameter_declarationContext *ctx) override;
     void enterParameter_port_declaration(sv2017::Parameter_port_declarationContext *ctx) override;
+    void enterType_assignment(sv2017::Type_assignmentContext *ctx) override;
+    void exitType_assignment(sv2017::Type_assignmentContext *ctx) override;
     void exitParameter_port_declaration(sv2017::Parameter_port_declarationContext *ctx) override;
     void enterParameter_override(sv2017::Parameter_overrideContext *ctx) override;
     void exitParameter_override(sv2017::Parameter_overrideContext *ctx) override;
@@ -434,6 +436,11 @@ private:
 
     std::shared_ptr<HDL_parameter> pending_composite_type_param;
     void finalize_pending_composite_type_param();
+    // type parameters whose default carries dimensions (`type T = logic [31:0]`), keyed by their assignment: the
+    // dimensions are collected by the type engine while the assignment is walked and patched onto the parameter
+    // at its exit
+    std::map<sv2017::Type_assignmentContext *, std::shared_ptr<HDL_parameter>> type_params_with_dimensions;
+    void track_type_param_dimensions(sv2017::Type_assignmentContext *ta, const std::shared_ptr<HDL_parameter> &p);
     void maybe_open_composite_type_default(sv2017::Data_typeContext *dt, bool single,
                                            const std::shared_ptr<HDL_parameter> &p);
     bool in_streaming_slice = false;
